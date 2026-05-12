@@ -65,8 +65,8 @@ class RefreshButton(CoordinatorEntity[EntityDistanceCoordinator], ButtonEntity):
         for entity_id in (entity_a, entity_b):
             if entity_id.startswith("zone."):
                 continue
-            entry = registry.async_get(entity_id)
-            if entry is None or entry.device_id is None:
+            device_id = self._resolve_device_id(registry, entity_id)
+            if device_id is None:
                 _LOGGER.warning(
                     "entity_distance: refresh — no device found for %s, skipping",
                     entity_id,
@@ -76,9 +76,25 @@ class RefreshButton(CoordinatorEntity[EntityDistanceCoordinator], ButtonEntity):
                 await self.hass.services.async_call(
                     "mobile_app",
                     "update_sensor_states",
-                    {"device_id": entry.device_id},
+                    {"device_id": device_id},
                     blocking=False,
                 )
-                _LOGGER.debug("entity_distance: refresh triggered for device %s", entry.device_id)
+                _LOGGER.debug("entity_distance: refresh triggered for device %s", device_id)
             except Exception as err:
                 _LOGGER.warning("entity_distance: refresh failed for %s: %s", entity_id, err)
+
+    def _resolve_device_id(self, registry: er.EntityRegistry, entity_id: str) -> str | None:
+        entry = registry.async_get(entity_id)
+        if entry is not None and entry.device_id is not None:
+            return entry.device_id
+
+        # person.* entities have no device_id — resolve via active source tracker
+        if entity_id.startswith("person."):
+            state = self.hass.states.get(entity_id)
+            source = state.attributes.get("source") if state else None
+            if source:
+                source_entry = registry.async_get(source)
+                if source_entry is not None and source_entry.device_id is not None:
+                    return source_entry.device_id
+
+        return None

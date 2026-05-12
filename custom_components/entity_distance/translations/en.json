@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Entity Pair",
-        "description": "Choose the two entities whose distance you want to track. Supported types: person, device tracker, sensor, or zone.",
+        "description": "Choose the two entities whose distance you want to track. Supported types: person, device tracker, sensor, or zone.\n\nAfter setup, sensors will show 'Unknown' until both entities report a location update. Press the Refresh Location button or wait for the next GPS update.",
         "data": {
           "entity_a": "First entity",
           "entity_b": "Second entity"

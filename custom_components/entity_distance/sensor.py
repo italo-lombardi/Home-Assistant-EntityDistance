@@ -16,11 +16,29 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import BUCKETS, DIRECTIONS, DOMAIN
+from .const import (
+    BUCKET_FAR,
+    BUCKET_MID,
+    BUCKET_NEAR,
+    BUCKET_VERY_FAR,
+    BUCKET_VERY_NEAR,
+    BUCKETS,
+    DIRECTIONS,
+    DOMAIN,
+)
 from .coordinator import EntityDistanceCoordinator, _calc_bucket
 from .models import PairState
 
 _LOGGER = logging.getLogger(__name__)
+
+
+_BUCKET_LEVEL = {
+    BUCKET_VERY_NEAR: 1,
+    BUCKET_NEAR: 2,
+    BUCKET_MID: 3,
+    BUCKET_FAR: 4,
+    BUCKET_VERY_FAR: 5,
+}
 
 
 async def async_setup_entry(
@@ -43,6 +61,7 @@ async def async_setup_entry(
         [
             DistanceSensor(coordinator, entry, entity_a_name, entity_b_name),
             BucketSensor(coordinator, entry, entity_a_name, entity_b_name),
+            BucketLevelSensor(coordinator, entry, entity_a_name, entity_b_name),
             ProximityDurationSensor(coordinator, entry, entity_a_name, entity_b_name),
             LastSeenTogetherSensor(coordinator, entry, entity_a_name, entity_b_name),
             TodayProximityTimeSensor(coordinator, entry, entity_a_name, entity_b_name),
@@ -114,7 +133,22 @@ class BucketSensor(EntityDistanceSensorBase):
     def native_value(self) -> str | None:
         if self._pair.distance_m is None:
             return None
-        return _calc_bucket(self._pair.distance_m)
+        return _calc_bucket(self._pair.distance_m, self.coordinator.bucket_thresholds)
+
+
+class BucketLevelSensor(EntityDistanceSensorBase):
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_translation_key = "bucket_level"
+
+    def __init__(self, coordinator, entry, a_name, b_name):
+        super().__init__(coordinator, entry, a_name, b_name, "bucket_level")
+
+    @property
+    def native_value(self) -> int | None:
+        if self._pair.distance_m is None:
+            return None
+        bucket = _calc_bucket(self._pair.distance_m, self.coordinator.bucket_thresholds)
+        return _BUCKET_LEVEL[bucket]
 
 
 class ProximityDurationSensor(EntityDistanceSensorBase):

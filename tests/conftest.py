@@ -28,6 +28,7 @@ def mock_config_entry():
         "updates_window_s": 300,
         "require_reliable": False,
     }
+    entry.options = {}
     return entry
 
 

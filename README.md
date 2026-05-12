@@ -15,7 +15,7 @@ Track the distance between any two entities — people, devices, or zones — wi
 ## Features
 
 - **Person-to-person, person-to-zone, device-to-zone, zone-to-zone** — any combination of `person`, `device_tracker`, `sensor`, or `zone` entities
-- **16 sensors per pair** — distance, proximity zone, proximity duration, last seen together, today proximity time, direction, closing speed, ETA, GPS accuracy, last update, update frequency, data staleness (per entity)
+- **16 sensors per pair** — distance, proximity zone, proximity zone level, proximity duration, last seen together, today proximity time, direction, closing speed, ETA, GPS accuracy, last update, update frequency, data staleness (per entity)
 - **Proximity binary sensor** — ON/OFF with configurable entry/exit hysteresis to prevent flickering
 - **Direction of travel** — approaching, diverging, or stationary
 - **ETA** — estimated minutes until together, only when approaching
@@ -67,14 +67,30 @@ Select the two entities to track. Supported types: `person`, `device_tracker`, `
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| Nearby distance (m) | 200 | Entities must be closer than this to trigger a proximity event |
-| Away distance (m) | 500 | Entities must move further than this before proximity ends (hysteresis) |
-| Update delay (s) | 10 | Seconds to wait before processing a location update — smooths GPS jitter |
+| Nearby threshold (m) | 200 | Entities must be closer than this to trigger a proximity event |
+| Away threshold (m) | 500 | Entities must move further than this before proximity ends (hysteresis) |
+| Location update delay (s) | 10 | Seconds to wait before processing a location update — smooths GPS jitter |
+| Configure proximity zone thresholds | Off | Turn on to customize Very Near / Near / Mid / Far zone distances |
 | Configure advanced filters | Off | Turn on to configure GPS accuracy, speed, and reliability filters |
 
 <!-- screenshot: step 2 proximity settings -->
 
-### Step 3: Advanced Filters (optional)
+### Step 3: Zone Thresholds (optional)
+
+Only shown when "Configure proximity zone thresholds" is enabled in Step 2.
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| Very Near threshold (m) | 100 | Distance at or below which entities are Very Near |
+| Near threshold (m) | 500 | Distance at or below which entities are Near |
+| Mid threshold (m) | 2000 | Distance at or below which entities are Mid |
+| Far threshold (m) | 10000 | Distance at or below which entities are Far (beyond this is Very Far) |
+
+Thresholds must be strictly increasing: Very Near < Near < Mid < Far.
+
+<!-- screenshot: step 3 zone thresholds -->
+
+### Step 4: Advanced Filters (optional)
 
 Only shown when "Configure advanced filters" is enabled in Step 2.
 
@@ -85,7 +101,7 @@ Only shown when "Configure advanced filters" is enabled in Step 2.
 | Only trigger when data is reliable | Off | Require several consistent updates before firing proximity events |
 | Updates needed to be reliable | 3 | Consecutive updates required before data is considered reliable |
 
-<!-- screenshot: step 3 advanced filters -->
+<!-- screenshot: step 4 advanced filters -->
 
 All settings can be changed after setup via **Configure** on the integration card.
 
@@ -93,30 +109,31 @@ All settings can be changed after setup via **Configure** on the integration car
 
 ## Entities
 
-Each configured pair creates one HA device with 18 entities.
+Each configured pair creates one HA device with 19 entities.
 
 ### Sensors
 
 | Entity | Description | Device Class |
 |--------|-------------|--------------|
 | Distance | Distance between entities in meters | `distance` |
-| Proximity Zone | very_near / near / mid / far / very_far | `enum` |
+| Proximity Zone | Very Near / Near / Medium / Far / Very Far | `enum` |
+| Proximity Zone Number | Numeric zone level: 1 (Very Near) to 5 (Very Far) | — |
 | Proximity Duration | Minutes currently in proximity (live, includes current session) | `duration` |
 | Last Seen Together | Timestamp of last proximity entry | `timestamp` |
 | Today Proximity Time | Total minutes together today — resets at midnight | `duration` |
-| Direction | approaching / diverging / stationary | `enum` |
-| Closing Speed | Convergence rate in km/h | `speed` |
-| ETA | Minutes until together (only when approaching) | `duration` |
+| Direction | Approaching / Diverging / Stationary | `enum` |
+| Approach Speed | Convergence rate in km/h | `speed` |
+| Estimated Arrival Time | Minutes until together (only when approaching) | `duration` |
 | GPS Accuracy (Name A) | GPS fix accuracy of entity A in meters | `distance` |
 | GPS Accuracy (Name B) | GPS fix accuracy of entity B in meters | `distance` |
 | Last Update (Name A) | Timestamp of last location change for entity A | `timestamp` |
 | Last Update (Name B) | Timestamp of last location change for entity B | `timestamp` |
 | Update Frequency (Name A) | Location updates/min over last 5-min window | — |
 | Update Frequency (Name B) | Location updates/min over last 5-min window | — |
-| Data Staleness (Name A) | Seconds since last update from entity A | `duration` |
-| Data Staleness (Name B) | Seconds since last update from entity B | `duration` |
+| Location Age (Name A) | Seconds since last update from entity A | `duration` |
+| Location Age (Name B) | Seconds since last update from entity B | `duration` |
 
-> GPS Accuracy, Last Update, Update Frequency, and Data Staleness are diagnostic sensors — collapsed by default in the HA UI. Sensor names use the entities' friendly names (e.g. "GPS Accuracy (Italo)") instead of generic A/B labels.
+> GPS Accuracy, Last Update, Update Frequency, and Location Age are diagnostic sensors — collapsed by default in the HA UI. Sensor names use the entities' friendly names (e.g. "GPS Accuracy (Italo)") instead of generic A/B labels.
 
 ### Binary Sensor
 
@@ -136,13 +153,19 @@ Each configured pair creates one HA device with 18 entities.
 
 ## Proximity Zone Thresholds
 
-| Zone | Distance |
-|------|----------|
-| Very Near | ≤ 50 m |
-| Near | ≤ 200 m |
-| Mid | ≤ 1 km |
-| Far | ≤ 5 km |
-| Very Far | > 5 km |
+Default thresholds (configurable via **Configure** → **Configure proximity zone thresholds**):
+
+| Zone | Default Distance | Level |
+|------|-----------------|-------|
+| Very Near | ≤ 100 m | 1 |
+| Near | ≤ 500 m | 2 |
+| Medium | ≤ 2 km | 3 |
+| Far | ≤ 10 km | 4 |
+| Very Far | > 10 km | 5 |
+
+The **Proximity Zone Level** sensor exposes the same information as a number (1–5), useful for automations that compare or threshold on zone level without working with strings.
+
+<!-- screenshot: zone thresholds config step -->
 
 ---
 

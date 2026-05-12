@@ -1,5 +1,26 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- **Proximity Zone Number sensor** — numeric equivalent of Proximity Zone (1 = Very Near … 5 = Very Far); use in automations without string comparisons
+- **Configurable zone thresholds** — new optional "Zone Thresholds" step in config/options flow to customize Very Near / Near / Medium / Far distances; defaults updated to 100 / 500 / 2000 / 10000 m
+- Validation: zone thresholds must be strictly ascending (Very Near < Near < Medium < Far)
+
+### Fixed
+- Refresh Location button now resolves `person.*` entity devices via `person.source` attribute; previously skipped with "no device found" warning
+- Internal `_show_advanced` temp key no longer leaks into config entry data
+- `mock_config_entry` test fixture now sets `entry.options = {}` to match coordinator's merged data read
+
+### Changed
+- Proximity Zone "Mid" renamed to "Medium" in UI (internal key `mid` unchanged)
+- Proximity zone defaults: Very Near 50 m → 100 m, Near 200 m → 500 m, Mid 1 km → 2 km, Far 5 km → 10 km
+- Coordinator reads from merged `entry.data + entry.options` (was `entry.data` only)
+- Sensor renames: "Closing Speed" → "Approach Speed", "ETA" → "Estimated Arrival Time", "Data Staleness" → "Location Age"
+- UI label improvements: "Nearby distance" → "Nearby threshold", "Away distance" → "Away threshold", "Update delay" → "Location update delay", "Max GPS inaccuracy" → "Max GPS error radius", "Max speed filter" → "Max plausible speed", "Updates needed to be reliable" → "Consecutive updates required for reliability"
+- Error messages made more precise and consistent with field labels
+- Config flow step 1 title changed from "Entity Pair" to "Choose Entities"
+
 ## [0.1.0-alpha.1] - 2026-05-13
 
 ### Fixed

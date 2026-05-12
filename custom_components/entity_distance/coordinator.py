@@ -12,8 +12,11 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util.location import distance as ha_distance
 
 from .const import (
-    BUCKET_THRESHOLDS,
+    BUCKET_FAR,
+    BUCKET_MID,
+    BUCKET_NEAR,
     BUCKET_VERY_FAR,
+    BUCKET_VERY_NEAR,
     CONF_DEBOUNCE_S,
     CONF_ENTITY_A,
     CONF_ENTITY_B,
@@ -26,6 +29,10 @@ from .const import (
     CONF_RESYNC_HOLD_S,
     CONF_RESYNC_SILENCE_S,
     CONF_UPDATES_WINDOW_S,
+    CONF_ZONE_FAR_M,
+    CONF_ZONE_MID_M,
+    CONF_ZONE_NEAR_M,
+    CONF_ZONE_VERY_NEAR_M,
     DEFAULT_DEBOUNCE_S,
     DEFAULT_ENTRY_THRESHOLD_M,
     DEFAULT_EXIT_THRESHOLD_M,
@@ -36,6 +43,10 @@ from .const import (
     DEFAULT_RESYNC_HOLD_S,
     DEFAULT_RESYNC_SILENCE_S,
     DEFAULT_UPDATES_WINDOW_S,
+    DEFAULT_ZONE_FAR_M,
+    DEFAULT_ZONE_MID_M,
+    DEFAULT_ZONE_NEAR_M,
+    DEFAULT_ZONE_VERY_NEAR_M,
     DIRECTION_APPROACHING,
     DIRECTION_DIVERGING,
     DIRECTION_STATIONARY,
@@ -105,8 +116,8 @@ def _get_coords(state: State) -> tuple[float, float, float | None] | None:
     return lat, lon, accuracy
 
 
-def _calc_bucket(distance_m: float) -> str:
-    for bucket, threshold in BUCKET_THRESHOLDS.items():
+def _calc_bucket(distance_m: float, thresholds: dict[str, float]) -> str:
+    for bucket, threshold in thresholds.items():
         if distance_m <= threshold:
             return bucket
     return BUCKET_VERY_FAR
@@ -124,7 +135,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
         self._unsub_listeners: list = []
         self._debouncer: Debouncer | None = None
 
-        data = entry.data
+        data = {**entry.data, **entry.options}
         self._entity_a: str = data[CONF_ENTITY_A]
         self._entity_b: str = data[CONF_ENTITY_B]
         self._entry_threshold_m: float = data.get(CONF_ENTRY_THRESHOLD_M, DEFAULT_ENTRY_THRESHOLD_M)
@@ -139,6 +150,12 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
         )
         self._updates_window_s: float = data.get(CONF_UPDATES_WINDOW_S, DEFAULT_UPDATES_WINDOW_S)
         self._require_reliable: bool = data.get(CONF_REQUIRE_RELIABLE, DEFAULT_REQUIRE_RELIABLE)
+        self._bucket_thresholds: dict[str, float] = {
+            BUCKET_VERY_NEAR: data.get(CONF_ZONE_VERY_NEAR_M, DEFAULT_ZONE_VERY_NEAR_M),
+            BUCKET_NEAR: data.get(CONF_ZONE_NEAR_M, DEFAULT_ZONE_NEAR_M),
+            BUCKET_MID: data.get(CONF_ZONE_MID_M, DEFAULT_ZONE_MID_M),
+            BUCKET_FAR: data.get(CONF_ZONE_FAR_M, DEFAULT_ZONE_FAR_M),
+        }
 
         self._pair_state = PairState(
             entity_a_id=self._entity_a,
@@ -146,6 +163,10 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
         )
         self._resync_holding: bool = False
         self._resync_hold_until: datetime | None = None
+
+    @property
+    def bucket_thresholds(self) -> dict[str, float]:
+        return self._bucket_thresholds
 
     async def async_setup(self) -> None:
         self._debouncer = Debouncer(

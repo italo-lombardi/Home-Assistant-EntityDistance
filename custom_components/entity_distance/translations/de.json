@@ -1,0 +1,117 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Entitätspaar",
+        "description": "Wählen Sie zwei Entitäten zur Abstandsverfolgung aus.",
+        "data": {
+          "entity_a": "Erste Entität",
+          "entity_b": "Zweite Entität"
+        }
+      },
+      "thresholds": {
+        "title": "Näherungseinstellungen",
+        "description": "Näherungsschwellenwerte und Entprellung konfigurieren.",
+        "data": {
+          "entry_threshold_m": "Eintrittsschwelle (m)",
+          "exit_threshold_m": "Austrittsschwelle (m)",
+          "debounce_s": "Entprellung (s)"
+        },
+        "data_description": {
+          "entry_threshold_m": "Abstand, bei dem Entitäten als in der Nähe betrachtet werden.",
+          "exit_threshold_m": "Abstand, bei dem Entitäten als nicht mehr in der Nähe betrachtet werden. Muss >= Eintrittsschwelle sein.",
+          "debounce_s": "Sekunden, die vor der Verarbeitung einer Standortaktualisierung gewartet werden. Reduziert Rauschen durch schnelle GPS-Änderungen."
+        }
+      },
+      "advanced": {
+        "title": "Erweiterte Filter",
+        "description": "Optionale Filter zum Ablehnen unzuverlässiger Standortaktualisierungen.",
+        "data": {
+          "max_accuracy_m": "Max. GPS-Genauigkeit (m, 0 = deaktiviert)",
+          "max_speed_kmh": "Max. implizite Geschwindigkeit (km/h, 0 = deaktiviert)",
+          "require_reliable": "Zuverlässige Daten für Näherungsereignisse erforderlich",
+          "min_updates_reliable": "Min. Aktualisierungen für zuverlässige Daten"
+        },
+        "data_description": {
+          "max_accuracy_m": "Standortaktualisierungen mit schlechterer GPS-Genauigkeit als diesem Wert ablehnen. Auf 0 setzen zum Deaktivieren.",
+          "max_speed_kmh": "Aktualisierungen ablehnen, bei denen die implizierte Bewegungsgeschwindigkeit diesen Wert überschreitet. Auf 0 setzen zum Deaktivieren.",
+          "require_reliable": "Proximity_enter-Ereignis nur auslösen, wenn Daten als zuverlässig gelten.",
+          "min_updates_reliable": "Mindestanzahl von Standortaktualisierungen im Fenster, bevor Daten als zuverlässig gelten."
+        }
+      }
+    },
+    "error": {
+      "same_entity": "Entität A und Entität B müssen unterschiedlich sein.",
+      "exit_below_entry": "Austrittsschwelle muss größer oder gleich der Eintrittsschwelle sein."
+    },
+    "abort": {
+      "already_configured": "Dieses Entitätspaar ist bereits konfiguriert."
+    }
+  },
+  "options": {
+    "step": {
+      "thresholds": {
+        "title": "Näherungseinstellungen",
+        "data": {
+          "entry_threshold_m": "Eintrittsschwelle (m)",
+          "exit_threshold_m": "Austrittsschwelle (m)",
+          "debounce_s": "Entprellung (s)"
+        }
+      },
+      "advanced": {
+        "title": "Erweiterte Filter",
+        "data": {
+          "max_accuracy_m": "Max. GPS-Genauigkeit (m, 0 = deaktiviert)",
+          "max_speed_kmh": "Max. implizite Geschwindigkeit (km/h, 0 = deaktiviert)",
+          "require_reliable": "Zuverlässige Daten für Näherungsereignisse erforderlich",
+          "min_updates_reliable": "Min. Aktualisierungen für zuverlässige Daten"
+        }
+      }
+    },
+    "error": {
+      "exit_below_entry": "Austrittsschwelle muss größer oder gleich der Eintrittsschwelle sein."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "distance": { "name": "Abstand" },
+      "bucket": {
+        "name": "Näherungszone",
+        "state": {
+          "very_near": "Sehr nah",
+          "near": "Nah",
+          "mid": "Mittel",
+          "far": "Weit",
+          "very_far": "Sehr weit"
+        }
+      },
+      "proximity_duration": { "name": "Näherungsdauer" },
+      "last_seen_together": { "name": "Zuletzt zusammen gesehen" },
+      "today_proximity_time": { "name": "Heutige Näherungszeit" },
+      "direction": {
+        "name": "Richtung",
+        "state": {
+          "approaching": "Nähert sich",
+          "diverging": "Entfernt sich",
+          "stationary": "Stationär"
+        }
+      },
+      "closing_speed": { "name": "Annäherungsgeschwindigkeit" },
+      "eta": { "name": "ETA" },
+      "gps_accuracy_a": { "name": "GPS-Genauigkeit (A)" },
+      "gps_accuracy_b": { "name": "GPS-Genauigkeit (B)" },
+      "last_update_a": { "name": "Letzte Aktualisierung (A)" },
+      "last_update_b": { "name": "Letzte Aktualisierung (B)" },
+      "update_frequency_a": { "name": "Aktualisierungsfrequenz (A)" },
+      "update_frequency_b": { "name": "Aktualisierungsfrequenz (B)" },
+      "data_staleness_a": { "name": "Datenaktualität (A)" },
+      "data_staleness_b": { "name": "Datenaktualität (B)" }
+    },
+    "binary_sensor": {
+      "proximity": { "name": "In der Nähe" }
+    },
+    "button": {
+      "refresh": { "name": "Standort aktualisieren" }
+    }
+  }
+}

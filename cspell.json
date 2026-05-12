@@ -1,0 +1,25 @@
+{
+  "version": "0.2",
+  "words": [
+    "italo",
+    "lombardi",
+    "HACS",
+    "homeassistant",
+    "aiohttp",
+    "voluptuous",
+    "automations",
+    "lovelace",
+    "haversine",
+    "diverging",
+    "stationary",
+    "debounce",
+    "debouncer",
+    "staleness",
+    "hysteresis",
+    "coords",
+    "unsub",
+    "kmh",
+    "gps",
+    "eta"
+  ]
+}

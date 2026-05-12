@@ -1,0 +1,117 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Par de entidades",
+        "description": "Selecione duas entidades para rastrear a distância entre elas.",
+        "data": {
+          "entity_a": "Primeira entidade",
+          "entity_b": "Segunda entidade"
+        }
+      },
+      "thresholds": {
+        "title": "Configurações de proximidade",
+        "description": "Configure os limiares de proximidade e o debounce.",
+        "data": {
+          "entry_threshold_m": "Limiar de entrada (m)",
+          "exit_threshold_m": "Limiar de saída (m)",
+          "debounce_s": "Debounce (s)"
+        },
+        "data_description": {
+          "entry_threshold_m": "Distância na qual as entidades são consideradas em proximidade.",
+          "exit_threshold_m": "Distância na qual as entidades não são mais consideradas em proximidade. Deve ser >= limiar de entrada.",
+          "debounce_s": "Segundos de espera antes de processar uma atualização de localização. Reduz ruído de mudanças rápidas de GPS."
+        }
+      },
+      "advanced": {
+        "title": "Filtros avançados",
+        "description": "Filtros opcionais para rejeitar atualizações de localização não confiáveis.",
+        "data": {
+          "max_accuracy_m": "Precisão GPS máx. (m, 0 = desativado)",
+          "max_speed_kmh": "Velocidade implícita máx. (km/h, 0 = desativado)",
+          "require_reliable": "Exigir dados confiáveis para eventos de proximidade",
+          "min_updates_reliable": "Atualizações mínimas para dados confiáveis"
+        },
+        "data_description": {
+          "max_accuracy_m": "Rejeitar atualizações de localização com precisão GPS pior que este valor. Defina como 0 para desativar.",
+          "max_speed_kmh": "Rejeitar atualizações onde a velocidade de movimento implícita excede este valor. Defina como 0 para desativar.",
+          "require_reliable": "Disparar evento proximity_enter apenas quando os dados forem considerados confiáveis.",
+          "min_updates_reliable": "Número mínimo de atualizações de localização na janela antes de os dados serem considerados confiáveis."
+        }
+      }
+    },
+    "error": {
+      "same_entity": "A entidade A e a entidade B devem ser diferentes.",
+      "exit_below_entry": "O limiar de saída deve ser maior ou igual ao limiar de entrada."
+    },
+    "abort": {
+      "already_configured": "Este par de entidades já está configurado."
+    }
+  },
+  "options": {
+    "step": {
+      "thresholds": {
+        "title": "Configurações de proximidade",
+        "data": {
+          "entry_threshold_m": "Limiar de entrada (m)",
+          "exit_threshold_m": "Limiar de saída (m)",
+          "debounce_s": "Debounce (s)"
+        }
+      },
+      "advanced": {
+        "title": "Filtros avançados",
+        "data": {
+          "max_accuracy_m": "Precisão GPS máx. (m, 0 = desativado)",
+          "max_speed_kmh": "Velocidade implícita máx. (km/h, 0 = desativado)",
+          "require_reliable": "Exigir dados confiáveis para eventos de proximidade",
+          "min_updates_reliable": "Atualizações mínimas para dados confiáveis"
+        }
+      }
+    },
+    "error": {
+      "exit_below_entry": "O limiar de saída deve ser maior ou igual ao limiar de entrada."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "distance": { "name": "Distância" },
+      "bucket": {
+        "name": "Zona de proximidade",
+        "state": {
+          "very_near": "Muito perto",
+          "near": "Perto",
+          "mid": "Médio",
+          "far": "Longe",
+          "very_far": "Muito longe"
+        }
+      },
+      "proximity_duration": { "name": "Duração de proximidade" },
+      "last_seen_together": { "name": "Visto juntos pela última vez" },
+      "today_proximity_time": { "name": "Tempo de proximidade hoje" },
+      "direction": {
+        "name": "Direção",
+        "state": {
+          "approaching": "Aproximando",
+          "diverging": "Afastando",
+          "stationary": "Estacionário"
+        }
+      },
+      "closing_speed": { "name": "Velocidade de aproximação" },
+      "eta": { "name": "ETA" },
+      "gps_accuracy_a": { "name": "Precisão GPS (A)" },
+      "gps_accuracy_b": { "name": "Precisão GPS (B)" },
+      "last_update_a": { "name": "Última atualização (A)" },
+      "last_update_b": { "name": "Última atualização (B)" },
+      "update_frequency_a": { "name": "Frequência de atualização (A)" },
+      "update_frequency_b": { "name": "Frequência de atualização (B)" },
+      "data_staleness_a": { "name": "Atualidade dos dados (A)" },
+      "data_staleness_b": { "name": "Atualidade dos dados (B)" }
+    },
+    "binary_sensor": {
+      "proximity": { "name": "Em proximidade" }
+    },
+    "button": {
+      "refresh": { "name": "Atualizar localização" }
+    }
+  }
+}

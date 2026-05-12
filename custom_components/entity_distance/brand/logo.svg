@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 300" width="900" height="300">
+  <!-- Background -->
+  <rect width="900" height="300" rx="24" fill="#1a1a2e"/>
+
+  <!-- Left pin -->
+  <g transform="translate(60, 60)">
+    <path d="M56 0C25.1 0 0 25.1 0 56c0 39.2 56 104 56 104S112 95.2 112 56C112 25.1 86.9 0 56 0z" fill="#41BDF5"/>
+    <circle cx="56" cy="56" r="22" fill="#1a1a2e"/>
+  </g>
+
+  <!-- Right pin -->
+  <g transform="translate(210, 60)">
+    <path d="M56 0C25.1 0 0 25.1 0 56c0 39.2 56 104 56 104S112 95.2 112 56C112 25.1 86.9 0 56 0z" fill="#41BDF5" opacity="0.75"/>
+    <circle cx="56" cy="56" r="22" fill="#1a1a2e"/>
+  </g>
+
+  <!-- Dashed distance line -->
+  <line x1="172" y1="116" x2="196" y2="116" stroke="#41BDF5" stroke-width="5" stroke-linecap="round"/>
+  <line x1="206" y1="116" x2="230" y2="116" stroke="#41BDF5" stroke-width="5" stroke-linecap="round" opacity="0.8"/>
+
+  <!-- Arrow left -->
+  <polygon points="162,116 178,108 178,124" fill="#41BDF5"/>
+  <!-- Arrow right -->
+  <polygon points="242,116 226,108 226,124" fill="#41BDF5" opacity="0.75"/>
+
+  <!-- Divider -->
+  <line x1="340" y1="40" x2="340" y2="260" stroke="#41BDF5" stroke-width="2" opacity="0.3"/>
+
+  <!-- Title -->
+  <text x="390" y="140" font-family="sans-serif" font-size="72" font-weight="bold" fill="#41BDF5" dominant-baseline="middle" letter-spacing="2">Entity</text>
+  <text x="390" y="210" font-family="sans-serif" font-size="72" font-weight="bold" fill="#ffffff" dominant-baseline="middle" letter-spacing="2">Distance</text>
+
+  <!-- Subtitle -->
+  <text x="392" y="260" font-family="sans-serif" font-size="22" fill="#41BDF5" opacity="0.7" dominant-baseline="middle" letter-spacing="1">Home Assistant Integration</text>
+</svg>

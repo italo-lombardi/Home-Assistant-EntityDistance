@@ -1,0 +1,117 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Para encji",
+        "description": "Wybierz dwie encje do śledzenia odległości między nimi.",
+        "data": {
+          "entity_a": "Pierwsza encja",
+          "entity_b": "Druga encja"
+        }
+      },
+      "thresholds": {
+        "title": "Ustawienia bliskości",
+        "description": "Skonfiguruj progi bliskości i debounce.",
+        "data": {
+          "entry_threshold_m": "Próg wejścia (m)",
+          "exit_threshold_m": "Próg wyjścia (m)",
+          "debounce_s": "Debounce (s)"
+        },
+        "data_description": {
+          "entry_threshold_m": "Odległość, przy której encje są uznawane za bliskie.",
+          "exit_threshold_m": "Odległość, przy której encje nie są już uznawane za bliskie. Musi być >= próg wejścia.",
+          "debounce_s": "Sekundy oczekiwania przed przetworzeniem aktualizacji lokalizacji. Zmniejsza szum z szybkich zmian GPS."
+        }
+      },
+      "advanced": {
+        "title": "Zaawansowane filtry",
+        "description": "Opcjonalne filtry do odrzucania zawodnych aktualizacji lokalizacji.",
+        "data": {
+          "max_accuracy_m": "Maks. dokładność GPS (m, 0 = wyłączone)",
+          "max_speed_kmh": "Maks. implikowana prędkość (km/h, 0 = wyłączone)",
+          "require_reliable": "Wymagaj wiarygodnych danych dla zdarzeń bliskości",
+          "min_updates_reliable": "Min. aktualizacje dla wiarygodnych danych"
+        },
+        "data_description": {
+          "max_accuracy_m": "Odrzucaj aktualizacje lokalizacji z dokładnością GPS gorszą niż ta wartość. Ustaw na 0, aby wyłączyć.",
+          "max_speed_kmh": "Odrzucaj aktualizacje, gdzie implikowana prędkość ruchu przekracza tę wartość. Ustaw na 0, aby wyłączyć.",
+          "require_reliable": "Wyzwalaj zdarzenie proximity_enter tylko gdy dane są uznawane za wiarygodne.",
+          "min_updates_reliable": "Minimalna liczba aktualizacji lokalizacji w oknie przed uznaniem danych za wiarygodne."
+        }
+      }
+    },
+    "error": {
+      "same_entity": "Encja A i encja B muszą być różne.",
+      "exit_below_entry": "Próg wyjścia musi być większy lub równy progowi wejścia."
+    },
+    "abort": {
+      "already_configured": "Ta para encji jest już skonfigurowana."
+    }
+  },
+  "options": {
+    "step": {
+      "thresholds": {
+        "title": "Ustawienia bliskości",
+        "data": {
+          "entry_threshold_m": "Próg wejścia (m)",
+          "exit_threshold_m": "Próg wyjścia (m)",
+          "debounce_s": "Debounce (s)"
+        }
+      },
+      "advanced": {
+        "title": "Zaawansowane filtry",
+        "data": {
+          "max_accuracy_m": "Maks. dokładność GPS (m, 0 = wyłączone)",
+          "max_speed_kmh": "Maks. implikowana prędkość (km/h, 0 = wyłączone)",
+          "require_reliable": "Wymagaj wiarygodnych danych dla zdarzeń bliskości",
+          "min_updates_reliable": "Min. aktualizacje dla wiarygodnych danych"
+        }
+      }
+    },
+    "error": {
+      "exit_below_entry": "Próg wyjścia musi być większy lub równy progowi wejścia."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "distance": { "name": "Odległość" },
+      "bucket": {
+        "name": "Strefa bliskości",
+        "state": {
+          "very_near": "Bardzo blisko",
+          "near": "Blisko",
+          "mid": "Średnio",
+          "far": "Daleko",
+          "very_far": "Bardzo daleko"
+        }
+      },
+      "proximity_duration": { "name": "Czas bliskości" },
+      "last_seen_together": { "name": "Ostatnio widziani razem" },
+      "today_proximity_time": { "name": "Czas bliskości dziś" },
+      "direction": {
+        "name": "Kierunek",
+        "state": {
+          "approaching": "Zbliżający się",
+          "diverging": "Oddalający się",
+          "stationary": "Stacjonarny"
+        }
+      },
+      "closing_speed": { "name": "Prędkość zbliżania" },
+      "eta": { "name": "ETA" },
+      "gps_accuracy_a": { "name": "Dokładność GPS (A)" },
+      "gps_accuracy_b": { "name": "Dokładność GPS (B)" },
+      "last_update_a": { "name": "Ostatnia aktualizacja (A)" },
+      "last_update_b": { "name": "Ostatnia aktualizacja (B)" },
+      "update_frequency_a": { "name": "Częstotliwość aktualizacji (A)" },
+      "update_frequency_b": { "name": "Częstotliwość aktualizacji (B)" },
+      "data_staleness_a": { "name": "Aktualność danych (A)" },
+      "data_staleness_b": { "name": "Aktualność danych (B)" }
+    },
+    "binary_sensor": {
+      "proximity": { "name": "W pobliżu" }
+    },
+    "button": {
+      "refresh": { "name": "Odśwież lokalizację" }
+    }
+  }
+}

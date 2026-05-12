@@ -1,0 +1,117 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Entiteitenpaar",
+        "description": "Selecteer twee entiteiten om de afstand tussen te volgen.",
+        "data": {
+          "entity_a": "Eerste entiteit",
+          "entity_b": "Tweede entiteit"
+        }
+      },
+      "thresholds": {
+        "title": "Nabijheidsinstellingen",
+        "description": "Configureer nabijheidsdrempels en debounce.",
+        "data": {
+          "entry_threshold_m": "Ingangsdrempel (m)",
+          "exit_threshold_m": "Uitgangsdrempel (m)",
+          "debounce_s": "Debounce (s)"
+        },
+        "data_description": {
+          "entry_threshold_m": "Afstand waarbij entiteiten als nabij worden beschouwd.",
+          "exit_threshold_m": "Afstand waarbij entiteiten niet meer als nabij worden beschouwd. Moet >= ingangsdrempel zijn.",
+          "debounce_s": "Seconden te wachten voor het verwerken van een locatie-update. Vermindert ruis van snelle GPS-wijzigingen."
+        }
+      },
+      "advanced": {
+        "title": "Geavanceerde filters",
+        "description": "Optionele filters om onbetrouwbare locatie-updates te weigeren.",
+        "data": {
+          "max_accuracy_m": "Max. GPS-nauwkeurigheid (m, 0 = uitgeschakeld)",
+          "max_speed_kmh": "Max. impliciete snelheid (km/h, 0 = uitgeschakeld)",
+          "require_reliable": "Betrouwbare gegevens vereisen voor nabijheidsgebeurtenissen",
+          "min_updates_reliable": "Min. updates voor betrouwbare gegevens"
+        },
+        "data_description": {
+          "max_accuracy_m": "Locatie-updates weigeren met GPS-nauwkeurigheid slechter dan deze waarde. Stel in op 0 om uit te schakelen.",
+          "max_speed_kmh": "Updates weigeren waarbij de impliciete bewegingssnelheid deze waarde overschrijdt. Stel in op 0 om uit te schakelen.",
+          "require_reliable": "Alleen proximity_enter-gebeurtenis activeren wanneer gegevens als betrouwbaar worden beschouwd.",
+          "min_updates_reliable": "Minimum aantal locatie-updates in het venster voordat gegevens als betrouwbaar worden beschouwd."
+        }
+      }
+    },
+    "error": {
+      "same_entity": "Entiteit A en entiteit B moeten verschillend zijn.",
+      "exit_below_entry": "Uitgangsdrempel moet groter dan of gelijk aan de ingangsdrempel zijn."
+    },
+    "abort": {
+      "already_configured": "Dit entiteitenpaar is al geconfigureerd."
+    }
+  },
+  "options": {
+    "step": {
+      "thresholds": {
+        "title": "Nabijheidsinstellingen",
+        "data": {
+          "entry_threshold_m": "Ingangsdrempel (m)",
+          "exit_threshold_m": "Uitgangsdrempel (m)",
+          "debounce_s": "Debounce (s)"
+        }
+      },
+      "advanced": {
+        "title": "Geavanceerde filters",
+        "data": {
+          "max_accuracy_m": "Max. GPS-nauwkeurigheid (m, 0 = uitgeschakeld)",
+          "max_speed_kmh": "Max. impliciete snelheid (km/h, 0 = uitgeschakeld)",
+          "require_reliable": "Betrouwbare gegevens vereisen voor nabijheidsgebeurtenissen",
+          "min_updates_reliable": "Min. updates voor betrouwbare gegevens"
+        }
+      }
+    },
+    "error": {
+      "exit_below_entry": "Uitgangsdrempel moet groter dan of gelijk aan de ingangsdrempel zijn."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "distance": { "name": "Afstand" },
+      "bucket": {
+        "name": "Nabijheidszone",
+        "state": {
+          "very_near": "Zeer dichtbij",
+          "near": "Dichtbij",
+          "mid": "Gemiddeld",
+          "far": "Ver",
+          "very_far": "Zeer ver"
+        }
+      },
+      "proximity_duration": { "name": "Nabijheidsduur" },
+      "last_seen_together": { "name": "Laatst samen gezien" },
+      "today_proximity_time": { "name": "Nabijheidstijd vandaag" },
+      "direction": {
+        "name": "Richting",
+        "state": {
+          "approaching": "Naderend",
+          "diverging": "Verwijderend",
+          "stationary": "Stilstaand"
+        }
+      },
+      "closing_speed": { "name": "Sluitingssnelheid" },
+      "eta": { "name": "ETA" },
+      "gps_accuracy_a": { "name": "GPS-nauwkeurigheid (A)" },
+      "gps_accuracy_b": { "name": "GPS-nauwkeurigheid (B)" },
+      "last_update_a": { "name": "Laatste update (A)" },
+      "last_update_b": { "name": "Laatste update (B)" },
+      "update_frequency_a": { "name": "Updatefrequentie (A)" },
+      "update_frequency_b": { "name": "Updatefrequentie (B)" },
+      "data_staleness_a": { "name": "Gegevensversheid (A)" },
+      "data_staleness_b": { "name": "Gegevensversheid (B)" }
+    },
+    "binary_sensor": {
+      "proximity": { "name": "In de buurt" }
+    },
+    "button": {
+      "refresh": { "name": "Locatie vernieuwen" }
+    }
+  }
+}

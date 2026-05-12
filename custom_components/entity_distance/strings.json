@@ -1,0 +1,139 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Entity Pair",
+        "description": "Choose the two entities whose distance you want to track. Supported types: person, device tracker, sensor, or zone.",
+        "data": {
+          "entity_a": "First entity",
+          "entity_b": "Second entity"
+        },
+        "data_description": {
+          "entity_a": "The first entity to track. Can be a person, device tracker, sensor, or zone.",
+          "entity_b": "The second entity to track. Must be different from the first."
+        }
+      },
+      "thresholds": {
+        "title": "Proximity Settings",
+        "description": "Set how close the entities need to be to count as 'nearby', how far apart before they're no longer nearby, and how long to wait between updates.",
+        "data": {
+          "entry_threshold_m": "Nearby distance (m)",
+          "exit_threshold_m": "Away distance (m)",
+          "debounce_s": "Update delay (s)",
+          "show_advanced": "Configure advanced filters"
+        },
+        "data_description": {
+          "entry_threshold_m": "How close (in meters) the entities must be to trigger a 'nearby' event. Example: 200 m is roughly 2 city blocks.",
+          "exit_threshold_m": "How far apart the entities must move before they're no longer considered nearby. Set this higher than the nearby distance to avoid rapid on/off switching. Example: 500 m means they need to move 300 m further than the entry point.",
+          "debounce_s": "How many seconds to wait before acting on a new location update. This smooths out GPS jitter — phones often send several noisy updates in a row. 10 s works well for most phones.",
+          "show_advanced": "Turn on to configure GPS accuracy, speed, and reliability filters on the next screen. Leave off to use sensible defaults."
+        }
+      },
+      "advanced": {
+        "title": "Advanced Filters",
+        "description": "These filters help ignore bad GPS data. The defaults work well for most users — only change these if you're seeing false triggers.",
+        "data": {
+          "max_accuracy_m": "Max GPS inaccuracy (m, 0 = off)",
+          "max_speed_kmh": "Max speed filter (km/h, 0 = off)",
+          "require_reliable": "Only trigger when data is reliable",
+          "min_updates_reliable": "Updates needed to be reliable"
+        },
+        "data_description": {
+          "max_accuracy_m": "Ignore location updates where the GPS error is larger than this. Example: set to 100 m to skip any fix where the device could be anywhere within a 100 m radius. A phone showing '150 m accuracy' would be skipped. Set to 0 to turn this off.",
+          "max_speed_kmh": "Ignore updates that imply the device moved faster than this since the last fix. Useful to filter out GPS jumps (e.g. a phone suddenly appearing 50 km away). 1000 km/h allows flights but blocks impossible teleports. Set to 0 to turn this off.",
+          "require_reliable": "When on, 'nearby' events only fire once the location data has been consistent for several updates in a row. Reduces false positives caused by a single bad GPS fix. Note: if updates are infrequent (e.g. every 3 min), this can add several minutes of delay.",
+          "min_updates_reliable": "How many updates in a row are needed before the location is considered reliable. Only applies when 'Only trigger when data is reliable' is on. Example: 3 updates at 3-minute intervals = up to 9 minutes before a nearby event can fire."
+        }
+      }
+    },
+    "error": {
+      "same_entity": "The two entities must be different.",
+      "exit_below_entry": "Away distance must be greater than or equal to nearby distance."
+    },
+    "abort": {
+      "already_configured": "This entity pair is already configured.",
+      "already_in_progress": "Setup is already in progress. Close and reopen the dialog to start over."
+    }
+  },
+  "options": {
+    "step": {
+      "thresholds": {
+        "title": "Proximity Settings",
+        "description": "Set how close the entities need to be to count as 'nearby', how far apart before they're no longer nearby, and how long to wait between updates.",
+        "data": {
+          "entry_threshold_m": "Nearby distance (m)",
+          "exit_threshold_m": "Away distance (m)",
+          "debounce_s": "Update delay (s)",
+          "show_advanced": "Configure advanced filters"
+        },
+        "data_description": {
+          "entry_threshold_m": "How close (in meters) the entities must be to trigger a 'nearby' event. Example: 200 m is roughly 2 city blocks.",
+          "exit_threshold_m": "How far apart the entities must move before they're no longer considered nearby. Set this higher than the nearby distance to avoid rapid on/off switching. Example: 500 m means they need to move 300 m further than the entry point.",
+          "debounce_s": "How many seconds to wait before acting on a new location update. This smooths out GPS jitter — phones often send several noisy updates in a row. 10 s works well for most phones.",
+          "show_advanced": "Turn on to configure GPS accuracy, speed, and reliability filters on the next screen. Leave off to use sensible defaults."
+        }
+      },
+      "advanced": {
+        "title": "Advanced Filters",
+        "description": "These filters help ignore bad GPS data. The defaults work well for most users — only change these if you're seeing false triggers.",
+        "data": {
+          "max_accuracy_m": "Max GPS inaccuracy (m, 0 = off)",
+          "max_speed_kmh": "Max speed filter (km/h, 0 = off)",
+          "require_reliable": "Only trigger when data is reliable",
+          "min_updates_reliable": "Updates needed to be reliable"
+        },
+        "data_description": {
+          "max_accuracy_m": "Ignore location updates where the GPS error is larger than this. Example: set to 100 m to skip any fix where the device could be anywhere within a 100 m radius. A phone showing '150 m accuracy' would be skipped. Set to 0 to turn this off.",
+          "max_speed_kmh": "Ignore updates that imply the device moved faster than this since the last fix. Useful to filter out GPS jumps (e.g. a phone suddenly appearing 50 km away). 1000 km/h allows flights but blocks impossible teleports. Set to 0 to turn this off.",
+          "require_reliable": "When on, 'nearby' events only fire once the location data has been consistent for several updates in a row. Reduces false positives caused by a single bad GPS fix. Note: if updates are infrequent (e.g. every 3 min), this can add several minutes of delay.",
+          "min_updates_reliable": "How many updates in a row are needed before the location is considered reliable. Only applies when 'Only trigger when data is reliable' is on. Example: 3 updates at 3-minute intervals = up to 9 minutes before a nearby event can fire."
+        }
+      }
+    },
+    "error": {
+      "exit_below_entry": "Away distance must be greater than or equal to nearby distance."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "distance": { "name": "Distance" },
+      "bucket": {
+        "name": "Proximity Zone",
+        "state": {
+          "very_near": "Very Near",
+          "near": "Near",
+          "mid": "Mid",
+          "far": "Far",
+          "very_far": "Very Far"
+        }
+      },
+      "proximity_duration": { "name": "Proximity Duration" },
+      "last_seen_together": { "name": "Last Seen Together" },
+      "today_proximity_time": { "name": "Today Proximity Time" },
+      "direction": {
+        "name": "Direction",
+        "state": {
+          "approaching": "Approaching",
+          "diverging": "Diverging",
+          "stationary": "Stationary"
+        }
+      },
+      "closing_speed": { "name": "Closing Speed" },
+      "eta": { "name": "ETA" },
+      "gps_accuracy_a": { "name": "GPS Accuracy (A)" },
+      "gps_accuracy_b": { "name": "GPS Accuracy (B)" },
+      "last_update_a": { "name": "Last Update (A)" },
+      "last_update_b": { "name": "Last Update (B)" },
+      "update_frequency_a": { "name": "Update Frequency (A)" },
+      "update_frequency_b": { "name": "Update Frequency (B)" },
+      "data_staleness_a": { "name": "Data Staleness (A)" },
+      "data_staleness_b": { "name": "Data Staleness (B)" }
+    },
+    "binary_sensor": {
+      "proximity": { "name": "In Proximity" }
+    },
+    "button": {
+      "refresh": { "name": "Refresh Location" }
+    }
+  }
+}

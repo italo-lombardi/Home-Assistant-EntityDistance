@@ -1,0 +1,117 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Enhedspar",
+        "description": "Vælg to enheder til at spore afstand mellem.",
+        "data": {
+          "entity_a": "Første enhed",
+          "entity_b": "Anden enhed"
+        }
+      },
+      "thresholds": {
+        "title": "Nærhedsindstillinger",
+        "description": "Konfigurer nærhedstærskler og debounce.",
+        "data": {
+          "entry_threshold_m": "Indgangstærskel (m)",
+          "exit_threshold_m": "Udgangstærskel (m)",
+          "debounce_s": "Debounce (s)"
+        },
+        "data_description": {
+          "entry_threshold_m": "Afstand ved hvilken enheder betragtes som nære.",
+          "exit_threshold_m": "Afstand ved hvilken enheder betragtes som ikke-nære. Skal være >= indgangstærskel.",
+          "debounce_s": "Sekunder at vente før en lokationsopdatering behandles. Reducerer støj fra hurtige GPS-ændringer."
+        }
+      },
+      "advanced": {
+        "title": "Avancerede filtre",
+        "description": "Valgfrie filtre til at afvise upålidelige lokationsopdateringer.",
+        "data": {
+          "max_accuracy_m": "Maks. GPS-nøjagtighed (m, 0 = deaktiveret)",
+          "max_speed_kmh": "Maks. underforstået hastighed (km/h, 0 = deaktiveret)",
+          "require_reliable": "Kræv pålidelige data til nærhedsbegivenheder",
+          "min_updates_reliable": "Min. opdateringer for pålidelige data"
+        },
+        "data_description": {
+          "max_accuracy_m": "Afvis lokationsopdateringer med GPS-nøjagtighed dårligere end denne værdi. Sæt til 0 for at deaktivere.",
+          "max_speed_kmh": "Afvis opdateringer, hvor underforstået bevægelseshastighed overstiger denne værdi. Sæt til 0 for at deaktivere.",
+          "require_reliable": "Afskyd kun proximity_enter-begivenhed, når data anses for pålidelige.",
+          "min_updates_reliable": "Mindste antal lokationsopdateringer i vinduet, før data anses for pålidelige."
+        }
+      }
+    },
+    "error": {
+      "same_entity": "Enhed A og enhed B skal være forskellige.",
+      "exit_below_entry": "Udgangstærskel skal være større end eller lig med indgangstærskel."
+    },
+    "abort": {
+      "already_configured": "Dette enhedspar er allerede konfigureret."
+    }
+  },
+  "options": {
+    "step": {
+      "thresholds": {
+        "title": "Nærhedsindstillinger",
+        "data": {
+          "entry_threshold_m": "Indgangstærskel (m)",
+          "exit_threshold_m": "Udgangstærskel (m)",
+          "debounce_s": "Debounce (s)"
+        }
+      },
+      "advanced": {
+        "title": "Avancerede filtre",
+        "data": {
+          "max_accuracy_m": "Maks. GPS-nøjagtighed (m, 0 = deaktiveret)",
+          "max_speed_kmh": "Maks. underforstået hastighed (km/h, 0 = deaktiveret)",
+          "require_reliable": "Kræv pålidelige data til nærhedsbegivenheder",
+          "min_updates_reliable": "Min. opdateringer for pålidelige data"
+        }
+      }
+    },
+    "error": {
+      "exit_below_entry": "Udgangstærskel skal være større end eller lig med indgangstærskel."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "distance": { "name": "Afstand" },
+      "bucket": {
+        "name": "Nærhedszone",
+        "state": {
+          "very_near": "Meget nær",
+          "near": "Nær",
+          "mid": "Middel",
+          "far": "Langt",
+          "very_far": "Meget langt"
+        }
+      },
+      "proximity_duration": { "name": "Nærhedsvarighed" },
+      "last_seen_together": { "name": "Sidst set sammen" },
+      "today_proximity_time": { "name": "Nærhedstid i dag" },
+      "direction": {
+        "name": "Retning",
+        "state": {
+          "approaching": "Nærmer sig",
+          "diverging": "Fjerner sig",
+          "stationary": "Stationær"
+        }
+      },
+      "closing_speed": { "name": "Lukkehastighed" },
+      "eta": { "name": "ETA" },
+      "gps_accuracy_a": { "name": "GPS-nøjagtighed (A)" },
+      "gps_accuracy_b": { "name": "GPS-nøjagtighed (B)" },
+      "last_update_a": { "name": "Seneste opdatering (A)" },
+      "last_update_b": { "name": "Seneste opdatering (B)" },
+      "update_frequency_a": { "name": "Opdateringsfrekvens (A)" },
+      "update_frequency_b": { "name": "Opdateringsfrekvens (B)" },
+      "data_staleness_a": { "name": "Dataforfald (A)" },
+      "data_staleness_b": { "name": "Dataforfald (B)" }
+    },
+    "binary_sensor": {
+      "proximity": { "name": "I nærheden" }
+    },
+    "button": {
+      "refresh": { "name": "Opdater lokation" }
+    }
+  }
+}

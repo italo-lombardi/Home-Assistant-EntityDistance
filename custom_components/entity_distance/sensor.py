@@ -131,10 +131,19 @@ class DistanceSensor(EntityDistanceSensorBase):
 
     def __init__(self, coordinator, entry, a_name, b_name):
         super().__init__(coordinator, entry, a_name, b_name, "distance")
+        self._entity_a_id: str = entry.data["entity_a"]
+        self._entity_b_id: str = entry.data["entity_b"]
 
     @property
     def native_value(self) -> float | None:
         return self._pair.distance_m
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        return {
+            "entity_a": self._entity_a_id,
+            "entity_b": self._entity_b_id,
+        }
 
 
 class BucketSensor(EntityDistanceSensorBase):

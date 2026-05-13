@@ -234,6 +234,22 @@ Hysteresis logic prevents flickering:
 - **OFF** when `distance > exit threshold` (default 500 m)
 - State unchanged while distance is between the two thresholds
 
+### State (Entity A / B)
+
+Direct mirror of `hass.states[entity_id].state`. Returns whatever HA reports — `home`, `not_home`, a zone name, `unavailable`, etc. No computation; read-only.
+
+### Today Unaccounted Time
+
+```
+gap_minutes = min(now, today_midnight) − prev_calc_time / 60
+```
+
+Measures how many minutes of today have no distance data — typically caused by HA restart or both entities going silent. Resets naturally when a new calculation runs. `None` until the first calculation fires.
+
+### Live Updates
+
+All sensors refresh on a 1-minute timer tick even when entities don't move. This keeps duration and gap sensors accurate between GPS updates. Entity state changes also trigger an immediate recalculate (debounced by the configured delay).
+
 ---
 
 ## Events

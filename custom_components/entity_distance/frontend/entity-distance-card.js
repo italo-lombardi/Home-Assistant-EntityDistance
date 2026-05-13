@@ -3,7 +3,7 @@
  * Lovelace custom card for the Entity Distance integration.
  */
 
-const CARD_VERSION = "0.2.0";
+const CARD_VERSION = "0.1.0";
 
 console.info(
   `%c ENTITY-DISTANCE-CARD %c v${CARD_VERSION} %c`,
@@ -413,6 +413,11 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         id.startsWith(`${p}_last_update_`) ||
         id.startsWith(`${p}_update_count_`)
       );
+      const distState = this.hass?.states[`${p}_distance`];
+      const entityA = distState?.attributes?.entity_a;
+      const entityB = distState?.attributes?.entity_b;
+      if (entityA) base.push(entityA);
+      if (entityB) base.push(entityB);
       return [...base, ...dynamic];
     }
 

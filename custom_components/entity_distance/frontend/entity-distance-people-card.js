@@ -425,13 +425,16 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       const p = `sensor.entity_distance_${slug}`;
       const ids = [
         `binary_sensor.entity_distance_${slug}_in_proximity`,
-        `${p}_distance`, `${p}_direction`, `${p}_bucket`,
+        `${p}_distance`, `${p}_direction`, `${p}_proximity_zone`,
         `${p}_closing_speed`, `${p}_eta`,
         `${p}_proximity_duration`, `${p}_today_proximity_time`,
         `${p}_last_seen_together`,
       ];
-      if (this._config?.entity_a) ids.push(this._config.entity_a);
-      if (this._config?.entity_b) ids.push(this._config.entity_b);
+      const distState = this.hass?.states[`${p}_distance`];
+      const entityA = this._config?.entity_a || distState?.attributes?.entity_a;
+      const entityB = this._config?.entity_b || distState?.attributes?.entity_b;
+      if (entityA) ids.push(entityA);
+      if (entityB) ids.push(entityB);
       return ids;
     }
 

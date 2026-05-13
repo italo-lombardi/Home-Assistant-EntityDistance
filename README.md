@@ -15,7 +15,7 @@ Track the distance between any two entities — people, devices, or zones — wi
 ## Features
 
 - **Person-to-person, person-to-zone, device-to-zone, zone-to-zone** — any combination of `person`, `device_tracker`, `sensor`, or `zone` entities
-- **22 sensors per pair** — distance, proximity zone, proximity zone level, proximity duration, last seen together, today proximity time, direction, direction level, closing speed, ETA, today zone times, GPS accuracy, last update, update count (per entity)
+- **24 sensors per pair** — distance, proximity zone, proximity zone level, proximity duration, last seen together, today proximity time, direction, direction level, closing speed, ETA, today zone times, GPS accuracy, last update, update count, entity state, today unaccounted time (per entity where applicable)
 - **Proximity binary sensor** — ON/OFF with configurable entry/exit hysteresis to prevent flickering
 - **Direction of travel** — approaching, diverging, or stationary
 - **ETA** — estimated minutes until together, only when approaching
@@ -31,6 +31,8 @@ Track the distance between any two entities — people, devices, or zones — wi
 - **Refresh button** — force immediate mobile app location update
 - **Multiple pairs** — each pair gets its own HA device; add as many as needed
 - **Vincenty distance** — uses HA's built-in ellipsoidal distance calculation, more accurate than Haversine
+- **Live sensor updates** — all sensors refresh every minute even when entities don't move; duration and gap sensors stay accurate
+- **State persistence** — today proximity time, zone times, and proximity duration survive HA restarts
 
 ---
 
@@ -111,7 +113,7 @@ All settings can be changed after setup via **Configure** on the integration car
 
 ## Entities
 
-Each configured pair creates one HA device with 22 entities.
+Each configured pair creates one HA device with 25 entities.
 
 ### Sensors
 
@@ -138,6 +140,9 @@ Each configured pair creates one HA device with 22 entities.
 | Last Update (Name B) | Timestamp of last location change for entity B | `timestamp` |
 | Update Count (Name A) | Location updates in the last 30 minutes for entity A | — |
 | Update Count (Name B) | Location updates in the last 30 minutes for entity B | — |
+| State (Name A) | Current state of entity A (e.g. home, away, zone name) | — |
+| State (Name B) | Current state of entity B (e.g. home, away, zone name) | — |
+| Today Unaccounted Time | Minutes since last successful calculation, capped at midnight | `duration` |
 
 > GPS Accuracy, Last Update, and Update Count are diagnostic sensors — collapsed by default in the HA UI.
 
@@ -172,6 +177,62 @@ Default thresholds (configurable via **Configure** → **Configure proximity zon
 The **Proximity Zone Level** sensor exposes the same information as a number (1–5), useful for automations that compare or threshold on zone level without working with strings.
 
 <!-- screenshot: zone thresholds config step -->
+
+---
+
+## Sensor Calculations
+
+How each computed sensor value is derived:
+
+### Distance
+
+Uses Home Assistant's built-in Vincenty formula (ellipsoidal earth model) on the `latitude` and `longitude` attributes of both entities. More accurate than Haversine for long distances.
+
+### Direction
+
+Requires at least two location updates. Compares current distance to previous distance:
+
+- `|Δdistance| < 50 m` → **Stationary**
+- `Δdistance < 0` → **Approaching**
+- `Δdistance > 0` → **Diverging**
+
+The 50 m stationary threshold is fixed and not configurable.
+
+### Approach Speed
+
+```
+closing_speed_km/h = |Δdistance_m / Δtime_s| × 3.6
+```
+
+Available on any update where two prior positions exist. Nonzero even when diverging — represents the rate of separation.
+
+### Estimated Arrival Time (ETA)
+
+```
+eta_minutes = current_distance_m / closing_speed_m/s / 60
+```
+
+**Only populated when direction is Approaching and closing speed > 0.** `None` on the first update, when stationary, or when diverging. Assumes constant speed — no traffic or route awareness.
+
+### Proximity Duration
+
+Accumulated seconds while `In Proximity` is ON. Each update adds `now − prev_calc_time` to the running total. The current open session is included live (not only closed sessions).
+
+### Today Proximity Time / Today Zone Times
+
+On each update, `elapsed = now − prev_calc_time` is added to the matching bucket. All today counters reset to zero at midnight local time.
+
+### Update Count (Last 30 min)
+
+Rolling window counter. Increments by 1 on each location update for that entity. Resets to 1 when the window (1800 s) has elapsed since it last reset.
+
+### In Proximity (Binary Sensor)
+
+Hysteresis logic prevents flickering:
+
+- **ON** when `distance ≤ entry threshold` (default 200 m)
+- **OFF** when `distance > exit threshold` (default 500 m)
+- State unchanged while distance is between the two thresholds
 
 ---
 

@@ -208,6 +208,15 @@
       },
       "update_count_b": {
         "name": "Update Count Last 30 min (B)"
+      },
+      "entity_state_a": {
+        "name": "State (A)"
+      },
+      "entity_state_b": {
+        "name": "State (B)"
+      },
+      "today_unaccounted_time": {
+        "name": "Today Unaccounted Time"
       }
     },
     "binary_sensor": {

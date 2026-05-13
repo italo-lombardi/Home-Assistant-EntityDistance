@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, date, timedelta
 import logging
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import HomeAssistant, State, callback
 from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.helpers.event import async_track_state_change_event, async_track_time_interval
+from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util.location import distance as ha_distance
 
@@ -163,12 +164,15 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
         )
         self._resync_holding: bool = False
         self._resync_hold_until: datetime | None = None
+        self._store: Store = Store(hass, 1, f"{DOMAIN}_state_{entry.entry_id}")
 
     @property
     def bucket_thresholds(self) -> dict[str, float]:
         return self._bucket_thresholds
 
     async def async_setup(self) -> None:
+        await self._async_load_state()
+
         self._debouncer = Debouncer(
             self.hass,
             _LOGGER,
@@ -183,7 +187,10 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
         unsub_b = async_track_state_change_event(
             self.hass, [self._entity_b], self._async_state_changed
         )
-        self._unsub_listeners = [unsub_a, unsub_b]
+        unsub_tick = async_track_time_interval(
+            self.hass, self._async_tick, timedelta(minutes=1)
+        )
+        self._unsub_listeners = [unsub_a, unsub_b, unsub_tick]
         _LOGGER.debug("entity_distance: tracking %s and %s", self._entity_a, self._entity_b)
 
     @callback
@@ -194,6 +201,11 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
         if self._debouncer:
             self._debouncer.async_cancel()
         _LOGGER.debug("entity_distance: unloaded coordinator for %s", self._entry.entry_id)
+
+    @callback
+    def _async_tick(self, _now: datetime) -> None:
+        if self._debouncer is not None:
+            self.hass.async_create_task(self._debouncer.async_call())
 
     @callback
     def _async_state_changed(self, event) -> None:
@@ -439,6 +451,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
             self.hass.bus.fire(EVENT_UPDATE, event_data)
 
         self.async_set_updated_data(PairData(pair=ps))
+        await self._async_save_state()
 
     def _update_frequency(self, count: int, window_start: datetime | None, now: datetime) -> int:
         if window_start is None:
@@ -456,3 +469,36 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
 
     async def _async_update_data(self) -> PairData:
         return PairData(pair=self._pair_state)
+
+    async def _async_save_state(self) -> None:
+        ps = self._pair_state
+        today = ps.today_reset_date
+        await self._store.async_save({
+            "today_reset_date": today.isoformat() if today else None,
+            "today_proximity_seconds": ps.today_proximity_seconds,
+            "today_zone_seconds": ps.today_zone_seconds,
+            "proximity_duration_s": ps.proximity_duration_s,
+            "last_seen_together": ps.last_seen_together.isoformat() if ps.last_seen_together else None,
+        })
+
+    async def _async_load_state(self) -> None:
+        stored = await self._store.async_load()
+        if not stored:
+            return
+        try:
+            stored_date_str = stored.get("today_reset_date")
+            if not stored_date_str:
+                return
+            stored_date = date.fromisoformat(stored_date_str)
+            today = datetime.now().astimezone().date()
+            ps = self._pair_state
+            if stored_date == today:
+                ps.today_proximity_seconds = float(stored.get("today_proximity_seconds", 0.0))
+                ps.today_zone_seconds = dict(stored.get("today_zone_seconds", {}))
+                ps.today_reset_date = stored_date
+            last_seen_str = stored.get("last_seen_together")
+            if last_seen_str:
+                ps.last_seen_together = datetime.fromisoformat(last_seen_str)
+            ps.proximity_duration_s = float(stored.get("proximity_duration_s", 0.0))
+        except Exception:
+            _LOGGER.warning("entity_distance: failed to restore persisted state, starting fresh")

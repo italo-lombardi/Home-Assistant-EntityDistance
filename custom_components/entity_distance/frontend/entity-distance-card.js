@@ -41,11 +41,11 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
 
   // ─── helpers ────────────────────────────────────────────────────────────────
 
-  function _slug(id) { return id.startsWith("binary_sensor.entity_distance_") ? id.replace("binary_sensor.entity_distance_", "").replace("_proximity", "") : null; }
+  function _slug(id) { return id.startsWith("sensor.entity_distance_") ? id.replace("sensor.entity_distance_", "").replace(/_distance$/, "") : null; }
 
   function _getPairs(hass) {
     return Object.keys(hass.states)
-      .filter(id => id.startsWith("binary_sensor.entity_distance_") && id.endsWith("_proximity"))
+      .filter(id => id.startsWith("sensor.entity_distance_") && id.endsWith("_distance"))
       .map(id => {
         const slug = _slug(id);
         const label = _pairLabel(hass, slug);
@@ -55,10 +55,12 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
   }
 
   function _pairLabel(hass, slug) {
-    const proxId = `binary_sensor.entity_distance_${slug}_proximity`;
-    const state = hass.states[proxId];
-    if (state?.attributes?.friendly_name) {
-      return state.attributes.friendly_name.replace(/^Entity Distance[^\w]*/i, "").replace(" — ", " & ") || slug;
+    const distState = hass.states[`sensor.entity_distance_${slug}_distance`];
+    if (distState?.attributes?.friendly_name) {
+      return distState.attributes.friendly_name
+        .replace(/^Entity Distance[^\w]*/i, "")
+        .replace(/\s*[-—]\s*Distance\s*$/i, "")
+        .replace(" — ", " & ") || slug;
     }
     return slug.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
   }
@@ -396,19 +398,22 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
 
     _watchIds(slug) {
       const p = `sensor.entity_distance_${slug}`;
-      return [
-        `binary_sensor.entity_distance_${slug}_proximity`,
-        `${p}_distance`, `${p}_direction`, `${p}_direction_level`, `${p}_bucket`,
+      const base = [
+        `binary_sensor.entity_distance_${slug}_in_proximity`,
+        `${p}_distance`, `${p}_direction`, `${p}_direction_level`, `${p}_proximity_zone`,
         `${p}_closing_speed`, `${p}_eta`,
         `${p}_proximity_duration`, `${p}_today_proximity_time`,
         `${p}_last_seen_together`,
-        `${p}_today_zone_time_very_near`, `${p}_today_zone_time_near`,
-        `${p}_today_zone_time_mid`, `${p}_today_zone_time_far`,
-        `${p}_today_zone_time_very_far`,
-        `${p}_gps_accuracy_a`, `${p}_gps_accuracy_b`,
-        `${p}_last_update_a`, `${p}_last_update_b`,
-        `${p}_update_count_a`, `${p}_update_count_b`,
+        `${p}_today_very_near_time`, `${p}_today_near_time`,
+        `${p}_today_medium_time`, `${p}_today_far_time`,
+        `${p}_today_very_far_time`,
       ];
+      const dynamic = Object.keys(this.hass?.states || {}).filter(id =>
+        id.startsWith(`${p}_gps_accuracy_`) ||
+        id.startsWith(`${p}_last_update_`) ||
+        id.startsWith(`${p}_update_count_`)
+      );
+      return [...base, ...dynamic];
     }
 
     render() {
@@ -419,7 +424,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         return html`<ha-card><div class="error-msg">No entity pair configured.</div></ha-card>`;
       }
 
-      const proxState = this.hass.states[`binary_sensor.entity_distance_${slug}_proximity`];
+      const proxState = this.hass.states[`binary_sensor.entity_distance_${slug}_in_proximity`];
       if (!proxState) {
         return html`<ha-card><div class="error-msg">Pair "${slug}" not found. Check integration is loaded.</div></ha-card>`;
       }
@@ -431,7 +436,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
 
       const distM = _num(this.hass, slug, "distance");
       const direction = _val(this.hass, slug, "direction");
-      const bucket = _val(this.hass, slug, "bucket");
+      const bucket = _val(this.hass, slug, "proximity_zone");
       const speedKmh = _num(this.hass, slug, "closing_speed");
       const etaMin = _num(this.hass, slug, "eta");
       const proxDurMin = _num(this.hass, slug, "proximity_duration");
@@ -514,7 +519,8 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
             <div class="zone-breakdown">
               <div class="zone-breakdown-title">Time by zone today</div>
               ${["very_near", "near", "mid", "far", "very_far"].map(z => {
-                const min = _num(this.hass, slug, `today_zone_time_${z}`);
+                const suffix = z === "mid" ? "today_medium_time" : `today_${z}_time`;
+                const min = _num(this.hass, slug, suffix);
                 if (min === null || min === 0) return nothing;
                 return html`
                   <div class="zone-row">
@@ -532,16 +538,13 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
               <div class="diag-title">Diagnostics</div>
               <div class="diag-grid">
                 ${c.show_gps_accuracy ? html`
-                  ${this._diagItem("GPS Accuracy A", `${_num(this.hass, slug, "gps_accuracy_a") ?? "—"} m`)}
-                  ${this._diagItem("GPS Accuracy B", `${_num(this.hass, slug, "gps_accuracy_b") ?? "—"} m`)}
+                  ${this._diagPair(slug, "gps_accuracy_", "m")}
                 ` : nothing}
                 ${c.show_last_update ? html`
-                  ${this._diagItem("Last Update A", _formatTs(_val(this.hass, slug, "last_update_a")))}
-                  ${this._diagItem("Last Update B", _formatTs(_val(this.hass, slug, "last_update_b")))}
+                  ${this._diagPairTs(slug, "last_update_")}
                 ` : nothing}
                 ${c.show_update_count ? html`
-                  ${this._diagItem("Update Count A (30 min)", `${_num(this.hass, slug, "update_count_a") ?? "—"}`)}
-                  ${this._diagItem("Update Count B (30 min)", `${_num(this.hass, slug, "update_count_b") ?? "—"}`)}
+                  ${this._diagPair(slug, "update_count_", "")}
                 ` : nothing}
               </div>
             </div>
@@ -557,6 +560,27 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
           <span class="diag-item-label">${label}</span>
           <span class="diag-item-value">${value}</span>
         </div>`;
+    }
+
+    _diagPair(slug, prefix, unit) {
+      const p = `sensor.entity_distance_${slug}_${prefix}`;
+      const ids = Object.keys(this.hass.states).filter(id => id.startsWith(p)).sort();
+      return ids.map(id => {
+        const s = this.hass.states[id];
+        const label = s?.attributes?.friendly_name || id.replace(`sensor.entity_distance_${slug}_`, "");
+        const val = s && s.state !== "unknown" && s.state !== "unavailable" ? `${s.state}${unit ? " " + unit : ""}` : "—";
+        return this._diagItem(label, val);
+      });
+    }
+
+    _diagPairTs(slug, prefix) {
+      const p = `sensor.entity_distance_${slug}_${prefix}`;
+      const ids = Object.keys(this.hass.states).filter(id => id.startsWith(p)).sort();
+      return ids.map(id => {
+        const s = this.hass.states[id];
+        const label = s?.attributes?.friendly_name || id.replace(`sensor.entity_distance_${slug}_`, "");
+        return this._diagItem(label, _formatTs(s?.state));
+      });
     }
 
     _hasMovementStats() {

@@ -1,17 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 300" width="900" height="300">
   <!-- Background -->
-  <rect width="900" height="300" rx="24" fill="#1a1a2e"/>
+  <rect width="900" height="300" rx="24" fill="#405d95"/>
 
   <!-- Left pin -->
   <g transform="translate(60, 60)">
     <path d="M56 0C25.1 0 0 25.1 0 56c0 39.2 56 104 56 104S112 95.2 112 56C112 25.1 86.9 0 56 0z" fill="#41BDF5"/>
-    <circle cx="56" cy="56" r="22" fill="#1a1a2e"/>
+    <circle cx="56" cy="56" r="22" fill="#405d95"/>
   </g>
 
   <!-- Right pin -->
   <g transform="translate(210, 60)">
     <path d="M56 0C25.1 0 0 25.1 0 56c0 39.2 56 104 56 104S112 95.2 112 56C112 25.1 86.9 0 56 0z" fill="#41BDF5" opacity="0.75"/>
-    <circle cx="56" cy="56" r="22" fill="#1a1a2e"/>
+    <circle cx="56" cy="56" r="22" fill="#405d95"/>
   </g>
 
   <!-- Dashed distance line -->

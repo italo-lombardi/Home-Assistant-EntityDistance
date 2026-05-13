@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 
 from homeassistant.components.sensor import (
@@ -68,6 +68,9 @@ async def async_setup_entry(
 
     async_add_entities(
         [
+            EntityStateSensor(coordinator, entry, entity_a_name, entity_b_name, "a", entry.data["entity_a"]),
+            EntityStateSensor(coordinator, entry, entity_a_name, entity_b_name, "b", entry.data["entity_b"]),
+            TodayUnaccountedTimeSensor(coordinator, entry, entity_a_name, entity_b_name),
             DistanceSensor(coordinator, entry, entity_a_name, entity_b_name),
             BucketSensor(coordinator, entry, entity_a_name, entity_b_name),
             BucketLevelSensor(coordinator, entry, entity_a_name, entity_b_name),
@@ -323,6 +326,7 @@ class UpdateCountSensor(EntityDistanceSensorBase):
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_native_unit_of_measurement = "updates"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_icon = "mdi:update"
 
     def __init__(self, coordinator, entry, a_name, b_name, which: str):
         super().__init__(coordinator, entry, a_name, b_name, f"update_count_{which}")
@@ -335,3 +339,42 @@ class UpdateCountSensor(EntityDistanceSensorBase):
         if not self._pair.data_valid:
             return None
         return self._pair.update_count_a if self._which == "a" else self._pair.update_count_b
+
+
+class EntityStateSensor(EntityDistanceSensorBase):
+    _attr_icon = "mdi:account-circle-outline"
+
+    def __init__(self, coordinator, entry, a_name, b_name, which: str, entity_id: str):
+        super().__init__(coordinator, entry, a_name, b_name, f"entity_state_{which}")
+        self._which = which
+        self._tracked_entity_id = entity_id
+        name = a_name if which == "a" else b_name
+        self._attr_name = f"State ({name})"
+
+    @property
+    def native_value(self) -> str | None:
+        state = self.hass.states.get(self._tracked_entity_id)
+        if state is None:
+            return None
+        return state.state
+
+
+class TodayUnaccountedTimeSensor(EntityDistanceSensorBase):
+    _attr_device_class = SensorDeviceClass.DURATION
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = UnitOfTime.MINUTES
+    _attr_translation_key = "today_unaccounted_time"
+
+    def __init__(self, coordinator, entry, a_name, b_name):
+        super().__init__(coordinator, entry, a_name, b_name, "today_unaccounted_time")
+
+    @property
+    def native_value(self) -> float | None:
+        ps = self._pair
+        if ps.prev_calc_time is None:
+            return None
+        now = datetime.now().astimezone()
+        midnight = now.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        cap = min(now, midnight)
+        gap_s = (cap - ps.prev_calc_time).total_seconds()
+        return round(max(gap_s, 0) / 60, 1)

@@ -43,14 +43,14 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
   // ─── helpers ────────────────────────────────────────────────────────────────
 
   function _slug(id) {
-    return id.startsWith("binary_sensor.entity_distance_")
-      ? id.replace("binary_sensor.entity_distance_", "").replace("_proximity", "")
+    return id.startsWith("sensor.entity_distance_")
+      ? id.replace("sensor.entity_distance_", "").replace(/_distance$/, "")
       : null;
   }
 
   function _getPairs(hass) {
     return Object.keys(hass.states)
-      .filter(id => id.startsWith("binary_sensor.entity_distance_") && id.endsWith("_proximity"))
+      .filter(id => id.startsWith("sensor.entity_distance_") && id.endsWith("_distance"))
       .map(id => {
         const slug = _slug(id);
         const label = _pairLabel(hass, slug);
@@ -60,10 +60,12 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
   }
 
   function _pairLabel(hass, slug) {
-    const proxId = `binary_sensor.entity_distance_${slug}_proximity`;
-    const state = hass.states[proxId];
-    if (state?.attributes?.friendly_name) {
-      return state.attributes.friendly_name.replace(/^Entity Distance[^\w]*/i, "").replace(" — ", " & ") || slug;
+    const distState = hass.states[`sensor.entity_distance_${slug}_distance`];
+    if (distState?.attributes?.friendly_name) {
+      return distState.attributes.friendly_name
+        .replace(/^Entity Distance[^\w]*/i, "")
+        .replace(/\s*[-—]\s*Distance\s*$/i, "")
+        .replace(" — ", " & ") || slug;
     }
     return slug.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
   }
@@ -422,7 +424,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     _watchIds(slug) {
       const p = `sensor.entity_distance_${slug}`;
       const ids = [
-        `binary_sensor.entity_distance_${slug}_proximity`,
+        `binary_sensor.entity_distance_${slug}_in_proximity`,
         `${p}_distance`, `${p}_direction`, `${p}_bucket`,
         `${p}_closing_speed`, `${p}_eta`,
         `${p}_proximity_duration`, `${p}_today_proximity_time`,
@@ -476,7 +478,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         return html`<ha-card><div class="error-msg">No entity pair configured.</div></ha-card>`;
       }
 
-      const proxState = this.hass.states[`binary_sensor.entity_distance_${slug}_proximity`];
+      const proxState = this.hass.states[`binary_sensor.entity_distance_${slug}_in_proximity`];
       if (!proxState) {
         return html`<ha-card><div class="error-msg">Pair "${slug}" not found. Check integration is loaded.</div></ha-card>`;
       }
@@ -682,6 +684,20 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         </label>`;
     }
 
+    _renderEntitySelect(key, current) {
+      const entities = Object.keys(this.hass.states)
+        .filter(id => id.startsWith("person.") || id.startsWith("device_tracker."))
+        .sort();
+      return html`
+        <select .value=${current} @change=${e => this._select(key, e)}>
+          <option value="">— None (show initials) —</option>
+          ${entities.map(id => {
+            const name = this.hass.states[id]?.attributes?.friendly_name || id;
+            return html`<option value=${id} ?selected=${current === id}>${name} (${id})</option>`;
+          })}
+        </select>`;
+    }
+
     render() {
       if (!this._config) return html``;
       const pairs = _getPairs(this.hass);
@@ -716,16 +732,12 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
           <div class="section-title">People</div>
           <div class="row">
             <label>Person A entity (optional)</label>
-            <input type="text" .value=${this._config.entity_a || ""}
-              placeholder="person.alice"
-              @input=${e => this._input("entity_a", e)} />
+            ${this._renderEntitySelect("entity_a", this._config.entity_a || "")}
             <div class="hint">Used to show avatar photo. Leave blank to show initials.</div>
           </div>
           <div class="row">
             <label>Person B entity (optional)</label>
-            <input type="text" .value=${this._config.entity_b || ""}
-              placeholder="person.bob"
-              @input=${e => this._input("entity_b", e)} />
+            ${this._renderEntitySelect("entity_b", this._config.entity_b || "")}
             <div class="hint">Used to show avatar photo. Leave blank to show initials.</div>
           </div>
 

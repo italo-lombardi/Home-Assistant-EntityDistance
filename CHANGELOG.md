@@ -2,6 +2,23 @@
 
 ## [Unreleased]
 
+## [0.1.0-alpha.5] - 2026-05-13
+
+### Added
+- **Entity State sensors** — two new sensors (`State (Name A)`, `State (Name B)`) mirroring the HA state of each tracked entity (home, away, zone name, etc.); read-only, no manipulation
+- **Today Unaccounted Time sensor** — tracks minutes since last successful distance calculation, capped at midnight; shows how much of today has no data (e.g. due to HA restart or GPS silence)
+- **State persistence** — today proximity time, today zone times, proximity duration, and last seen together survive HA restarts and integration reloads; stored via HA `Store`; today counters only restored if the stored date matches today
+- **Live sensor updates** — all sensors now refresh every minute via a 1-minute timer tick, even when tracked entities don't move; proximity duration and unaccounted time stay accurate between GPS updates
+- **Update Count icon** — `mdi:update` icon added to Update Count sensors
+
+### Fixed
+- **Lovelace cards broken** — both cards used wrong entity ID suffixes (`bucket` instead of `proximity_zone`, `today_zone_time_*` instead of `today_*_time`, `gps_accuracy_a/b` instead of dynamic name-based IDs, binary sensor `_proximity` instead of `_in_proximity`); all fixed by scanning `hass.states` for dynamic per-entity suffixes and correcting static suffix mappings
+- **Card pair slug derivation** — slug was derived from binary sensor entity ID (which HA appends `_in` to due to "In Proximity" name), causing all sensor lookups to fail; now derived from `sensor.entity_distance_*_distance` entity IDs
+- **Logo background color** — logo SVG still used old dark navy background (`#1a1a2e`) instead of medium blue-slate (`#405d95`) introduced in alpha.4; pin hole colors also corrected
+
+### Changed
+- **People card editor** — Person A / Person B fields changed from free-text input to dropdown listing all `person.*` and `device_tracker.*` entities with friendly names
+
 ## [0.1.0-alpha.4] - 2026-05-13
 
 ### Added

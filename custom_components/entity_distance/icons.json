@@ -69,8 +69,8 @@
       "proximity": {
         "default": "mdi:account-group",
         "state": {
-          "true": "mdi:account-group",
-          "false": "mdi:account-group-outline"
+          "on": "mdi:account-group",
+          "off": "mdi:account-group-outline"
         }
       }
     },

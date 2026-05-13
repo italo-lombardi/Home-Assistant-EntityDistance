@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, date
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import date, datetime, timedelta
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 

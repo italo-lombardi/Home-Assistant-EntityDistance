@@ -495,6 +495,7 @@ class TestProximityRateSensor:
 
 def _make_unaccounted_sensor(pair_state):
     from custom_components.entity_distance.sensor import TodayUnaccountedTimeSensor
+
     coordinator = MagicMock()
     coordinator.data = PairData(pair=pair_state)
     coordinator.bucket_thresholds = _DEFAULT_THRESHOLDS
@@ -559,6 +560,7 @@ class TestBucketSensor:
 
     def _make_sensor(self, distance_m):
         from custom_components.entity_distance.sensor import BucketSensor
+
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.distance_m = distance_m
         ps.data_valid = True
@@ -566,6 +568,7 @@ class TestBucketSensor:
 
     def test_none_distance_returns_none(self):
         from custom_components.entity_distance.sensor import BucketSensor
+
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.distance_m = None
         ps.data_valid = True
@@ -574,11 +577,13 @@ class TestBucketSensor:
 
     def test_very_near(self):
         from custom_components.entity_distance.const import BUCKET_VERY_NEAR
+
         sensor = self._make_sensor(50)
         assert sensor.native_value == BUCKET_VERY_NEAR
 
     def test_very_far(self):
         from custom_components.entity_distance.const import BUCKET_VERY_FAR
+
         sensor = self._make_sensor(50000)
         assert sensor.native_value == BUCKET_VERY_FAR
 

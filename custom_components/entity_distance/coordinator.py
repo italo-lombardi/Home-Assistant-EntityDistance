@@ -192,9 +192,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
         unsub_b = async_track_state_change_event(
             self.hass, [self._entity_b], self._async_state_changed
         )
-        unsub_tick = async_track_time_interval(
-            self.hass, self._async_tick, timedelta(minutes=1)
-        )
+        unsub_tick = async_track_time_interval(self.hass, self._async_tick, timedelta(minutes=1))
         self._unsub_listeners = [unsub_a, unsub_b, unsub_tick]
         _LOGGER.debug("entity_distance: tracking %s and %s", self._entity_a, self._entity_b)
 
@@ -392,7 +390,9 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
             )
 
         if self._pending_update_a:
-            ps.update_count_a = self._update_frequency(ps.update_count_a, ps.update_window_start_a, now)
+            ps.update_count_a = self._update_frequency(
+                ps.update_count_a, ps.update_window_start_a, now
+            )
             if (
                 ps.update_window_start_a is None
                 or (now - ps.update_window_start_a).total_seconds() > UPDATES_FREQUENCY_WINDOW_S
@@ -401,7 +401,9 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
             self._pending_update_a = False
 
         if self._pending_update_b:
-            ps.update_count_b = self._update_frequency(ps.update_count_b, ps.update_window_start_b, now)
+            ps.update_count_b = self._update_frequency(
+                ps.update_count_b, ps.update_window_start_b, now
+            )
             if (
                 ps.update_window_start_b is None
                 or (now - ps.update_window_start_b).total_seconds() > UPDATES_FREQUENCY_WINDOW_S
@@ -501,16 +503,22 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
     async def _async_save_state(self) -> None:
         ps = self._pair_state
         today = ps.today_reset_date
-        await self._store.async_save({
-            "entity_a": self._entity_a,
-            "entity_b": self._entity_b,
-            "today_reset_date": today.isoformat() if today else None,
-            "today_proximity_seconds": ps.today_proximity_seconds,
-            "today_zone_seconds": ps.today_zone_seconds,
-            "proximity_duration_s": ps.proximity_duration_s,
-            "proximity_tracking_started": ps.proximity_tracking_started.isoformat() if ps.proximity_tracking_started else None,
-            "last_seen_together": ps.last_seen_together.isoformat() if ps.last_seen_together else None,
-        })
+        await self._store.async_save(
+            {
+                "entity_a": self._entity_a,
+                "entity_b": self._entity_b,
+                "today_reset_date": today.isoformat() if today else None,
+                "today_proximity_seconds": ps.today_proximity_seconds,
+                "today_zone_seconds": ps.today_zone_seconds,
+                "proximity_duration_s": ps.proximity_duration_s,
+                "proximity_tracking_started": ps.proximity_tracking_started.isoformat()
+                if ps.proximity_tracking_started
+                else None,
+                "last_seen_together": ps.last_seen_together.isoformat()
+                if ps.last_seen_together
+                else None,
+            }
+        )
 
     async def _async_load_state(self) -> None:
         stored = await self._store.async_load()
@@ -523,7 +531,10 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
             if stored_a and stored_b and (stored_a != self._entity_a or stored_b != self._entity_b):
                 _LOGGER.info(
                     "entity_distance: entity pair changed (%s/%s → %s/%s), resetting tracking history",
-                    stored_a, stored_b, self._entity_a, self._entity_b,
+                    stored_a,
+                    stored_b,
+                    self._entity_a,
+                    self._entity_b,
                 )
                 await self._store.async_remove()
                 return

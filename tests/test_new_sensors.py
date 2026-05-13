@@ -43,10 +43,14 @@ class TestEntityStateSensor:
     def _make(self, entity_id: str, state_value: str | None) -> EntityStateSensor:
         ps = PairState(entity_a_id="person.alice", entity_b_id="person.bob")
         ps.data_valid = True
-        sensor = _make_sensor(EntityStateSensor, ps, {
-            "_tracked_entity_id": entity_id,
-            "_which": "a",
-        })
+        sensor = _make_sensor(
+            EntityStateSensor,
+            ps,
+            {
+                "_tracked_entity_id": entity_id,
+                "_which": "a",
+            },
+        )
         hass = MagicMock()
         if state_value is None:
             hass.states.get.return_value = None

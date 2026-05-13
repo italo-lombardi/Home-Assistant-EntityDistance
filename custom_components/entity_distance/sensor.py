@@ -68,8 +68,12 @@ async def async_setup_entry(
 
     async_add_entities(
         [
-            EntityStateSensor(coordinator, entry, entity_a_name, entity_b_name, "a", entry.data["entity_a"]),
-            EntityStateSensor(coordinator, entry, entity_a_name, entity_b_name, "b", entry.data["entity_b"]),
+            EntityStateSensor(
+                coordinator, entry, entity_a_name, entity_b_name, "a", entry.data["entity_a"]
+            ),
+            EntityStateSensor(
+                coordinator, entry, entity_a_name, entity_b_name, "b", entry.data["entity_b"]
+            ),
             TodayUnaccountedTimeSensor(coordinator, entry, entity_a_name, entity_b_name),
             DistanceSensor(coordinator, entry, entity_a_name, entity_b_name),
             BucketSensor(coordinator, entry, entity_a_name, entity_b_name),

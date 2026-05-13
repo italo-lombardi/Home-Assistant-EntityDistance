@@ -247,9 +247,15 @@ class TestGetCoordsEdgeCases:
 class TestCalcBucketEdgeCases:
     def test_negative_distance_treated_as_very_near(self):
         # Negative distances should not crash and land in VERY_NEAR
-        assert _calc_bucket(-1, {
-            BUCKET_VERY_NEAR: DEFAULT_ZONE_VERY_NEAR_M,
-            BUCKET_NEAR: DEFAULT_ZONE_NEAR_M,
-            BUCKET_MID: DEFAULT_ZONE_MID_M,
-            BUCKET_FAR: DEFAULT_ZONE_FAR_M,
-        }) == BUCKET_VERY_NEAR
+        assert (
+            _calc_bucket(
+                -1,
+                {
+                    BUCKET_VERY_NEAR: DEFAULT_ZONE_VERY_NEAR_M,
+                    BUCKET_NEAR: DEFAULT_ZONE_NEAR_M,
+                    BUCKET_MID: DEFAULT_ZONE_MID_M,
+                    BUCKET_FAR: DEFAULT_ZONE_FAR_M,
+                },
+            )
+            == BUCKET_VERY_NEAR
+        )

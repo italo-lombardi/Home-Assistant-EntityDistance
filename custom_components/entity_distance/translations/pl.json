@@ -144,10 +144,10 @@
         "name": "Czas bardzo daleko dziś"
       },
       "update_count_a": {
-        "name": "Liczba aktualizacji (A)"
+        "name": "Update Count Last 30 min (A)"
       },
       "update_count_b": {
-        "name": "Liczba aktualizacji (B)"
+        "name": "Update Count Last 30 min (B)"
       }
     },
     "binary_sensor": {

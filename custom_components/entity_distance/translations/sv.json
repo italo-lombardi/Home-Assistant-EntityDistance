@@ -144,10 +144,10 @@
         "name": "Tid mycket långt idag"
       },
       "update_count_a": {
-        "name": "Uppdateringsantal (A)"
+        "name": "Update Count Last 30 min (A)"
       },
       "update_count_b": {
-        "name": "Uppdateringsantal (B)"
+        "name": "Update Count Last 30 min (B)"
       }
     },
     "binary_sensor": {

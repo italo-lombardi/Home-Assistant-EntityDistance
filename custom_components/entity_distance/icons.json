@@ -1,0 +1,83 @@
+{
+  "entity": {
+    "sensor": {
+      "distance": {
+        "default": "mdi:map-marker-distance"
+      },
+      "bucket": {
+        "default": "mdi:signal"
+      },
+      "bucket_level": {
+        "default": "mdi:signal"
+      },
+      "proximity_duration": {
+        "default": "mdi:timer-outline"
+      },
+      "last_seen_together": {
+        "default": "mdi:clock-check-outline"
+      },
+      "today_proximity_time": {
+        "default": "mdi:clock-time-four-outline"
+      },
+      "today_zone_time_very_near": {
+        "default": "mdi:map-marker-radius"
+      },
+      "today_zone_time_near": {
+        "default": "mdi:map-marker-radius-outline"
+      },
+      "today_zone_time_mid": {
+        "default": "mdi:map-marker-outline"
+      },
+      "today_zone_time_far": {
+        "default": "mdi:map-marker-off-outline"
+      },
+      "today_zone_time_very_far": {
+        "default": "mdi:map-marker-off"
+      },
+      "direction": {
+        "default": "mdi:compass-outline"
+      },
+      "direction_level": {
+        "default": "mdi:compass"
+      },
+      "closing_speed": {
+        "default": "mdi:speedometer"
+      },
+      "eta": {
+        "default": "mdi:clock-fast"
+      },
+      "gps_accuracy_a": {
+        "default": "mdi:crosshairs-gps"
+      },
+      "gps_accuracy_b": {
+        "default": "mdi:crosshairs-gps"
+      },
+      "last_update_a": {
+        "default": "mdi:update"
+      },
+      "last_update_b": {
+        "default": "mdi:update"
+      },
+      "update_count_a": {
+        "default": "mdi:counter"
+      },
+      "update_count_b": {
+        "default": "mdi:counter"
+      }
+    },
+    "binary_sensor": {
+      "proximity": {
+        "default": "mdi:account-group",
+        "state": {
+          "true": "mdi:account-group",
+          "false": "mdi:account-group-outline"
+        }
+      }
+    },
+    "button": {
+      "refresh": {
+        "default": "mdi:crosshairs-gps"
+      }
+    }
+  }
+}

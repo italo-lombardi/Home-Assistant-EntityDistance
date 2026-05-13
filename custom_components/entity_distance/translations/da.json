@@ -144,10 +144,10 @@
         "name": "Meget fjern tid i dag"
       },
       "update_count_a": {
-        "name": "Opdateringsantal (A)"
+        "name": "Update Count Last 30 min (A)"
       },
       "update_count_b": {
-        "name": "Opdateringsantal (B)"
+        "name": "Update Count Last 30 min (B)"
       }
     },
     "binary_sensor": {

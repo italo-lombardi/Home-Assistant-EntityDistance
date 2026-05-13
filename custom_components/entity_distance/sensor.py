@@ -215,7 +215,6 @@ class TodayZoneTimeSensor(EntityDistanceSensorBase):
     _attr_device_class = SensorDeviceClass.DURATION
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
     _attr_native_unit_of_measurement = UnitOfTime.MINUTES
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(self, coordinator, entry, a_name, b_name, bucket: str):
         super().__init__(coordinator, entry, a_name, b_name, f"today_zone_time_{bucket}")
@@ -329,7 +328,7 @@ class UpdateCountSensor(EntityDistanceSensorBase):
         super().__init__(coordinator, entry, a_name, b_name, f"update_count_{which}")
         self._which = which
         name = a_name if which == "a" else b_name
-        self._attr_name = f"Update Count ({name})"
+        self._attr_name = f"Update Count Last 30 min ({name})"
 
     @property
     def native_value(self) -> int | None:

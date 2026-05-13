@@ -7,6 +7,10 @@
         "data": {
           "entity_a": "Première entité",
           "entity_b": "Deuxième entité"
+        },
+        "data_description": {
+          "entity_a": "La première entité à suivre. Peut être une personne, un traqueur de dispositif, un capteur ou une zone.",
+          "entity_b": "La deuxième entité à suivre. Doit être différente de la première."
         }
       },
       "thresholds": {
@@ -15,12 +19,16 @@
         "data": {
           "entry_threshold_m": "Seuil d'entrée (m)",
           "exit_threshold_m": "Seuil de sortie (m)",
-          "debounce_s": "Anti-rebond (s)"
+          "debounce_s": "Anti-rebond (s)",
+          "show_advanced": "Configurer les filtres avancés",
+          "show_zone_thresholds": "Configurer les seuils de zone de proximité"
         },
         "data_description": {
           "entry_threshold_m": "Distance à laquelle les entités sont considérées en proximité.",
           "exit_threshold_m": "Distance à laquelle les entités ne sont plus considérées en proximité. Doit être >= seuil d'entrée.",
-          "debounce_s": "Secondes d'attente avant de traiter une mise à jour de localisation. Réduit le bruit des changements GPS rapides."
+          "debounce_s": "Secondes d'attente avant de traiter une mise à jour de localisation. Réduit le bruit des changements GPS rapides.",
+          "show_advanced": "Activer pour configurer la précision GPS, la vitesse et les filtres de fiabilité.",
+          "show_zone_thresholds": "Activer pour définir les limites de distance des zones."
         }
       },
       "advanced": {
@@ -38,14 +46,32 @@
           "require_reliable": "Déclencher l'événement proximity_enter uniquement lorsque les données sont fiables.",
           "min_updates_reliable": "Nombre minimum de mises à jour de localisation dans la fenêtre avant que les données soient considérées fiables."
         }
+      },
+      "zone_thresholds": {
+        "title": "Seuils de zone de proximité",
+        "description": "Définissez les limites de distance pour chaque zone de proximité. Chaque seuil doit être supérieur au précédent.",
+        "data": {
+          "zone_very_near_m": "Seuil Très proche (m)",
+          "zone_near_m": "Seuil Proche (m)",
+          "zone_mid_m": "Seuil Moyen (m)",
+          "zone_far_m": "Seuil Loin (m)"
+        },
+        "data_description": {
+          "zone_very_near_m": "Les entités sont considérées 'Très proches' à cette distance ou moins. Défaut : 100 m.",
+          "zone_near_m": "Les entités sont considérées 'Proches' à cette distance ou moins. Doit être supérieur à Très proche. Défaut : 500 m.",
+          "zone_mid_m": "Les entités sont considérées à distance 'Moyenne'. Doit être supérieur à Proche. Défaut : 2000 m.",
+          "zone_far_m": "Les entités sont considérées 'Loin'. Au-delà est 'Très loin'. Défaut : 10000 m."
+        }
       }
     },
     "error": {
       "same_entity": "L'entité A et l'entité B doivent être différentes.",
-      "exit_below_entry": "Le seuil de sortie doit être supérieur ou égal au seuil d'entrée."
+      "exit_below_entry": "Le seuil de sortie doit être supérieur ou égal au seuil d'entrée.",
+      "zone_thresholds_not_ascending": "Les seuils de zone doivent augmenter dans l'ordre : Très proche < Proche < Moyen < Loin."
     },
     "abort": {
-      "already_configured": "Cette paire d'entités est déjà configurée."
+      "already_configured": "Cette paire d'entités est déjà configurée.",
+      "already_in_progress": "Une configuration est déjà en cours pour cette intégration. Fermez et rouvrez le dialogue pour recommencer."
     }
   },
   "options": {
@@ -55,7 +81,17 @@
         "data": {
           "entry_threshold_m": "Seuil d'entrée (m)",
           "exit_threshold_m": "Seuil de sortie (m)",
-          "debounce_s": "Anti-rebond (s)"
+          "debounce_s": "Anti-rebond (s)",
+          "show_advanced": "Configurer les filtres avancés",
+          "show_zone_thresholds": "Configurer les seuils de zone de proximité"
+        },
+        "description": "Configurez les seuils de proximité.",
+        "data_description": {
+          "entry_threshold_m": "Quelle distance (en mètres) les entités doivent-elles avoir pour déclencher un événement de proximité.",
+          "exit_threshold_m": "Jusqu'à quelle distance les entités doivent-elles s'éloigner avant de ne plus être considérées proches.",
+          "debounce_s": "Secondes à attendre avant de traiter une nouvelle mise à jour de localisation.",
+          "show_advanced": "Activer pour configurer les filtres GPS, vitesse et fiabilité.",
+          "show_zone_thresholds": "Activer pour définir les limites de zone."
         }
       },
       "advanced": {
@@ -65,11 +101,35 @@
           "max_speed_kmh": "Vitesse implicite max. (km/h, 0 = désactivé)",
           "require_reliable": "Exiger des données fiables pour les événements de proximité",
           "min_updates_reliable": "Mises à jour min. pour données fiables"
+        },
+        "description": "Ces filtres aident à ignorer les données GPS incorrectes.",
+        "data_description": {
+          "max_accuracy_m": "Ignorer les mises à jour de localisation où l'erreur GPS dépasse cette valeur.",
+          "max_speed_kmh": "Ignorer les mises à jour impliquant un mouvement plus rapide que cela.",
+          "require_reliable": "Quand activé, un événement de proximité ne se déclenche qu'après des mises à jour cohérentes.",
+          "min_updates_reliable": "Combien de mises à jour consécutives sont nécessaires avant de considérer la localisation fiable."
+        }
+      },
+      "zone_thresholds": {
+        "title": "Seuils de zone de proximité",
+        "description": "Définissez les limites de distance pour chaque zone de proximité.",
+        "data": {
+          "zone_very_near_m": "Seuil Très proche (m)",
+          "zone_near_m": "Seuil Proche (m)",
+          "zone_mid_m": "Seuil Moyen (m)",
+          "zone_far_m": "Seuil Loin (m)"
+        },
+        "data_description": {
+          "zone_very_near_m": "Défaut : 100 m.",
+          "zone_near_m": "Défaut : 500 m.",
+          "zone_mid_m": "Défaut : 2000 m.",
+          "zone_far_m": "Défaut : 10000 m."
         }
       }
     },
     "error": {
-      "exit_below_entry": "Le seuil de sortie doit être supérieur ou égal au seuil d'entrée."
+      "exit_below_entry": "Le seuil de sortie doit être supérieur ou égal au seuil d'entrée.",
+      "zone_thresholds_not_ascending": "Les seuils de zone doivent augmenter dans l'ordre : Très proche < Proche < Moyen < Loin."
     }
   },
   "entity": {
@@ -89,6 +149,12 @@
       },
       "proximity_duration": {
         "name": "Durée de proximité"
+      },
+      "proximity_tracking_started": {
+        "name": "Proximity Tracking Started"
+      },
+      "proximity_rate": {
+        "name": "Proximity Rate"
       },
       "last_seen_together": {
         "name": "Dernière fois ensemble"
@@ -148,6 +214,15 @@
       },
       "update_count_b": {
         "name": "Update Count Last 30 min (B)"
+      },
+      "entity_state_a": {
+        "name": "État (A)"
+      },
+      "entity_state_b": {
+        "name": "État (B)"
+      },
+      "today_unaccounted_time": {
+        "name": "Temps non comptabilisé aujourd'hui"
       }
     },
     "binary_sensor": {

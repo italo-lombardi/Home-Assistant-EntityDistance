@@ -7,6 +7,10 @@
         "data": {
           "entity_a": "Första enheten",
           "entity_b": "Andra enheten"
+        },
+        "data_description": {
+          "entity_a": "Den första entiteten att spåra. Kan vara en person, enhetsspårare, sensor eller zon.",
+          "entity_b": "Den andra entiteten att spåra. Måste skilja sig från den första."
         }
       },
       "thresholds": {
@@ -15,12 +19,16 @@
         "data": {
           "entry_threshold_m": "Ingångsgräns (m)",
           "exit_threshold_m": "Utgångsgräns (m)",
-          "debounce_s": "Debounce (s)"
+          "debounce_s": "Debounce (s)",
+          "show_advanced": "Konfigurera avancerade filter",
+          "show_zone_thresholds": "Konfigurera närhetszontrösklarna"
         },
         "data_description": {
           "entry_threshold_m": "Avstånd vid vilket enheter anses vara i närheten.",
           "exit_threshold_m": "Avstånd vid vilket enheter inte längre anses vara i närheten. Måste vara >= ingångsgräns.",
-          "debounce_s": "Sekunder att vänta innan en platsuppdatering behandlas. Minskar brus från snabba GPS-ändringar."
+          "debounce_s": "Sekunder att vänta innan en platsuppdatering behandlas. Minskar brus från snabba GPS-ändringar.",
+          "show_advanced": "Aktivera för att konfigurera GPS-noggrannhet, hastighet och tillförlitlighetsfilter.",
+          "show_zone_thresholds": "Aktivera för att ange avståndsgränserna för zonerna."
         }
       },
       "advanced": {
@@ -38,14 +46,32 @@
           "require_reliable": "Utlösa proximity_enter-event bara när data anses tillförlitliga.",
           "min_updates_reliable": "Minsta antal platsuppdateringar i fönstret innan data anses tillförlitliga."
         }
+      },
+      "zone_thresholds": {
+        "title": "Närhetszontrösklarna",
+        "description": "Ange avståndsgränserna för varje nähetszon. Varje tröskel måste vara större än den föregående.",
+        "data": {
+          "zone_very_near_m": "Tröskel Mycket nära (m)",
+          "zone_near_m": "Tröskel Nära (m)",
+          "zone_mid_m": "Tröskel Medel (m)",
+          "zone_far_m": "Tröskel Långt (m)"
+        },
+        "data_description": {
+          "zone_very_near_m": "Entiteter anses vara 'Mycket nära' vid eller närmre än detta avstånd. Standard: 100 m.",
+          "zone_near_m": "Entiteter anses vara 'Nära' vid eller närmre. Måste vara större än Mycket nära. Standard: 500 m.",
+          "zone_mid_m": "Entiteter anses vara på 'Medel' avstånd. Måste vara större än Nära. Standard: 2000 m.",
+          "zone_far_m": "Entiteter anses vara 'Långt'. Bortom är 'Mycket långt'. Standard: 10000 m."
+        }
       }
     },
     "error": {
       "same_entity": "Enhet A och enhet B måste vara olika.",
-      "exit_below_entry": "Utgångsgräns måste vara större än eller lika med ingångsgränsen."
+      "exit_below_entry": "Utgångsgräns måste vara större än eller lika med ingångsgränsen.",
+      "zone_thresholds_not_ascending": "Zontrösklar måste öka i ordning: Mycket nära < Nära < Medel < Långt."
     },
     "abort": {
-      "already_configured": "Detta enhetspar är redan konfigurerat."
+      "already_configured": "Detta enhetspar är redan konfigurerat.",
+      "already_in_progress": "En konfiguration pågår redan för denna integration. Stäng och öppna dialogen igen för att börja om."
     }
   },
   "options": {
@@ -55,7 +81,17 @@
         "data": {
           "entry_threshold_m": "Ingångsgräns (m)",
           "exit_threshold_m": "Utgångsgräns (m)",
-          "debounce_s": "Debounce (s)"
+          "debounce_s": "Debounce (s)",
+          "show_advanced": "Konfigurera avancerade filter",
+          "show_zone_thresholds": "Konfigurera närhetszontrösklarna"
+        },
+        "description": "Konfigurera närhetsströsklarna.",
+        "data_description": {
+          "entry_threshold_m": "Hur nära (i meter) entiteterna måste vara för att utlösa en nähets-händelse.",
+          "exit_threshold_m": "Hur långt ifrån varandra entiteterna måste flytta innan de inte längre anses vara nära.",
+          "debounce_s": "Sekunder att vänta innan en ny platsuppdatering behandlas.",
+          "show_advanced": "Aktivera för att konfigurera GPS-, hastighets- och tillförlitlighetsfilter.",
+          "show_zone_thresholds": "Aktivera för att ange zongränser."
         }
       },
       "advanced": {
@@ -65,11 +101,35 @@
           "max_speed_kmh": "Max. implicit hastighet (km/h, 0 = inaktiverad)",
           "require_reliable": "Kräv tillförlitliga data för närhetsevents",
           "min_updates_reliable": "Min. uppdateringar för tillförlitliga data"
+        },
+        "description": "Dessa filter hjälper till att ignorera dåliga GPS-data.",
+        "data_description": {
+          "max_accuracy_m": "Ignorera platsuppdateringar där GPS-felet är större än detta.",
+          "max_speed_kmh": "Ignorera uppdateringar som antyder rörelse snabbare än detta.",
+          "require_reliable": "När aktiverat utlöses en nähets-händelse bara efter konsekventa uppdateringar.",
+          "min_updates_reliable": "Hur många konsekventa uppdateringar som krävs innan platsen anses tillförlitlig."
+        }
+      },
+      "zone_thresholds": {
+        "title": "Närhetszontrösklarna",
+        "description": "Ange avståndsgränserna för varje nähetszon.",
+        "data": {
+          "zone_very_near_m": "Tröskel Mycket nära (m)",
+          "zone_near_m": "Tröskel Nära (m)",
+          "zone_mid_m": "Tröskel Medel (m)",
+          "zone_far_m": "Tröskel Långt (m)"
+        },
+        "data_description": {
+          "zone_very_near_m": "Standard: 100 m.",
+          "zone_near_m": "Standard: 500 m.",
+          "zone_mid_m": "Standard: 2000 m.",
+          "zone_far_m": "Standard: 10000 m."
         }
       }
     },
     "error": {
-      "exit_below_entry": "Utgångsgräns måste vara större än eller lika med ingångsgränsen."
+      "exit_below_entry": "Utgångsgräns måste vara större än eller lika med ingångsgränsen.",
+      "zone_thresholds_not_ascending": "Zontrösklar måste öka i ordning: Mycket nära < Nära < Medel < Långt."
     }
   },
   "entity": {
@@ -89,6 +149,12 @@
       },
       "proximity_duration": {
         "name": "Nährvarotid"
+      },
+      "proximity_tracking_started": {
+        "name": "Proximity Tracking Started"
+      },
+      "proximity_rate": {
+        "name": "Proximity Rate"
       },
       "last_seen_together": {
         "name": "Senast sedd tillsammans"
@@ -148,6 +214,15 @@
       },
       "update_count_b": {
         "name": "Update Count Last 30 min (B)"
+      },
+      "entity_state_a": {
+        "name": "Tillstånd (A)"
+      },
+      "entity_state_b": {
+        "name": "Tillstånd (B)"
+      },
+      "today_unaccounted_time": {
+        "name": "Ej redovisad tid idag"
       }
     },
     "binary_sensor": {

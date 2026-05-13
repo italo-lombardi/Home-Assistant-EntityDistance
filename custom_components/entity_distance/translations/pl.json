@@ -7,6 +7,10 @@
         "data": {
           "entity_a": "Pierwsza encja",
           "entity_b": "Druga encja"
+        },
+        "data_description": {
+          "entity_a": "Pierwsza encja do śledzenia. Może być osobą, trackerem urządzenia, czujnikiem lub strefą.",
+          "entity_b": "Druga encja do śledzenia. Musi być inna niż pierwsza."
         }
       },
       "thresholds": {
@@ -15,12 +19,16 @@
         "data": {
           "entry_threshold_m": "Próg wejścia (m)",
           "exit_threshold_m": "Próg wyjścia (m)",
-          "debounce_s": "Debounce (s)"
+          "debounce_s": "Debounce (s)",
+          "show_advanced": "Konfiguruj zaawansowane filtry",
+          "show_zone_thresholds": "Konfiguruj progi stref zbliżenia"
         },
         "data_description": {
           "entry_threshold_m": "Odległość, przy której encje są uznawane za bliskie.",
           "exit_threshold_m": "Odległość, przy której encje nie są już uznawane za bliskie. Musi być >= próg wejścia.",
-          "debounce_s": "Sekundy oczekiwania przed przetworzeniem aktualizacji lokalizacji. Zmniejsza szum z szybkich zmian GPS."
+          "debounce_s": "Sekundy oczekiwania przed przetworzeniem aktualizacji lokalizacji. Zmniejsza szum z szybkich zmian GPS.",
+          "show_advanced": "Włącz, aby skonfigurować dokładność GPS, prędkość i filtry niezawodności.",
+          "show_zone_thresholds": "Włącz, aby ustawić limity odległości stref."
         }
       },
       "advanced": {
@@ -38,14 +46,32 @@
           "require_reliable": "Wyzwalaj zdarzenie proximity_enter tylko gdy dane są uznawane za wiarygodne.",
           "min_updates_reliable": "Minimalna liczba aktualizacji lokalizacji w oknie przed uznaniem danych za wiarygodne."
         }
+      },
+      "zone_thresholds": {
+        "title": "Progi stref zbliżenia",
+        "description": "Ustaw limity odległości dla każdej strefy zbliżenia. Każdy próg musi być większy od poprzedniego.",
+        "data": {
+          "zone_very_near_m": "Próg Bardzo blisko (m)",
+          "zone_near_m": "Próg Blisko (m)",
+          "zone_mid_m": "Próg Średnio (m)",
+          "zone_far_m": "Próg Daleko (m)"
+        },
+        "data_description": {
+          "zone_very_near_m": "Encje są uważane za 'Bardzo blisko' w tej odległości lub bliżej. Domyślnie: 100 m.",
+          "zone_near_m": "Encje są uważane za 'Blisko' w tej odległości lub bliżej. Musi być większe niż Bardzo blisko. Domyślnie: 500 m.",
+          "zone_mid_m": "Encje są w odległości 'Średniej'. Musi być większe niż Blisko. Domyślnie: 2000 m.",
+          "zone_far_m": "Encje są uważane za 'Daleko'. Poza tym jest 'Bardzo daleko'. Domyślnie: 10000 m."
+        }
       }
     },
     "error": {
       "same_entity": "Encja A i encja B muszą być różne.",
-      "exit_below_entry": "Próg wyjścia musi być większy lub równy progowi wejścia."
+      "exit_below_entry": "Próg wyjścia musi być większy lub równy progowi wejścia.",
+      "zone_thresholds_not_ascending": "Progi stref muszą rosnąć w kolejności: Bardzo blisko < Blisko < Średnio < Daleko."
     },
     "abort": {
-      "already_configured": "Ta para encji jest już skonfigurowana."
+      "already_configured": "Ta para encji jest już skonfigurowana.",
+      "already_in_progress": "Konfiguracja tej integracji jest już w toku. Zamknij i ponownie otwórz okno dialogowe, aby zacząć od nowa."
     }
   },
   "options": {
@@ -55,7 +81,17 @@
         "data": {
           "entry_threshold_m": "Próg wejścia (m)",
           "exit_threshold_m": "Próg wyjścia (m)",
-          "debounce_s": "Debounce (s)"
+          "debounce_s": "Debounce (s)",
+          "show_advanced": "Konfiguruj zaawansowane filtry",
+          "show_zone_thresholds": "Konfiguruj progi stref zbliżenia"
+        },
+        "description": "Skonfiguruj progi zbliżenia.",
+        "data_description": {
+          "entry_threshold_m": "Jak blisko (w metrach) encje muszą być, aby wyzwolić zdarzenie zbliżenia.",
+          "exit_threshold_m": "Jak daleko od siebie muszą się oddalić encje, zanim nie będą już uważane za bliskie.",
+          "debounce_s": "Sekundy do odczekania przed przetworzeniem nowej aktualizacji lokalizacji.",
+          "show_advanced": "Włącz, aby skonfigurować filtry GPS, prędkości i niezawodności.",
+          "show_zone_thresholds": "Włącz, aby ustawić limity stref."
         }
       },
       "advanced": {
@@ -65,11 +101,35 @@
           "max_speed_kmh": "Maks. implikowana prędkość (km/h, 0 = wyłączone)",
           "require_reliable": "Wymagaj wiarygodnych danych dla zdarzeń bliskości",
           "min_updates_reliable": "Min. aktualizacje dla wiarygodnych danych"
+        },
+        "description": "Te filtry pomagają ignorować złe dane GPS.",
+        "data_description": {
+          "max_accuracy_m": "Ignoruj aktualizacje lokalizacji, gdzie błąd GPS jest większy niż to.",
+          "max_speed_kmh": "Ignoruj aktualizacje sugerujące ruch szybszy niż to.",
+          "require_reliable": "Gdy włączone, zdarzenie zbliżenia wyzwala się tylko po spójnych aktualizacjach.",
+          "min_updates_reliable": "Ile kolejnych aktualizacji jest wymaganych, zanim lokalizacja zostanie uznana za niezawodną."
+        }
+      },
+      "zone_thresholds": {
+        "title": "Progi stref zbliżenia",
+        "description": "Ustaw limity odległości dla każdej strefy zbliżenia.",
+        "data": {
+          "zone_very_near_m": "Próg Bardzo blisko (m)",
+          "zone_near_m": "Próg Blisko (m)",
+          "zone_mid_m": "Próg Średnio (m)",
+          "zone_far_m": "Próg Daleko (m)"
+        },
+        "data_description": {
+          "zone_very_near_m": "Domyślnie: 100 m.",
+          "zone_near_m": "Domyślnie: 500 m.",
+          "zone_mid_m": "Domyślnie: 2000 m.",
+          "zone_far_m": "Domyślnie: 10000 m."
         }
       }
     },
     "error": {
-      "exit_below_entry": "Próg wyjścia musi być większy lub równy progowi wejścia."
+      "exit_below_entry": "Próg wyjścia musi być większy lub równy progowi wejścia.",
+      "zone_thresholds_not_ascending": "Progi stref muszą rosnąć w kolejności: Bardzo blisko < Blisko < Średnio < Daleko."
     }
   },
   "entity": {
@@ -89,6 +149,12 @@
       },
       "proximity_duration": {
         "name": "Czas bliskości"
+      },
+      "proximity_tracking_started": {
+        "name": "Proximity Tracking Started"
+      },
+      "proximity_rate": {
+        "name": "Proximity Rate"
       },
       "last_seen_together": {
         "name": "Ostatnio widziani razem"
@@ -148,6 +214,15 @@
       },
       "update_count_b": {
         "name": "Update Count Last 30 min (B)"
+      },
+      "entity_state_a": {
+        "name": "Stan (A)"
+      },
+      "entity_state_b": {
+        "name": "Stan (B)"
+      },
+      "today_unaccounted_time": {
+        "name": "Czas nieuwzględniony dzisiaj"
       }
     },
     "binary_sensor": {

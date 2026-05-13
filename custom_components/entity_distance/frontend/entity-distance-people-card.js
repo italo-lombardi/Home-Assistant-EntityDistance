@@ -116,6 +116,38 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     return `${diffD}d ago`;
   }
 
+  function _formatDate(isoStr) {
+    if (!isoStr || isoStr === "unknown" || isoStr === "unavailable") return null;
+    const d = new Date(isoStr);
+    if (isNaN(d.getTime())) return null;
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  }
+
+  function _zoneColor(bucket) {
+    if (bucket === "very_near") return "#4caf50";
+    if (bucket === "near") return "#8bc34a";
+    if (bucket === "mid") return "#ff9800";
+    if (bucket === "far") return "#ff5722";
+    if (bucket === "very_far") return "#9e9e9e";
+    return null;
+  }
+
+  function _entityStateLabel(hass, entityId) {
+    if (!entityId) return null;
+    const s = hass.states[entityId];
+    if (!s || s.state === "unknown" || s.state === "unavailable") return null;
+    const state = s.state;
+    // Try to get a human-friendly zone name
+    if (state === "home") return "Home";
+    if (state === "not_home") return "Away";
+    // Zone entity: look up the zone's friendly name
+    const zoneId = `zone.${state}`;
+    const zone = hass.states[zoneId];
+    if (zone?.attributes?.friendly_name) return zone.attributes.friendly_name;
+    // Fallback: capitalize state
+    return state.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+  }
+
   function _dirIcon(dir) {
     if (dir === "approaching") return "↓";
     if (dir === "diverging") return "↑";
@@ -165,7 +197,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       --edpc-proximity-on: #4caf50;
       --edpc-proximity-off: #9e9e9e;
       --edpc-divider: var(--divider-color, rgba(0,0,0,0.12));
-      --edpc-avatar-size: 56px;
+      --edpc-avatar-size: 68px;
       user-select: text;
     }
 
@@ -174,41 +206,61 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     .card-header {
       display: flex;
       align-items: center;
-      justify-content: center;
+      justify-content: space-between;
       padding: 16px 16px 12px;
+      gap: 8px;
     }
     .compact .card-header { padding: 12px 16px 8px; }
 
     .pair-title {
-      font-size: 16px;
-      font-weight: 500;
-      color: var(--primary-text-color);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .pair-title-icon { font-size: 1.2rem; flex-shrink: 0; }
+
+    .pair-title-text {
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      text-align: center;
+      font-size: 16px;
+      color: var(--primary-text-color);
     }
+    .pair-title-text strong { font-weight: 700; }
+    .pair-title-text .pair-suffix { font-weight: 400; color: var(--secondary-text-color); }
+
+    .prox-badge {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 12px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .prox-badge.on  { background: #4caf5022; color: var(--edpc-proximity-on);  border: 1px solid #4caf5055; }
+    .prox-badge.off { background: #9e9e9e18; color: var(--edpc-proximity-off); border: 1px solid #9e9e9e44; }
 
     .divider { height: 1px; background: var(--edpc-divider); margin: 0 16px; }
 
-    /* ── hero row ── */
+    /* ── hero ── */
     .hero {
       display: flex;
       align-items: center;
-      justify-content: center;
-      padding: 16px 20px 12px;
+      padding: 16px 16px 12px;
       gap: 0;
     }
-    .compact .hero { padding: 12px 20px 8px; }
+    .compact .hero { padding: 10px 16px 8px; }
 
-    /* person column: avatar + name */
     .person-col {
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 6px;
       flex: 0 0 auto;
-      min-width: 72px;
+      width: 92px;
     }
 
     .avatar-wrap {
@@ -218,14 +270,9 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       overflow: hidden;
       border: 2px solid var(--divider-color, rgba(0,0,0,0.15));
       flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
     }
-
-    .avatar-wrap img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
+    .avatar-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
     .avatar-initials {
       width: 100%;
@@ -233,120 +280,141 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.1rem;
+      font-size: 1.3rem;
       font-weight: 700;
       color: #fff;
       letter-spacing: 0.03em;
     }
 
     .person-name {
-      font-size: 0.82rem;
-      font-weight: 500;
+      font-size: 0.88rem;
+      font-weight: 600;
       color: var(--primary-text-color);
       text-align: center;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      max-width: 80px;
+      max-width: 84px;
     }
-    .compact .person-name { font-size: 0.78rem; }
+    .compact .person-name { font-size: 0.8rem; }
 
-    /* middle distance block */
+    .person-state {
+      font-size: 0.7rem;
+      color: var(--secondary-text-color);
+      background: var(--secondary-background-color, rgba(0,0,0,0.05));
+      padding: 2px 8px;
+      border-radius: 10px;
+      white-space: normal;
+      word-break: break-word;
+      max-width: 88px;
+      text-align: center;
+    }
+
+    /* ── middle connector ── */
     .middle {
       flex: 1;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 4px;
-      padding: 0 12px;
+      gap: 6px;
+      padding: 0 4px;
       min-width: 0;
+      position: relative;
+    }
+
+    .connector-line {
+      position: absolute;
+      top: calc(var(--edpc-avatar-size) / 2 - 16px);
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: var(--edpc-divider);
+      z-index: 0;
+    }
+
+    .distance-bubble {
+      position: relative;
+      z-index: 1;
+      background: var(--card-background-color, #fff);
+      border: 1px solid var(--divider-color, rgba(0,0,0,0.15));
+      border-radius: 20px;
+      padding: 4px 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
     }
 
     .distance-value {
-      font-size: 1.9rem;
+      font-size: 1.2rem;
       font-weight: 700;
-      color: var(--primary-text-color);
       line-height: 1;
       white-space: nowrap;
-      text-align: center;
     }
-    .compact .distance-value { font-size: 1.5rem; }
+    .compact .distance-value { font-size: 1rem; }
 
     .dir-row {
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 3px;
     }
 
-    .dir-icon {
-      font-size: 1.1rem;
-      line-height: 1;
-    }
-    .compact .dir-icon { font-size: 0.95rem; }
+    .dir-icon { font-size: 0.9rem; line-height: 1; }
 
     .dir-label {
-      font-size: 0.72rem;
+      font-size: 0.62rem;
       text-transform: capitalize;
       white-space: nowrap;
     }
 
     .zone-label {
-      font-size: 0.72rem;
-      color: var(--secondary-text-color);
+      font-size: 0.65rem;
       text-transform: capitalize;
-      text-align: center;
-    }
-
-    /* ── proximity badge row ── */
-    .prox-badge-row {
-      display: flex;
-      justify-content: center;
-      padding: 8px 16px 12px;
-    }
-    .compact .prox-badge-row { padding: 6px 16px 8px; }
-
-    .prox-badge {
-      font-size: 0.72rem;
-      font-weight: 600;
-      padding: 4px 14px;
-      border-radius: 12px;
       white-space: nowrap;
     }
-    .prox-badge.on {
-      background: #4caf5022;
-      color: var(--edpc-proximity-on);
-      border: 1px solid #4caf5055;
-    }
-    .prox-badge.off {
-      background: #9e9e9e18;
-      color: var(--edpc-proximity-off);
-      border: 1px solid #9e9e9e44;
-    }
 
-    /* ── stats rows ── */
-    .stats { padding: 6px 16px 12px; }
-    .compact .stats { padding: 4px 16px 8px; }
+    /* ── stat boxes ── */
+    .stat-boxes {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding: 8px 16px 12px;
+    }
+    .compact .stat-boxes { padding: 6px 16px 8px; gap: 6px; }
 
-    .stat-row {
+    .stat-box {
+      min-width: 0;
+      border-radius: 10px;
+      padding: 10px 12px;
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 4px 0;
+      flex-direction: column;
+      gap: 2px;
+      background: var(--secondary-background-color, rgba(0,0,0,0.04));
     }
-    .compact .stat-row { padding: 3px 0; }
+    .compact .stat-box { padding: 7px 10px; border-radius: 8px; }
+    .stat-box.full-width { grid-column: 1 / -1; }
 
-    .stat-label {
-      font-size: 0.85rem;
+    .stat-box-label {
+      font-size: 0.72rem;
       color: var(--secondary-text-color);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-    .compact .stat-label { font-size: 0.8rem; }
 
-    .stat-value {
-      font-size: 0.85rem;
-      font-weight: 500;
-      color: var(--primary-text-color);
+    .stat-box-value {
+      font-size: 1.1rem;
+      font-weight: 700;
+      white-space: nowrap;
     }
-    .compact .stat-value { font-size: 0.8rem; }
+    .compact .stat-box-value { font-size: 0.95rem; }
+
+    .stat-box-sub {
+      font-size: 0.68rem;
+      color: var(--secondary-text-color);
+      margin-top: 1px;
+    }
 
     .error-msg {
       padding: 16px;
@@ -387,6 +455,9 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         show_today_time: true,
         show_proximity_duration: false,
         show_last_seen: false,
+        show_proximity_rate: false,
+        show_unaccounted_time: false,
+        show_entity_states: true,
         compact: false,
       };
     }
@@ -405,6 +476,9 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         show_today_time: true,
         show_proximity_duration: false,
         show_last_seen: false,
+        show_proximity_rate: false,
+        show_unaccounted_time: false,
+        show_entity_states: true,
         compact: false,
         ...config,
       };
@@ -429,8 +503,9 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         `binary_sensor.entity_distance_${slug}_in_proximity`,
         `${p}_distance`, `${p}_direction`, `${p}_proximity_zone`,
         `${p}_approach_speed`, `${p}_estimated_arrival_time`,
-        `${p}_proximity_duration`, `${p}_today_proximity_time`,
-        `${p}_last_seen_together`,
+        `${p}_proximity_duration`, `${p}_proximity_tracking_started`,
+        `${p}_proximity_rate`, `${p}_today_proximity_time`,
+        `${p}_today_unaccounted_time`, `${p}_last_seen_together`,
       ];
       const distState = this.hass?.states[`${p}_distance`];
       const entityA = this._config?.entity_a || distState?.attributes?.entity_a;
@@ -491,6 +566,10 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       const c = this._config;
       const isProx = proxState.state === "on";
       const title = c.title || _pairLabel(this.hass, slug);
+      const ampIdx = title.indexOf(" & ");
+      const boldTitle = ampIdx >= 0
+        ? html`<strong>${title.slice(0, ampIdx)}</strong><span class="pair-suffix"> &amp; </span><strong>${title.slice(ampIdx + 3)}</strong>`
+        : html`<strong>${title}</strong>`;
       const compactClass = c.compact ? "compact" : "";
 
       const distM = _num(this.hass, slug, "distance");
@@ -499,10 +578,14 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       const speedKmh = _num(this.hass, slug, "approach_speed");
       const etaMin = _num(this.hass, slug, "estimated_arrival_time");
       const proxDurMin = _num(this.hass, slug, "proximity_duration");
+      const proxTrackingStarted = _val(this.hass, slug, "proximity_tracking_started");
+      const proxRate = _num(this.hass, slug, "proximity_rate");
       const todayMin = _num(this.hass, slug, "today_proximity_time");
+      const unaccountedMin = _num(this.hass, slug, "today_unaccounted_time");
       const lastSeen = _val(this.hass, slug, "last_seen_together");
 
       const bucketLabel = bucket ? bucket.replace(/_/g, " ") : null;
+      const zoneColor = bucket ? _zoneColor(bucket) : null;
       const dirColor = _dirColor(direction);
 
       const { nameA, nameB } = this._pairNames(slug);
@@ -511,14 +594,36 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       const displayNameA = (entityA && _personName(this.hass, entityA)) || nameA;
       const displayNameB = (entityB && _personName(this.hass, entityB)) || nameB;
 
-      const hasStats = this._hasStats();
+      // Entity states
+      const distState = this.hass.states[`sensor.entity_distance_${slug}_distance`];
+      const resolvedEntityA = entityA || distState?.attributes?.entity_a || null;
+      const resolvedEntityB = entityB || distState?.attributes?.entity_b || null;
+      const stateA = _entityStateLabel(this.hass, resolvedEntityA);
+      const stateB = _entityStateLabel(this.hass, resolvedEntityB);
+
+      // Stat boxes
+      const showDur = c.show_proximity_duration && proxDurMin !== null;
+      const showRate = c.show_proximity_rate && proxRate !== null;
+      const showToday = c.show_today_time && todayMin !== null;
+      const showSpeed = c.show_speed && speedKmh !== null;
+      const showEta = c.show_eta && direction === "approaching" && etaMin !== null;
+      const showLast = c.show_last_seen;
+      const showUnaccounted = c.show_unaccounted_time && unaccountedMin !== null && unaccountedMin > 0;
+      const hasStats = showDur || showRate || showToday || showSpeed || showEta || showLast || showUnaccounted;
 
       return html`
         <ha-card class="${compactClass}">
 
           <!-- title -->
           <div class="card-header">
-            <span class="pair-title">${title}</span>
+            <div class="pair-title">
+              <span class="pair-title-icon">👥</span>
+              <span class="pair-title-text">${boldTitle}</span>
+            </div>
+            ${c.show_proximity_badge ? html`
+              <span class="prox-badge ${isProx ? "on" : "off"}">
+                ${isProx ? "In Proximity" : "Not in Proximity"}
+              </span>` : nothing}
           </div>
 
           <div class="divider"></div>
@@ -529,64 +634,86 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
             <div class="person-col">
               ${this._renderAvatar(entityA, displayNameA)}
               <span class="person-name">${displayNameA}</span>
+              ${c.show_entity_states && stateA ? html`<span class="person-state">${stateA}</span>` : nothing}
             </div>
 
-            <!-- middle: distance + direction + zone -->
+            <!-- middle: connector + distance bubble + direction -->
             <div class="middle">
-              <div class="distance-value">${_formatDistance(distM)}</div>
-              ${c.show_direction && direction ? html`
-                <div class="dir-row" style="color:${dirColor}">
-                  <span class="dir-icon">${_dirIcon(direction)}</span>
-                  <span class="dir-label">${direction}</span>
-                </div>` : nothing}
-              ${c.show_zone && bucketLabel ? html`
-                <div class="zone-label">${bucketLabel}</div>` : nothing}
+              <div class="connector-line"></div>
+              <div class="distance-bubble">
+                <span class="distance-value" style="${zoneColor ? `color:${zoneColor}` : ""}">
+                  ${_formatDistance(distM)}
+                </span>
+                ${(c.show_direction || c.show_zone) ? html`
+                  <div class="dir-row" style="color:${dirColor}">
+                    ${c.show_direction && direction ? html`
+                      <span class="dir-icon">${_dirIcon(direction)}</span>
+                      <span class="dir-label">${direction}</span>
+                    ` : nothing}
+                  </div>` : nothing}
+                ${c.show_zone && bucketLabel ? html`
+                  <div class="zone-label" style="${zoneColor ? `color:${zoneColor}` : ""}">${bucketLabel}</div>
+                ` : nothing}
+              </div>
             </div>
 
             <!-- person B -->
             <div class="person-col">
               ${this._renderAvatar(entityB, displayNameB)}
               <span class="person-name">${displayNameB}</span>
+              ${c.show_entity_states && stateB ? html`<span class="person-state">${stateB}</span>` : nothing}
             </div>
           </div>
 
-          <!-- proximity badge -->
-          ${c.show_proximity_badge ? html`
-            <div class="prox-badge-row">
-              <span class="prox-badge ${isProx ? "on" : "off"}">
-                ${isProx ? "In Proximity" : "Not in Proximity"}
-              </span>
-            </div>` : nothing}
-
           ${hasStats ? html`<div class="divider"></div>` : nothing}
 
-          <!-- stats -->
+          <!-- stat boxes -->
           ${hasStats ? html`
-            <div class="stats">
-              ${c.show_speed && speedKmh !== null ? html`
-                <div class="stat-row">
-                  <span class="stat-label">Approach speed</span>
-                  <span class="stat-value">${speedKmh.toFixed(1)} km/h</span>
+            <div class="stat-boxes">
+              ${showDur ? html`
+                <div class="stat-box full-width"
+                  style="background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.25)">
+                  <span class="stat-box-label">⏳ Proximity duration</span>
+                  <span class="stat-box-value" style="color:#6366f1">${_formatMinutes(proxDurMin)}</span>
+                  ${proxTrackingStarted ? html`<span class="stat-box-sub">since ${_formatDate(proxTrackingStarted)}</span>` : nothing}
                 </div>` : nothing}
-              ${c.show_eta && direction === "approaching" && etaMin !== null ? html`
-                <div class="stat-row">
-                  <span class="stat-label">ETA</span>
-                  <span class="stat-value">${_formatMinutes(etaMin)}</span>
+              ${showRate ? html`
+                <div class="stat-box full-width"
+                  style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2)">
+                  <span class="stat-box-label">📊 Proximity rate</span>
+                  <span class="stat-box-value" style="color:#6366f1">${proxRate.toFixed(1)}%</span>
+                  <span class="stat-box-sub">of time since tracking started</span>
                 </div>` : nothing}
-              ${c.show_today_time && todayMin !== null ? html`
-                <div class="stat-row">
-                  <span class="stat-label">Together today</span>
-                  <span class="stat-value">${_formatMinutes(todayMin)}</span>
+              ${showToday ? html`
+                <div class="stat-box ${showToday && !showLast ? "full-width" : ""}"
+                  style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.25)">
+                  <span class="stat-box-label">📅 Together today</span>
+                  <span class="stat-box-value" style="color:#16a34a">${_formatMinutes(todayMin)}</span>
                 </div>` : nothing}
-              ${c.show_proximity_duration && proxDurMin !== null ? html`
-                <div class="stat-row">
-                  <span class="stat-label">Proximity duration</span>
-                  <span class="stat-value">${_formatMinutes(proxDurMin)}</span>
+              ${showLast ? html`
+                <div class="stat-box ${showLast && !showToday ? "full-width" : ""}"
+                  style="background:rgba(251,146,60,0.1);border:1px solid rgba(251,146,60,0.25)">
+                  <span class="stat-box-label">👁 Last seen together</span>
+                  <span class="stat-box-value" style="color:#ea580c">${_formatTs(lastSeen)}</span>
                 </div>` : nothing}
-              ${c.show_last_seen ? html`
-                <div class="stat-row">
-                  <span class="stat-label">Last seen together</span>
-                  <span class="stat-value">${_formatTs(lastSeen)}</span>
+              ${showSpeed ? html`
+                <div class="stat-box ${showSpeed && !showEta ? "full-width" : ""}"
+                  style="background:rgba(14,165,233,0.1);border:1px solid rgba(14,165,233,0.25)">
+                  <span class="stat-box-label">💨 Approach speed</span>
+                  <span class="stat-box-value" style="color:#0284c7">${speedKmh.toFixed(1)} km/h</span>
+                </div>` : nothing}
+              ${showEta ? html`
+                <div class="stat-box ${showEta && !showSpeed ? "full-width" : ""}"
+                  style="background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.25)">
+                  <span class="stat-box-label">⏱ ETA</span>
+                  <span class="stat-box-value" style="color:#9333ea">${_formatMinutes(etaMin)}</span>
+                </div>` : nothing}
+              ${showUnaccounted ? html`
+                <div class="stat-box full-width"
+                  style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.35)">
+                  <span class="stat-box-label">⚠ No data today</span>
+                  <span class="stat-box-value" style="color:#d97706">${_formatMinutes(unaccountedMin)}</span>
+                  <span class="stat-box-sub">gap since last calculation</span>
                 </div>` : nothing}
             </div>
           ` : nothing}
@@ -595,11 +722,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       `;
     }
 
-    _hasStats() {
-      const c = this._config;
-      return c.show_speed || c.show_eta || c.show_today_time || c.show_proximity_duration || c.show_last_seen;
-    }
-  }
+  } // end EntityDistancePeopleCard
 
   customElements.define("entity-distance-people-card", EntityDistancePeopleCard);
 
@@ -747,6 +870,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
           </div>
 
           <div class="section-title">Display</div>
+          ${this._checkRow("show_entity_states", "Show entity states (Home / Away / zone)")}
           ${this._checkRow("show_direction", "Show direction (approaching / diverging / stationary)")}
           ${this._checkRow("show_zone", "Show proximity zone label (Very Near … Very Far)")}
           ${this._checkRow("show_proximity_badge", "Show proximity badge (In Proximity / Not in Proximity)")}
@@ -758,7 +882,9 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
           <div class="section-title">Time Together</div>
           ${this._checkRow("show_today_time", "Show time together today")}
           ${this._checkRow("show_proximity_duration", "Show total proximity duration")}
+          ${this._checkRow("show_proximity_rate", "Show proximity rate % (duration ÷ time since tracking started)")}
           ${this._checkRow("show_last_seen", "Show last seen together")}
+          ${this._checkRow("show_unaccounted_time", "Show data gap warning (time since last calculation)")}
 
           <div class="section-title">Layout</div>
           ${this._checkRow("compact", "Compact mode")}

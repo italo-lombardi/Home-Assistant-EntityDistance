@@ -76,6 +76,7 @@ async def async_setup_entry(
             BucketLevelSensor(coordinator, entry, entity_a_name, entity_b_name),
             ProximityDurationSensor(coordinator, entry, entity_a_name, entity_b_name),
             ProximityTrackingStartedSensor(coordinator, entry, entity_a_name, entity_b_name),
+            ProximityRateSensor(coordinator, entry, entity_a_name, entity_b_name),
             LastSeenTogetherSensor(coordinator, entry, entity_a_name, entity_b_name),
             TodayProximityTimeSensor(coordinator, entry, entity_a_name, entity_b_name),
             TodayZoneTimeSensor(coordinator, entry, entity_a_name, entity_b_name, BUCKET_VERY_NEAR),
@@ -381,6 +382,30 @@ class ProximityTrackingStartedSensor(EntityDistanceSensorBase):
         return self._pair.proximity_tracking_started
 
 
+class ProximityRateSensor(EntityDistanceSensorBase):
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = "%"
+    _attr_translation_key = "proximity_rate"
+    _attr_suggested_display_precision = 1
+
+    def __init__(self, coordinator, entry, a_name, b_name):
+        super().__init__(coordinator, entry, a_name, b_name, "proximity_rate")
+
+    @property
+    def native_value(self) -> float | None:
+        ps = self._pair
+        if not ps.data_valid or ps.proximity_tracking_started is None:
+            return None
+        now = datetime.now().astimezone()
+        total_s = (now - ps.proximity_tracking_started).total_seconds()
+        if total_s <= 0:
+            return None
+        prox_s = ps.proximity_duration_s
+        if ps.proximity and ps.proximity_since:
+            prox_s += (now - ps.proximity_since).total_seconds()
+        return round(min(prox_s / total_s * 100, 100.0), 1)
+
+
 class TodayUnaccountedTimeSensor(EntityDistanceSensorBase):
     _attr_device_class = SensorDeviceClass.DURATION
     _attr_state_class = SensorStateClass.MEASUREMENT
@@ -396,7 +421,7 @@ class TodayUnaccountedTimeSensor(EntityDistanceSensorBase):
         if ps.prev_calc_time is None:
             return None
         now = datetime.now().astimezone()
-        midnight = now.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
-        cap = min(now, midnight)
-        gap_s = (cap - ps.prev_calc_time).total_seconds()
+        today_midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        effective_prev = max(ps.prev_calc_time, today_midnight)
+        gap_s = (now - effective_prev).total_seconds()
         return round(max(gap_s, 0) / 60, 1)

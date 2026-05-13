@@ -15,7 +15,7 @@ Track the distance between any two entities — people, devices, or zones — wi
 ## Features
 
 - **Person-to-person, person-to-zone, device-to-zone, zone-to-zone** — any combination of `person`, `device_tracker`, `sensor`, or `zone` entities
-- **24 sensors per pair** — distance, proximity zone, proximity zone level, proximity duration, last seen together, today proximity time, direction, direction level, closing speed, ETA, today zone times, GPS accuracy, last update, update count, entity state, today unaccounted time (per entity where applicable)
+- **26 sensors per pair** — distance, proximity zone, proximity zone level, proximity duration, proximity rate, proximity tracking started, last seen together, today proximity time, direction, direction level, closing speed, ETA, today zone times, GPS accuracy, last update, update count, entity state, today unaccounted time (per entity where applicable)
 - **Proximity binary sensor** — ON/OFF with configurable entry/exit hysteresis to prevent flickering
 - **Direction of travel** — approaching, diverging, or stationary
 - **ETA** — estimated minutes until together, only when approaching
@@ -113,7 +113,7 @@ All settings can be changed after setup via **Configure** on the integration car
 
 ## Entities
 
-Each configured pair creates one HA device with 25 entities.
+Each configured pair creates one HA device with 27 entities.
 
 ### Sensors
 
@@ -123,6 +123,8 @@ Each configured pair creates one HA device with 25 entities.
 | Proximity Zone | Very Near / Near / Medium / Far / Very Far | `enum` |
 | Proximity Zone Number | Numeric zone level: 1 (Very Near) to 5 (Very Far) | — |
 | Proximity Duration | Minutes currently in proximity (live, includes current session) | `duration` |
+| Proximity Tracking Started | Timestamp when tracking began for this pair (set once) | `timestamp` |
+| Proximity Rate | Percentage of tracked time spent in proximity | `%` |
 | Last Seen Together | Timestamp of last proximity entry | `timestamp` |
 | Today Proximity Time | Total minutes together today — resets at midnight | `duration` |
 | Today Very Near Time | Minutes spent Very Near today | `duration` |
@@ -363,6 +365,9 @@ show_proximity_duration: false
 show_today_time: true         # time together today
 show_last_seen: false
 show_today_zone_times: false  # time per zone (Very Near, Near, …)
+show_entity_states: true      # current state of each person (Home / Away / zone)
+show_proximity_rate: false    # % of tracked time spent together
+show_unaccounted_time: false  # minutes today with no GPS data
 show_gps_accuracy: false
 show_last_update: false
 show_update_count: false      # update count last 30 min
@@ -395,6 +400,9 @@ show_eta: true
 show_today_time: true
 show_proximity_duration: false
 show_last_seen: false
+show_entity_states: true      # current state of each person (Home / Away / zone)
+show_proximity_rate: false    # % of tracked time spent together
+show_unaccounted_time: false  # minutes today with no GPS data
 compact: false
 ```
 
@@ -404,13 +412,15 @@ If auto-registration fails (e.g. YAML-only Lovelace mode), add manually:
 
 ```yaml
 resources:
-  - url: /entity_distance/entity-distance-card.js?0.1.0-alpha.3
+  - url: /entity_distance/entity-distance-card.js?0.1.0
     type: module
-  - url: /entity_distance/entity-distance-people-card.js?0.1.0-alpha.3
+  - url: /entity_distance/entity-distance-people-card.js?0.1.0
     type: module
 ```
 
-<!-- screenshot: lovelace card -->
+<!-- screenshot: entity-distance-card -->
+
+<!-- screenshot: entity-distance-people-card -->
 
 ---
 

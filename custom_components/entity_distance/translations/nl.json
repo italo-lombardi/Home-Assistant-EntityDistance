@@ -7,6 +7,10 @@
         "data": {
           "entity_a": "Eerste entiteit",
           "entity_b": "Tweede entiteit"
+        },
+        "data_description": {
+          "entity_a": "De eerste te volgen entiteit. Kan een persoon, apparaattracker, sensor of zone zijn.",
+          "entity_b": "De tweede te volgen entiteit. Moet verschillen van de eerste."
         }
       },
       "thresholds": {
@@ -15,12 +19,16 @@
         "data": {
           "entry_threshold_m": "Ingangsdrempel (m)",
           "exit_threshold_m": "Uitgangsdrempel (m)",
-          "debounce_s": "Debounce (s)"
+          "debounce_s": "Debounce (s)",
+          "show_advanced": "Geavanceerde filters configureren",
+          "show_zone_thresholds": "Nabijheidszone-drempelwaarden configureren"
         },
         "data_description": {
           "entry_threshold_m": "Afstand waarbij entiteiten als nabij worden beschouwd.",
           "exit_threshold_m": "Afstand waarbij entiteiten niet meer als nabij worden beschouwd. Moet >= ingangsdrempel zijn.",
-          "debounce_s": "Seconden te wachten voor het verwerken van een locatie-update. Vermindert ruis van snelle GPS-wijzigingen."
+          "debounce_s": "Seconden te wachten voor het verwerken van een locatie-update. Vermindert ruis van snelle GPS-wijzigingen.",
+          "show_advanced": "Inschakelen om GPS-nauwkeurigheid, snelheid en betrouwbaarheidsfilters te configureren.",
+          "show_zone_thresholds": "Inschakelen om de afstandsgrenzen voor zones in te stellen."
         }
       },
       "advanced": {
@@ -38,14 +46,32 @@
           "require_reliable": "Alleen proximity_enter-gebeurtenis activeren wanneer gegevens als betrouwbaar worden beschouwd.",
           "min_updates_reliable": "Minimum aantal locatie-updates in het venster voordat gegevens als betrouwbaar worden beschouwd."
         }
+      },
+      "zone_thresholds": {
+        "title": "Nabijheidszone-drempelwaarden",
+        "description": "Stel de afstandsgrenzen in voor elke nabijheidszone. Elke drempelwaarde moet groter zijn dan de vorige.",
+        "data": {
+          "zone_very_near_m": "Drempelwaarde Zeer dichtbij (m)",
+          "zone_near_m": "Drempelwaarde Dichtbij (m)",
+          "zone_mid_m": "Drempelwaarde Middel (m)",
+          "zone_far_m": "Drempelwaarde Ver (m)"
+        },
+        "data_description": {
+          "zone_very_near_m": "Entiteiten zijn 'Zeer dichtbij' op of dichter dan deze afstand. Standaard: 100 m.",
+          "zone_near_m": "Entiteiten zijn 'Dichtbij' op of dichter dan deze afstand. Moet groter zijn dan Zeer dichtbij. Standaard: 500 m.",
+          "zone_mid_m": "Entiteiten zijn op 'Middel' afstand. Moet groter zijn dan Dichtbij. Standaard: 2000 m.",
+          "zone_far_m": "Entiteiten zijn 'Ver'. Verder is 'Zeer ver'. Standaard: 10000 m."
+        }
       }
     },
     "error": {
       "same_entity": "Entiteit A en entiteit B moeten verschillend zijn.",
-      "exit_below_entry": "Uitgangsdrempel moet groter dan of gelijk aan de ingangsdrempel zijn."
+      "exit_below_entry": "Uitgangsdrempel moet groter dan of gelijk aan de ingangsdrempel zijn.",
+      "zone_thresholds_not_ascending": "Zoneverlopen moeten stijgen in volgorde: Zeer dichtbij < Dichtbij < Middel < Ver."
     },
     "abort": {
-      "already_configured": "Dit entiteitenpaar is al geconfigureerd."
+      "already_configured": "Dit entiteitenpaar is al geconfigureerd.",
+      "already_in_progress": "Er is al een configuratie bezig voor deze integratie. Sluit de dialoog en open hem opnieuw om opnieuw te beginnen."
     }
   },
   "options": {
@@ -55,7 +81,17 @@
         "data": {
           "entry_threshold_m": "Ingangsdrempel (m)",
           "exit_threshold_m": "Uitgangsdrempel (m)",
-          "debounce_s": "Debounce (s)"
+          "debounce_s": "Debounce (s)",
+          "show_advanced": "Geavanceerde filters configureren",
+          "show_zone_thresholds": "Nabijheidszone-drempelwaarden configureren"
+        },
+        "description": "Configureer de nabijheidsdrempelwaarden.",
+        "data_description": {
+          "entry_threshold_m": "Hoe dicht (in meters) de entiteiten moeten zijn om een nabijheidsgebeurtenis te activeren.",
+          "exit_threshold_m": "Hoe ver de entiteiten zich moeten verwijderen voordat ze niet meer als nabij worden beschouwd.",
+          "debounce_s": "Seconden wachten voordat een nieuwe locatieupdate wordt verwerkt.",
+          "show_advanced": "Inschakelen om GPS-, snelheids- en betrouwbaarheidsfilters te configureren.",
+          "show_zone_thresholds": "Inschakelen om zonegrenzen in te stellen."
         }
       },
       "advanced": {
@@ -65,11 +101,35 @@
           "max_speed_kmh": "Max. impliciete snelheid (km/h, 0 = uitgeschakeld)",
           "require_reliable": "Betrouwbare gegevens vereisen voor nabijheidsgebeurtenissen",
           "min_updates_reliable": "Min. updates voor betrouwbare gegevens"
+        },
+        "description": "Deze filters helpen slechte GPS-gegevens te negeren.",
+        "data_description": {
+          "max_accuracy_m": "Negeer locatieupdates waarbij de GPS-fout groter is dan dit.",
+          "max_speed_kmh": "Negeer updates die beweging sneller dan dit impliceren.",
+          "require_reliable": "Wanneer ingeschakeld wordt een nabijheidsgebeurtenis alleen geactiveerd na consistente updates.",
+          "min_updates_reliable": "Hoeveel opeenvolgende updates nodig zijn voordat de locatie als betrouwbaar wordt beschouwd."
+        }
+      },
+      "zone_thresholds": {
+        "title": "Nabijheidszone-drempelwaarden",
+        "description": "Stel de afstandsgrenzen in voor elke nabijheidszone.",
+        "data": {
+          "zone_very_near_m": "Drempelwaarde Zeer dichtbij (m)",
+          "zone_near_m": "Drempelwaarde Dichtbij (m)",
+          "zone_mid_m": "Drempelwaarde Middel (m)",
+          "zone_far_m": "Drempelwaarde Ver (m)"
+        },
+        "data_description": {
+          "zone_very_near_m": "Standaard: 100 m.",
+          "zone_near_m": "Standaard: 500 m.",
+          "zone_mid_m": "Standaard: 2000 m.",
+          "zone_far_m": "Standaard: 10000 m."
         }
       }
     },
     "error": {
-      "exit_below_entry": "Uitgangsdrempel moet groter dan of gelijk aan de ingangsdrempel zijn."
+      "exit_below_entry": "Uitgangsdrempel moet groter dan of gelijk aan de ingangsdrempel zijn.",
+      "zone_thresholds_not_ascending": "Zoneverlopen moeten stijgen in volgorde: Zeer dichtbij < Dichtbij < Middel < Ver."
     }
   },
   "entity": {
@@ -89,6 +149,12 @@
       },
       "proximity_duration": {
         "name": "Nabijheidsduur"
+      },
+      "proximity_tracking_started": {
+        "name": "Proximity Tracking Started"
+      },
+      "proximity_rate": {
+        "name": "Proximity Rate"
       },
       "last_seen_together": {
         "name": "Laatst samen gezien"
@@ -148,6 +214,15 @@
       },
       "update_count_b": {
         "name": "Update Count Last 30 min (B)"
+      },
+      "entity_state_a": {
+        "name": "Status (A)"
+      },
+      "entity_state_b": {
+        "name": "Status (B)"
+      },
+      "today_unaccounted_time": {
+        "name": "Niet bijgehouden tijd vandaag"
       }
     },
     "binary_sensor": {

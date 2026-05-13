@@ -7,6 +7,10 @@
         "data": {
           "entity_a": "Primeira entidade",
           "entity_b": "Segunda entidade"
+        },
+        "data_description": {
+          "entity_a": "A primeira entidade a rastrear. Pode ser uma pessoa, rastreador de dispositivo, sensor ou zona.",
+          "entity_b": "A segunda entidade a rastrear. Deve ser diferente da primeira."
         }
       },
       "thresholds": {
@@ -15,12 +19,16 @@
         "data": {
           "entry_threshold_m": "Limiar de entrada (m)",
           "exit_threshold_m": "Limiar de saída (m)",
-          "debounce_s": "Debounce (s)"
+          "debounce_s": "Debounce (s)",
+          "show_advanced": "Configurar filtros avançados",
+          "show_zone_thresholds": "Configurar limiares de zona de proximidade"
         },
         "data_description": {
           "entry_threshold_m": "Distância na qual as entidades são consideradas em proximidade.",
           "exit_threshold_m": "Distância na qual as entidades não são mais consideradas em proximidade. Deve ser >= limiar de entrada.",
-          "debounce_s": "Segundos de espera antes de processar uma atualização de localização. Reduz ruído de mudanças rápidas de GPS."
+          "debounce_s": "Segundos de espera antes de processar uma atualização de localização. Reduz ruído de mudanças rápidas de GPS.",
+          "show_advanced": "Ativar para configurar precisão GPS, velocidade e filtros de confiabilidade.",
+          "show_zone_thresholds": "Ativar para definir os limites de distância das zonas."
         }
       },
       "advanced": {
@@ -38,14 +46,32 @@
           "require_reliable": "Disparar evento proximity_enter apenas quando os dados forem considerados confiáveis.",
           "min_updates_reliable": "Número mínimo de atualizações de localização na janela antes de os dados serem considerados confiáveis."
         }
+      },
+      "zone_thresholds": {
+        "title": "Limiares de zona de proximidade",
+        "description": "Defina os limites de distância para cada zona de proximidade. Cada limiar deve ser maior que o anterior.",
+        "data": {
+          "zone_very_near_m": "Limiar Muito perto (m)",
+          "zone_near_m": "Limiar Perto (m)",
+          "zone_mid_m": "Limiar Médio (m)",
+          "zone_far_m": "Limiar Longe (m)"
+        },
+        "data_description": {
+          "zone_very_near_m": "Entidades são consideradas 'Muito perto' nesta distância ou menos. Padrão: 100 m.",
+          "zone_near_m": "Entidades são consideradas 'Perto' nesta distância ou menos. Deve ser maior que Muito perto. Padrão: 500 m.",
+          "zone_mid_m": "Entidades estão a distância 'Média'. Deve ser maior que Perto. Padrão: 2000 m.",
+          "zone_far_m": "Entidades são consideradas 'Longe'. Além disso é 'Muito longe'. Padrão: 10000 m."
+        }
       }
     },
     "error": {
       "same_entity": "A entidade A e a entidade B devem ser diferentes.",
-      "exit_below_entry": "O limiar de saída deve ser maior ou igual ao limiar de entrada."
+      "exit_below_entry": "O limiar de saída deve ser maior ou igual ao limiar de entrada.",
+      "zone_thresholds_not_ascending": "Os limiares de zona devem aumentar em ordem: Muito perto < Perto < Médio < Longe."
     },
     "abort": {
-      "already_configured": "Este par de entidades já está configurado."
+      "already_configured": "Este par de entidades já está configurado.",
+      "already_in_progress": "Já há uma configuração em andamento para esta integração. Feche e reabra o diálogo para começar novamente."
     }
   },
   "options": {
@@ -55,7 +81,17 @@
         "data": {
           "entry_threshold_m": "Limiar de entrada (m)",
           "exit_threshold_m": "Limiar de saída (m)",
-          "debounce_s": "Debounce (s)"
+          "debounce_s": "Debounce (s)",
+          "show_advanced": "Configurar filtros avançados",
+          "show_zone_thresholds": "Configurar limiares de zona de proximidade"
+        },
+        "description": "Configure os limiares de proximidade.",
+        "data_description": {
+          "entry_threshold_m": "Quão perto (em metros) as entidades devem estar para acionar um evento de proximidade.",
+          "exit_threshold_m": "Quão longe as entidades devem se afastar antes de não serem mais consideradas próximas.",
+          "debounce_s": "Segundos a aguardar antes de processar uma nova atualização de localização.",
+          "show_advanced": "Ativar para configurar filtros de GPS, velocidade e confiabilidade.",
+          "show_zone_thresholds": "Ativar para definir limites de zona."
         }
       },
       "advanced": {
@@ -65,11 +101,35 @@
           "max_speed_kmh": "Velocidade implícita máx. (km/h, 0 = desativado)",
           "require_reliable": "Exigir dados confiáveis para eventos de proximidade",
           "min_updates_reliable": "Atualizações mínimas para dados confiáveis"
+        },
+        "description": "Estes filtros ajudam a ignorar dados GPS deficientes.",
+        "data_description": {
+          "max_accuracy_m": "Ignorar atualizações de localização onde o erro GPS excede este valor.",
+          "max_speed_kmh": "Ignorar atualizações que implicam movimento mais rápido que isso.",
+          "require_reliable": "Quando ativo, um evento de proximidade só é acionado após atualizações consistentes.",
+          "min_updates_reliable": "Quantas atualizações consecutivas são necessárias antes de considerar a localização confiável."
+        }
+      },
+      "zone_thresholds": {
+        "title": "Limiares de zona de proximidade",
+        "description": "Defina os limites de distância para cada zona de proximidade.",
+        "data": {
+          "zone_very_near_m": "Limiar Muito perto (m)",
+          "zone_near_m": "Limiar Perto (m)",
+          "zone_mid_m": "Limiar Médio (m)",
+          "zone_far_m": "Limiar Longe (m)"
+        },
+        "data_description": {
+          "zone_very_near_m": "Padrão: 100 m.",
+          "zone_near_m": "Padrão: 500 m.",
+          "zone_mid_m": "Padrão: 2000 m.",
+          "zone_far_m": "Padrão: 10000 m."
         }
       }
     },
     "error": {
-      "exit_below_entry": "O limiar de saída deve ser maior ou igual ao limiar de entrada."
+      "exit_below_entry": "O limiar de saída deve ser maior ou igual ao limiar de entrada.",
+      "zone_thresholds_not_ascending": "Os limiares de zona devem aumentar em ordem: Muito perto < Perto < Médio < Longe."
     }
   },
   "entity": {
@@ -89,6 +149,12 @@
       },
       "proximity_duration": {
         "name": "Duração de proximidade"
+      },
+      "proximity_tracking_started": {
+        "name": "Proximity Tracking Started"
+      },
+      "proximity_rate": {
+        "name": "Proximity Rate"
       },
       "last_seen_together": {
         "name": "Visto juntos pela última vez"
@@ -148,6 +214,15 @@
       },
       "update_count_b": {
         "name": "Update Count Last 30 min (B)"
+      },
+      "entity_state_a": {
+        "name": "Estado (A)"
+      },
+      "entity_state_b": {
+        "name": "Estado (B)"
+      },
+      "today_unaccounted_time": {
+        "name": "Tempo não contabilizado hoje"
       }
     },
     "binary_sensor": {

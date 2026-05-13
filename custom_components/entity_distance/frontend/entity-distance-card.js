@@ -131,6 +131,19 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     return null;
   }
 
+  function _entityStateLabel(hass, entityId) {
+    if (!entityId) return null;
+    const s = hass.states[entityId];
+    if (!s || s.state === "unknown" || s.state === "unavailable") return null;
+    const state = s.state;
+    if (state === "home") return "Home";
+    if (state === "not_home") return "Away";
+    const zoneId = `zone.${state}`;
+    const zone = hass.states[zoneId];
+    if (zone?.attributes?.friendly_name) return zone.attributes.friendly_name;
+    return state.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+  }
+
   function _dirIcon(dir) {
     if (dir === "approaching") return "↓";
     if (dir === "diverging") return "↑";
@@ -243,6 +256,39 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       color: var(--secondary-text-color);
       margin-top: 4px;
       text-transform: capitalize;
+    }
+
+    /* ── entity state badges ── */
+    .entity-states {
+      display: flex;
+      gap: 8px;
+      padding: 0 16px 10px;
+      flex-wrap: wrap;
+    }
+
+    .entity-state-badge {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--secondary-background-color, rgba(0,0,0,0.04));
+      border: 1px solid var(--divider-color, rgba(0,0,0,0.1));
+      border-radius: 12px;
+      padding: 3px 10px 3px 8px;
+      font-size: 0.78rem;
+    }
+
+    .entity-state-name {
+      font-weight: 600;
+      color: var(--primary-text-color);
+    }
+
+    .entity-state-sep {
+      color: var(--secondary-text-color);
+      font-size: 0.7rem;
+    }
+
+    .entity-state-value {
+      color: var(--secondary-text-color);
     }
 
     .direction-block {
@@ -460,6 +506,9 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         show_gps_accuracy: false,
         show_last_update: false,
         show_update_count: false,
+        show_entity_states: true,
+        show_proximity_rate: false,
+        show_unaccounted_time: false,
         compact: false,
       };
     }
@@ -480,6 +529,9 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         show_gps_accuracy: false,
         show_last_update: false,
         show_update_count: false,
+        show_entity_states: true,
+        show_proximity_rate: false,
+        show_unaccounted_time: false,
         compact: false,
         ...config,
       };
@@ -504,8 +556,9 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         `binary_sensor.entity_distance_${slug}_in_proximity`,
         `${p}_distance`, `${p}_direction`, `${p}_direction_level`, `${p}_proximity_zone`,
         `${p}_approach_speed`, `${p}_estimated_arrival_time`,
-        `${p}_proximity_duration`, `${p}_today_proximity_time`,
-        `${p}_last_seen_together`,
+        `${p}_proximity_duration`, `${p}_proximity_tracking_started`,
+        `${p}_proximity_rate`, `${p}_today_proximity_time`,
+        `${p}_today_unaccounted_time`, `${p}_last_seen_together`,
         `${p}_today_very_near_time`, `${p}_today_near_time`,
         `${p}_today_medium_time`, `${p}_today_far_time`,
         `${p}_today_very_far_time`,
@@ -554,12 +607,23 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       const etaMin = _num(this.hass, slug, "estimated_arrival_time");
       const proxDurMin = _num(this.hass, slug, "proximity_duration");
       const proxTrackingStarted = _val(this.hass, slug, "proximity_tracking_started");
+      const proxRate = _num(this.hass, slug, "proximity_rate");
       const todayMin = _num(this.hass, slug, "today_proximity_time");
+      const unaccountedMin = _num(this.hass, slug, "today_unaccounted_time");
       const lastSeen = _val(this.hass, slug, "last_seen_together");
 
       const bucketLabel = bucket ? bucket.replace(/_/g, " ") : null;
       const zoneColor = bucket ? _zoneColor(bucket) : null;
       const dirColor = _dirColor(direction);
+
+      // Entity states
+      const distState = this.hass.states[`sensor.entity_distance_${slug}_distance`];
+      const entityA = distState?.attributes?.entity_a;
+      const entityB = distState?.attributes?.entity_b;
+      const nameA = entityA ? (this.hass.states[entityA]?.attributes?.friendly_name || entityA.replace(/^[^.]+\./, "").replace(/_/g, " ").replace(/\b\w/g, x => x.toUpperCase())) : null;
+      const nameB = entityB ? (this.hass.states[entityB]?.attributes?.friendly_name || entityB.replace(/^[^.]+\./, "").replace(/_/g, " ").replace(/\b\w/g, x => x.toUpperCase())) : null;
+      const stateA = _entityStateLabel(this.hass, entityA);
+      const stateB = _entityStateLabel(this.hass, entityB);
 
       return html`
         <ha-card class="${compactClass}">
@@ -593,6 +657,24 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
             </div>
             <div class="divider"></div>` : nothing}
 
+          <!-- entity state badges -->
+          ${c.show_entity_states && (stateA || stateB) ? html`
+            <div class="entity-states">
+              ${stateA && nameA ? html`
+                <div class="entity-state-badge">
+                  <span class="entity-state-name">${nameA}</span>
+                  <span class="entity-state-sep">·</span>
+                  <span class="entity-state-value">${stateA}</span>
+                </div>` : nothing}
+              ${stateB && nameB ? html`
+                <div class="entity-state-badge">
+                  <span class="entity-state-name">${nameB}</span>
+                  <span class="entity-state-sep">·</span>
+                  <span class="entity-state-value">${stateB}</span>
+                </div>` : nothing}
+            </div>
+          ` : nothing}
+
           <!-- movement stat boxes -->
           ${this._hasMovementStats() ? html`
             <div class="stat-boxes">
@@ -613,28 +695,41 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
           <!-- time-together stat boxes -->
           ${this._hasTimeStats() ? html`${(() => {
             const showDur = c.show_proximity_duration && proxDurMin !== null;
+            const showRate = c.show_proximity_rate && proxRate !== null;
             const showToday = c.show_today_time && todayMin !== null;
             const showLast = c.show_last_seen;
-            const count = [showDur, showToday, showLast].filter(Boolean).length;
-            const lastFull = count % 2 === 1; // odd count → last item spans full width
-            const lastIdx = [showDur, showToday, showLast].lastIndexOf(true);
+            const showUnaccounted = c.show_unaccounted_time && unaccountedMin !== null && unaccountedMin > 0;
+            // duration always full-width; rate full-width; today+last share one row; unaccounted full-width
+            const todayLastCount = [showToday, showLast].filter(Boolean).length;
             return html`
               <div class="stat-boxes">
                 ${showDur ? html`
-                  <div class="stat-box ${lastIdx === 0 && lastFull ? "full-width" : ""}" style="background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.25)">
+                  <div class="stat-box full-width" style="background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.25)">
                     <span class="stat-box-label">⏳ Proximity duration</span>
                     <span class="stat-box-value" style="color:#6366f1">${_formatMinutes(proxDurMin)}</span>
                     ${proxTrackingStarted ? html`<span class="stat-box-sub">since ${_formatDate(proxTrackingStarted)}</span>` : nothing}
                   </div>` : nothing}
+                ${showRate ? html`
+                  <div class="stat-box full-width" style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2)">
+                    <span class="stat-box-label">📊 Proximity rate</span>
+                    <span class="stat-box-value" style="color:#6366f1">${proxRate.toFixed(1)}%</span>
+                    <span class="stat-box-sub">of time since tracking started</span>
+                  </div>` : nothing}
                 ${showToday ? html`
-                  <div class="stat-box ${lastIdx === 1 && lastFull ? "full-width" : ""}" style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.25)">
+                  <div class="stat-box ${todayLastCount === 1 ? "full-width" : ""}" style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.25)">
                     <span class="stat-box-label">📅 Together today</span>
                     <span class="stat-box-value" style="color:#16a34a">${_formatMinutes(todayMin)}</span>
                   </div>` : nothing}
                 ${showLast ? html`
-                  <div class="stat-box ${lastIdx === 2 && lastFull ? "full-width" : ""}" style="background:rgba(251,146,60,0.1);border:1px solid rgba(251,146,60,0.25)">
+                  <div class="stat-box ${todayLastCount === 1 ? "full-width" : ""}" style="background:rgba(251,146,60,0.1);border:1px solid rgba(251,146,60,0.25)">
                     <span class="stat-box-label">👁 Last seen together</span>
                     <span class="stat-box-value" style="color:#ea580c">${_formatTs(lastSeen)}</span>
+                  </div>` : nothing}
+                ${showUnaccounted ? html`
+                  <div class="stat-box full-width" style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.35)">
+                    <span class="stat-box-label">⚠ No data today</span>
+                    <span class="stat-box-value" style="color:#d97706">${_formatMinutes(unaccountedMin)}</span>
+                    <span class="stat-box-sub">gap since last calculation</span>
                   </div>` : nothing}
               </div>`;
           })()}
@@ -651,10 +746,11 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
                   const min = _num(this.hass, slug, suffix);
                   if (min === null || min === 0) return nothing;
                   const zLabel = z === "mid" ? "Medium" : z.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+                  const zc = _zoneColor(z);
                   return html`
-                    <div class="zone-chip">
+                    <div class="zone-chip" style="background:${zc}18;border-color:${zc}44">
                       <span class="zone-chip-label">${zLabel}</span>
-                      <span class="zone-chip-value">${_formatMinutes(min)}</span>
+                      <span class="zone-chip-value" style="color:${zc}">${_formatMinutes(min)}</span>
                     </div>`;
                 })}
               </div>
@@ -786,7 +882,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
 
     _hasTimeStats() {
       const c = this._config;
-      return c.show_proximity_duration || c.show_today_time || c.show_last_seen;
+      return c.show_proximity_duration || c.show_proximity_rate || c.show_today_time || c.show_last_seen || c.show_unaccounted_time;
     }
 
     _hasDiagnostics() {
@@ -921,9 +1017,14 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
 
           <div class="section-title">Time Together</div>
           ${this._checkRow("show_proximity_duration", "Show total proximity duration")}
+          ${this._checkRow("show_proximity_rate", "Show proximity rate % (duration ÷ time since tracking started)")}
           ${this._checkRow("show_today_time", "Show time together today")}
           ${this._checkRow("show_last_seen", "Show last seen together")}
           ${this._checkRow("show_today_zone_times", "Show today's time per zone (Very Near, Near, …)")}
+          ${this._checkRow("show_unaccounted_time", "Show data gap warning (time since last calculation)")}
+
+          <div class="section-title">People</div>
+          ${this._checkRow("show_entity_states", "Show entity states (Home / Away / zone)")}
 
           <div class="section-title">Diagnostics</div>
           ${this._checkRow("show_gps_accuracy", "Show GPS accuracy (A & B)")}

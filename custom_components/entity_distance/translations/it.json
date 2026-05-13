@@ -7,6 +7,10 @@
         "data": {
           "entity_a": "Prima entità",
           "entity_b": "Seconda entità"
+        },
+        "data_description": {
+          "entity_a": "La prima entità da tracciare. Può essere una persona, tracker dispositivo, sensore o zona.",
+          "entity_b": "La seconda entità da tracciare. Deve essere diversa dalla prima."
         }
       },
       "thresholds": {
@@ -15,12 +19,16 @@
         "data": {
           "entry_threshold_m": "Soglia di ingresso (m)",
           "exit_threshold_m": "Soglia di uscita (m)",
-          "debounce_s": "Debounce (s)"
+          "debounce_s": "Debounce (s)",
+          "show_advanced": "Configura filtri avanzati",
+          "show_zone_thresholds": "Configura soglie zona di prossimità"
         },
         "data_description": {
           "entry_threshold_m": "Distanza alla quale le entità sono considerate in prossimità.",
           "exit_threshold_m": "Distanza alla quale le entità non sono più considerate in prossimità. Deve essere >= soglia di ingresso.",
-          "debounce_s": "Secondi di attesa prima di elaborare un aggiornamento della posizione. Riduce il rumore dei cambiamenti GPS rapidi."
+          "debounce_s": "Secondi di attesa prima di elaborare un aggiornamento della posizione. Riduce il rumore dei cambiamenti GPS rapidi.",
+          "show_advanced": "Attiva per configurare precisione GPS, velocità e filtri di affidabilità.",
+          "show_zone_thresholds": "Attiva per impostare i limiti di distanza delle zone."
         }
       },
       "advanced": {
@@ -38,14 +46,32 @@
           "require_reliable": "Attiva l'evento proximity_enter solo quando i dati sono considerati affidabili.",
           "min_updates_reliable": "Numero minimo di aggiornamenti di posizione nella finestra prima che i dati siano considerati affidabili."
         }
+      },
+      "zone_thresholds": {
+        "title": "Soglie zona di prossimità",
+        "description": "Imposta i limiti di distanza per ogni zona di prossimità. Ogni soglia deve essere maggiore della precedente.",
+        "data": {
+          "zone_very_near_m": "Soglia Molto vicino (m)",
+          "zone_near_m": "Soglia Vicino (m)",
+          "zone_mid_m": "Soglia Medio (m)",
+          "zone_far_m": "Soglia Lontano (m)"
+        },
+        "data_description": {
+          "zone_very_near_m": "Le entità sono considerate 'Molto vicino' a questa distanza o meno. Predefinito: 100 m.",
+          "zone_near_m": "Le entità sono considerate 'Vicino' a questa distanza o meno. Deve essere maggiore di Molto vicino. Predefinito: 500 m.",
+          "zone_mid_m": "Le entità sono a distanza 'Media'. Deve essere maggiore di Vicino. Predefinito: 2000 m.",
+          "zone_far_m": "Le entità sono considerate 'Lontano'. Oltre è 'Molto lontano'. Predefinito: 10000 m."
+        }
       }
     },
     "error": {
       "same_entity": "L'entità A e l'entità B devono essere diverse.",
-      "exit_below_entry": "La soglia di uscita deve essere maggiore o uguale alla soglia di ingresso."
+      "exit_below_entry": "La soglia di uscita deve essere maggiore o uguale alla soglia di ingresso.",
+      "zone_thresholds_not_ascending": "Le soglie di zona devono aumentare in ordine: Molto vicino < Vicino < Medio < Lontano."
     },
     "abort": {
-      "already_configured": "Questa coppia di entità è già configurata."
+      "already_configured": "Questa coppia di entità è già configurata.",
+      "already_in_progress": "È già in corso una configurazione per questa integrazione. Chiudi e riapri la finestra per ricominciare."
     }
   },
   "options": {
@@ -55,7 +81,17 @@
         "data": {
           "entry_threshold_m": "Soglia di ingresso (m)",
           "exit_threshold_m": "Soglia di uscita (m)",
-          "debounce_s": "Debounce (s)"
+          "debounce_s": "Debounce (s)",
+          "show_advanced": "Configura filtri avanzati",
+          "show_zone_thresholds": "Configura soglie zona di prossimità"
+        },
+        "description": "Configura le soglie di prossimità.",
+        "data_description": {
+          "entry_threshold_m": "Quanto vicino (in metri) le entità devono essere per attivare un evento di prossimità.",
+          "exit_threshold_m": "Quanto lontano devono spostarsi le entità prima di non essere più considerate vicine.",
+          "debounce_s": "Secondi da attendere prima di elaborare un nuovo aggiornamento di posizione.",
+          "show_advanced": "Attiva per configurare filtri GPS, velocità e affidabilità.",
+          "show_zone_thresholds": "Attiva per impostare i limiti di zona."
         }
       },
       "advanced": {
@@ -65,11 +101,35 @@
           "max_speed_kmh": "Velocità implicita max. (km/h, 0 = disabilitato)",
           "require_reliable": "Richiedi dati affidabili per gli eventi di prossimità",
           "min_updates_reliable": "Aggiornamenti minimi per dati affidabili"
+        },
+        "description": "Questi filtri aiutano a ignorare i dati GPS errati.",
+        "data_description": {
+          "max_accuracy_m": "Ignora aggiornamenti di posizione dove l'errore GPS supera questo valore.",
+          "max_speed_kmh": "Ignora aggiornamenti che implicano movimento più veloce di questo.",
+          "require_reliable": "Quando attivo, un evento di prossimità si attiva solo dopo aggiornamenti coerenti.",
+          "min_updates_reliable": "Quanti aggiornamenti consecutivi sono necessari prima di considerare la posizione affidabile."
+        }
+      },
+      "zone_thresholds": {
+        "title": "Soglie zona di prossimità",
+        "description": "Imposta i limiti di distanza per ogni zona di prossimità.",
+        "data": {
+          "zone_very_near_m": "Soglia Molto vicino (m)",
+          "zone_near_m": "Soglia Vicino (m)",
+          "zone_mid_m": "Soglia Medio (m)",
+          "zone_far_m": "Soglia Lontano (m)"
+        },
+        "data_description": {
+          "zone_very_near_m": "Predefinito: 100 m.",
+          "zone_near_m": "Predefinito: 500 m.",
+          "zone_mid_m": "Predefinito: 2000 m.",
+          "zone_far_m": "Predefinito: 10000 m."
         }
       }
     },
     "error": {
-      "exit_below_entry": "La soglia di uscita deve essere maggiore o uguale alla soglia di ingresso."
+      "exit_below_entry": "La soglia di uscita deve essere maggiore o uguale alla soglia di ingresso.",
+      "zone_thresholds_not_ascending": "Le soglie di zona devono aumentare in ordine: Molto vicino < Vicino < Medio < Lontano."
     }
   },
   "entity": {
@@ -89,6 +149,12 @@
       },
       "proximity_duration": {
         "name": "Durata prossimità"
+      },
+      "proximity_tracking_started": {
+        "name": "Proximity Tracking Started"
+      },
+      "proximity_rate": {
+        "name": "Proximity Rate"
       },
       "last_seen_together": {
         "name": "Ultima volta insieme"
@@ -148,6 +214,15 @@
       },
       "update_count_b": {
         "name": "Update Count Last 30 min (B)"
+      },
+      "entity_state_a": {
+        "name": "Stato (A)"
+      },
+      "entity_state_b": {
+        "name": "Stato (B)"
+      },
+      "today_unaccounted_time": {
+        "name": "Tempo non contabilizzato oggi"
       }
     },
     "binary_sensor": {

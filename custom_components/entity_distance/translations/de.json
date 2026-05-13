@@ -7,6 +7,10 @@
         "data": {
           "entity_a": "Erste Entität",
           "entity_b": "Zweite Entität"
+        },
+        "data_description": {
+          "entity_a": "Die erste zu verfolgende Entität. Kann eine Person, ein Geräteverfolger, ein Sensor oder eine Zone sein.",
+          "entity_b": "Die zweite zu verfolgende Entität. Muss sich von der ersten unterscheiden."
         }
       },
       "thresholds": {
@@ -15,12 +19,16 @@
         "data": {
           "entry_threshold_m": "Eintrittsschwelle (m)",
           "exit_threshold_m": "Austrittsschwelle (m)",
-          "debounce_s": "Entprellung (s)"
+          "debounce_s": "Entprellung (s)",
+          "show_advanced": "Erweiterte Filter konfigurieren",
+          "show_zone_thresholds": "Näherungszonenschwellenwerte konfigurieren"
         },
         "data_description": {
           "entry_threshold_m": "Abstand, bei dem Entitäten als in der Nähe betrachtet werden.",
           "exit_threshold_m": "Abstand, bei dem Entitäten als nicht mehr in der Nähe betrachtet werden. Muss >= Eintrittsschwelle sein.",
-          "debounce_s": "Sekunden, die vor der Verarbeitung einer Standortaktualisierung gewartet werden. Reduziert Rauschen durch schnelle GPS-Änderungen."
+          "debounce_s": "Sekunden, die vor der Verarbeitung einer Standortaktualisierung gewartet werden. Reduziert Rauschen durch schnelle GPS-Änderungen.",
+          "show_advanced": "Aktivieren, um GPS-Genauigkeit, Geschwindigkeit und Zuverlässigkeitsfilter zu konfigurieren.",
+          "show_zone_thresholds": "Aktivieren, um die Abstandsgrenzen für die Zonen festzulegen."
         }
       },
       "advanced": {
@@ -38,14 +46,32 @@
           "require_reliable": "Proximity_enter-Ereignis nur auslösen, wenn Daten als zuverlässig gelten.",
           "min_updates_reliable": "Mindestanzahl von Standortaktualisierungen im Fenster, bevor Daten als zuverlässig gelten."
         }
+      },
+      "zone_thresholds": {
+        "title": "Näherungszonenschwellenwerte",
+        "description": "Legen Sie die Abstandsgrenzen für jede Näherungszone fest.",
+        "data": {
+          "zone_very_near_m": "Sehr nah Schwellenwert (m)",
+          "zone_near_m": "Nah Schwellenwert (m)",
+          "zone_mid_m": "Mittel Schwellenwert (m)",
+          "zone_far_m": "Weit Schwellenwert (m)"
+        },
+        "data_description": {
+          "zone_very_near_m": "Entitäten gelten als 'Sehr nah' bei oder näher als dieser Abstand. Standard: 100 m.",
+          "zone_near_m": "Entitäten gelten als 'Nah' bei oder näher als dieser Abstand. Muss größer als Sehr nah sein. Standard: 500 m.",
+          "zone_mid_m": "Entitäten gelten als 'Mittel' Abstand. Muss größer als Nah sein. Standard: 2000 m.",
+          "zone_far_m": "Entitäten gelten als 'Weit'. Darüber hinaus ist 'Sehr weit'. Standard: 10000 m."
+        }
       }
     },
     "error": {
       "same_entity": "Entität A und Entität B müssen unterschiedlich sein.",
-      "exit_below_entry": "Austrittsschwelle muss größer oder gleich der Eintrittsschwelle sein."
+      "exit_below_entry": "Austrittsschwelle muss größer oder gleich der Eintrittsschwelle sein.",
+      "zone_thresholds_not_ascending": "Zonenschwellenwerte müssen aufsteigend sein: Sehr nah < Nah < Mittel < Weit."
     },
     "abort": {
-      "already_configured": "Dieses Entitätspaar ist bereits konfiguriert."
+      "already_configured": "Dieses Entitätspaar ist bereits konfiguriert.",
+      "already_in_progress": "Eine Einrichtung für diese Integration ist bereits in Gang. Schließen Sie den Dialog und öffnen Sie ihn erneut, um neu zu beginnen."
     }
   },
   "options": {
@@ -55,7 +81,17 @@
         "data": {
           "entry_threshold_m": "Eintrittsschwelle (m)",
           "exit_threshold_m": "Austrittsschwelle (m)",
-          "debounce_s": "Entprellung (s)"
+          "debounce_s": "Entprellung (s)",
+          "show_advanced": "Erweiterte Filter konfigurieren",
+          "show_zone_thresholds": "Näherungszonenschwellenwerte konfigurieren"
+        },
+        "description": "Konfigurieren Sie die Näherungsschwellenwerte.",
+        "data_description": {
+          "entry_threshold_m": "Wie nah (in Metern) die Entitäten sein müssen, um ein 'in der Nähe'-Ereignis auszulösen.",
+          "exit_threshold_m": "Wie weit die Entitäten auseinander sein müssen, bevor sie nicht mehr als in der Nähe gelten.",
+          "debounce_s": "Sekunden, die gewartet werden, bevor eine neue Standortaktualisierung verarbeitet wird.",
+          "show_advanced": "Aktivieren, um GPS-Genauigkeit, Geschwindigkeit und Zuverlässigkeitsfilter zu konfigurieren.",
+          "show_zone_thresholds": "Aktivieren, um Zonengrenzen festzulegen."
         }
       },
       "advanced": {
@@ -65,11 +101,35 @@
           "max_speed_kmh": "Max. implizite Geschwindigkeit (km/h, 0 = deaktiviert)",
           "require_reliable": "Zuverlässige Daten für Näherungsereignisse erforderlich",
           "min_updates_reliable": "Min. Aktualisierungen für zuverlässige Daten"
+        },
+        "description": "Diese Filter helfen, schlechte GPS-Daten zu ignorieren.",
+        "data_description": {
+          "max_accuracy_m": "Standortaktualisierungen ablehnen, bei denen der GPS-Fehler größer als dieser Wert ist.",
+          "max_speed_kmh": "Aktualisierungen ablehnen, die eine Bewegung schneller als dies implizieren.",
+          "require_reliable": "Wenn aktiviert, wird ein Näherungsereignis nur nach konsistenten Aktualisierungen ausgelöst.",
+          "min_updates_reliable": "Wie viele konsistente Aktualisierungen erforderlich sind, bevor der Standort als zuverlässig gilt."
+        }
+      },
+      "zone_thresholds": {
+        "title": "Näherungszonenschwellenwerte",
+        "description": "Legen Sie die Abstandsgrenzen für jede Näherungszone fest.",
+        "data": {
+          "zone_very_near_m": "Sehr nah Schwellenwert (m)",
+          "zone_near_m": "Nah Schwellenwert (m)",
+          "zone_mid_m": "Mittel Schwellenwert (m)",
+          "zone_far_m": "Weit Schwellenwert (m)"
+        },
+        "data_description": {
+          "zone_very_near_m": "Standard: 100 m.",
+          "zone_near_m": "Standard: 500 m.",
+          "zone_mid_m": "Standard: 2000 m.",
+          "zone_far_m": "Standard: 10000 m."
         }
       }
     },
     "error": {
-      "exit_below_entry": "Austrittsschwelle muss größer oder gleich der Eintrittsschwelle sein."
+      "exit_below_entry": "Austrittsschwelle muss größer oder gleich der Eintrittsschwelle sein.",
+      "zone_thresholds_not_ascending": "Zonenschwellenwerte müssen aufsteigend sein: Sehr nah < Nah < Mittel < Weit."
     }
   },
   "entity": {
@@ -89,6 +149,12 @@
       },
       "proximity_duration": {
         "name": "Näherungsdauer"
+      },
+      "proximity_tracking_started": {
+        "name": "Proximity Tracking Started"
+      },
+      "proximity_rate": {
+        "name": "Proximity Rate"
       },
       "last_seen_together": {
         "name": "Zuletzt zusammen gesehen"
@@ -148,6 +214,15 @@
       },
       "update_count_b": {
         "name": "Update Count Last 30 min (B)"
+      },
+      "entity_state_a": {
+        "name": "Status (A)"
+      },
+      "entity_state_b": {
+        "name": "Status (B)"
+      },
+      "today_unaccounted_time": {
+        "name": "Nicht erfasste Zeit heute"
       }
     },
     "binary_sensor": {

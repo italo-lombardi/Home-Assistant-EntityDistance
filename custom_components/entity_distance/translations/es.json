@@ -7,6 +7,10 @@
         "data": {
           "entity_a": "Primera entidad",
           "entity_b": "Segunda entidad"
+        },
+        "data_description": {
+          "entity_a": "La primera entidad a rastrear. Puede ser una persona, rastreador de dispositivo, sensor o zona.",
+          "entity_b": "La segunda entidad a rastrear. Debe ser diferente de la primera."
         }
       },
       "thresholds": {
@@ -15,12 +19,16 @@
         "data": {
           "entry_threshold_m": "Umbral de entrada (m)",
           "exit_threshold_m": "Umbral de salida (m)",
-          "debounce_s": "Antirrebote (s)"
+          "debounce_s": "Antirrebote (s)",
+          "show_advanced": "Configurar filtros avanzados",
+          "show_zone_thresholds": "Configurar umbrales de zona de proximidad"
         },
         "data_description": {
           "entry_threshold_m": "Distancia a la que las entidades se consideran en proximidad.",
           "exit_threshold_m": "Distancia a la que las entidades se consideran fuera de proximidad. Debe ser >= umbral de entrada.",
-          "debounce_s": "Segundos de espera antes de procesar una actualización de ubicación. Reduce el ruido de cambios rápidos de GPS."
+          "debounce_s": "Segundos de espera antes de procesar una actualización de ubicación. Reduce el ruido de cambios rápidos de GPS.",
+          "show_advanced": "Activar para configurar precisión GPS, velocidad y filtros de fiabilidad.",
+          "show_zone_thresholds": "Activar para establecer los límites de distancia de las zonas."
         }
       },
       "advanced": {
@@ -38,14 +46,32 @@
           "require_reliable": "Solo disparar evento proximity_enter cuando los datos se consideren fiables.",
           "min_updates_reliable": "Número mínimo de actualizaciones de ubicación en la ventana antes de que los datos se consideren fiables."
         }
+      },
+      "zone_thresholds": {
+        "title": "Umbrales de zona de proximidad",
+        "description": "Establezca los límites de distancia para cada zona de proximidad. Cada umbral debe ser mayor que el anterior.",
+        "data": {
+          "zone_very_near_m": "Umbral Muy cerca (m)",
+          "zone_near_m": "Umbral Cerca (m)",
+          "zone_mid_m": "Umbral Medio (m)",
+          "zone_far_m": "Umbral Lejos (m)"
+        },
+        "data_description": {
+          "zone_very_near_m": "Las entidades se consideran 'Muy cerca' a esta distancia o menos. Predeterminado: 100 m.",
+          "zone_near_m": "Las entidades se consideran 'Cerca' a esta distancia o menos. Debe ser mayor que Muy cerca. Predeterminado: 500 m.",
+          "zone_mid_m": "Las entidades se consideran a distancia 'Media'. Debe ser mayor que Cerca. Predeterminado: 2000 m.",
+          "zone_far_m": "Las entidades se consideran 'Lejos'. Más allá es 'Muy lejos'. Predeterminado: 10000 m."
+        }
       }
     },
     "error": {
       "same_entity": "La entidad A y la entidad B deben ser diferentes.",
-      "exit_below_entry": "El umbral de salida debe ser mayor o igual al umbral de entrada."
+      "exit_below_entry": "El umbral de salida debe ser mayor o igual al umbral de entrada.",
+      "zone_thresholds_not_ascending": "Los umbrales de zona deben aumentar en orden: Muy cerca < Cerca < Medio < Lejos."
     },
     "abort": {
-      "already_configured": "Este par de entidades ya está configurado."
+      "already_configured": "Este par de entidades ya está configurado.",
+      "already_in_progress": "Ya hay una configuración en progreso para esta integración. Cierre y vuelva a abrir el diálogo para empezar de nuevo."
     }
   },
   "options": {
@@ -55,7 +81,17 @@
         "data": {
           "entry_threshold_m": "Umbral de entrada (m)",
           "exit_threshold_m": "Umbral de salida (m)",
-          "debounce_s": "Antirrebote (s)"
+          "debounce_s": "Antirrebote (s)",
+          "show_advanced": "Configurar filtros avanzados",
+          "show_zone_thresholds": "Configurar umbrales de zona de proximidad"
+        },
+        "description": "Configure los umbrales de proximidad.",
+        "data_description": {
+          "entry_threshold_m": "Qué tan cerca (en metros) deben estar las entidades para activar un evento de proximidad.",
+          "exit_threshold_m": "Qué tan lejos deben moverse las entidades antes de que ya no se consideren cercanas.",
+          "debounce_s": "Segundos a esperar antes de procesar una nueva actualización de ubicación.",
+          "show_advanced": "Activar para configurar filtros de GPS, velocidad y fiabilidad.",
+          "show_zone_thresholds": "Activar para establecer límites de zona."
         }
       },
       "advanced": {
@@ -65,11 +101,35 @@
           "max_speed_kmh": "Velocidad implícita máx. (km/h, 0 = desactivado)",
           "require_reliable": "Requerir datos fiables para eventos de proximidad",
           "min_updates_reliable": "Actualizaciones mínimas para datos fiables"
+        },
+        "description": "Estos filtros ayudan a ignorar datos GPS deficientes.",
+        "data_description": {
+          "max_accuracy_m": "Ignorar actualizaciones de ubicación donde el error GPS supera este valor.",
+          "max_speed_kmh": "Ignorar actualizaciones que impliquen movimiento más rápido que esto.",
+          "require_reliable": "Cuando está activo, un evento de proximidad solo se activa tras actualizaciones consistentes.",
+          "min_updates_reliable": "Cuántas actualizaciones consecutivas se necesitan antes de considerar la ubicación fiable."
+        }
+      },
+      "zone_thresholds": {
+        "title": "Umbrales de zona de proximidad",
+        "description": "Establezca los límites de distancia para cada zona de proximidad.",
+        "data": {
+          "zone_very_near_m": "Umbral Muy cerca (m)",
+          "zone_near_m": "Umbral Cerca (m)",
+          "zone_mid_m": "Umbral Medio (m)",
+          "zone_far_m": "Umbral Lejos (m)"
+        },
+        "data_description": {
+          "zone_very_near_m": "Predeterminado: 100 m.",
+          "zone_near_m": "Predeterminado: 500 m.",
+          "zone_mid_m": "Predeterminado: 2000 m.",
+          "zone_far_m": "Predeterminado: 10000 m."
         }
       }
     },
     "error": {
-      "exit_below_entry": "El umbral de salida debe ser mayor o igual al umbral de entrada."
+      "exit_below_entry": "El umbral de salida debe ser mayor o igual al umbral de entrada.",
+      "zone_thresholds_not_ascending": "Los umbrales de zona deben aumentar en orden: Muy cerca < Cerca < Medio < Lejos."
     }
   },
   "entity": {
@@ -89,6 +149,12 @@
       },
       "proximity_duration": {
         "name": "Duración de proximidad"
+      },
+      "proximity_tracking_started": {
+        "name": "Proximity Tracking Started"
+      },
+      "proximity_rate": {
+        "name": "Proximity Rate"
       },
       "last_seen_together": {
         "name": "Visto juntos por última vez"
@@ -148,6 +214,15 @@
       },
       "update_count_b": {
         "name": "Update Count Last 30 min (B)"
+      },
+      "entity_state_a": {
+        "name": "Estado (A)"
+      },
+      "entity_state_b": {
+        "name": "Estado (B)"
+      },
+      "today_unaccounted_time": {
+        "name": "Tiempo no contabilizado hoy"
       }
     },
     "binary_sensor": {

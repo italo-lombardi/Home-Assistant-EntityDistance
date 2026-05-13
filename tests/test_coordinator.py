@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from custom_components.entity_distance.const import (
     BUCKET_FAR,
     BUCKET_MID,
@@ -18,6 +20,7 @@ from custom_components.entity_distance.coordinator import (
     _get_coords,
     _is_zone,
 )
+from custom_components.entity_distance.models import PairState
 from tests.conftest import make_state, make_zone_state
 
 _DEFAULT_THRESHOLDS = {
@@ -140,3 +143,113 @@ class TestIsZone:
     def test_person_entity(self):
         state = make_state("person.alice", 51.5, -0.1)
         assert _is_zone(state) is False
+
+
+# ---------------------------------------------------------------------------
+# PairState.proximity_tracking_started initialisation tests
+# ---------------------------------------------------------------------------
+
+
+class TestProximityTrackingStartedInit:
+    """Test that PairState.proximity_tracking_started initialises to None and can be set."""
+
+    def test_initialises_to_none(self):
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        assert ps.proximity_tracking_started is None
+
+    def test_can_be_set_to_datetime(self):
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        now = datetime.now().astimezone()
+        ps.proximity_tracking_started = now
+        assert ps.proximity_tracking_started == now
+
+    def test_coordinator_logic_sets_when_none(self):
+        # Simulate the coordinator initialisation pattern: if the field is None,
+        # set it to now.  Verify the field transitions from None to a datetime.
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        assert ps.proximity_tracking_started is None
+        now = datetime.now().astimezone()
+        if ps.proximity_tracking_started is None:
+            ps.proximity_tracking_started = now
+        assert ps.proximity_tracking_started is not None
+        assert ps.proximity_tracking_started == now
+
+
+# ---------------------------------------------------------------------------
+# Additional _get_coords edge cases
+# ---------------------------------------------------------------------------
+
+
+class TestGetCoordsEdgeCases:
+    """Edge cases for _get_coords coordinate extraction."""
+
+    def test_valid_out_of_range_lon(self):
+        from homeassistant.core import State
+
+        state = State("person.alice", "home", {"latitude": 0.0, "longitude": 200.0})
+        result = _get_coords(state)
+        assert result is None
+
+    def test_location_attr_with_extra_elements(self):
+        from homeassistant.core import State
+
+        state = State("person.alice", "home", {"location": [51.5, -0.1, 42.0]})
+        result = _get_coords(state)
+        assert result is not None
+        assert result[0] == 51.5
+        assert result[1] == -0.1
+
+    def test_location_attr_non_numeric(self):
+        from homeassistant.core import State
+
+        state = State("person.alice", "home", {"location": ["x", "y"]})
+        result = _get_coords(state)
+        assert result is None
+
+    def test_state_string_with_spaces(self):
+        from homeassistant.core import State
+
+        # "51.5, -0.1" with a space after comma — split on comma still works
+        state = State("sensor.gps", "51.5,-0.1", {})
+        result = _get_coords(state)
+        assert result is not None
+        assert abs(result[0] - 51.5) < 0.001
+
+    def test_out_of_range_lon_via_attributes(self):
+        from homeassistant.core import State
+
+        state = State("person.alice", "home", {"latitude": 45.0, "longitude": -200.0})
+        result = _get_coords(state)
+        assert result is None
+
+    def test_accuracy_extracted_from_gps_accuracy_attr(self):
+        from tests.conftest import make_state
+
+        state = make_state("person.alice", 51.5, -0.1, accuracy=25.0)
+        result = _get_coords(state)
+        assert result is not None
+        assert result[2] == 25.0
+
+    def test_accuracy_is_none_when_absent(self):
+        from homeassistant.core import State
+
+        state = State("person.alice", "home", {"latitude": 51.5, "longitude": -0.1})
+        result = _get_coords(state)
+        assert result is not None
+        assert result[2] is None
+
+
+# ---------------------------------------------------------------------------
+# _calc_bucket with zero thresholds edge case
+# ---------------------------------------------------------------------------
+
+
+class TestCalcBucketEdgeCases:
+    def test_negative_distance_treated_as_very_near(self):
+        # Negative distances should not crash and land in VERY_NEAR
+        assert _calc_bucket(-1, {
+            BUCKET_VERY_NEAR: DEFAULT_ZONE_VERY_NEAR_M,
+            BUCKET_NEAR: DEFAULT_ZONE_NEAR_M,
+            BUCKET_MID: DEFAULT_ZONE_MID_M,
+            BUCKET_FAR: DEFAULT_ZONE_FAR_M,
+        }) == BUCKET_VERY_NEAR

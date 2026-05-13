@@ -24,6 +24,7 @@ from custom_components.entity_distance.sensor import (
     BucketLevelSensor,
     DirectionLevelSensor,
     ProximityDurationSensor,
+    ProximityRateSensor,
     TodayZoneTimeSensor,
     UpdateCountSensor,
 )
@@ -375,3 +376,237 @@ class TestUpdateCountSensor:
     def test_zero_count_b_still_returns_zero_when_valid(self):
         sensor = _make_count_sensor("b", self._ps(True, count_a=99, count_b=0))
         assert sensor.native_value == 0
+
+
+# ---------------------------------------------------------------------------
+# ProximityRateSensor tests
+# ---------------------------------------------------------------------------
+
+
+class TestProximityRateSensor:
+    """Test ProximityRateSensor.native_value rate calculation."""
+
+    def _ps(self, **kwargs) -> PairState:
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.data_valid = True
+        ps.proximity = False
+        ps.proximity_since = None
+        ps.proximity_duration_s = 0.0
+        ps.proximity_tracking_started = None
+        for k, v in kwargs.items():
+            setattr(ps, k, v)
+        return ps
+
+    def _make_sensor(self, ps: PairState) -> ProximityRateSensor:
+        return _make_sensor(ProximityRateSensor, ps)
+
+    def test_returns_none_when_data_invalid(self):
+        now = datetime.now().astimezone()
+        ps = self._ps(
+            data_valid=False,
+            proximity_tracking_started=now - timedelta(hours=1),
+        )
+        sensor = self._make_sensor(ps)
+        assert sensor.native_value is None
+
+    def test_returns_none_when_tracking_started_is_none(self):
+        ps = self._ps(data_valid=True, proximity_tracking_started=None)
+        sensor = self._make_sensor(ps)
+        assert sensor.native_value is None
+
+    def test_no_live_session(self):
+        # Tracking started 1 hour ago; 30 min of stored proximity, not currently close.
+        # Rate = 1800 / 3600 * 100 = 50.0
+        now = datetime.now().astimezone()
+        ps = self._ps(
+            proximity_tracking_started=now - timedelta(hours=1),
+            proximity_duration_s=1800.0,
+            proximity=False,
+        )
+        sensor = self._make_sensor(ps)
+        assert sensor.native_value == 50.0
+
+    def test_live_session_adds_elapsed(self):
+        # Tracking started 2 hours ago; 0 s stored; currently proximate for ~1 hour.
+        # Rate ≈ 3600 / 7200 * 100 = 50.0
+        now = datetime.now().astimezone()
+        ps = self._ps(
+            proximity_tracking_started=now - timedelta(hours=2),
+            proximity_duration_s=0.0,
+            proximity=True,
+            proximity_since=now - timedelta(hours=1),
+        )
+        sensor = self._make_sensor(ps)
+        value = sensor.native_value
+        assert value is not None
+        assert 48.0 <= value <= 52.0
+
+    def test_capped_at_100(self):
+        # Tracking started 1 hour ago but 2 hours of stored proximity — impossible in
+        # practice, but the clamp must cap the result at 100.0.
+        now = datetime.now().astimezone()
+        ps = self._ps(
+            proximity_tracking_started=now - timedelta(hours=1),
+            proximity_duration_s=7200.0,
+            proximity=False,
+        )
+        sensor = self._make_sensor(ps)
+        assert sensor.native_value == 100.0
+
+    def test_zero_proximity_duration_returns_zero(self):
+        now = datetime.now().astimezone()
+        ps = self._ps(
+            proximity_tracking_started=now - timedelta(hours=1),
+            proximity_duration_s=0.0,
+            proximity=False,
+        )
+        sensor = self._make_sensor(ps)
+        assert sensor.native_value == 0.0
+
+    def test_tracking_started_in_future_returns_none(self):
+        # tracking_started in the future gives total_s <= 0 → None
+        now = datetime.now().astimezone()
+        ps = self._ps(
+            proximity_tracking_started=now + timedelta(seconds=10),
+            proximity_duration_s=0.0,
+            proximity=False,
+        )
+        sensor = self._make_sensor(ps)
+        assert sensor.native_value is None
+
+    def test_proximity_since_none_when_proximity_false(self):
+        # proximity=False but proximity_since is set — should NOT add elapsed time
+        now = datetime.now().astimezone()
+        ps = self._ps(
+            proximity_tracking_started=now - timedelta(hours=2),
+            proximity_duration_s=3600.0,
+            proximity=False,
+            proximity_since=now - timedelta(hours=1),
+        )
+        sensor = self._make_sensor(ps)
+        # 3600 / 7200 = 50.0 — proximity_since must not be added when proximity=False
+        assert sensor.native_value == 50.0
+
+
+# ---------------------------------------------------------------------------
+# TodayUnaccountedTimeSensor tests
+# ---------------------------------------------------------------------------
+
+
+def _make_unaccounted_sensor(pair_state):
+    from custom_components.entity_distance.sensor import TodayUnaccountedTimeSensor
+    coordinator = MagicMock()
+    coordinator.data = PairData(pair=pair_state)
+    coordinator.bucket_thresholds = _DEFAULT_THRESHOLDS
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    sensor = TodayUnaccountedTimeSensor.__new__(TodayUnaccountedTimeSensor)
+    sensor.coordinator = coordinator
+    sensor._entry = entry
+    sensor._sensor_key = "today_unaccounted_time"
+    sensor._attr_unique_id = "test_unaccounted"
+    sensor._attr_device_info = {}
+    return sensor
+
+
+class TestTodayUnaccountedTimeSensor:
+    """Test TodayUnaccountedTimeSensor gap calculation."""
+
+    def test_returns_none_when_prev_calc_time_is_none(self):
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.prev_calc_time = None
+        sensor = _make_unaccounted_sensor(ps)
+        assert sensor.native_value is None
+
+    def test_recent_calc_returns_small_gap(self):
+        # prev_calc_time 30 seconds ago → gap ≈ 0.5 min
+        now = datetime.now().astimezone()
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.prev_calc_time = now - timedelta(seconds=30)
+        sensor = _make_unaccounted_sensor(ps)
+        value = sensor.native_value
+        assert value is not None
+        assert 0.0 <= value <= 1.0
+
+    def test_long_gap_returns_expected_minutes(self):
+        # prev_calc_time 60 minutes ago → gap ≈ 60 min
+        now = datetime.now().astimezone()
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.prev_calc_time = now - timedelta(minutes=60)
+        sensor = _make_unaccounted_sensor(ps)
+        value = sensor.native_value
+        assert value is not None
+        assert 59.0 <= value <= 61.0
+
+    def test_gap_never_negative(self):
+        # prev_calc_time slightly in the future (clock drift) → max(gap, 0) = 0
+        now = datetime.now().astimezone()
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.prev_calc_time = now + timedelta(seconds=5)
+        sensor = _make_unaccounted_sensor(ps)
+        assert sensor.native_value == 0.0
+
+
+# ---------------------------------------------------------------------------
+# BucketSensor tests
+# ---------------------------------------------------------------------------
+
+
+class TestBucketSensor:
+    """Test BucketSensor.native_value zone label."""
+
+    from custom_components.entity_distance.sensor import BucketSensor as _BucketSensor
+
+    def _make_sensor(self, distance_m):
+        from custom_components.entity_distance.sensor import BucketSensor
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.distance_m = distance_m
+        ps.data_valid = True
+        return _make_sensor(BucketSensor, ps)
+
+    def test_none_distance_returns_none(self):
+        from custom_components.entity_distance.sensor import BucketSensor
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.distance_m = None
+        ps.data_valid = True
+        sensor = _make_sensor(BucketSensor, ps)
+        assert sensor.native_value is None
+
+    def test_very_near(self):
+        from custom_components.entity_distance.const import BUCKET_VERY_NEAR
+        sensor = self._make_sensor(50)
+        assert sensor.native_value == BUCKET_VERY_NEAR
+
+    def test_very_far(self):
+        from custom_components.entity_distance.const import BUCKET_VERY_FAR
+        sensor = self._make_sensor(50000)
+        assert sensor.native_value == BUCKET_VERY_FAR
+
+
+# ---------------------------------------------------------------------------
+# ProximityDurationSensor — additional edge cases
+# ---------------------------------------------------------------------------
+
+
+class TestProximityDurationSensorEdgeCases:
+    """Additional edge cases for ProximityDurationSensor."""
+
+    def test_proximity_true_but_proximity_since_none_uses_only_stored(self):
+        # proximity=True but proximity_since=None: can't add live elapsed → use stored only
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.data_valid = True
+        ps.proximity = True
+        ps.proximity_since = None
+        ps.proximity_duration_s = 120.0  # 2 min stored
+        sensor = _make_sensor(ProximityDurationSensor, ps)
+        assert sensor.native_value == 2.0
+
+    def test_rounds_to_one_decimal(self):
+        # 100 s / 60 = 1.6666... → 1.7
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.data_valid = True
+        ps.proximity = False
+        ps.proximity_since = None
+        ps.proximity_duration_s = 100.0
+        sensor = _make_sensor(ProximityDurationSensor, ps)
+        assert sensor.native_value == round(100.0 / 60, 1)

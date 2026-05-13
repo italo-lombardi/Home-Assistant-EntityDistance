@@ -7,6 +7,10 @@
         "data": {
           "entity_a": "Første enhet",
           "entity_b": "Andre enhet"
+        },
+        "data_description": {
+          "entity_a": "Den første enheten å spore. Kan være en person, enhetssporer, sensor eller sone.",
+          "entity_b": "Den andre enheten å spore. Må være forskjellig fra den første."
         }
       },
       "thresholds": {
@@ -15,12 +19,16 @@
         "data": {
           "entry_threshold_m": "Inngangsterskel (m)",
           "exit_threshold_m": "Utgangsterskel (m)",
-          "debounce_s": "Debounce (s)"
+          "debounce_s": "Debounce (s)",
+          "show_advanced": "Konfigurer avanserte filtre",
+          "show_zone_thresholds": "Konfigurer nærhetssoneterskler"
         },
         "data_description": {
           "entry_threshold_m": "Avstand der enheter anses som nærliggende.",
           "exit_threshold_m": "Avstand der enheter ikke lenger anses som nærliggende. Må være >= inngangsterskel.",
-          "debounce_s": "Sekunder å vente før en posisjonsoppdatering behandles. Reduserer støy fra raske GPS-endringer."
+          "debounce_s": "Sekunder å vente før en posisjonsoppdatering behandles. Reduserer støy fra raske GPS-endringer.",
+          "show_advanced": "Slå på for å konfigurere GPS-nøyaktighet, hastighet og pålitelighetsfiltre.",
+          "show_zone_thresholds": "Slå på for å angi avstandsgrensene for sonene."
         }
       },
       "advanced": {
@@ -38,14 +46,32 @@
           "require_reliable": "Avskyte proximity_enter-hendelse bare når data anses pålitelige.",
           "min_updates_reliable": "Minimum antall posisjonsoppdateringer i vinduet før data anses pålitelige."
         }
+      },
+      "zone_thresholds": {
+        "title": "Nærhetssoneterskler",
+        "description": "Angi avstandsgrensene for hver nærhetssone. Hver terskel må være større enn den forrige.",
+        "data": {
+          "zone_very_near_m": "Veldig nær terskel (m)",
+          "zone_near_m": "Nær terskel (m)",
+          "zone_mid_m": "Middels terskel (m)",
+          "zone_far_m": "Langt terskel (m)"
+        },
+        "data_description": {
+          "zone_very_near_m": "Enheter anses som 'Veldig nær' ved eller nærmere enn denne avstanden. Standard: 100 m.",
+          "zone_near_m": "Enheter anses som 'Nær' ved eller nærmere enn denne avstanden. Må være større enn Veldig nær. Standard: 500 m.",
+          "zone_mid_m": "Enheter anses som 'Middels' avstand. Må være større enn Nær. Standard: 2000 m.",
+          "zone_far_m": "Enheter anses som 'Langt'. Utover dette er 'Veldig langt'. Standard: 10000 m."
+        }
       }
     },
     "error": {
       "same_entity": "Enhet A og enhet B må være forskjellige.",
-      "exit_below_entry": "Utgangsterskel må være større enn eller lik inngangsterskel."
+      "exit_below_entry": "Utgangsterskel må være større enn eller lik inngangsterskel.",
+      "zone_thresholds_not_ascending": "Sonetersklene må øke i rekkefølge: Veldig nær < Nær < Middels < Langt."
     },
     "abort": {
-      "already_configured": "Dette enhetsparet er allerede konfigurert."
+      "already_configured": "Dette enhetsparet er allerede konfigurert.",
+      "already_in_progress": "En oppsett er allerede i gang for denne integrasjonen. Lukk og åpne dialogen på nytt for å starte på nytt."
     }
   },
   "options": {
@@ -55,7 +81,17 @@
         "data": {
           "entry_threshold_m": "Inngangsterskel (m)",
           "exit_threshold_m": "Utgangsterskel (m)",
-          "debounce_s": "Debounce (s)"
+          "debounce_s": "Debounce (s)",
+          "show_advanced": "Konfigurer avanserte filtre",
+          "show_zone_thresholds": "Konfigurer nærhetssoneterskler"
+        },
+        "description": "Konfigurer nærhetstersklene.",
+        "data_description": {
+          "entry_threshold_m": "Hvor nær (i meter) enhetene må være for å utløse en 'i nærheten'-hendelse.",
+          "exit_threshold_m": "Hvor langt fra hverandre enhetene må flytte før de ikke lenger anses som i nærheten.",
+          "debounce_s": "Sekunder å vente før en ny posisjonsoppdatering behandles.",
+          "show_advanced": "Slå på for å konfigurere GPS-, hastighets- og pålitelighetsfiltre.",
+          "show_zone_thresholds": "Slå på for å angi sonegrenser."
         }
       },
       "advanced": {
@@ -65,11 +101,35 @@
           "max_speed_kmh": "Maks. implisitt hastighet (km/h, 0 = deaktivert)",
           "require_reliable": "Krev pålitelige data for nærhetshendelser",
           "min_updates_reliable": "Min. oppdateringer for pålitelige data"
+        },
+        "description": "Disse filtrene hjelper med å ignorere dårlige GPS-data.",
+        "data_description": {
+          "max_accuracy_m": "Ignorer posisjonsoppdateringer der GPS-feilen er større enn dette.",
+          "max_speed_kmh": "Ignorer oppdateringer som innebærer bevegelse raskere enn dette.",
+          "require_reliable": "Når aktivert utløses en nærhendelse bare etter konsekvente oppdateringer.",
+          "min_updates_reliable": "Hvor mange konsekvente oppdateringer som kreves før posisjonen anses som pålitelig."
+        }
+      },
+      "zone_thresholds": {
+        "title": "Nærhetssoneterskler",
+        "description": "Angi avstandsgrensene for hver nærhetssone.",
+        "data": {
+          "zone_very_near_m": "Veldig nær terskel (m)",
+          "zone_near_m": "Nær terskel (m)",
+          "zone_mid_m": "Middels terskel (m)",
+          "zone_far_m": "Langt terskel (m)"
+        },
+        "data_description": {
+          "zone_very_near_m": "Standard: 100 m.",
+          "zone_near_m": "Standard: 500 m.",
+          "zone_mid_m": "Standard: 2000 m.",
+          "zone_far_m": "Standard: 10000 m."
         }
       }
     },
     "error": {
-      "exit_below_entry": "Utgangsterskel må være større enn eller lik inngangsterskel."
+      "exit_below_entry": "Utgangsterskel må være større enn eller lik inngangsterskel.",
+      "zone_thresholds_not_ascending": "Sonetersklene må øke i rekkefølge: Veldig nær < Nær < Middels < Langt."
     }
   },
   "entity": {
@@ -89,6 +149,12 @@
       },
       "proximity_duration": {
         "name": "Nærhetvarighet"
+      },
+      "proximity_tracking_started": {
+        "name": "Proximity Tracking Started"
+      },
+      "proximity_rate": {
+        "name": "Proximity Rate"
       },
       "last_seen_together": {
         "name": "Sist sett sammen"
@@ -148,6 +214,15 @@
       },
       "update_count_b": {
         "name": "Update Count Last 30 min (B)"
+      },
+      "entity_state_a": {
+        "name": "Tilstand (A)"
+      },
+      "entity_state_b": {
+        "name": "Tilstand (B)"
+      },
+      "today_unaccounted_time": {
+        "name": "Tid uten data i dag"
       }
     },
     "binary_sensor": {

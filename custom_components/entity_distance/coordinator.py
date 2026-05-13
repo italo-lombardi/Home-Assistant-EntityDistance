@@ -174,6 +174,9 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
 
     async def async_setup(self) -> None:
         await self._async_load_state()
+        if self._pair_state.proximity_tracking_started is None:
+            self._pair_state.proximity_tracking_started = datetime.now().astimezone()
+            await self._async_save_state()
 
         self._debouncer = Debouncer(
             self.hass,
@@ -233,6 +236,8 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
         if state_a is None or state_b is None:
             _LOGGER.warning("entity_distance: one or both entities not found")
             ps.data_valid = False
+            ps.prev_calc_time = None
+            ps.prev_distance_m = None
             self.async_set_updated_data(PairData(pair=ps))
             return
 
@@ -246,6 +251,8 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
                 state_b.state,
             )
             ps.data_valid = False
+            ps.prev_calc_time = None
+            ps.prev_distance_m = None
             self.async_set_updated_data(PairData(pair=ps))
             return
 
@@ -255,6 +262,8 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
         if coords_a is None or coords_b is None:
             ps.data_valid = False
             ps.last_error = "coord_extraction_failed"
+            ps.prev_calc_time = None
+            ps.prev_distance_m = None
             self.async_set_updated_data(PairData(pair=ps))
             return
 
@@ -276,6 +285,8 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
                 acc_a,
                 self._max_accuracy_m,
             )
+            ps.prev_calc_time = None
+            ps.prev_distance_m = None
             self.async_set_updated_data(PairData(pair=ps))
             return
 
@@ -291,6 +302,8 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
                 acc_b,
                 self._max_accuracy_m,
             )
+            ps.prev_calc_time = None
+            ps.prev_distance_m = None
             self.async_set_updated_data(PairData(pair=ps))
             return
 
@@ -302,6 +315,8 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
                 self._entity_b,
             )
             ps.data_valid = False
+            ps.prev_calc_time = None
+            ps.prev_distance_m = None
             self.async_set_updated_data(PairData(pair=ps))
             return
 
@@ -312,7 +327,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
             and ps.prev_calc_time is not None
             and self._max_speed_kmh > 0
         ):
-            delta_s = (now - ps.prev_calc_time).total_seconds()
+            delta_s = max(0.0, (now - ps.prev_calc_time).total_seconds())
             if delta_s > 0:
                 implied_speed_kmh = abs(dist_m - ps.prev_distance_m) / delta_s * 3.6
                 if implied_speed_kmh > self._max_speed_kmh:
@@ -321,6 +336,8 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
                         implied_speed_kmh,
                         self._max_speed_kmh,
                     )
+                    ps.prev_calc_time = None
+                    ps.prev_distance_m = None
                     self.async_set_updated_data(PairData(pair=ps))
                     return
 
@@ -330,7 +347,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
 
         if ps.prev_distance_m is not None and ps.prev_calc_time is not None:
             delta_m = dist_m - ps.prev_distance_m
-            delta_s = (now - ps.prev_calc_time).total_seconds()
+            delta_s = max(0.0, (now - ps.prev_calc_time).total_seconds())
 
             if abs(delta_m) < STATIONARY_THRESHOLD_M:
                 direction = DIRECTION_STATIONARY
@@ -344,6 +361,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
                 if direction == DIRECTION_APPROACHING and closing_speed_kmh > 0:
                     closing_speed_m_per_s = closing_speed_kmh / 3.6
                     eta_minutes = dist_m / closing_speed_m_per_s / 60
+                    eta_minutes = min(eta_minutes, 1440.0)
 
         was_proximity = ps.proximity
         if not ps.proximity and dist_m <= self._entry_threshold_m:
@@ -365,7 +383,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
             ps.today_reset_date = today
 
         if ps.prev_calc_time is not None:
-            elapsed = (now - ps.prev_calc_time).total_seconds()
+            elapsed = max(0.0, (now - ps.prev_calc_time).total_seconds())
             if ps.proximity:
                 ps.today_proximity_seconds += elapsed
             current_bucket = _calc_bucket(dist_m, self._bucket_thresholds)
@@ -484,6 +502,8 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
         ps = self._pair_state
         today = ps.today_reset_date
         await self._store.async_save({
+            "entity_a": self._entity_a,
+            "entity_b": self._entity_b,
             "today_reset_date": today.isoformat() if today else None,
             "today_proximity_seconds": ps.today_proximity_seconds,
             "today_zone_seconds": ps.today_zone_seconds,
@@ -497,6 +517,16 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
         if not stored:
             return
         try:
+            # If entities changed (reconfiguration), discard history — rate/duration would be meaningless
+            stored_a = stored.get("entity_a")
+            stored_b = stored.get("entity_b")
+            if stored_a and stored_b and (stored_a != self._entity_a or stored_b != self._entity_b):
+                _LOGGER.info(
+                    "entity_distance: entity pair changed (%s/%s → %s/%s), resetting tracking history",
+                    stored_a, stored_b, self._entity_a, self._entity_b,
+                )
+                await self._store.async_remove()
+                return
             stored_date_str = stored.get("today_reset_date")
             if not stored_date_str:
                 return

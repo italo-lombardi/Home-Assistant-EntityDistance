@@ -156,6 +156,9 @@
       "proximity_tracking_started": {
         "name": "Proximity Tracking Started"
       },
+      "proximity_rate": {
+        "name": "Proximity Rate"
+      },
       "last_seen_together": {
         "name": "Last Seen Together"
       },

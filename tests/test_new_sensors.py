@@ -105,15 +105,29 @@ class TestTodayUnaccountedTimeSensor:
         assert val is not None
         assert val >= 0.0
 
-    def test_gap_capped_at_midnight(self):
-        # prev_calc_time far in the past — gap returned is (now - prev_calc_time) / 60
-        # The midnight cap only clamps future; past gap is uncapped.
+    def test_gap_capped_at_midnight_for_yesterday_calc(self):
+        # prev_calc_time is before today's midnight — gap is capped to today only,
+        # so the result is at most time since midnight (not a full 2+ days).
         now = datetime.now().astimezone()
+        yesterday = now - timedelta(days=1)
+        sensor = self._make(yesterday)
+        val = sensor.native_value
+        assert val is not None
+        # Capped at today's midnight: always < 24h = 1440 min
+        assert val < 1440.0
+        assert val >= 0.0
+
+    def test_two_hours_ago_within_today(self):
+        # prev_calc_time 2 hours ago within today.
+        # Skip if before 02:00 to avoid test-time-of-day failures.
+        now = datetime.now().astimezone()
+        today_midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
         two_hours_ago = now - timedelta(hours=2)
+        if two_hours_ago < today_midnight:
+            return
         sensor = self._make(two_hours_ago)
         val = sensor.native_value
         assert val is not None
-        # ~120 min, allow 119–122 min range
         assert 119.0 <= val <= 122.0
 
 

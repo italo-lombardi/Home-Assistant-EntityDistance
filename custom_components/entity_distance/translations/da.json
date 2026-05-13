@@ -7,6 +7,10 @@
         "data": {
           "entity_a": "Første enhed",
           "entity_b": "Anden enhed"
+        },
+        "data_description": {
+          "entity_a": "Den første enhed at spore. Kan være en person, enhedssporer, sensor eller zone.",
+          "entity_b": "Den anden enhed at spore. Skal være forskellig fra den første."
         }
       },
       "thresholds": {
@@ -15,12 +19,16 @@
         "data": {
           "entry_threshold_m": "Indgangstærskel (m)",
           "exit_threshold_m": "Udgangstærskel (m)",
-          "debounce_s": "Debounce (s)"
+          "debounce_s": "Debounce (s)",
+          "show_advanced": "Konfigurer avancerede filtre",
+          "show_zone_thresholds": "Konfigurer nærheds-zonetærskler"
         },
         "data_description": {
           "entry_threshold_m": "Afstand ved hvilken enheder betragtes som nære.",
           "exit_threshold_m": "Afstand ved hvilken enheder betragtes som ikke-nære. Skal være >= indgangstærskel.",
-          "debounce_s": "Sekunder at vente før en lokationsopdatering behandles. Reducerer støj fra hurtige GPS-ændringer."
+          "debounce_s": "Sekunder at vente før en lokationsopdatering behandles. Reducerer støj fra hurtige GPS-ændringer.",
+          "show_advanced": "Aktivér for at konfigurere GPS-nøjagtighed, hastighed og pålidelighedsfiltre på næste skærm.",
+          "show_zone_thresholds": "Aktivér for at indstille afstandsgrænserne for Meget tæt, Tæt, Middel og Langt zoner på næste skærm."
         }
       },
       "advanced": {
@@ -38,14 +46,32 @@
           "require_reliable": "Afskyd kun proximity_enter-begivenhed, når data anses for pålidelige.",
           "min_updates_reliable": "Mindste antal lokationsopdateringer i vinduet, før data anses for pålidelige."
         }
+      },
+      "zone_thresholds": {
+        "title": "Nærheds-zonetærskler",
+        "description": "Indstil afstandsgrænserne for hvert nærhedszone. Hver tærskel skal være større end den forrige.",
+        "data": {
+          "zone_very_near_m": "Meget tæt tærskel (m)",
+          "zone_near_m": "Tæt tærskel (m)",
+          "zone_mid_m": "Middel tærskel (m)",
+          "zone_far_m": "Langt tærskel (m)"
+        },
+        "data_description": {
+          "zone_very_near_m": "Enheder anses som 'Meget tæt' ved eller nærmere end denne afstand. Standard: 100 m.",
+          "zone_near_m": "Enheder anses som 'Tæt' ved eller nærmere end denne afstand. Skal være større end Meget tæt. Standard: 500 m.",
+          "zone_mid_m": "Enheder anses som 'Middel' afstand ved eller nærmere end dette. Skal være større end Tæt. Standard: 2000 m.",
+          "zone_far_m": "Enheder anses som 'Langt' ved eller nærmere end denne afstand. Ud over dette er 'Meget langt'. Skal være større end Middel. Standard: 10000 m."
+        }
       }
     },
     "error": {
       "same_entity": "Enhed A og enhed B skal være forskellige.",
-      "exit_below_entry": "Udgangstærskel skal være større end eller lig med indgangstærskel."
+      "exit_below_entry": "Udgangstærskel skal være større end eller lig med indgangstærskel.",
+      "zone_thresholds_not_ascending": "Zonetærskler skal stige i rækkefølge: Meget tæt < Tæt < Middel < Langt."
     },
     "abort": {
-      "already_configured": "Dette enhedspar er allerede konfigureret."
+      "already_configured": "Dette enhedspar er allerede konfigureret.",
+      "already_in_progress": "En opsætning er allerede i gang for denne integration. Luk og genåbn dialogen for at starte forfra."
     }
   },
   "options": {
@@ -55,7 +81,17 @@
         "data": {
           "entry_threshold_m": "Indgangstærskel (m)",
           "exit_threshold_m": "Udgangstærskel (m)",
-          "debounce_s": "Debounce (s)"
+          "debounce_s": "Debounce (s)",
+          "show_advanced": "Konfigurer avancerede filtre",
+          "show_zone_thresholds": "Konfigurer nærheds-zonetærskler"
+        },
+        "description": "Indstil hvor tæt enhederne skal være for at tælle som 'i nærheden'.",
+        "data_description": {
+          "entry_threshold_m": "Hvor tæt (i meter) enhederne skal være for at udløse en 'i nærheden'-hændelse.",
+          "exit_threshold_m": "Hvor langt fra hinanden enhederne skal flytte, før de ikke længere betragtes som i nærheden.",
+          "debounce_s": "Hvor mange sekunder der skal ventes, før en ny lokationsopdatering behandles.",
+          "show_advanced": "Aktivér for at konfigurere GPS-nøjagtighed, hastighed og pålidelighedsfiltre.",
+          "show_zone_thresholds": "Aktivér for at indstille afstandsgrænserne for zonerne."
         }
       },
       "advanced": {
@@ -65,11 +101,35 @@
           "max_speed_kmh": "Maks. underforstået hastighed (km/h, 0 = deaktiveret)",
           "require_reliable": "Kræv pålidelige data til nærhedsbegivenheder",
           "min_updates_reliable": "Min. opdateringer for pålidelige data"
+        },
+        "description": "Disse filtre hjælper med at ignorere dårlige GPS-data.",
+        "data_description": {
+          "max_accuracy_m": "Ignorer lokationsopdateringer, hvor GPS-fejlen er større end dette.",
+          "max_speed_kmh": "Ignorer opdateringer, der antyder bevægelse hurtigere end dette.",
+          "require_reliable": "Når aktiveret udløses en 'i nærheden'-hændelse kun efter konsistente opdateringer.",
+          "min_updates_reliable": "Hvor mange konsistente opdateringer der kræves, før lokationen betragtes som pålidelig."
+        }
+      },
+      "zone_thresholds": {
+        "title": "Nærheds-zonetærskler",
+        "description": "Indstil afstandsgrænserne for hvert nærhedszone.",
+        "data": {
+          "zone_very_near_m": "Meget tæt tærskel (m)",
+          "zone_near_m": "Tæt tærskel (m)",
+          "zone_mid_m": "Middel tærskel (m)",
+          "zone_far_m": "Langt tærskel (m)"
+        },
+        "data_description": {
+          "zone_very_near_m": "Enheder anses som 'Meget tæt' ved eller nærmere end denne afstand. Standard: 100 m.",
+          "zone_near_m": "Enheder anses som 'Tæt' ved eller nærmere end denne afstand. Standard: 500 m.",
+          "zone_mid_m": "Enheder anses som 'Middel' afstand. Standard: 2000 m.",
+          "zone_far_m": "Enheder anses som 'Langt'. Standard: 10000 m."
         }
       }
     },
     "error": {
-      "exit_below_entry": "Udgangstærskel skal være større end eller lig med indgangstærskel."
+      "exit_below_entry": "Udgangstærskel skal være større end eller lig med indgangstærskel.",
+      "zone_thresholds_not_ascending": "Zonetærskler skal stige i rækkefølge: Meget tæt < Tæt < Middel < Langt."
     }
   },
   "entity": {
@@ -89,6 +149,12 @@
       },
       "proximity_duration": {
         "name": "Nærhedsvarighed"
+      },
+      "proximity_tracking_started": {
+        "name": "Proximity Tracking Started"
+      },
+      "proximity_rate": {
+        "name": "Proximity Rate"
       },
       "last_seen_together": {
         "name": "Sidst set sammen"
@@ -148,6 +214,15 @@
       },
       "update_count_b": {
         "name": "Update Count Last 30 min (B)"
+      },
+      "entity_state_a": {
+        "name": "Tilstand (A)"
+      },
+      "entity_state_b": {
+        "name": "Tilstand (B)"
+      },
+      "today_unaccounted_time": {
+        "name": "Uberedsret tid i dag"
       }
     },
     "binary_sensor": {

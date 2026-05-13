@@ -75,6 +75,7 @@ async def async_setup_entry(
             BucketSensor(coordinator, entry, entity_a_name, entity_b_name),
             BucketLevelSensor(coordinator, entry, entity_a_name, entity_b_name),
             ProximityDurationSensor(coordinator, entry, entity_a_name, entity_b_name),
+            ProximityTrackingStartedSensor(coordinator, entry, entity_a_name, entity_b_name),
             LastSeenTogetherSensor(coordinator, entry, entity_a_name, entity_b_name),
             TodayProximityTimeSensor(coordinator, entry, entity_a_name, entity_b_name),
             TodayZoneTimeSensor(coordinator, entry, entity_a_name, entity_b_name, BUCKET_VERY_NEAR),
@@ -366,6 +367,18 @@ class EntityStateSensor(EntityDistanceSensorBase):
         if state is None:
             return None
         return state.state
+
+
+class ProximityTrackingStartedSensor(EntityDistanceSensorBase):
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+    _attr_translation_key = "proximity_tracking_started"
+
+    def __init__(self, coordinator, entry, a_name, b_name):
+        super().__init__(coordinator, entry, a_name, b_name, "proximity_tracking_started")
+
+    @property
+    def native_value(self) -> datetime | None:
+        return self._pair.proximity_tracking_started
 
 
 class TodayUnaccountedTimeSensor(EntityDistanceSensorBase):

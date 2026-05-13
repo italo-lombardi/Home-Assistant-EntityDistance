@@ -20,6 +20,7 @@ class PairState:
     proximity: bool = False
     proximity_since: datetime | None = None
     proximity_duration_s: float = 0.0
+    proximity_tracking_started: datetime | None = None
     last_seen_together: datetime | None = None
 
     today_proximity_seconds: float = 0.0

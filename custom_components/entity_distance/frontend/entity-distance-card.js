@@ -59,7 +59,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     if (distState?.attributes?.friendly_name) {
       return distState.attributes.friendly_name
         .replace(/^Entity Distance[^\w]*/i, "")
-        .replace(/\s*[-—]\s*Distance\s*$/i, "")
+        .replace(/\s*[-—]?\s*Distance\s*$/i, "")
         .replace(" — ", " & ") || slug;
     }
     return slug.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
@@ -90,6 +90,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
 
   function _formatMinutes(min) {
     if (min === null) return "—";
+    if (min === 0) return "0 min";
     if (min < 1) return "< 1 min";
     if (min >= 60) {
       const h = Math.floor(min / 60);
@@ -97,6 +98,13 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       return m > 0 ? `${h}h ${m}m` : `${h}h`;
     }
     return `${Math.round(min)} min`;
+  }
+
+  function _formatDate(isoStr) {
+    if (!isoStr || isoStr === "unknown" || isoStr === "unavailable") return null;
+    const d = new Date(isoStr);
+    if (isNaN(d.getTime())) return null;
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
   }
 
   function _formatTs(isoStr) {
@@ -112,6 +120,15 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     if (diffH < 24) return `${diffH}h ago`;
     const diffD = Math.floor(diffH / 24);
     return `${diffD}d ago`;
+  }
+
+  function _zoneColor(bucket) {
+    if (bucket === "very_near") return "#4caf50";
+    if (bucket === "near") return "#8bc34a";
+    if (bucket === "mid") return "#ff9800";
+    if (bucket === "far") return "#ff5722";
+    if (bucket === "very_far") return "#9e9e9e";
+    return null;
   }
 
   function _dirIcon(dir) {
@@ -136,6 +153,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       --edc-proximity-on: #4caf50;
       --edc-proximity-off: #9e9e9e;
       --edc-divider: var(--divider-color, rgba(0,0,0,0.12));
+      user-select: text;
     }
 
     ha-card { overflow: hidden; }
@@ -150,13 +168,33 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     .compact .card-header { padding: 12px 16px 8px; }
 
     .pair-title {
-      font-size: 16px;
-      font-weight: 500;
-      color: var(--primary-text-color);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .pair-title-icon {
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+
+    .pair-title-text {
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      min-width: 0;
+      font-size: 16px;
+      color: var(--primary-text-color);
+    }
+
+    .pair-title-text strong {
+      font-weight: 700;
+    }
+
+    .pair-title-text .pair-suffix {
+      font-weight: 400;
+      color: var(--secondary-text-color);
     }
 
     .prox-badge {
@@ -227,7 +265,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       letter-spacing: 0.06em;
     }
 
-    /* ── stats rows ── */
+    /* ── stats rows (movement) ── */
     .stats { padding: 6px 16px 12px; }
     .compact .stats { padding: 4px 16px 8px; }
 
@@ -252,34 +290,89 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     }
     .compact .stat-value { font-size: 0.8rem; }
 
-    /* ── zone breakdown ── */
-    .zone-breakdown { padding: 0 16px 10px; }
+    /* ── stat boxes ── */
+    .stat-boxes {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding: 8px 16px 12px;
+    }
+    .compact .stat-boxes { padding: 6px 16px 8px; gap: 6px; }
+
+    .stat-box {
+      min-width: 0;
+      background: var(--secondary-background-color, rgba(0,0,0,0.04));
+      border-radius: 10px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .stat-box.full-width { grid-column: 1 / -1; }
+    .compact .stat-box { padding: 7px 10px; border-radius: 8px; }
+
+    .stat-box-label {
+      font-size: 0.72rem;
+      color: var(--secondary-text-color);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .stat-box-value {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--primary-text-color);
+      white-space: nowrap;
+    }
+    .compact .stat-box-value { font-size: 0.95rem; }
+
+    .stat-box-sub {
+      font-size: 0.68rem;
+      color: var(--secondary-text-color);
+      margin-top: 1px;
+    }
+
+    /* ── zone breakdown chips ── */
+    .zone-breakdown { padding: 4px 16px 12px; }
 
     .zone-breakdown-title {
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       font-weight: 600;
       color: var(--secondary-text-color);
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      padding: 6px 0 4px;
+      padding: 0 0 6px;
     }
 
-    .zone-row {
+    .zone-chips {
       display: flex;
-      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .zone-chip {
+      display: flex;
+      flex-direction: column;
       align-items: center;
-      padding: 2px 0;
+      padding: 6px 12px;
+      border-radius: 20px;
+      background: var(--secondary-background-color, rgba(0,0,0,0.04));
+      border: 1px solid var(--divider-color, rgba(0,0,0,0.1));
+      min-width: 60px;
     }
 
-    .zone-row-label {
-      font-size: 0.82rem;
+    .zone-chip-label {
+      font-size: 0.68rem;
       color: var(--secondary-text-color);
+      white-space: nowrap;
     }
 
-    .zone-row-value {
-      font-size: 0.82rem;
-      font-weight: 500;
+    .zone-chip-value {
+      font-size: 0.85rem;
+      font-weight: 700;
       color: var(--primary-text-color);
+      white-space: nowrap;
     }
 
     /* ── diagnostic section ── */
@@ -294,10 +387,19 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       padding: 6px 0 4px;
     }
 
-    .diag-grid {
+    .diag-cols {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 2px 12px;
+      gap: 0 12px;
+    }
+
+    .diag-col-header {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--secondary-text-color);
+      padding: 2px 0 4px;
+      border-bottom: 1px solid var(--divider-color, rgba(0,0,0,0.1));
+      margin-bottom: 4px;
     }
 
     .diag-item {
@@ -401,7 +503,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       const base = [
         `binary_sensor.entity_distance_${slug}_in_proximity`,
         `${p}_distance`, `${p}_direction`, `${p}_direction_level`, `${p}_proximity_zone`,
-        `${p}_closing_speed`, `${p}_eta`,
+        `${p}_approach_speed`, `${p}_estimated_arrival_time`,
         `${p}_proximity_duration`, `${p}_today_proximity_time`,
         `${p}_last_seen_together`,
         `${p}_today_very_near_time`, `${p}_today_near_time`,
@@ -436,26 +538,37 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
 
       const c = this._config;
       const isProx = proxState.state === "on";
-      const label = this._config.title || _pairLabel(this.hass, slug);
+      const rawLabel = this._config.title || _pairLabel(this.hass, slug);
+      // Bold each name, non-bold the connector and any suffix like " Distance"
+      // rawLabel should be "Italo & Dercy" after _pairLabel strips device/sensor name
+      const ampIdx = rawLabel.indexOf(" & ");
+      const boldLabel = ampIdx >= 0
+        ? html`<strong>${rawLabel.slice(0, ampIdx)}</strong><span class="pair-suffix"> &amp; </span><strong>${rawLabel.slice(ampIdx + 3).replace(/\s*distance\s*$/i, "")}</strong>`
+        : html`<strong>${rawLabel.replace(/\s*distance\s*$/i, "")}</strong>`;
       const compactClass = c.compact ? "compact" : "";
 
       const distM = _num(this.hass, slug, "distance");
       const direction = _val(this.hass, slug, "direction");
       const bucket = _val(this.hass, slug, "proximity_zone");
-      const speedKmh = _num(this.hass, slug, "closing_speed");
-      const etaMin = _num(this.hass, slug, "eta");
+      const speedKmh = _num(this.hass, slug, "approach_speed");
+      const etaMin = _num(this.hass, slug, "estimated_arrival_time");
       const proxDurMin = _num(this.hass, slug, "proximity_duration");
+      const proxTrackingStarted = _val(this.hass, slug, "proximity_tracking_started");
       const todayMin = _num(this.hass, slug, "today_proximity_time");
       const lastSeen = _val(this.hass, slug, "last_seen_together");
 
       const bucketLabel = bucket ? bucket.replace(/_/g, " ") : null;
+      const zoneColor = bucket ? _zoneColor(bucket) : null;
       const dirColor = _dirColor(direction);
 
       return html`
         <ha-card class="${compactClass}">
           <!-- header -->
           <div class="card-header">
-            <span class="pair-title">${label}</span>
+            <div class="pair-title">
+              <span class="pair-title-icon">📍</span>
+              <span class="pair-title-text">${boldLabel}</span>
+            </div>
             ${c.show_proximity_badge ? html`
               <span class="prox-badge ${isProx ? "on" : "off"}">
                 ${isProx ? "In Proximity" : "Not in Proximity"}
@@ -469,8 +582,8 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
             <div class="hero">
               ${c.show_distance ? html`
                 <div class="distance-block">
-                  <div class="distance-value">${_formatDistance(distM)}</div>
-                  ${c.show_zone && bucketLabel ? html`<div class="zone-label">${bucketLabel}</div>` : nothing}
+                  <div class="distance-value" style="${zoneColor ? `color:${zoneColor}` : ""}">${_formatDistance(distM)}</div>
+                  ${c.show_zone && bucketLabel ? html`<div class="zone-label" style="${zoneColor ? `color:${zoneColor};opacity:0.8` : ""}">${bucketLabel}</div>` : nothing}
                 </div>` : nothing}
               ${c.show_direction && direction ? html`
                 <div class="direction-block" style="color:${dirColor}">
@@ -480,59 +593,71 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
             </div>
             <div class="divider"></div>` : nothing}
 
-          <!-- movement stats -->
+          <!-- movement stat boxes -->
           ${this._hasMovementStats() ? html`
-            <div class="stats">
+            <div class="stat-boxes">
               ${c.show_speed && speedKmh !== null ? html`
-                <div class="stat-row">
-                  <span class="stat-label">Approach speed</span>
-                  <span class="stat-value">${speedKmh.toFixed(1)} km/h</span>
+                <div class="stat-box" style="background:rgba(14,165,233,0.1);border:1px solid rgba(14,165,233,0.25)">
+                  <span class="stat-box-label">💨 Approach speed</span>
+                  <span class="stat-box-value" style="color:#0284c7">${speedKmh.toFixed(1)} km/h</span>
                 </div>` : nothing}
               ${c.show_eta && direction === "approaching" && etaMin !== null ? html`
-                <div class="stat-row">
-                  <span class="stat-label">ETA</span>
-                  <span class="stat-value">${_formatMinutes(etaMin)}</span>
+                <div class="stat-box" style="background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.25)">
+                  <span class="stat-box-label">⏱ ETA</span>
+                  <span class="stat-box-value" style="color:#9333ea">${_formatMinutes(etaMin)}</span>
                 </div>` : nothing}
             </div>
             ${this._hasTimeStats() || this._hasDiagnostics() ? html`<div class="divider"></div>` : nothing}
           ` : nothing}
 
-          <!-- time-together stats -->
-          ${this._hasTimeStats() ? html`
-            <div class="stats">
-              ${c.show_proximity_duration && proxDurMin !== null ? html`
-                <div class="stat-row">
-                  <span class="stat-label">Proximity duration</span>
-                  <span class="stat-value">${_formatMinutes(proxDurMin)}</span>
-                </div>` : nothing}
-              ${c.show_today_time && todayMin !== null ? html`
-                <div class="stat-row">
-                  <span class="stat-label">Together today</span>
-                  <span class="stat-value">${_formatMinutes(todayMin)}</span>
-                </div>` : nothing}
-              ${c.show_last_seen ? html`
-                <div class="stat-row">
-                  <span class="stat-label">Last seen together</span>
-                  <span class="stat-value">${_formatTs(lastSeen)}</span>
-                </div>` : nothing}
-            </div>
+          <!-- time-together stat boxes -->
+          ${this._hasTimeStats() ? html`${(() => {
+            const showDur = c.show_proximity_duration && proxDurMin !== null;
+            const showToday = c.show_today_time && todayMin !== null;
+            const showLast = c.show_last_seen;
+            const count = [showDur, showToday, showLast].filter(Boolean).length;
+            const lastFull = count % 2 === 1; // odd count → last item spans full width
+            const lastIdx = [showDur, showToday, showLast].lastIndexOf(true);
+            return html`
+              <div class="stat-boxes">
+                ${showDur ? html`
+                  <div class="stat-box ${lastIdx === 0 && lastFull ? "full-width" : ""}" style="background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.25)">
+                    <span class="stat-box-label">⏳ Proximity duration</span>
+                    <span class="stat-box-value" style="color:#6366f1">${_formatMinutes(proxDurMin)}</span>
+                    ${proxTrackingStarted ? html`<span class="stat-box-sub">since ${_formatDate(proxTrackingStarted)}</span>` : nothing}
+                  </div>` : nothing}
+                ${showToday ? html`
+                  <div class="stat-box ${lastIdx === 1 && lastFull ? "full-width" : ""}" style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.25)">
+                    <span class="stat-box-label">📅 Together today</span>
+                    <span class="stat-box-value" style="color:#16a34a">${_formatMinutes(todayMin)}</span>
+                  </div>` : nothing}
+                ${showLast ? html`
+                  <div class="stat-box ${lastIdx === 2 && lastFull ? "full-width" : ""}" style="background:rgba(251,146,60,0.1);border:1px solid rgba(251,146,60,0.25)">
+                    <span class="stat-box-label">👁 Last seen together</span>
+                    <span class="stat-box-value" style="color:#ea580c">${_formatTs(lastSeen)}</span>
+                  </div>` : nothing}
+              </div>`;
+          })()}
             ${c.show_today_zone_times ? nothing : (this._hasDiagnostics() ? html`<div class="divider"></div>` : nothing)}
           ` : nothing}
 
-          <!-- zone breakdown -->
+          <!-- zone breakdown chips -->
           ${c.show_today_zone_times ? html`
             <div class="zone-breakdown">
-              <div class="zone-breakdown-title">Time by zone today</div>
-              ${["very_near", "near", "mid", "far", "very_far"].map(z => {
-                const suffix = z === "mid" ? "today_medium_time" : `today_${z}_time`;
-                const min = _num(this.hass, slug, suffix);
-                if (min === null || min === 0) return nothing;
-                return html`
-                  <div class="zone-row">
-                    <span class="zone-row-label">${z.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</span>
-                    <span class="zone-row-value">${_formatMinutes(min)}</span>
-                  </div>`;
-              })}
+              <div class="zone-breakdown-title">🗺 Time by zone today</div>
+              <div class="zone-chips">
+                ${["very_near", "near", "mid", "far", "very_far"].map(z => {
+                  const suffix = z === "mid" ? "today_medium_time" : `today_${z}_time`;
+                  const min = _num(this.hass, slug, suffix);
+                  if (min === null || min === 0) return nothing;
+                  const zLabel = z === "mid" ? "Medium" : z.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+                  return html`
+                    <div class="zone-chip">
+                      <span class="zone-chip-label">${zLabel}</span>
+                      <span class="zone-chip-value">${_formatMinutes(min)}</span>
+                    </div>`;
+                })}
+              </div>
             </div>
             ${this._hasDiagnostics() ? html`<div class="divider"></div>` : nothing}
           ` : nothing}
@@ -540,18 +665,8 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
           <!-- diagnostics -->
           ${this._hasDiagnostics() ? html`
             <div class="diag-section">
-              <div class="diag-title">Diagnostics</div>
-              <div class="diag-grid">
-                ${c.show_gps_accuracy ? html`
-                  ${this._diagPair(slug, "gps_accuracy_", "m")}
-                ` : nothing}
-                ${c.show_last_update ? html`
-                  ${this._diagPairTs(slug, "last_update_")}
-                ` : nothing}
-                ${c.show_update_count ? html`
-                  ${this._diagPair(slug, "update_count_", "")}
-                ` : nothing}
-              </div>
+              <div class="diag-title">🔬 Diagnostics</div>
+              ${this._renderDiagCols(slug, c)}
             </div>
           ` : nothing}
 
@@ -567,25 +682,101 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         </div>`;
     }
 
-    _diagPair(slug, prefix, unit) {
-      const p = `sensor.entity_distance_${slug}_${prefix}`;
-      const ids = Object.keys(this.hass.states).filter(id => id.startsWith(p)).sort();
-      return ids.map(id => {
-        const s = this.hass.states[id];
-        const label = s?.attributes?.friendly_name || id.replace(`sensor.entity_distance_${slug}_`, "");
-        const val = s && s.state !== "unknown" && s.state !== "unavailable" ? `${s.state}${unit ? " " + unit : ""}` : "—";
-        return this._diagItem(label, val);
-      });
+    // Get person name from entity_id basename.
+    _personNameFromId(entityId) {
+      if (!entityId) return null;
+      const s = this.hass.states[entityId];
+      if (s?.attributes?.friendly_name) return s.attributes.friendly_name;
+      return entityId.replace(/^[^.]+\./, "").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
     }
 
-    _diagPairTs(slug, prefix) {
+    // Returns { a: {metric, val}, b: {metric, val} } ordered by entity_a/entity_b from distance sensor.
+    _diagSplit(slug, prefix, unit, isTs) {
       const p = `sensor.entity_distance_${slug}_${prefix}`;
-      const ids = Object.keys(this.hass.states).filter(id => id.startsWith(p)).sort();
-      return ids.map(id => {
+      const distState = this.hass.states[`sensor.entity_distance_${slug}_distance`];
+      const entityA = distState?.attributes?.entity_a;
+      const entityB = distState?.attributes?.entity_b;
+      // Derive expected name suffixes from entity friendly names (lowercase, no spaces)
+      const nameA = entityA ? this._personNameFromId(entityA) : null;
+      const nameB = entityB ? this._personNameFromId(entityB) : null;
+
+      const ids = Object.keys(this.hass.states).filter(id => id.startsWith(p));
+
+      const _parse = (id) => {
         const s = this.hass.states[id];
-        const label = s?.attributes?.friendly_name || id.replace(`sensor.entity_distance_${slug}_`, "");
-        return this._diagItem(label, _formatTs(s?.state));
-      });
+        const rawLabel = s?.attributes?.friendly_name || id.replace(`sensor.entity_distance_${slug}_`, "");
+        const afterDevice = rawLabel.includes(" — ") ? rawLabel.slice(rawLabel.lastIndexOf(" — ") + 3) : rawLabel;
+        const parenMatch = afterDevice.match(/^(.+?)\s*\((.+?)\)\s*$/);
+        const metric = parenMatch ? parenMatch[1].trim() : afterDevice;
+        const rawVal = s && s.state !== "unknown" && s.state !== "unavailable" ? s.state : null;
+        let val;
+        if (isTs) {
+          val = _formatTs(s?.state);
+        } else {
+          const num = rawVal !== null ? parseFloat(rawVal) : NaN;
+          const isInt = unit === "" && !isNaN(num) && Number.isInteger(num);
+          val = rawVal === null ? "—" : (!isNaN(num)
+            ? `${isInt ? num : num.toFixed(1)}${unit ? " " + unit : ""}`
+            : `${rawVal}${unit ? " " + unit : ""}`);
+        }
+        return { metric, val };
+      };
+
+      // Match IDs to A/B by checking if entity friendly name appears in the sensor ID suffix
+      let idA = null, idB = null;
+      for (const id of ids) {
+        const suffix = id.slice(p.length).toLowerCase();
+        const aMatch = nameA && suffix.startsWith(nameA.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, ""));
+        if (aMatch) { idA = id; } else { idB = id; }
+      }
+      // Fallback: if only one entity configured, just use first
+      if (!idA && !idB && ids.length > 0) idA = ids[0];
+      if (!idA && ids.length > 1) { idA = ids[0]; idB = ids[1]; }
+
+      return {
+        a: idA ? _parse(idA) : null,
+        b: idB ? _parse(idB) : null,
+        nameA, nameB,
+      };
+    }
+
+    _renderDiagCols(slug, c) {
+      const rowsA = [], rowsB = [];
+      let nameA = null, nameB = null;
+
+      const addSplit = (prefix, unit, isTs) => {
+        const r = this._diagSplit(slug, prefix, unit, isTs);
+        if (!nameA && r.nameA) nameA = r.nameA;
+        if (!nameB && r.nameB) nameB = r.nameB;
+        if (r.a) rowsA.push(r.a);
+        if (r.b) rowsB.push(r.b);
+      };
+
+      if (c.show_gps_accuracy) addSplit("gps_accuracy_", "m", false);
+      if (c.show_last_update) addSplit("last_update_", "", true);
+      if (c.show_update_count) addSplit("update_count_", "", false);
+
+      if (!rowsA.length && !rowsB.length) return nothing;
+
+      const _iconFor = (metric) => {
+        const m = metric.toLowerCase();
+        if (m.includes("gps") || m.includes("accuracy")) return "📡";
+        if (m.includes("update") && m.includes("count")) return "🔄";
+        if (m.includes("update") || m.includes("last")) return "🕐";
+        return "";
+      };
+
+      return html`
+        <div class="diag-cols">
+          <div>
+            ${nameA ? html`<div class="diag-col-header">${nameA}</div>` : nothing}
+            ${rowsA.map(r => this._diagItem(`${_iconFor(r.metric)} ${r.metric}`, r.val))}
+          </div>
+          <div>
+            ${nameB ? html`<div class="diag-col-header">${nameB}</div>` : nothing}
+            ${rowsB.map(r => this._diagItem(`${_iconFor(r.metric)} ${r.metric}`, r.val))}
+          </div>
+        </div>`;
     }
 
     _hasMovementStats() {

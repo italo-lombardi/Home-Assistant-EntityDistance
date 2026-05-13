@@ -64,7 +64,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     if (distState?.attributes?.friendly_name) {
       return distState.attributes.friendly_name
         .replace(/^Entity Distance[^\w]*/i, "")
-        .replace(/\s*[-—]\s*Distance\s*$/i, "")
+        .replace(/\s*[-—]?\s*Distance\s*$/i, "")
         .replace(" — ", " & ") || slug;
     }
     return slug.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
@@ -91,6 +91,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
 
   function _formatMinutes(min) {
     if (min === null) return "—";
+    if (min === 0) return "0 min";
     if (min < 1) return "< 1 min";
     if (min >= 60) {
       const h = Math.floor(min / 60);
@@ -165,6 +166,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       --edpc-proximity-off: #9e9e9e;
       --edpc-divider: var(--divider-color, rgba(0,0,0,0.12));
       --edpc-avatar-size: 56px;
+      user-select: text;
     }
 
     ha-card { overflow: hidden; }
@@ -426,7 +428,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       const ids = [
         `binary_sensor.entity_distance_${slug}_in_proximity`,
         `${p}_distance`, `${p}_direction`, `${p}_proximity_zone`,
-        `${p}_closing_speed`, `${p}_eta`,
+        `${p}_approach_speed`, `${p}_estimated_arrival_time`,
         `${p}_proximity_duration`, `${p}_today_proximity_time`,
         `${p}_last_seen_together`,
       ];
@@ -493,9 +495,9 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
 
       const distM = _num(this.hass, slug, "distance");
       const direction = _val(this.hass, slug, "direction");
-      const bucket = _val(this.hass, slug, "bucket");
-      const speedKmh = _num(this.hass, slug, "closing_speed");
-      const etaMin = _num(this.hass, slug, "eta");
+      const bucket = _val(this.hass, slug, "proximity_zone");
+      const speedKmh = _num(this.hass, slug, "approach_speed");
+      const etaMin = _num(this.hass, slug, "estimated_arrival_time");
       const proxDurMin = _num(this.hass, slug, "proximity_duration");
       const todayMin = _num(this.hass, slug, "today_proximity_time");
       const lastSeen = _val(this.hass, slug, "last_seen_together");

@@ -153,6 +153,9 @@
       "proximity_duration": {
         "name": "Proximity Duration"
       },
+      "proximity_tracking_started": {
+        "name": "Proximity Tracking Started"
+      },
       "last_seen_together": {
         "name": "Last Seen Together"
       },

@@ -165,6 +165,8 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
         self._resync_holding: bool = False
         self._resync_hold_until: datetime | None = None
         self._store: Store = Store(hass, 1, f"{DOMAIN}_state_{entry.entry_id}")
+        self._pending_update_a: bool = False
+        self._pending_update_b: bool = False
 
     @property
     def bucket_thresholds(self) -> dict[str, float]:
@@ -215,8 +217,10 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
         now = datetime.now().astimezone()
         if entity_id == self._entity_a:
             self._pair_state.last_update_a = now
+            self._pending_update_a = True
         elif entity_id == self._entity_b:
             self._pair_state.last_update_b = now
+            self._pending_update_b = True
         self.hass.async_create_task(self._debouncer.async_call())
 
     async def _async_recalculate(self) -> None:
@@ -346,6 +350,8 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
             ps.proximity = True
             ps.proximity_since = now
             ps.last_seen_together = now
+            if ps.proximity_tracking_started is None:
+                ps.proximity_tracking_started = now
         elif ps.proximity and dist_m > self._exit_threshold_m:
             ps.proximity = False
             if ps.proximity_since:
@@ -367,19 +373,23 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
                 ps.today_zone_seconds.get(current_bucket, 0.0) + elapsed
             )
 
-        ps.update_count_a = self._update_frequency(ps.update_count_a, ps.update_window_start_a, now)
-        if (
-            ps.update_window_start_a is None
-            or (now - ps.update_window_start_a).total_seconds() > UPDATES_FREQUENCY_WINDOW_S
-        ):
-            ps.update_window_start_a = now
+        if self._pending_update_a:
+            ps.update_count_a = self._update_frequency(ps.update_count_a, ps.update_window_start_a, now)
+            if (
+                ps.update_window_start_a is None
+                or (now - ps.update_window_start_a).total_seconds() > UPDATES_FREQUENCY_WINDOW_S
+            ):
+                ps.update_window_start_a = now
+            self._pending_update_a = False
 
-        ps.update_count_b = self._update_frequency(ps.update_count_b, ps.update_window_start_b, now)
-        if (
-            ps.update_window_start_b is None
-            or (now - ps.update_window_start_b).total_seconds() > UPDATES_FREQUENCY_WINDOW_S
-        ):
-            ps.update_window_start_b = now
+        if self._pending_update_b:
+            ps.update_count_b = self._update_frequency(ps.update_count_b, ps.update_window_start_b, now)
+            if (
+                ps.update_window_start_b is None
+                or (now - ps.update_window_start_b).total_seconds() > UPDATES_FREQUENCY_WINDOW_S
+            ):
+                ps.update_window_start_b = now
+            self._pending_update_b = False
 
         ps.distance_m = dist_m
         ps.prev_distance_m = dist_m
@@ -478,6 +488,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
             "today_proximity_seconds": ps.today_proximity_seconds,
             "today_zone_seconds": ps.today_zone_seconds,
             "proximity_duration_s": ps.proximity_duration_s,
+            "proximity_tracking_started": ps.proximity_tracking_started.isoformat() if ps.proximity_tracking_started else None,
             "last_seen_together": ps.last_seen_together.isoformat() if ps.last_seen_together else None,
         })
 
@@ -500,5 +511,8 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
             if last_seen_str:
                 ps.last_seen_together = datetime.fromisoformat(last_seen_str)
             ps.proximity_duration_s = float(stored.get("proximity_duration_s", 0.0))
+            tracking_started_str = stored.get("proximity_tracking_started")
+            if tracking_started_str:
+                ps.proximity_tracking_started = datetime.fromisoformat(tracking_started_str)
         except Exception:
             _LOGGER.warning("entity_distance: failed to restore persisted state, starting fresh")

@@ -2,6 +2,27 @@
 
 ## [Unreleased]
 
+## [0.1.0-alpha.6] - 2026-05-13
+
+### Added
+- **Proximity Tracking Started sensor** — timestamp of the first ever proximity entry; persisted across restarts; shown as "since [date]" in the card proximity duration box
+- **Card stat boxes** — proximity duration, together today, last seen together, approach speed, and ETA now render as colored boxes (2-per-row grid, odd item spans full width)
+- **Zone time chips** — "Time by zone today" breakdown replaced with horizontal colored pill chips
+- **Distance value zone color** — hero distance value and zone label colored by proximity zone (green → grey gradient from Very Near to Very Far)
+- **Card icons** — emoji icons on all stat labels (💨⏱⏳📅👁🗺🔬📡🕐🔄)
+- **Card title redesign** — 📍 icon prefix; entity names bold, connector and suffixes non-bold
+- **Diagnostics two-column layout** — GPS accuracy, last update, and update count grouped by person in left/right columns ordered by entity_a/entity_b
+
+### Fixed
+- **Update count incremented for both entities on every recalculate** — now only increments for the entity that actually triggered the state change via pending-update flags; 1-minute tick no longer inflates counts
+- **Card suffix mismatches** — `_closing_speed` → `_approach_speed`, `_eta` → `_estimated_arrival_time`, `bucket` → `proximity_zone`, `_update_count_` prefix scan corrected
+- **Diagnostics label showing full device name** — now strips device prefix and shows only sensor name (e.g. "GPS Accuracy" not "Entity Distance — Italo & Dercy GPS Accuracy (Italo)")
+- **GPS accuracy showing raw float** — now rounded to 1 decimal place
+- **Update count showing float** — now shown as integer
+- **"Distance" in card title not stripped** — `_pairLabel` regex made optional dash so plain space before "Distance" is also stripped from sensor friendly name
+- **Text selection blocked in cards** — added `user-select: text` to `:host` styles in both cards
+- **0 duration showing "< 1 min"** — now shows "0 min"
+
 ## [0.1.0-alpha.5] - 2026-05-13
 
 ### Added

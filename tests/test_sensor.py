@@ -330,6 +330,12 @@ class TestTodayZoneTimeSensor:
         sensor = _make_zone_sensor(BUCKET_NEAR, self._ps(True, zone))
         assert sensor.native_value == 1.0  # 60 / 60
 
+    def test_not_diagnostic(self):
+        from homeassistant.const import EntityCategory
+
+        sensor = _make_zone_sensor(BUCKET_VERY_NEAR, self._ps(True, {}))
+        assert sensor.entity_category is None or sensor.entity_category != EntityCategory.DIAGNOSTIC
+
 
 # ---------------------------------------------------------------------------
 # UpdateCountSensor tests

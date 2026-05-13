@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+## [0.1.0-alpha.4] - 2026-05-13
+
+### Added
+- **Icons** — `icons.json` with MDI icons for all sensors, binary sensor (open/closed states), and button
+
+### Changed
+- **Today Zone Time sensors** — removed `DIAGNOSTIC` category; now shown as regular sensors alongside Today Proximity Time
+- **Update Count sensors** — renamed to `Update Count Last 30 min (A/B)` to make the 30-minute window explicit; updated in all 11 language files
+- **Integration icon** — lightened background from dark navy to medium blue-slate (`#405d95`)
+
 ## [0.1.0-alpha.3] - 2026-05-13
 
 ### Added

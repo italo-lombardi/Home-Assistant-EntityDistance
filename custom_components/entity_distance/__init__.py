@@ -23,6 +23,8 @@ PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.B
 
 CARD_FILENAME = "entity-distance-card.js"
 CARD_URL = f"/{DOMAIN}/{CARD_FILENAME}"
+PEOPLE_CARD_FILENAME = "entity-distance-people-card.js"
+PEOPLE_CARD_URL = f"/{DOMAIN}/{PEOPLE_CARD_FILENAME}"
 _CARD_INSTALLED = False
 
 
@@ -73,24 +75,29 @@ async def _async_install_card(hass: HomeAssistant) -> None:
     if _CARD_INSTALLED:
         return
 
-    source = Path(__file__).parent / "frontend" / CARD_FILENAME
-    if not source.exists():
-        _LOGGER.warning("entity_distance: card JS not found at %s", source)
-        return
-
     version = await hass.async_add_executor_job(_get_version)
 
-    try:
-        await hass.http.async_register_static_paths([StaticPathConfig(CARD_URL, str(source), True)])
-    except Exception:  # noqa: BLE001
-        _LOGGER.debug("entity_distance: static path %s already registered", CARD_URL)
+    for filename, url in [
+        (CARD_FILENAME, CARD_URL),
+        (PEOPLE_CARD_FILENAME, PEOPLE_CARD_URL),
+    ]:
+        source = Path(__file__).parent / "frontend" / filename
+        if not source.exists():
+            _LOGGER.warning("entity_distance: card JS not found at %s", source)
+            continue
+        try:
+            await hass.http.async_register_static_paths([StaticPathConfig(url, str(source), True)])
+        except Exception:  # noqa: BLE001
+            _LOGGER.debug("entity_distance: static path %s already registered", url)
+        await _async_register_lovelace_resource(hass, filename, url, version)
 
-    await _async_register_lovelace_resource(hass, version)
     _CARD_INSTALLED = True
 
 
-async def _async_register_lovelace_resource(hass: HomeAssistant, version: str) -> None:
-    resource_url = f"{CARD_URL}?automatically-added&{version}"
+async def _async_register_lovelace_resource(
+    hass: HomeAssistant, filename: str, card_url: str, version: str
+) -> None:
+    resource_url = f"{card_url}?automatically-added&{version}"
 
     try:
         resources = hass.data["lovelace"].resources
@@ -98,7 +105,7 @@ async def _async_register_lovelace_resource(hass: HomeAssistant, version: str) -
         _LOGGER.info(
             "entity_distance: could not auto-register Lovelace resource. "
             "Add manually: url: %s?%s, type: module",
-            CARD_URL,
+            card_url,
             version,
         )
         return
@@ -107,7 +114,7 @@ async def _async_register_lovelace_resource(hass: HomeAssistant, version: str) -
         await resources.async_load()
         resources.loaded = True
 
-    existing = [r for r in resources.async_items() if CARD_FILENAME in r.get("url", "")]
+    existing = [r for r in resources.async_items() if filename in r.get("url", "")]
 
     if not existing:
         if getattr(resources, "async_create_item", None):

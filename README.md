@@ -15,17 +15,19 @@ Track the distance between any two entities — people, devices, or zones — wi
 ## Features
 
 - **Person-to-person, person-to-zone, device-to-zone, zone-to-zone** — any combination of `person`, `device_tracker`, `sensor`, or `zone` entities
-- **16 sensors per pair** — distance, proximity zone, proximity zone level, proximity duration, last seen together, today proximity time, direction, closing speed, ETA, GPS accuracy, last update, update frequency, data staleness (per entity)
+- **22 sensors per pair** — distance, proximity zone, proximity zone level, proximity duration, last seen together, today proximity time, direction, direction level, closing speed, ETA, today zone times, GPS accuracy, last update, update count (per entity)
 - **Proximity binary sensor** — ON/OFF with configurable entry/exit hysteresis to prevent flickering
 - **Direction of travel** — approaching, diverging, or stationary
 - **ETA** — estimated minutes until together, only when approaching
 - **Closing speed** — convergence rate in km/h
 - **Today proximity time** — total minutes together today, resets at midnight
+- **Today zone times** — minutes spent in each proximity zone today (Very Near, Near, Medium, Far, Very Far)
+- **Direction Level sensor** — numeric direction: -1 approaching, 0 stationary, 1 diverging
 - **GPS accuracy filter** — reject updates with poor GPS fix quality
 - **Speed filter** — reject physically implausible location jumps (e.g. GPS teleports)
 - **Reliability tracking** — require consistent updates before proximity events fire
 - **4 HA events** — fire automations without polling
-- **Diagnostic sensors** — GPS accuracy, last update, update frequency, staleness per tracked entity
+- **Diagnostic sensors** — GPS accuracy, last update, update count (last 30 min) per tracked entity
 - **Refresh button** — force immediate mobile app location update
 - **Multiple pairs** — each pair gets its own HA device; add as many as needed
 - **Vincenty distance** — uses HA's built-in ellipsoidal distance calculation, more accurate than Haversine
@@ -96,10 +98,10 @@ Only shown when "Configure advanced filters" is enabled in Step 2.
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| Max GPS inaccuracy (m) | 150 | Ignore updates where GPS error exceeds this radius (0 = off) |
+| Max GPS error radius (m) | 150 | Ignore updates where GPS error exceeds this radius (0 = off) |
 | Max speed filter (km/h) | 1000 | Ignore updates implying movement faster than this — catches GPS teleports, allows flights (0 = off) |
 | Only trigger when data is reliable | Off | Require several consistent updates before firing proximity events |
-| Updates needed to be reliable | 3 | Consecutive updates required before data is considered reliable |
+| Consecutive updates required for reliability | 3 | Consecutive updates required before data is considered reliable |
 
 <!-- screenshot: step 4 advanced filters -->
 
@@ -109,7 +111,7 @@ All settings can be changed after setup via **Configure** on the integration car
 
 ## Entities
 
-Each configured pair creates one HA device with 19 entities.
+Each configured pair creates one HA device with 22 entities.
 
 ### Sensors
 
@@ -121,19 +123,23 @@ Each configured pair creates one HA device with 19 entities.
 | Proximity Duration | Minutes currently in proximity (live, includes current session) | `duration` |
 | Last Seen Together | Timestamp of last proximity entry | `timestamp` |
 | Today Proximity Time | Total minutes together today — resets at midnight | `duration` |
+| Today Very Near Time | Minutes spent Very Near today | `duration` |
+| Today Near Time | Minutes spent Near today | `duration` |
+| Today Medium Time | Minutes spent at Medium distance today | `duration` |
+| Today Far Time | Minutes spent Far today | `duration` |
+| Today Very Far Time | Minutes spent Very Far today | `duration` |
 | Direction | Approaching / Diverging / Stationary | `enum` |
+| Direction Level | Numeric direction: -1 approaching, 0 stationary, 1 diverging | — |
 | Approach Speed | Convergence rate in km/h | `speed` |
 | Estimated Arrival Time | Minutes until together (only when approaching) | `duration` |
 | GPS Accuracy (Name A) | GPS fix accuracy of entity A in meters | `distance` |
 | GPS Accuracy (Name B) | GPS fix accuracy of entity B in meters | `distance` |
 | Last Update (Name A) | Timestamp of last location change for entity A | `timestamp` |
 | Last Update (Name B) | Timestamp of last location change for entity B | `timestamp` |
-| Update Frequency (Name A) | Location updates/min over last 5-min window | — |
-| Update Frequency (Name B) | Location updates/min over last 5-min window | — |
-| Location Age (Name A) | Seconds since last update from entity A | `duration` |
-| Location Age (Name B) | Seconds since last update from entity B | `duration` |
+| Update Count (Name A) | Location updates in the last 30 minutes for entity A | — |
+| Update Count (Name B) | Location updates in the last 30 minutes for entity B | — |
 
-> GPS Accuracy, Last Update, Update Frequency, and Location Age are diagnostic sensors — collapsed by default in the HA UI. Sensor names use the entities' friendly names (e.g. "GPS Accuracy (Italo)") instead of generic A/B labels.
+> GPS Accuracy, Last Update, and Update Count are diagnostic sensors — collapsed by default in the HA UI.
 
 ### Binary Sensor
 
@@ -145,7 +151,7 @@ Each configured pair creates one HA device with 19 entities.
 
 | Entity | Description |
 |--------|-------------|
-| Refresh Location | Triggers mobile app `update_sensor_states` for both entities |
+| Refresh Location | Sends a silent push notification to request an immediate location update from both entities (iOS and Android) |
 
 <!-- screenshot: device card with all entities -->
 
@@ -252,34 +258,78 @@ automation:
 
 ---
 
-## Lovelace Card
+## Lovelace Cards
 
-The integration ships a custom card — `entity-distance-card` — automatically registered as a Lovelace resource when the integration loads.
+The integration ships two custom Lovelace cards, automatically registered as resources when the integration loads.
 
-### Minimal config
+### Entity Distance Card (`entity-distance-card`)
 
-```yaml
-type: custom:entity-distance-card
-entity_a: person.alice
-entity_b: person.bob
-```
-
-### Full config
+A data-focused card showing distance, direction, proximity status, and stats.
 
 ```yaml
 type: custom:entity-distance-card
-entity_a: person.alice
-entity_b: person.bob
-entry_id: abc123def456  # optional: explicit config entry ID
+slug: italo_home        # auto-detected from dropdown in the visual editor
 ```
 
-The card shows distance, direction, proximity zone, closing speed, ETA, and time together today.
+**All options:**
+```yaml
+type: custom:entity-distance-card
+slug: italo_home
+title: ""                     # optional custom title
+show_distance: true
+show_direction: true
+show_zone: true               # proximity zone label
+show_proximity_badge: true    # In Proximity / Not in Proximity badge
+show_speed: true              # approach speed
+show_eta: true                # ETA (only when approaching)
+show_proximity_duration: false
+show_today_time: true         # time together today
+show_last_seen: false
+show_today_zone_times: false  # time per zone (Very Near, Near, …)
+show_gps_accuracy: false
+show_last_update: false
+show_update_count: false      # update count last 30 min
+compact: false
+```
+
+### Entity Distance People Card (`entity-distance-people-card`)
+
+A people-focused card with entity avatars side-by-side.
+
+```yaml
+type: custom:entity-distance-people-card
+slug: italo_home
+entity_a: person.italo        # optional: for avatar lookup
+entity_b: person.dercy        # optional: for avatar lookup
+```
+
+**All options:**
+```yaml
+type: custom:entity-distance-people-card
+slug: italo_home
+entity_a: person.italo
+entity_b: person.dercy
+title: ""
+show_direction: true
+show_zone: true
+show_proximity_badge: true
+show_speed: true
+show_eta: true
+show_today_time: true
+show_proximity_duration: false
+show_last_seen: false
+compact: false
+```
+
+The visual editor (pencil icon in Lovelace) shows a dropdown of all configured pairs and checkboxes for each option — no YAML editing required.
 
 If auto-registration fails (e.g. YAML-only Lovelace mode), add manually:
 
 ```yaml
 resources:
-  - url: /entity_distance/entity-distance-card.js?0.1.0-alpha.1
+  - url: /entity_distance/entity-distance-card.js?0.1.0-alpha.3
+    type: module
+  - url: /entity_distance/entity-distance-people-card.js?0.1.0-alpha.3
     type: module
 ```
 
@@ -294,6 +344,8 @@ Zones (`zone.*`) are supported as either entity in a pair:
 - Zones use `latitude`/`longitude` attributes — GPS accuracy and speed filters are not applied to zones
 - Person-to-zone: direction and ETA work normally
 - Zone-to-zone: distance is static; direction always stationary
+
+> Movement of less than 50 m between updates is classified as stationary.
 
 ---
 

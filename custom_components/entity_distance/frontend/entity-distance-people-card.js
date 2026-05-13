@@ -1,28 +1,29 @@
 /**
- * Entity Distance Card
+ * Entity Distance People Card
  * Lovelace custom card for the Entity Distance integration.
+ * People-focused layout: two avatars side-by-side with distance in the middle.
  */
 
-const CARD_VERSION = "0.2.0";
+const PEOPLE_CARD_VERSION = "0.1.0";
 
 console.info(
-  `%c ENTITY-DISTANCE-CARD %c v${CARD_VERSION} %c`,
-  "color: white; background: #2196f3; font-weight: bold; padding: 2px 6px; border-radius: 3px 0 0 3px;",
-  "color: #2196f3; background: #e3f2fd; font-weight: bold; padding: 2px 6px;",
-  "color: #9e9e9e; background: #e3f2fd; padding: 2px 6px; border-radius: 0 3px 3px 0;"
+  `%c ENTITY-DISTANCE-PEOPLE-CARD %c v${PEOPLE_CARD_VERSION} %c`,
+  "color: white; background: #9c27b0; font-weight: bold; padding: 2px 6px; border-radius: 3px 0 0 3px;",
+  "color: #9c27b0; background: #f3e5f5; font-weight: bold; padding: 2px 6px;",
+  "color: #9e9e9e; background: #f3e5f5; padding: 2px 6px; border-radius: 0 3px 3px 0;"
 );
 
 window.customCards = window.customCards || [];
 window.customCards.push({
-  type: "entity-distance-card",
-  name: "Entity Distance Card",
-  description: "Shows distance, direction, proximity status, and time-together stats for a configured entity pair.",
+  type: "entity-distance-people-card",
+  name: "Entity Distance People Card",
+  description: "Shows two people's avatars side-by-side with distance, direction, and proximity stats for a configured entity pair.",
   preview: true,
   documentationURL: "https://github.com/italo-lombardi/Home-Assistant-EntityDistance",
 });
 
 customElements.whenDefined("ha-panel-lovelace").then(() => {
-  if (customElements.get("entity-distance-card")) return;
+  if (customElements.get("entity-distance-people-card")) return;
 
   const haPanel = customElements.get("ha-panel-lovelace");
   if (!haPanel) return;
@@ -41,7 +42,11 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
 
   // ─── helpers ────────────────────────────────────────────────────────────────
 
-  function _slug(id) { return id.startsWith("binary_sensor.entity_distance_") ? id.replace("binary_sensor.entity_distance_", "").replace("_proximity", "") : null; }
+  function _slug(id) {
+    return id.startsWith("binary_sensor.entity_distance_")
+      ? id.replace("binary_sensor.entity_distance_", "").replace("_proximity", "")
+      : null;
+  }
 
   function _getPairs(hass) {
     return Object.keys(hass.states)
@@ -63,12 +68,8 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     return slug.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
   }
 
-  function _s(hass, slug, suffix) {
-    return hass.states[`sensor.entity_distance_${slug}_${suffix}`] || null;
-  }
-
   function _val(hass, slug, suffix, fallback = null) {
-    const s = _s(hass, slug, suffix);
+    const s = hass.states[`sensor.entity_distance_${slug}_${suffix}`] || null;
     if (!s || s.state === "unknown" || s.state === "unavailable") return fallback;
     return s.state;
   }
@@ -120,20 +121,48 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
   }
 
   function _dirColor(dir) {
-    if (dir === "approaching") return "var(--edc-approach, #4caf50)";
-    if (dir === "diverging") return "var(--edc-diverge, #f44336)";
+    if (dir === "approaching") return "var(--edpc-approach, #4caf50)";
+    if (dir === "diverging") return "var(--edpc-diverge, #f44336)";
     return "var(--secondary-text-color)";
+  }
+
+  /** Generate a deterministic hue from a string for initials avatars. */
+  function _nameHue(name) {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    return Math.abs(hash) % 360;
+  }
+
+  /** Get 1-2 initials from a friendly_name or entity_id. */
+  function _initials(name) {
+    if (!name) return "?";
+    const words = name.trim().split(/[\s_]+/).filter(Boolean);
+    if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+    return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+  }
+
+  /**
+   * Derive a display name for one side of the pair.
+   * Priority: friendly_name of the entity, then entity_id basename.
+   */
+  function _personName(hass, entityId) {
+    if (!entityId) return null;
+    const state = hass.states[entityId];
+    if (state?.attributes?.friendly_name) return state.attributes.friendly_name;
+    // strip domain
+    return entityId.replace(/^[^.]+\./, "").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
   }
 
   // ─── card styles ─────────────────────────────────────────────────────────────
 
   const cardStyles = css`
     :host {
-      --edc-approach: #4caf50;
-      --edc-diverge: #f44336;
-      --edc-proximity-on: #4caf50;
-      --edc-proximity-off: #9e9e9e;
-      --edc-divider: var(--divider-color, rgba(0,0,0,0.12));
+      --edpc-approach: #4caf50;
+      --edpc-diverge: #f44336;
+      --edpc-proximity-on: #4caf50;
+      --edpc-proximity-off: #9e9e9e;
+      --edpc-divider: var(--divider-color, rgba(0,0,0,0.12));
+      --edpc-avatar-size: 56px;
     }
 
     ha-card { overflow: hidden; }
@@ -141,9 +170,8 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     .card-header {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      justify-content: center;
       padding: 16px 16px 12px;
-      gap: 8px;
     }
     .compact .card-header { padding: 12px 16px 8px; }
 
@@ -154,75 +182,141 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      min-width: 0;
+      text-align: center;
     }
 
-    .prox-badge {
-      font-size: 0.72rem;
-      font-weight: 600;
-      padding: 3px 10px;
-      border-radius: 12px;
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
-    .prox-badge.on {
-      background: #4caf5022;
-      color: var(--edc-proximity-on);
-      border: 1px solid #4caf5055;
-    }
-    .prox-badge.off {
-      background: #9e9e9e18;
-      color: var(--edc-proximity-off);
-      border: 1px solid #9e9e9e44;
-    }
-
-    .divider { height: 1px; background: var(--edc-divider); margin: 0 16px; }
+    .divider { height: 1px; background: var(--edpc-divider); margin: 0 16px; }
 
     /* ── hero row ── */
     .hero {
       display: flex;
       align-items: center;
-      padding: 14px 16px 10px;
-      gap: 16px;
+      justify-content: center;
+      padding: 16px 20px 12px;
+      gap: 0;
     }
-    .compact .hero { padding: 10px 16px 8px; }
+    .compact .hero { padding: 12px 20px 8px; }
 
-    .distance-block { flex: 1; min-width: 0; }
+    /* person column: avatar + name */
+    .person-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      flex: 0 0 auto;
+      min-width: 72px;
+    }
+
+    .avatar-wrap {
+      width: var(--edpc-avatar-size);
+      height: var(--edpc-avatar-size);
+      border-radius: 50%;
+      overflow: hidden;
+      border: 2px solid var(--divider-color, rgba(0,0,0,0.15));
+      flex-shrink: 0;
+    }
+
+    .avatar-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .avatar-initials {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 0.03em;
+    }
+
+    .person-name {
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--primary-text-color);
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 80px;
+    }
+    .compact .person-name { font-size: 0.78rem; }
+
+    /* middle distance block */
+    .middle {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 0 12px;
+      min-width: 0;
+    }
 
     .distance-value {
-      font-size: 2.6rem;
+      font-size: 1.9rem;
       font-weight: 700;
       color: var(--primary-text-color);
       line-height: 1;
       white-space: nowrap;
+      text-align: center;
     }
-    .compact .distance-value { font-size: 2rem; }
+    .compact .distance-value { font-size: 1.5rem; }
 
-    .zone-label {
-      font-size: 0.75rem;
-      color: var(--secondary-text-color);
-      margin-top: 4px;
-      text-transform: capitalize;
-    }
-
-    .direction-block {
+    .dir-row {
       display: flex;
-      flex-direction: column;
       align-items: center;
-      gap: 2px;
-      min-width: 44px;
+      gap: 4px;
     }
 
     .dir-icon {
-      font-size: 1.8rem;
+      font-size: 1.1rem;
       line-height: 1;
     }
-    .compact .dir-icon { font-size: 1.4rem; }
+    .compact .dir-icon { font-size: 0.95rem; }
 
     .dir-label {
-      font-size: 0.62rem;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
+      font-size: 0.72rem;
+      text-transform: capitalize;
+      white-space: nowrap;
+    }
+
+    .zone-label {
+      font-size: 0.72rem;
+      color: var(--secondary-text-color);
+      text-transform: capitalize;
+      text-align: center;
+    }
+
+    /* ── proximity badge row ── */
+    .prox-badge-row {
+      display: flex;
+      justify-content: center;
+      padding: 8px 16px 12px;
+    }
+    .compact .prox-badge-row { padding: 6px 16px 8px; }
+
+    .prox-badge {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 4px 14px;
+      border-radius: 12px;
+      white-space: nowrap;
+    }
+    .prox-badge.on {
+      background: #4caf5022;
+      color: var(--edpc-proximity-on);
+      border: 1px solid #4caf5055;
+    }
+    .prox-badge.off {
+      background: #9e9e9e18;
+      color: var(--edpc-proximity-off);
+      border: 1px solid #9e9e9e44;
     }
 
     /* ── stats rows ── */
@@ -250,71 +344,6 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     }
     .compact .stat-value { font-size: 0.8rem; }
 
-    /* ── zone breakdown ── */
-    .zone-breakdown { padding: 0 16px 10px; }
-
-    .zone-breakdown-title {
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: var(--secondary-text-color);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      padding: 6px 0 4px;
-    }
-
-    .zone-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 2px 0;
-    }
-
-    .zone-row-label {
-      font-size: 0.82rem;
-      color: var(--secondary-text-color);
-    }
-
-    .zone-row-value {
-      font-size: 0.82rem;
-      font-weight: 500;
-      color: var(--primary-text-color);
-    }
-
-    /* ── diagnostic section ── */
-    .diag-section { padding: 0 16px 10px; }
-
-    .diag-title {
-      font-size: 0.72rem;
-      font-weight: 600;
-      color: var(--secondary-text-color);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      padding: 6px 0 4px;
-    }
-
-    .diag-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 2px 12px;
-    }
-
-    .diag-item {
-      display: flex;
-      flex-direction: column;
-      padding: 3px 0;
-    }
-
-    .diag-item-label {
-      font-size: 0.72rem;
-      color: var(--secondary-text-color);
-    }
-
-    .diag-item-value {
-      font-size: 0.82rem;
-      font-weight: 500;
-      color: var(--primary-text-color);
-    }
-
     .error-msg {
       padding: 16px;
       color: var(--error-color, #db4437);
@@ -324,7 +353,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
 
   // ─── card ────────────────────────────────────────────────────────────────────
 
-  class EntityDistanceCard extends LitElement {
+  class EntityDistancePeopleCard extends LitElement {
     static get properties() {
       return {
         hass: { attribute: false },
@@ -335,7 +364,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     static get styles() { return cardStyles; }
 
     static getConfigElement() {
-      return document.createElement("entity-distance-card-editor");
+      return document.createElement("entity-distance-people-card-editor");
     }
 
     static getStubConfig(hass) {
@@ -343,39 +372,35 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       const slug = pairs.length > 0 ? pairs[0].slug : "";
       return {
         slug,
-        show_distance: true,
+        entity_a: "",
+        entity_b: "",
+        title: "",
         show_direction: true,
         show_zone: true,
         show_proximity_badge: true,
         show_speed: true,
         show_eta: true,
-        show_proximity_duration: false,
         show_today_time: true,
+        show_proximity_duration: false,
         show_last_seen: false,
-        show_today_zone_times: false,
-        show_gps_accuracy: false,
-        show_last_update: false,
-        show_update_count: false,
         compact: false,
       };
     }
 
     setConfig(config) {
-      if (!config.slug) throw new Error("entity-distance-card: 'slug' is required.");
+      if (!config.slug) throw new Error("entity-distance-people-card: 'slug' is required.");
       this._config = {
-        show_distance: true,
+        entity_a: "",
+        entity_b: "",
+        title: "",
         show_direction: true,
         show_zone: true,
         show_proximity_badge: true,
         show_speed: true,
         show_eta: true,
-        show_proximity_duration: false,
         show_today_time: true,
+        show_proximity_duration: false,
         show_last_seen: false,
-        show_today_zone_times: false,
-        show_gps_accuracy: false,
-        show_last_update: false,
-        show_update_count: false,
         compact: false,
         ...config,
       };
@@ -396,19 +421,51 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
 
     _watchIds(slug) {
       const p = `sensor.entity_distance_${slug}`;
-      return [
+      const ids = [
         `binary_sensor.entity_distance_${slug}_proximity`,
-        `${p}_distance`, `${p}_direction`, `${p}_direction_level`, `${p}_bucket`,
+        `${p}_distance`, `${p}_direction`, `${p}_bucket`,
         `${p}_closing_speed`, `${p}_eta`,
         `${p}_proximity_duration`, `${p}_today_proximity_time`,
         `${p}_last_seen_together`,
-        `${p}_today_zone_time_very_near`, `${p}_today_zone_time_near`,
-        `${p}_today_zone_time_mid`, `${p}_today_zone_time_far`,
-        `${p}_today_zone_time_very_far`,
-        `${p}_gps_accuracy_a`, `${p}_gps_accuracy_b`,
-        `${p}_last_update_a`, `${p}_last_update_b`,
-        `${p}_update_count_a`, `${p}_update_count_b`,
       ];
+      if (this._config?.entity_a) ids.push(this._config.entity_a);
+      if (this._config?.entity_b) ids.push(this._config.entity_b);
+      return ids;
+    }
+
+    // Derive pair member names from the pair label (best-effort) if entity_a/b not set.
+    _pairNames(slug) {
+      const label = _pairLabel(this.hass, slug);
+      const parts = label.split(/\s*[&]\s*/);
+      return {
+        nameA: parts[0]?.trim() || "A",
+        nameB: parts[1]?.trim() || "B",
+      };
+    }
+
+    _renderAvatar(entityId, fallbackName) {
+      const hue = _nameHue(fallbackName || entityId || "?");
+      if (entityId && this.hass.states[entityId]) {
+        const state = this.hass.states[entityId];
+        const pic = state.attributes?.entity_picture;
+        if (pic) {
+          const src = pic.startsWith("/") ? pic : pic;
+          return html`
+            <div class="avatar-wrap">
+              <img src="${src}" alt="${fallbackName}" />
+            </div>`;
+        }
+      }
+      // Initials fallback
+      const name = (entityId && _personName(this.hass, entityId)) || fallbackName || "?";
+      const initials = _initials(name);
+      return html`
+        <div class="avatar-wrap">
+          <div class="avatar-initials"
+            style="background: hsl(${hue}, 50%, 45%)">
+            ${initials}
+          </div>
+        </div>`;
     }
 
     render() {
@@ -426,7 +483,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
 
       const c = this._config;
       const isProx = proxState.state === "on";
-      const label = this._config.title || _pairLabel(this.hass, slug);
+      const title = c.title || _pairLabel(this.hass, slug);
       const compactClass = c.compact ? "compact" : "";
 
       const distM = _num(this.hass, slug, "distance");
@@ -441,37 +498,63 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       const bucketLabel = bucket ? bucket.replace(/_/g, " ") : null;
       const dirColor = _dirColor(direction);
 
+      const { nameA, nameB } = this._pairNames(slug);
+      const entityA = c.entity_a || null;
+      const entityB = c.entity_b || null;
+      const displayNameA = (entityA && _personName(this.hass, entityA)) || nameA;
+      const displayNameB = (entityB && _personName(this.hass, entityB)) || nameB;
+
+      const hasStats = this._hasStats();
+
       return html`
         <ha-card class="${compactClass}">
-          <!-- header -->
+
+          <!-- title -->
           <div class="card-header">
-            <span class="pair-title">${label}</span>
-            ${c.show_proximity_badge ? html`
-              <span class="prox-badge ${isProx ? "on" : "off"}">
-                ${isProx ? "In Proximity" : "Not in Proximity"}
-              </span>` : nothing}
+            <span class="pair-title">${title}</span>
           </div>
 
           <div class="divider"></div>
 
-          <!-- hero: distance + direction -->
-          ${c.show_distance || c.show_direction ? html`
-            <div class="hero">
-              ${c.show_distance ? html`
-                <div class="distance-block">
-                  <div class="distance-value">${_formatDistance(distM)}</div>
-                  ${c.show_zone && bucketLabel ? html`<div class="zone-label">${bucketLabel}</div>` : nothing}
-                </div>` : nothing}
-              ${c.show_direction && direction ? html`
-                <div class="direction-block" style="color:${dirColor}">
-                  <div class="dir-icon">${_dirIcon(direction)}</div>
-                  <div class="dir-label">${direction}</div>
-                </div>` : nothing}
+          <!-- hero: avatar A — distance — avatar B -->
+          <div class="hero">
+            <!-- person A -->
+            <div class="person-col">
+              ${this._renderAvatar(entityA, displayNameA)}
+              <span class="person-name">${displayNameA}</span>
             </div>
-            <div class="divider"></div>` : nothing}
 
-          <!-- movement stats -->
-          ${this._hasMovementStats() ? html`
+            <!-- middle: distance + direction + zone -->
+            <div class="middle">
+              <div class="distance-value">${_formatDistance(distM)}</div>
+              ${c.show_direction && direction ? html`
+                <div class="dir-row" style="color:${dirColor}">
+                  <span class="dir-icon">${_dirIcon(direction)}</span>
+                  <span class="dir-label">${direction}</span>
+                </div>` : nothing}
+              ${c.show_zone && bucketLabel ? html`
+                <div class="zone-label">${bucketLabel}</div>` : nothing}
+            </div>
+
+            <!-- person B -->
+            <div class="person-col">
+              ${this._renderAvatar(entityB, displayNameB)}
+              <span class="person-name">${displayNameB}</span>
+            </div>
+          </div>
+
+          <!-- proximity badge -->
+          ${c.show_proximity_badge ? html`
+            <div class="prox-badge-row">
+              <span class="prox-badge ${isProx ? "on" : "off"}">
+                ${isProx ? "In Proximity" : "Not in Proximity"}
+              </span>
+            </div>` : nothing}
+
+          ${hasStats ? html`<div class="divider"></div>` : nothing}
+
+          <!-- stats -->
+          ${hasStats ? html`
             <div class="stats">
               ${c.show_speed && speedKmh !== null ? html`
                 <div class="stat-row">
@@ -483,22 +566,15 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
                   <span class="stat-label">ETA</span>
                   <span class="stat-value">${_formatMinutes(etaMin)}</span>
                 </div>` : nothing}
-            </div>
-            ${this._hasTimeStats() || this._hasDiagnostics() ? html`<div class="divider"></div>` : nothing}
-          ` : nothing}
-
-          <!-- time-together stats -->
-          ${this._hasTimeStats() ? html`
-            <div class="stats">
-              ${c.show_proximity_duration && proxDurMin !== null ? html`
-                <div class="stat-row">
-                  <span class="stat-label">Proximity duration</span>
-                  <span class="stat-value">${_formatMinutes(proxDurMin)}</span>
-                </div>` : nothing}
               ${c.show_today_time && todayMin !== null ? html`
                 <div class="stat-row">
                   <span class="stat-label">Together today</span>
                   <span class="stat-value">${_formatMinutes(todayMin)}</span>
+                </div>` : nothing}
+              ${c.show_proximity_duration && proxDurMin !== null ? html`
+                <div class="stat-row">
+                  <span class="stat-label">Proximity duration</span>
+                  <span class="stat-value">${_formatMinutes(proxDurMin)}</span>
                 </div>` : nothing}
               ${c.show_last_seen ? html`
                 <div class="stat-row">
@@ -506,80 +582,23 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
                   <span class="stat-value">${_formatTs(lastSeen)}</span>
                 </div>` : nothing}
             </div>
-            ${c.show_today_zone_times ? nothing : (this._hasDiagnostics() ? html`<div class="divider"></div>` : nothing)}
-          ` : nothing}
-
-          <!-- zone breakdown -->
-          ${c.show_today_zone_times ? html`
-            <div class="zone-breakdown">
-              <div class="zone-breakdown-title">Time by zone today</div>
-              ${["very_near", "near", "mid", "far", "very_far"].map(z => {
-                const min = _num(this.hass, slug, `today_zone_time_${z}`);
-                if (min === null || min === 0) return nothing;
-                return html`
-                  <div class="zone-row">
-                    <span class="zone-row-label">${z.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</span>
-                    <span class="zone-row-value">${_formatMinutes(min)}</span>
-                  </div>`;
-              })}
-            </div>
-            ${this._hasDiagnostics() ? html`<div class="divider"></div>` : nothing}
-          ` : nothing}
-
-          <!-- diagnostics -->
-          ${this._hasDiagnostics() ? html`
-            <div class="diag-section">
-              <div class="diag-title">Diagnostics</div>
-              <div class="diag-grid">
-                ${c.show_gps_accuracy ? html`
-                  ${this._diagItem("GPS Accuracy A", `${_num(this.hass, slug, "gps_accuracy_a") ?? "—"} m`)}
-                  ${this._diagItem("GPS Accuracy B", `${_num(this.hass, slug, "gps_accuracy_b") ?? "—"} m`)}
-                ` : nothing}
-                ${c.show_last_update ? html`
-                  ${this._diagItem("Last Update A", _formatTs(_val(this.hass, slug, "last_update_a")))}
-                  ${this._diagItem("Last Update B", _formatTs(_val(this.hass, slug, "last_update_b")))}
-                ` : nothing}
-                ${c.show_update_count ? html`
-                  ${this._diagItem("Update Count A (30 min)", `${_num(this.hass, slug, "update_count_a") ?? "—"}`)}
-                  ${this._diagItem("Update Count B (30 min)", `${_num(this.hass, slug, "update_count_b") ?? "—"}`)}
-                ` : nothing}
-              </div>
-            </div>
           ` : nothing}
 
         </ha-card>
       `;
     }
 
-    _diagItem(label, value) {
-      return html`
-        <div class="diag-item">
-          <span class="diag-item-label">${label}</span>
-          <span class="diag-item-value">${value}</span>
-        </div>`;
-    }
-
-    _hasMovementStats() {
+    _hasStats() {
       const c = this._config;
-      return c.show_speed || c.show_eta;
-    }
-
-    _hasTimeStats() {
-      const c = this._config;
-      return c.show_proximity_duration || c.show_today_time || c.show_last_seen;
-    }
-
-    _hasDiagnostics() {
-      const c = this._config;
-      return c.show_gps_accuracy || c.show_last_update || c.show_update_count;
+      return c.show_speed || c.show_eta || c.show_today_time || c.show_proximity_duration || c.show_last_seen;
     }
   }
 
-  customElements.define("entity-distance-card", EntityDistanceCard);
+  customElements.define("entity-distance-people-card", EntityDistancePeopleCard);
 
   // ─── editor ──────────────────────────────────────────────────────────────────
 
-  class EntityDistanceCardEditor extends LitElement {
+  class EntityDistancePeopleCardEditor extends LitElement {
     static get properties() {
       return {
         hass: { attribute: false },
@@ -628,6 +647,11 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         }
         .check-row input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
         .check-row span { font-size: 0.88rem; color: var(--primary-text-color); }
+        .hint {
+          font-size: 0.75rem;
+          color: var(--secondary-text-color);
+          margin-top: 3px;
+        }
       `;
     }
 
@@ -636,7 +660,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     _update(key, value) {
       if (!this._config) return;
       const cfg = { ...this._config, [key]: value };
-      if (value === undefined) delete cfg[key];
+      if (value === undefined || value === "") delete cfg[key];
       this._config = cfg;
       this.dispatchEvent(new CustomEvent("config-changed", {
         detail: { config: this._config },
@@ -689,8 +713,23 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
               @input=${e => this._input("title", e)} />
           </div>
 
-          <div class="section-title">Main Display</div>
-          ${this._checkRow("show_distance", "Show distance")}
+          <div class="section-title">People</div>
+          <div class="row">
+            <label>Person A entity (optional)</label>
+            <input type="text" .value=${this._config.entity_a || ""}
+              placeholder="person.alice"
+              @input=${e => this._input("entity_a", e)} />
+            <div class="hint">Used to show avatar photo. Leave blank to show initials.</div>
+          </div>
+          <div class="row">
+            <label>Person B entity (optional)</label>
+            <input type="text" .value=${this._config.entity_b || ""}
+              placeholder="person.bob"
+              @input=${e => this._input("entity_b", e)} />
+            <div class="hint">Used to show avatar photo. Leave blank to show initials.</div>
+          </div>
+
+          <div class="section-title">Display</div>
           ${this._checkRow("show_direction", "Show direction (approaching / diverging / stationary)")}
           ${this._checkRow("show_zone", "Show proximity zone label (Very Near … Very Far)")}
           ${this._checkRow("show_proximity_badge", "Show proximity badge (In Proximity / Not in Proximity)")}
@@ -700,15 +739,9 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
           ${this._checkRow("show_eta", "Show ETA (only when approaching)")}
 
           <div class="section-title">Time Together</div>
-          ${this._checkRow("show_proximity_duration", "Show total proximity duration")}
           ${this._checkRow("show_today_time", "Show time together today")}
+          ${this._checkRow("show_proximity_duration", "Show total proximity duration")}
           ${this._checkRow("show_last_seen", "Show last seen together")}
-          ${this._checkRow("show_today_zone_times", "Show today's time per zone (Very Near, Near, …)")}
-
-          <div class="section-title">Diagnostics</div>
-          ${this._checkRow("show_gps_accuracy", "Show GPS accuracy (A & B)")}
-          ${this._checkRow("show_last_update", "Show last update time (A & B)")}
-          ${this._checkRow("show_update_count", "Show update count — last 30 min (A & B)")}
 
           <div class="section-title">Layout</div>
           ${this._checkRow("compact", "Compact mode")}
@@ -718,6 +751,6 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     }
   }
 
-  customElements.define("entity-distance-card-editor", EntityDistanceCardEditor);
+  customElements.define("entity-distance-people-card-editor", EntityDistancePeopleCardEditor);
 
 }); // end whenDefined

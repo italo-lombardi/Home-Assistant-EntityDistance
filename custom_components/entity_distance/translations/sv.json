@@ -74,7 +74,9 @@
   },
   "entity": {
     "sensor": {
-      "distance": { "name": "Avstånd" },
+      "distance": {
+        "name": "Avstånd"
+      },
       "bucket": {
         "name": "Nähetszon",
         "state": {
@@ -85,9 +87,15 @@
           "very_far": "Mycket långt"
         }
       },
-      "proximity_duration": { "name": "Nährvarotid" },
-      "last_seen_together": { "name": "Senast sedd tillsammans" },
-      "today_proximity_time": { "name": "Nährvarotid idag" },
+      "proximity_duration": {
+        "name": "Nährvarotid"
+      },
+      "last_seen_together": {
+        "name": "Senast sedd tillsammans"
+      },
+      "today_proximity_time": {
+        "name": "Nährvarotid idag"
+      },
       "direction": {
         "name": "Riktning",
         "state": {
@@ -96,22 +104,61 @@
           "stationary": "Stationär"
         }
       },
-      "closing_speed": { "name": "Stänghastighet" },
-      "eta": { "name": "ETA" },
-      "gps_accuracy_a": { "name": "GPS-noggrannhet (A)" },
-      "gps_accuracy_b": { "name": "GPS-noggrannhet (B)" },
-      "last_update_a": { "name": "Senaste uppdatering (A)" },
-      "last_update_b": { "name": "Senaste uppdatering (B)" },
-      "update_frequency_a": { "name": "Uppdateringsfrekvens (A)" },
-      "update_frequency_b": { "name": "Uppdateringsfrekvens (B)" },
-      "data_staleness_a": { "name": "Dataaktualitet (A)" },
-      "data_staleness_b": { "name": "Dataaktualitet (B)" }
+      "closing_speed": {
+        "name": "Stänghastighet"
+      },
+      "eta": {
+        "name": "ETA"
+      },
+      "gps_accuracy_a": {
+        "name": "GPS-noggrannhet (A)"
+      },
+      "gps_accuracy_b": {
+        "name": "GPS-noggrannhet (B)"
+      },
+      "last_update_a": {
+        "name": "Senaste uppdatering (A)"
+      },
+      "last_update_b": {
+        "name": "Senaste uppdatering (B)"
+      },
+      "bucket_level": {
+        "name": "Närhetszonnummer"
+      },
+      "direction_level": {
+        "name": "Riktningsnivå"
+      },
+      "today_zone_time_very_near": {
+        "name": "Tid mycket nära idag"
+      },
+      "today_zone_time_near": {
+        "name": "Tid nära idag"
+      },
+      "today_zone_time_mid": {
+        "name": "Tid medel idag"
+      },
+      "today_zone_time_far": {
+        "name": "Tid långt idag"
+      },
+      "today_zone_time_very_far": {
+        "name": "Tid mycket långt idag"
+      },
+      "update_count_a": {
+        "name": "Uppdateringsantal (A)"
+      },
+      "update_count_b": {
+        "name": "Uppdateringsantal (B)"
+      }
     },
     "binary_sensor": {
-      "proximity": { "name": "I närheten" }
+      "proximity": {
+        "name": "I närheten"
+      }
     },
     "button": {
-      "refresh": { "name": "Uppdatera plats" }
+      "refresh": {
+        "name": "Uppdatera plats"
+      }
     }
   }
 }

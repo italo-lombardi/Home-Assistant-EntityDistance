@@ -149,6 +149,11 @@
       "proximity_duration": { "name": "Proximity Duration" },
       "last_seen_together": { "name": "Last Seen Together" },
       "today_proximity_time": { "name": "Today Proximity Time" },
+      "today_zone_time_very_near": { "name": "Today Very Near Time" },
+      "today_zone_time_near": { "name": "Today Near Time" },
+      "today_zone_time_mid": { "name": "Today Medium Time" },
+      "today_zone_time_far": { "name": "Today Far Time" },
+      "today_zone_time_very_far": { "name": "Today Very Far Time" },
       "direction": {
         "name": "Direction",
         "state": {
@@ -157,16 +162,15 @@
           "stationary": "Stationary"
         }
       },
+      "direction_level": { "name": "Direction Level" },
       "closing_speed": { "name": "Approach Speed" },
       "eta": { "name": "Estimated Arrival Time" },
       "gps_accuracy_a": { "name": "GPS Accuracy (A)" },
       "gps_accuracy_b": { "name": "GPS Accuracy (B)" },
       "last_update_a": { "name": "Last Update (A)" },
       "last_update_b": { "name": "Last Update (B)" },
-      "update_frequency_a": { "name": "Update Frequency (A)" },
-      "update_frequency_b": { "name": "Update Frequency (B)" },
-      "data_staleness_a": { "name": "Location Age (A)" },
-      "data_staleness_b": { "name": "Location Age (B)" }
+      "update_count_a": { "name": "Update Count (A)" },
+      "update_count_b": { "name": "Update Count (B)" }
     },
     "binary_sensor": {
       "proximity": { "name": "In Proximity" }

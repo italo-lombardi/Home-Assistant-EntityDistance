@@ -16,9 +16,17 @@ from custom_components.entity_distance.const import (
     DEFAULT_ZONE_NEAR_M,
     DEFAULT_ZONE_VERY_NEAR_M,
     DIRECTION_APPROACHING,
+    DIRECTION_DIVERGING,
+    DIRECTION_STATIONARY,
 )
 from custom_components.entity_distance.models import PairData, PairState
-from custom_components.entity_distance.sensor import BucketLevelSensor, ProximityDurationSensor
+from custom_components.entity_distance.sensor import (
+    BucketLevelSensor,
+    DirectionLevelSensor,
+    ProximityDurationSensor,
+    TodayZoneTimeSensor,
+    UpdateCountSensor,
+)
 
 _BUCKET_LEVEL_MAP = {
     BUCKET_VERY_NEAR: 1,
@@ -190,3 +198,174 @@ class TestProximityDurationSensor:
         ps.proximity_duration_s = 0.0
         sensor = self._make_sensor(ps)
         assert sensor.native_value == 0.0
+
+
+# ---------------------------------------------------------------------------
+# Helpers for sensors with extra constructor parameters
+# ---------------------------------------------------------------------------
+
+
+def _make_zone_sensor(bucket: str, pair_state: PairState) -> TodayZoneTimeSensor:
+    """Build a TodayZoneTimeSensor with the given bucket and PairState."""
+    coordinator = MagicMock()
+    coordinator.data = PairData(pair=pair_state)
+    coordinator.bucket_thresholds = _DEFAULT_THRESHOLDS
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    sensor = TodayZoneTimeSensor.__new__(TodayZoneTimeSensor)
+    sensor.coordinator = coordinator
+    sensor._entry = entry
+    sensor._bucket = bucket
+    sensor._sensor_key = f"today_zone_time_{bucket}"
+    sensor._attr_unique_id = f"test_sensor_{bucket}"
+    sensor._attr_device_info = {}
+    return sensor
+
+
+def _make_count_sensor(which: str, pair_state: PairState) -> UpdateCountSensor:
+    """Build an UpdateCountSensor for entity 'a' or 'b'."""
+    coordinator = MagicMock()
+    coordinator.data = PairData(pair=pair_state)
+    coordinator.bucket_thresholds = _DEFAULT_THRESHOLDS
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    sensor = UpdateCountSensor.__new__(UpdateCountSensor)
+    sensor.coordinator = coordinator
+    sensor._entry = entry
+    sensor._which = which
+    sensor._sensor_key = f"update_count_{which}"
+    sensor._attr_unique_id = f"test_sensor_count_{which}"
+    sensor._attr_device_info = {}
+    return sensor
+
+
+# ---------------------------------------------------------------------------
+# DirectionLevelSensor tests
+# ---------------------------------------------------------------------------
+
+
+class TestDirectionLevelSensor:
+    """Test DirectionLevelSensor.native_value maps direction strings to -1/0/1."""
+
+    def _ps(self, direction) -> PairState:
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.direction = direction
+        ps.data_valid = True
+        return ps
+
+    def test_approaching_returns_minus_one(self):
+        sensor = _make_sensor(DirectionLevelSensor, self._ps(DIRECTION_APPROACHING))
+        assert sensor.native_value == -1
+
+    def test_stationary_returns_zero(self):
+        sensor = _make_sensor(DirectionLevelSensor, self._ps(DIRECTION_STATIONARY))
+        assert sensor.native_value == 0
+
+    def test_diverging_returns_one(self):
+        sensor = _make_sensor(DirectionLevelSensor, self._ps(DIRECTION_DIVERGING))
+        assert sensor.native_value == 1
+
+    def test_none_direction_returns_none(self):
+        sensor = _make_sensor(DirectionLevelSensor, self._ps(None))
+        assert sensor.native_value is None
+
+    def test_unknown_direction_string_returns_none(self):
+        # An unrecognised string is not in _DIRECTION_LEVEL; .get() returns None
+        sensor = _make_sensor(DirectionLevelSensor, self._ps("sideways"))
+        assert sensor.native_value is None
+
+
+# ---------------------------------------------------------------------------
+# TodayZoneTimeSensor tests
+# ---------------------------------------------------------------------------
+
+
+class TestTodayZoneTimeSensor:
+    """Test TodayZoneTimeSensor.native_value per bucket."""
+
+    def _ps(self, data_valid: bool, zone_seconds: dict | None = None) -> PairState:
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.data_valid = data_valid
+        if zone_seconds is not None:
+            ps.today_zone_seconds = zone_seconds
+        return ps
+
+    def test_returns_none_when_data_invalid(self):
+        sensor = _make_zone_sensor(BUCKET_VERY_NEAR, self._ps(False))
+        assert sensor.native_value is None
+
+    def test_returns_zero_when_bucket_not_in_dict(self):
+        # today_zone_seconds is empty; the bucket key is absent → default 0.0
+        sensor = _make_zone_sensor(BUCKET_NEAR, self._ps(True, {}))
+        assert sensor.native_value == 0.0
+
+    def test_very_near_bucket_minutes(self):
+        sensor = _make_zone_sensor(BUCKET_VERY_NEAR, self._ps(True, {BUCKET_VERY_NEAR: 120.0}))
+        assert sensor.native_value == 2.0  # 120 / 60
+
+    def test_near_bucket_minutes(self):
+        sensor = _make_zone_sensor(BUCKET_NEAR, self._ps(True, {BUCKET_NEAR: 300.0}))
+        assert sensor.native_value == 5.0  # 300 / 60
+
+    def test_mid_bucket_minutes(self):
+        sensor = _make_zone_sensor(BUCKET_MID, self._ps(True, {BUCKET_MID: 600.0}))
+        assert sensor.native_value == 10.0  # 600 / 60
+
+    def test_far_bucket_minutes(self):
+        sensor = _make_zone_sensor(BUCKET_FAR, self._ps(True, {BUCKET_FAR: 1800.0}))
+        assert sensor.native_value == 30.0  # 1800 / 60
+
+    def test_very_far_bucket_minutes(self):
+        sensor = _make_zone_sensor(BUCKET_VERY_FAR, self._ps(True, {BUCKET_VERY_FAR: 3600.0}))
+        assert sensor.native_value == 60.0  # 3600 / 60
+
+    def test_rounds_to_one_decimal(self):
+        # 100 s / 60 = 1.6666… → rounded to 1 decimal = 1.7
+        sensor = _make_zone_sensor(BUCKET_MID, self._ps(True, {BUCKET_MID: 100.0}))
+        assert sensor.native_value == round(100.0 / 60, 1)
+
+    def test_only_requested_bucket_is_read(self):
+        # Sensor for BUCKET_NEAR should ignore BUCKET_FAR data
+        zone = {BUCKET_FAR: 9999.0, BUCKET_NEAR: 60.0}
+        sensor = _make_zone_sensor(BUCKET_NEAR, self._ps(True, zone))
+        assert sensor.native_value == 1.0  # 60 / 60
+
+
+# ---------------------------------------------------------------------------
+# UpdateCountSensor tests
+# ---------------------------------------------------------------------------
+
+
+class TestUpdateCountSensor:
+    """Test UpdateCountSensor.native_value for each entity."""
+
+    def _ps(self, data_valid: bool, count_a: int = 0, count_b: int = 0) -> PairState:
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.data_valid = data_valid
+        ps.update_count_a = count_a
+        ps.update_count_b = count_b
+        return ps
+
+    def test_returns_none_when_data_invalid_a(self):
+        sensor = _make_count_sensor("a", self._ps(False, count_a=5))
+        assert sensor.native_value is None
+
+    def test_returns_none_when_data_invalid_b(self):
+        sensor = _make_count_sensor("b", self._ps(False, count_b=3))
+        assert sensor.native_value is None
+
+    def test_returns_update_count_a(self):
+        sensor = _make_count_sensor("a", self._ps(True, count_a=42, count_b=7))
+        assert sensor.native_value == 42
+
+    def test_returns_update_count_b(self):
+        sensor = _make_count_sensor("b", self._ps(True, count_a=42, count_b=7))
+        assert sensor.native_value == 7
+
+    def test_zero_count_a_still_returns_zero_when_valid(self):
+        sensor = _make_count_sensor("a", self._ps(True, count_a=0, count_b=99))
+        assert sensor.native_value == 0
+
+    def test_zero_count_b_still_returns_zero_when_valid(self):
+        sensor = _make_count_sensor("b", self._ps(True, count_a=99, count_b=0))
+        assert sensor.native_value == 0

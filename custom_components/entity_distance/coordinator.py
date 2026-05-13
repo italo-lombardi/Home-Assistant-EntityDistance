@@ -343,11 +343,17 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
         today = now.date()
         if ps.today_reset_date != today:
             ps.today_proximity_seconds = 0.0
+            ps.today_zone_seconds = {}
             ps.today_reset_date = today
 
-        if ps.proximity and ps.prev_calc_time is not None:
+        if ps.prev_calc_time is not None:
             elapsed = (now - ps.prev_calc_time).total_seconds()
-            ps.today_proximity_seconds += elapsed
+            if ps.proximity:
+                ps.today_proximity_seconds += elapsed
+            current_bucket = _calc_bucket(dist_m, self._bucket_thresholds)
+            ps.today_zone_seconds[current_bucket] = (
+                ps.today_zone_seconds.get(current_bucket, 0.0) + elapsed
+            )
 
         ps.update_count_a = self._update_frequency(ps.update_count_a, ps.update_window_start_a, now)
         if (
@@ -385,8 +391,8 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
             staleness_a = (now - ps.last_update_a).total_seconds()
             staleness_b = (now - ps.last_update_b).total_seconds()
             if (
-                staleness_a > self._resync_silence_s
-                and staleness_b > self._resync_silence_s
+                staleness_a >= self._resync_silence_s
+                and staleness_b >= self._resync_silence_s
                 and not self._resync_holding
             ):
                 self._resync_holding = True

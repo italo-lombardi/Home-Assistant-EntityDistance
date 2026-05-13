@@ -74,7 +74,9 @@
   },
   "entity": {
     "sensor": {
-      "distance": { "name": "Afstand" },
+      "distance": {
+        "name": "Afstand"
+      },
       "bucket": {
         "name": "Nabijheidszone",
         "state": {
@@ -85,9 +87,15 @@
           "very_far": "Zeer ver"
         }
       },
-      "proximity_duration": { "name": "Nabijheidsduur" },
-      "last_seen_together": { "name": "Laatst samen gezien" },
-      "today_proximity_time": { "name": "Nabijheidstijd vandaag" },
+      "proximity_duration": {
+        "name": "Nabijheidsduur"
+      },
+      "last_seen_together": {
+        "name": "Laatst samen gezien"
+      },
+      "today_proximity_time": {
+        "name": "Nabijheidstijd vandaag"
+      },
       "direction": {
         "name": "Richting",
         "state": {
@@ -96,22 +104,61 @@
           "stationary": "Stilstaand"
         }
       },
-      "closing_speed": { "name": "Sluitingssnelheid" },
-      "eta": { "name": "ETA" },
-      "gps_accuracy_a": { "name": "GPS-nauwkeurigheid (A)" },
-      "gps_accuracy_b": { "name": "GPS-nauwkeurigheid (B)" },
-      "last_update_a": { "name": "Laatste update (A)" },
-      "last_update_b": { "name": "Laatste update (B)" },
-      "update_frequency_a": { "name": "Updatefrequentie (A)" },
-      "update_frequency_b": { "name": "Updatefrequentie (B)" },
-      "data_staleness_a": { "name": "Gegevensversheid (A)" },
-      "data_staleness_b": { "name": "Gegevensversheid (B)" }
+      "closing_speed": {
+        "name": "Sluitingssnelheid"
+      },
+      "eta": {
+        "name": "ETA"
+      },
+      "gps_accuracy_a": {
+        "name": "GPS-nauwkeurigheid (A)"
+      },
+      "gps_accuracy_b": {
+        "name": "GPS-nauwkeurigheid (B)"
+      },
+      "last_update_a": {
+        "name": "Laatste update (A)"
+      },
+      "last_update_b": {
+        "name": "Laatste update (B)"
+      },
+      "bucket_level": {
+        "name": "Nabijheidszone nummer"
+      },
+      "direction_level": {
+        "name": "Richtingsniveau"
+      },
+      "today_zone_time_very_near": {
+        "name": "Tijd zeer dichtbij vandaag"
+      },
+      "today_zone_time_near": {
+        "name": "Tijd dichtbij vandaag"
+      },
+      "today_zone_time_mid": {
+        "name": "Gemiddelde tijd vandaag"
+      },
+      "today_zone_time_far": {
+        "name": "Tijd ver vandaag"
+      },
+      "today_zone_time_very_far": {
+        "name": "Tijd zeer ver vandaag"
+      },
+      "update_count_a": {
+        "name": "Updatetelling (A)"
+      },
+      "update_count_b": {
+        "name": "Updatetelling (B)"
+      }
     },
     "binary_sensor": {
-      "proximity": { "name": "In de buurt" }
+      "proximity": {
+        "name": "In de buurt"
+      }
     },
     "button": {
-      "refresh": { "name": "Locatie vernieuwen" }
+      "refresh": {
+        "name": "Locatie vernieuwen"
+      }
     }
   }
 }

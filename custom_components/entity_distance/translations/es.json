@@ -74,7 +74,9 @@
   },
   "entity": {
     "sensor": {
-      "distance": { "name": "Distancia" },
+      "distance": {
+        "name": "Distancia"
+      },
       "bucket": {
         "name": "Zona de proximidad",
         "state": {
@@ -85,9 +87,15 @@
           "very_far": "Muy lejos"
         }
       },
-      "proximity_duration": { "name": "Duración de proximidad" },
-      "last_seen_together": { "name": "Visto juntos por última vez" },
-      "today_proximity_time": { "name": "Tiempo de proximidad hoy" },
+      "proximity_duration": {
+        "name": "Duración de proximidad"
+      },
+      "last_seen_together": {
+        "name": "Visto juntos por última vez"
+      },
+      "today_proximity_time": {
+        "name": "Tiempo de proximidad hoy"
+      },
       "direction": {
         "name": "Dirección",
         "state": {
@@ -96,22 +104,61 @@
           "stationary": "Estacionario"
         }
       },
-      "closing_speed": { "name": "Velocidad de acercamiento" },
-      "eta": { "name": "ETA" },
-      "gps_accuracy_a": { "name": "Precisión GPS (A)" },
-      "gps_accuracy_b": { "name": "Precisión GPS (B)" },
-      "last_update_a": { "name": "Última actualización (A)" },
-      "last_update_b": { "name": "Última actualización (B)" },
-      "update_frequency_a": { "name": "Frecuencia de actualización (A)" },
-      "update_frequency_b": { "name": "Frecuencia de actualización (B)" },
-      "data_staleness_a": { "name": "Antigüedad de datos (A)" },
-      "data_staleness_b": { "name": "Antigüedad de datos (B)" }
+      "closing_speed": {
+        "name": "Velocidad de acercamiento"
+      },
+      "eta": {
+        "name": "ETA"
+      },
+      "gps_accuracy_a": {
+        "name": "Precisión GPS (A)"
+      },
+      "gps_accuracy_b": {
+        "name": "Precisión GPS (B)"
+      },
+      "last_update_a": {
+        "name": "Última actualización (A)"
+      },
+      "last_update_b": {
+        "name": "Última actualización (B)"
+      },
+      "bucket_level": {
+        "name": "Número de zona de proximidad"
+      },
+      "direction_level": {
+        "name": "Nivel de dirección"
+      },
+      "today_zone_time_very_near": {
+        "name": "Tiempo muy cerca hoy"
+      },
+      "today_zone_time_near": {
+        "name": "Tiempo cerca hoy"
+      },
+      "today_zone_time_mid": {
+        "name": "Tiempo medio hoy"
+      },
+      "today_zone_time_far": {
+        "name": "Tiempo lejos hoy"
+      },
+      "today_zone_time_very_far": {
+        "name": "Tiempo muy lejos hoy"
+      },
+      "update_count_a": {
+        "name": "Número de actualizaciones (A)"
+      },
+      "update_count_b": {
+        "name": "Número de actualizaciones (B)"
+      }
     },
     "binary_sensor": {
-      "proximity": { "name": "En proximidad" }
+      "proximity": {
+        "name": "En proximidad"
+      }
     },
     "button": {
-      "refresh": { "name": "Actualizar ubicación" }
+      "refresh": {
+        "name": "Actualizar ubicación"
+      }
     }
   }
 }

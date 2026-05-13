@@ -23,6 +23,9 @@ from .const import (
     BUCKET_VERY_FAR,
     BUCKET_VERY_NEAR,
     BUCKETS,
+    DIRECTION_APPROACHING,
+    DIRECTION_DIVERGING,
+    DIRECTION_STATIONARY,
     DIRECTIONS,
     DOMAIN,
 )
@@ -38,6 +41,12 @@ _BUCKET_LEVEL = {
     BUCKET_MID: 3,
     BUCKET_FAR: 4,
     BUCKET_VERY_FAR: 5,
+}
+
+_DIRECTION_LEVEL = {
+    DIRECTION_APPROACHING: -1,
+    DIRECTION_STATIONARY: 0,
+    DIRECTION_DIVERGING: 1,
 }
 
 
@@ -65,17 +74,21 @@ async def async_setup_entry(
             ProximityDurationSensor(coordinator, entry, entity_a_name, entity_b_name),
             LastSeenTogetherSensor(coordinator, entry, entity_a_name, entity_b_name),
             TodayProximityTimeSensor(coordinator, entry, entity_a_name, entity_b_name),
+            TodayZoneTimeSensor(coordinator, entry, entity_a_name, entity_b_name, BUCKET_VERY_NEAR),
+            TodayZoneTimeSensor(coordinator, entry, entity_a_name, entity_b_name, BUCKET_NEAR),
+            TodayZoneTimeSensor(coordinator, entry, entity_a_name, entity_b_name, BUCKET_MID),
+            TodayZoneTimeSensor(coordinator, entry, entity_a_name, entity_b_name, BUCKET_FAR),
+            TodayZoneTimeSensor(coordinator, entry, entity_a_name, entity_b_name, BUCKET_VERY_FAR),
             DirectionSensor(coordinator, entry, entity_a_name, entity_b_name),
+            DirectionLevelSensor(coordinator, entry, entity_a_name, entity_b_name),
             ClosingSpeedSensor(coordinator, entry, entity_a_name, entity_b_name),
             EtaSensor(coordinator, entry, entity_a_name, entity_b_name),
             GpsAccuracySensor(coordinator, entry, entity_a_name, entity_b_name, "a"),
             GpsAccuracySensor(coordinator, entry, entity_a_name, entity_b_name, "b"),
             LastUpdateSensor(coordinator, entry, entity_a_name, entity_b_name, "a"),
             LastUpdateSensor(coordinator, entry, entity_a_name, entity_b_name, "b"),
-            UpdateFrequencySensor(coordinator, entry, entity_a_name, entity_b_name, "a"),
-            UpdateFrequencySensor(coordinator, entry, entity_a_name, entity_b_name, "b"),
-            DataStalenessSensor(coordinator, entry, entity_a_name, entity_b_name, "a"),
-            DataStalenessSensor(coordinator, entry, entity_a_name, entity_b_name, "b"),
+            UpdateCountSensor(coordinator, entry, entity_a_name, entity_b_name, "a"),
+            UpdateCountSensor(coordinator, entry, entity_a_name, entity_b_name, "b"),
         ]
     )
 
@@ -198,6 +211,24 @@ class TodayProximityTimeSensor(EntityDistanceSensorBase):
         return round(self._pair.today_proximity_seconds / 60, 1)
 
 
+class TodayZoneTimeSensor(EntityDistanceSensorBase):
+    _attr_device_class = SensorDeviceClass.DURATION
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_native_unit_of_measurement = UnitOfTime.MINUTES
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, coordinator, entry, a_name, b_name, bucket: str):
+        super().__init__(coordinator, entry, a_name, b_name, f"today_zone_time_{bucket}")
+        self._bucket = bucket
+        self._attr_translation_key = f"today_zone_time_{bucket}"
+
+    @property
+    def native_value(self) -> float | None:
+        if not self._pair.data_valid:
+            return None
+        return round(self._pair.today_zone_seconds.get(self._bucket, 0.0) / 60, 1)
+
+
 class DirectionSensor(EntityDistanceSensorBase):
     _attr_device_class = SensorDeviceClass.ENUM
     _attr_options = DIRECTIONS
@@ -209,6 +240,20 @@ class DirectionSensor(EntityDistanceSensorBase):
     @property
     def native_value(self) -> str | None:
         return self._pair.direction
+
+
+class DirectionLevelSensor(EntityDistanceSensorBase):
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_translation_key = "direction_level"
+
+    def __init__(self, coordinator, entry, a_name, b_name):
+        super().__init__(coordinator, entry, a_name, b_name, "direction_level")
+
+    @property
+    def native_value(self) -> int | None:
+        if self._pair.direction is None:
+            return None
+        return _DIRECTION_LEVEL.get(self._pair.direction)
 
 
 class ClosingSpeedSensor(EntityDistanceSensorBase):
@@ -275,51 +320,19 @@ class LastUpdateSensor(EntityDistanceSensorBase):
         return self._pair.last_update_a if self._which == "a" else self._pair.last_update_b
 
 
-class UpdateFrequencySensor(EntityDistanceSensorBase):
+class UpdateCountSensor(EntityDistanceSensorBase):
     _attr_state_class = SensorStateClass.MEASUREMENT
-    _attr_native_unit_of_measurement = "updates/min"
+    _attr_native_unit_of_measurement = "updates"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(self, coordinator, entry, a_name, b_name, which: str):
-        super().__init__(coordinator, entry, a_name, b_name, f"update_frequency_{which}")
+        super().__init__(coordinator, entry, a_name, b_name, f"update_count_{which}")
         self._which = which
         name = a_name if which == "a" else b_name
-        self._attr_name = f"Update Frequency ({name})"
+        self._attr_name = f"Update Count ({name})"
 
     @property
-    def native_value(self) -> float | None:
+    def native_value(self) -> int | None:
         if not self._pair.data_valid:
             return None
-        count = self._pair.update_count_a if self._which == "a" else self._pair.update_count_b
-        window_start = (
-            self._pair.update_window_start_a
-            if self._which == "a"
-            else self._pair.update_window_start_b
-        )
-        if window_start is None or count == 0:
-            return 0.0
-        elapsed_s = (datetime.now().astimezone() - window_start).total_seconds()
-        if elapsed_s < 1.0:
-            return 0.0
-        elapsed_min = elapsed_s / 60
-        return round(count / elapsed_min, 2)
-
-
-class DataStalenessSensor(EntityDistanceSensorBase):
-    _attr_device_class = SensorDeviceClass.DURATION
-    _attr_state_class = SensorStateClass.MEASUREMENT
-    _attr_native_unit_of_measurement = UnitOfTime.SECONDS
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
-
-    def __init__(self, coordinator, entry, a_name, b_name, which: str):
-        super().__init__(coordinator, entry, a_name, b_name, f"data_staleness_{which}")
-        self._which = which
-        name = a_name if which == "a" else b_name
-        self._attr_name = f"Data Staleness ({name})"
-
-    @property
-    def native_value(self) -> float | None:
-        last = self._pair.last_update_a if self._which == "a" else self._pair.last_update_b
-        if last is None:
-            return None
-        return round((datetime.now().astimezone() - last).total_seconds(), 0)
+        return self._pair.update_count_a if self._which == "a" else self._pair.update_count_b

@@ -74,7 +74,9 @@
   },
   "entity": {
     "sensor": {
-      "distance": { "name": "Avstand" },
+      "distance": {
+        "name": "Avstand"
+      },
       "bucket": {
         "name": "Nærhetssone",
         "state": {
@@ -85,9 +87,15 @@
           "very_far": "Svært langt"
         }
       },
-      "proximity_duration": { "name": "Nærhetvarighet" },
-      "last_seen_together": { "name": "Sist sett sammen" },
-      "today_proximity_time": { "name": "Nærhetstid i dag" },
+      "proximity_duration": {
+        "name": "Nærhetvarighet"
+      },
+      "last_seen_together": {
+        "name": "Sist sett sammen"
+      },
+      "today_proximity_time": {
+        "name": "Nærhetstid i dag"
+      },
       "direction": {
         "name": "Retning",
         "state": {
@@ -96,22 +104,61 @@
           "stationary": "Stasjonær"
         }
       },
-      "closing_speed": { "name": "Lukkehastighet" },
-      "eta": { "name": "ETA" },
-      "gps_accuracy_a": { "name": "GPS-nøyaktighet (A)" },
-      "gps_accuracy_b": { "name": "GPS-nøyaktighet (B)" },
-      "last_update_a": { "name": "Siste oppdatering (A)" },
-      "last_update_b": { "name": "Siste oppdatering (B)" },
-      "update_frequency_a": { "name": "Oppdateringsfrekvens (A)" },
-      "update_frequency_b": { "name": "Oppdateringsfrekvens (B)" },
-      "data_staleness_a": { "name": "Dataaktualitet (A)" },
-      "data_staleness_b": { "name": "Dataaktualitet (B)" }
+      "closing_speed": {
+        "name": "Lukkehastighet"
+      },
+      "eta": {
+        "name": "ETA"
+      },
+      "gps_accuracy_a": {
+        "name": "GPS-nøyaktighet (A)"
+      },
+      "gps_accuracy_b": {
+        "name": "GPS-nøyaktighet (B)"
+      },
+      "last_update_a": {
+        "name": "Siste oppdatering (A)"
+      },
+      "last_update_b": {
+        "name": "Siste oppdatering (B)"
+      },
+      "bucket_level": {
+        "name": "Nærhetssone nummer"
+      },
+      "direction_level": {
+        "name": "Retningsnivå"
+      },
+      "today_zone_time_very_near": {
+        "name": "Svært nær tid i dag"
+      },
+      "today_zone_time_near": {
+        "name": "Nær tid i dag"
+      },
+      "today_zone_time_mid": {
+        "name": "Middels tid i dag"
+      },
+      "today_zone_time_far": {
+        "name": "Fjern tid i dag"
+      },
+      "today_zone_time_very_far": {
+        "name": "Svært fjern tid i dag"
+      },
+      "update_count_a": {
+        "name": "Oppdateringsantall (A)"
+      },
+      "update_count_b": {
+        "name": "Oppdateringsantall (B)"
+      }
     },
     "binary_sensor": {
-      "proximity": { "name": "I nærheten" }
+      "proximity": {
+        "name": "I nærheten"
+      }
     },
     "button": {
-      "refresh": { "name": "Oppdater posisjon" }
+      "refresh": {
+        "name": "Oppdater posisjon"
+      }
     }
   }
 }

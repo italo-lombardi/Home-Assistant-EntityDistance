@@ -74,7 +74,9 @@
   },
   "entity": {
     "sensor": {
-      "distance": { "name": "Afstand" },
+      "distance": {
+        "name": "Afstand"
+      },
       "bucket": {
         "name": "Nærhedszone",
         "state": {
@@ -85,9 +87,15 @@
           "very_far": "Meget langt"
         }
       },
-      "proximity_duration": { "name": "Nærhedsvarighed" },
-      "last_seen_together": { "name": "Sidst set sammen" },
-      "today_proximity_time": { "name": "Nærhedstid i dag" },
+      "proximity_duration": {
+        "name": "Nærhedsvarighed"
+      },
+      "last_seen_together": {
+        "name": "Sidst set sammen"
+      },
+      "today_proximity_time": {
+        "name": "Nærhedstid i dag"
+      },
       "direction": {
         "name": "Retning",
         "state": {
@@ -96,22 +104,61 @@
           "stationary": "Stationær"
         }
       },
-      "closing_speed": { "name": "Lukkehastighed" },
-      "eta": { "name": "ETA" },
-      "gps_accuracy_a": { "name": "GPS-nøjagtighed (A)" },
-      "gps_accuracy_b": { "name": "GPS-nøjagtighed (B)" },
-      "last_update_a": { "name": "Seneste opdatering (A)" },
-      "last_update_b": { "name": "Seneste opdatering (B)" },
-      "update_frequency_a": { "name": "Opdateringsfrekvens (A)" },
-      "update_frequency_b": { "name": "Opdateringsfrekvens (B)" },
-      "data_staleness_a": { "name": "Dataforfald (A)" },
-      "data_staleness_b": { "name": "Dataforfald (B)" }
+      "closing_speed": {
+        "name": "Lukkehastighed"
+      },
+      "eta": {
+        "name": "ETA"
+      },
+      "gps_accuracy_a": {
+        "name": "GPS-nøjagtighed (A)"
+      },
+      "gps_accuracy_b": {
+        "name": "GPS-nøjagtighed (B)"
+      },
+      "last_update_a": {
+        "name": "Seneste opdatering (A)"
+      },
+      "last_update_b": {
+        "name": "Seneste opdatering (B)"
+      },
+      "bucket_level": {
+        "name": "Nærhedszone nummer"
+      },
+      "direction_level": {
+        "name": "Retningsniveau"
+      },
+      "today_zone_time_very_near": {
+        "name": "Meget nær tid i dag"
+      },
+      "today_zone_time_near": {
+        "name": "Nær tid i dag"
+      },
+      "today_zone_time_mid": {
+        "name": "Mellemtid i dag"
+      },
+      "today_zone_time_far": {
+        "name": "Fjern tid i dag"
+      },
+      "today_zone_time_very_far": {
+        "name": "Meget fjern tid i dag"
+      },
+      "update_count_a": {
+        "name": "Opdateringsantal (A)"
+      },
+      "update_count_b": {
+        "name": "Opdateringsantal (B)"
+      }
     },
     "binary_sensor": {
-      "proximity": { "name": "I nærheden" }
+      "proximity": {
+        "name": "I nærheden"
+      }
     },
     "button": {
-      "refresh": { "name": "Opdater lokation" }
+      "refresh": {
+        "name": "Opdater lokation"
+      }
     }
   }
 }

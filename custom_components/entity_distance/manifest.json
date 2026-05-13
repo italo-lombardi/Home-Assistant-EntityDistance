@@ -1,7 +1,7 @@
 {
     "domain": "entity_distance",
     "name": "Entity Distance",
-    "after_dependencies": ["http", "mobile_app"],
+    "after_dependencies": ["http", "lovelace", "mobile_app"],
     "codeowners": ["@italo-lombardi"],
     "config_flow": true,
     "dependencies": [],
@@ -9,6 +9,7 @@
     "integration_type": "service",
     "iot_class": "calculated",
     "issue_tracker": "https://github.com/italo-lombardi/Home-Assistant-EntityDistance/issues",
+    "quality_scale": "custom",
     "requirements": [],
     "version": "0.1.0"
 }

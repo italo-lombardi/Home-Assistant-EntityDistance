@@ -72,14 +72,26 @@ class RefreshButton(CoordinatorEntity[EntityDistanceCoordinator], ButtonEntity):
                     entity_id,
                 )
                 continue
+            notify_service = self._resolve_notify_service(device_id)
+            if notify_service is None:
+                _LOGGER.warning(
+                    "entity_distance: refresh — no notify service found for device %s (%s), skipping",
+                    device_id,
+                    entity_id,
+                )
+                continue
             try:
                 await self.hass.services.async_call(
-                    "mobile_app",
-                    "update_sensor_states",
-                    {"device_id": device_id},
+                    "notify",
+                    notify_service,
+                    {"message": "request_location_update"},
                     blocking=False,
                 )
-                _LOGGER.debug("entity_distance: refresh triggered for device %s", device_id)
+                _LOGGER.debug(
+                    "entity_distance: location refresh requested for %s via notify.%s",
+                    entity_id,
+                    notify_service,
+                )
             except Exception as err:
                 _LOGGER.warning("entity_distance: refresh failed for %s: %s", entity_id, err)
 
@@ -98,3 +110,17 @@ class RefreshButton(CoordinatorEntity[EntityDistanceCoordinator], ButtonEntity):
                     return source_entry.device_id
 
         return None
+
+    def _resolve_notify_service(self, device_id: str) -> str | None:
+        try:
+            from homeassistant.components.mobile_app.util import (
+                get_notify_service,
+                webhook_id_from_device_id,
+            )
+        except ImportError:
+            return None
+
+        webhook_id = webhook_id_from_device_id(self.hass, device_id)
+        if webhook_id is None:
+            return None
+        return get_notify_service(self.hass, webhook_id)

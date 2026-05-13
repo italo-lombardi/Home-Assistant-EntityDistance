@@ -41,7 +41,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     coordinator = EntityDistanceCoordinator(hass, entry)
     await coordinator.async_setup()
-    await coordinator.async_config_entry_first_refresh()
+    await coordinator._async_recalculate()
 
     hass.data[DOMAIN][entry.entry_id] = coordinator
 

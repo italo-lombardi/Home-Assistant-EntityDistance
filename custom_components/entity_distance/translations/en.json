@@ -57,7 +57,7 @@
           "min_updates_reliable": "Consecutive updates required for reliability"
         },
         "data_description": {
-          "max_accuracy_m": "Ignore location updates where the GPS error is larger than this. Example: set to 100 m to skip any fix where the device could be anywhere within a 100 m radius. A phone showing '150 m accuracy' would be skipped. Set to 0 to turn this off.",
+          "max_accuracy_m": "Ignore location updates where the GPS error is larger than this. Example: set to 150 m to skip any fix where the device could be anywhere within a 150 m radius. A phone showing '200 m accuracy' would be skipped. Set to 0 to turn this off.",
           "max_speed_kmh": "Ignore updates that imply the device moved faster than this since the last fix. Useful to filter out GPS jumps (e.g. a phone suddenly appearing 50 km away). 1000 km/h allows flights but blocks impossible teleports. Set to 0 to turn this off.",
           "require_reliable": "When on, a 'nearby' event only fires after the location has been consistent across several consecutive updates. Reduces false positives caused by a single bad GPS fix. Note: if updates are infrequent (e.g. every 3 min), this can add several minutes of delay.",
           "min_updates_reliable": "How many consecutive updates are needed before the location is considered reliable. Only applies when 'Only trigger when data is reliable' is on. Example: 3 updates at 3-minute intervals = up to 9 minutes before a nearby event can fire."
@@ -120,7 +120,7 @@
           "min_updates_reliable": "Consecutive updates required for reliability"
         },
         "data_description": {
-          "max_accuracy_m": "Ignore location updates where the GPS error is larger than this. Example: set to 100 m to skip any fix where the device could be anywhere within a 100 m radius. A phone showing '150 m accuracy' would be skipped. Set to 0 to turn this off.",
+          "max_accuracy_m": "Ignore location updates where the GPS error is larger than this. Example: set to 150 m to skip any fix where the device could be anywhere within a 150 m radius. A phone showing '200 m accuracy' would be skipped. Set to 0 to turn this off.",
           "max_speed_kmh": "Ignore updates that imply the device moved faster than this since the last fix. Useful to filter out GPS jumps (e.g. a phone suddenly appearing 50 km away). 1000 km/h allows flights but blocks impossible teleports. Set to 0 to turn this off.",
           "require_reliable": "When on, a 'nearby' event only fires after the location has been consistent across several consecutive updates. Reduces false positives caused by a single bad GPS fix. Note: if updates are infrequent (e.g. every 3 min), this can add several minutes of delay.",
           "min_updates_reliable": "How many consecutive updates are needed before the location is considered reliable. Only applies when 'Only trigger when data is reliable' is on. Example: 3 updates at 3-minute intervals = up to 9 minutes before a nearby event can fire."

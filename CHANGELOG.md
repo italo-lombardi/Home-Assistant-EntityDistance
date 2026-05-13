@@ -8,11 +8,13 @@
 - Validation: zone thresholds must be strictly ascending (Very Near < Near < Medium < Far)
 
 ### Fixed
-- Refresh Location button now resolves `person.*` entity devices via `person.source` attribute; previously skipped with "no device found" warning
+- Refresh Location button now sends `request_location_update` via `notify.mobile_app_*` (works on iOS and Android); previously called a non-existent service and always failed
+- Sensors no longer go Unknown after reconfiguring — coordinator immediately recalculates from current state on reload instead of waiting for next GPS event
 - Internal `_show_advanced` temp key no longer leaks into config entry data
 - `mock_config_entry` test fixture now sets `entry.options = {}` to match coordinator's merged data read
 
 ### Changed
+- Default GPS error radius: 100 m → 150 m (covers Android indoors which commonly reports 100 m accuracy)
 - Proximity Zone "Mid" renamed to "Medium" in UI (internal key `mid` unchanged)
 - Proximity zone defaults: Very Near 50 m → 100 m, Near 200 m → 500 m, Mid 1 km → 2 km, Far 5 km → 10 km
 - Coordinator reads from merged `entry.data + entry.options` (was `entry.data` only)

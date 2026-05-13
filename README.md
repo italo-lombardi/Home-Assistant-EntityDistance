@@ -96,7 +96,7 @@ Only shown when "Configure advanced filters" is enabled in Step 2.
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| Max GPS inaccuracy (m) | 100 | Ignore updates where GPS error exceeds this radius (0 = off) |
+| Max GPS inaccuracy (m) | 150 | Ignore updates where GPS error exceeds this radius (0 = off) |
 | Max speed filter (km/h) | 1000 | Ignore updates implying movement faster than this — catches GPS teleports, allows flights (0 = off) |
 | Only trigger when data is reliable | Off | Require several consistent updates before firing proximity events |
 | Updates needed to be reliable | 3 | Consecutive updates required before data is considered reliable |

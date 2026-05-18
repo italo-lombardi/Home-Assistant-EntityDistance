@@ -66,6 +66,13 @@ async def async_setup_entry(
     entity_a_name = _friendly_name(entry.data["entity_a"])
     entity_b_name = _friendly_name(entry.data["entity_b"])
 
+    _LOGGER.debug(
+        "entity_distance: sensor platform setup — entry=%s a=%s b=%s",
+        entry.entry_id,
+        entry.data["entity_a"],
+        entry.data["entity_b"],
+    )
+
     async_add_entities(
         [
             EntityStateSensor(

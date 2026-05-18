@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
@@ -14,6 +16,8 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN
 from .coordinator import EntityDistanceCoordinator
 from .models import PairState
+
+_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
@@ -31,6 +35,13 @@ async def async_setup_entry(
 
     entity_a_name = _friendly_name(entry.data["entity_a"])
     entity_b_name = _friendly_name(entry.data["entity_b"])
+
+    _LOGGER.debug(
+        "entity_distance: binary_sensor platform setup — entry=%s a=%s b=%s",
+        entry.entry_id,
+        entry.data["entity_a"],
+        entry.data["entity_b"],
+    )
 
     async_add_entities([ProximityBinarySensor(coordinator, entry, entity_a_name, entity_b_name)])
 

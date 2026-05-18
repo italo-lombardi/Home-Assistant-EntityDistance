@@ -97,7 +97,12 @@ def _get_coords(state: State) -> tuple[float, float, float | None] | None:
             lat = lon = None
 
     if lat is None or lon is None:
-        _LOGGER.warning("entity_distance: cannot extract coords from %s", state.entity_id)
+        _LOGGER.warning(
+            "entity_distance: cannot extract coords from %s (state=%r, attrs=%r)",
+            state.entity_id,
+            state.state,
+            dict(state.attributes),
+        )
         return None
 
     if not (-90 <= lat <= 90) or not (-180 <= lon <= 180):
@@ -114,6 +119,13 @@ def _get_coords(state: State) -> tuple[float, float, float | None] | None:
     except (KeyError, TypeError, ValueError):
         accuracy = None
 
+    _LOGGER.debug(
+        "entity_distance: coords resolved for %s — lat=%.6f lon=%.6f acc=%s",
+        state.entity_id,
+        lat,
+        lon,
+        f"{accuracy:.1f}m" if accuracy is not None else "none",
+    )
     return lat, lon, accuracy
 
 
@@ -215,6 +227,14 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
         if self._debouncer is None:
             return
         entity_id = event.data.get("entity_id")
+        old_state = event.data.get("old_state")
+        new_state = event.data.get("new_state")
+        _LOGGER.debug(
+            "entity_distance: state change — %s: %s → %s",
+            entity_id,
+            old_state.state if old_state else "none",
+            new_state.state if new_state else "none",
+        )
         now = datetime.now().astimezone()
         if entity_id == self._entity_a:
             self._pair_state.last_update_a = now
@@ -230,6 +250,14 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
 
         ps = self._pair_state
         now = datetime.now().astimezone()
+
+        _LOGGER.debug(
+            "entity_distance: recalculate — a=%s(%s) b=%s(%s)",
+            self._entity_a,
+            state_a.state if state_a else "missing",
+            self._entity_b,
+            state_b.state if state_b else "missing",
+        )
 
         if state_a is None or state_b is None:
             _LOGGER.warning("entity_distance: one or both entities not found")
@@ -317,6 +345,15 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
             ps.prev_distance_m = None
             self.async_set_updated_data(PairData(pair=ps))
             return
+
+        _LOGGER.debug(
+            "entity_distance: distance computed — %.1fm (a=%s acc=%s, b=%s acc=%s)",
+            dist_m,
+            self._entity_a,
+            f"{acc_a:.1f}m" if acc_a is not None else "none",
+            self._entity_b,
+            f"{acc_b:.1f}m" if acc_b is not None else "none",
+        )
 
         if (
             not is_zone_a
@@ -423,6 +460,16 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
         ps.last_error = None
 
         reliable = self._is_reliable(ps)
+
+        _LOGGER.debug(
+            "entity_distance: calc result — dist=%.1fm dir=%s speed=%s prox=%s→%s reliable=%s",
+            dist_m,
+            direction or "none",
+            f"{closing_speed_kmh:.1f}km/h" if closing_speed_kmh is not None else "none",
+            was_proximity,
+            ps.proximity,
+            reliable,
+        )
 
         # resync silence: if both entities silent for resync_silence_s, hold updates
         if (

@@ -41,6 +41,13 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
 
+    _LOGGER.debug(
+        "entity_distance: setting up entry %s — a=%s b=%s",
+        entry.entry_id,
+        entry.data.get("entity_a"),
+        entry.data.get("entity_b"),
+    )
+
     coordinator = EntityDistanceCoordinator(hass, entry)
     await coordinator.async_setup()
     await coordinator._async_recalculate()
@@ -67,6 +74,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def _async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    _LOGGER.debug("entity_distance: options updated — reloading entry %s", entry.entry_id)
     await hass.config_entries.async_reload(entry.entry_id)
 
 

@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Changed
+- Bump `pytest-homeassistant-custom-component` to `>=0.13.331` (HA core 2026.5.2)
+
 ## [0.1.0] - 2026-05-14
 
 ### Added

@@ -10,12 +10,10 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.typing import ConfigType
 
-from .const import CONF_ENTITIES, CONF_ENTITY_A, CONF_ENTITY_B, DOMAIN
+from .const import CONF_ENTITIES, DOMAIN
 from .coordinator import EntityDistanceCoordinator
-from .models import pair_key
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -40,61 +38,13 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Migrate config entry from VERSION 1 (pair) to VERSION 2 (group)."""
-    if entry.version == 1:
-        new_data = dict(entry.data)
-        if CONF_ENTITIES not in new_data:
-            if CONF_ENTITY_A in new_data and CONF_ENTITY_B in new_data:
-                new_data[CONF_ENTITIES] = [new_data[CONF_ENTITY_A], new_data[CONF_ENTITY_B]]
-            else:
-                _LOGGER.error(
-                    "entity_distance: cannot migrate entry %s — no entity data found",
-                    entry.entry_id,
-                )
-                return False
-
-        # Migrate entity registry unique_ids:
-        # Old format: "{entry_id}_{sensor_key}"  (e.g. "abc_distance")
-        # New format: "{entry_id}_{a}__{b}_{sensor_key}"  (e.g. "abc_person.alice__person.bob_distance")
-        entities = new_data[CONF_ENTITIES]
-        k = pair_key(entities[0], entities[1])
-        pair_prefix = f"{k[0]}__{k[1]}_"
-        entry_id_prefix = f"{entry.entry_id}_"
-
-        def _migrate_unique_id(entity_entry: er.RegistryEntry) -> dict | None:
-            uid = entity_entry.unique_id
-            if not uid.startswith(entry_id_prefix):
-                return None
-            suffix = uid[len(entry_id_prefix) :]
-            # Already migrated (contains __ separator with entity domain)
-            if "__" in suffix and "." in suffix.split("__")[0]:
-                return None
-            new_uid = f"{entry_id_prefix}{pair_prefix}{suffix}"
-            _LOGGER.debug(
-                "entity_distance: migrating unique_id %s → %s",
-                uid,
-                new_uid,
-            )
-            return {"new_unique_id": new_uid}
-
-        await er.async_migrate_entries(hass, entry.entry_id, _migrate_unique_id)
-
-        hass.config_entries.async_update_entry(entry, data=new_data, version=2, minor_version=1)
-        _LOGGER.info(
-            "entity_distance: migrated entry %s from VERSION 1 to VERSION 2",
-            entry.entry_id,
-        )
-    return True
-
-
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
 
     _LOGGER.debug(
         "entity_distance: setting up entry %s — entities=%s",
         entry.entry_id,
-        entry.data.get(CONF_ENTITIES, [entry.data.get("entity_a"), entry.data.get("entity_b")]),
+        entry.data.get(CONF_ENTITIES, []),
     )
 
     coordinator = EntityDistanceCoordinator(hass, entry)

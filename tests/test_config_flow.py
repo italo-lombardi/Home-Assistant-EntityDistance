@@ -103,8 +103,41 @@ class TestConfigFlowUserStep:
         assert result2["type"] == FlowResultType.FORM
         assert result2["step_id"] == "thresholds"
 
+    async def test_too_many_entities_returns_error(self, flow_manager):
+        result = await flow_manager.async_init(DOMAIN, context={"source": SOURCE_USER})
+        result2 = await flow_manager.async_configure(
+            result["flow_id"],
+            user_input={
+                CONF_ENTITIES: [
+                    "person.a",
+                    "person.b",
+                    "person.c",
+                    "person.d",
+                    "person.e",
+                    "person.f",
+                ]
+            },
+        )
+        assert result2["type"] == FlowResultType.FORM
+        assert result2["errors"]["base"] == "too_many_entities"
 
-class TestConfigFlowThresholdsStep:
+    async def test_five_entities_advances_to_thresholds(self, flow_manager):
+        result = await flow_manager.async_init(DOMAIN, context={"source": SOURCE_USER})
+        result2 = await flow_manager.async_configure(
+            result["flow_id"],
+            user_input={
+                CONF_ENTITIES: [
+                    "person.a",
+                    "person.b",
+                    "person.c",
+                    "person.d",
+                    "person.e",
+                ]
+            },
+        )
+        assert result2["type"] == FlowResultType.FORM
+        assert result2["step_id"] == "thresholds"
+
     async def _init_to_thresholds(self, flow_manager):
         result = await flow_manager.async_init(DOMAIN, context={"source": SOURCE_USER})
         result2 = await flow_manager.async_configure(

@@ -137,7 +137,7 @@ async def async_setup_entry(
         group_dev = _group_device_info(entry, group_name)
         all_sensors.extend(
             [
-                MinDistanceSensor(coordinator, entry, group_dev, group_name),
+                MinDistanceSensor(coordinator, entry, group_dev),
             ]
         )
 
@@ -487,13 +487,11 @@ class MinDistanceSensor(CoordinatorEntity[EntityDistanceCoordinator], SensorEnti
         coordinator: EntityDistanceCoordinator,
         entry: ConfigEntry,
         device_info: DeviceInfo,
-        group_name: str,
     ) -> None:
         super().__init__(coordinator)
         self._entry = entry
         self._attr_unique_id = f"{entry.entry_id}_min_distance"
         self._attr_device_info = device_info
-        self._attr_name = f"Min Distance ({group_name})"
 
     @property
     def native_value(self) -> float | None:

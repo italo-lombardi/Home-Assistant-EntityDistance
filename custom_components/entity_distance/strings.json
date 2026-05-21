@@ -63,7 +63,6 @@
       }
     },
     "error": {
-      "same_entity": "The two entities must be different.",
       "too_few_entities": "Select at least 2 entities.",
       "too_many_entities": "Select at most 5 entities.",
       "duplicate_entities": "Each entity must appear only once.",

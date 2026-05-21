@@ -66,8 +66,8 @@ async def async_setup_entry(
             manufacturer="Entity Distance",
             entry_type=DeviceEntryType.SERVICE,
         )
-        sensors.append(AnyInProximityBinarySensor(coordinator, entry, group_dev, group_name))
-        sensors.append(AllInProximityBinarySensor(coordinator, entry, group_dev, group_name))
+        sensors.append(AnyInProximityBinarySensor(coordinator, entry, group_dev))
+        sensors.append(AllInProximityBinarySensor(coordinator, entry, group_dev))
 
     async_add_entities(sensors)
 
@@ -114,13 +114,11 @@ class AnyInProximityBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], B
         coordinator: EntityDistanceCoordinator,
         entry: ConfigEntry,
         device_info: DeviceInfo,
-        group_name: str,
     ) -> None:
         super().__init__(coordinator)
         self._entry = entry
         self._attr_unique_id = f"{entry.entry_id}_any_in_proximity"
         self._attr_device_info = device_info
-        self._attr_name = f"Any In Proximity ({group_name})"
 
     @property
     def is_on(self) -> bool | None:
@@ -137,13 +135,11 @@ class AllInProximityBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], B
         coordinator: EntityDistanceCoordinator,
         entry: ConfigEntry,
         device_info: DeviceInfo,
-        group_name: str,
     ) -> None:
         super().__init__(coordinator)
         self._entry = entry
         self._attr_unique_id = f"{entry.entry_id}_all_in_proximity"
         self._attr_device_info = device_info
-        self._attr_name = f"All In Proximity ({group_name})"
 
     @property
     def is_on(self) -> bool | None:

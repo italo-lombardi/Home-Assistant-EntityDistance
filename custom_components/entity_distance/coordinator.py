@@ -21,8 +21,6 @@ from .const import (
     BUCKET_VERY_NEAR,
     CONF_DEBOUNCE_S,
     CONF_ENTITIES,
-    CONF_ENTITY_A,
-    CONF_ENTITY_B,
     CONF_ENTRY_THRESHOLD_M,
     CONF_EXIT_THRESHOLD_M,
     CONF_MAX_ACCURACY_M,
@@ -139,12 +137,7 @@ def _calc_bucket(distance_m: float, thresholds: dict[str, float]) -> str:
 
 
 def _resolve_entities(data: dict) -> list[str]:
-    """Return entity list from either new CONF_ENTITIES or legacy CONF_ENTITY_A/B."""
-    if CONF_ENTITIES in data:
-        return list(data[CONF_ENTITIES])
-    if CONF_ENTITY_A in data and CONF_ENTITY_B in data:
-        return [data[CONF_ENTITY_A], data[CONF_ENTITY_B]]
-    return []
+    return list(data.get(CONF_ENTITIES, []))
 
 
 class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):

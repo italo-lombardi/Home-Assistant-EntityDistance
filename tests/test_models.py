@@ -1,10 +1,41 @@
-"""Tests for PairState and PairData models."""
+"""Tests for PairState and pair_key models."""
 
 from __future__ import annotations
 
 from datetime import datetime
 
-from custom_components.entity_distance.models import PairData, PairState
+from custom_components.entity_distance.models import PairState, pair_key
+
+
+class TestPairKey:
+    def test_person_before_zone(self):
+        assert pair_key("zone.home", "person.alice") == ("person.alice", "zone.home")
+
+    def test_person_before_device_tracker(self):
+        assert pair_key("device_tracker.phone", "person.alice") == (
+            "person.alice",
+            "device_tracker.phone",
+        )
+
+    def test_device_tracker_before_zone(self):
+        assert pair_key("zone.home", "device_tracker.phone") == (
+            "device_tracker.phone",
+            "zone.home",
+        )
+
+    def test_zone_before_sensor(self):
+        assert pair_key("sensor.gps", "zone.home") == ("zone.home", "sensor.gps")
+
+    def test_same_domain_alphabetical(self):
+        a, b = pair_key("person.bob", "person.alice")
+        assert a == "person.alice"
+        assert b == "person.bob"
+
+    def test_symmetric(self):
+        assert pair_key("person.alice", "zone.home") == pair_key("zone.home", "person.alice")
+
+    def test_unknown_domain_last(self):
+        assert pair_key("custom.thing", "person.alice")[0] == "person.alice"
 
 
 class TestPairStateDefaults:
@@ -20,11 +51,6 @@ class TestPairStateDefaults:
         assert ps.update_count_b == 0
         assert ps.update_window_start_a is None
         assert ps.update_window_start_b is None
-
-    def test_pair_data_wraps_state(self):
-        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
-        pd = PairData(pair=ps)
-        assert pd.pair is ps
 
 
 class TestPairStateInit:
@@ -90,17 +116,3 @@ class TestPairStateInit:
         ps.update_count_b = 3
         assert ps.update_count_a == 5
         assert ps.update_count_b == 3
-
-
-class TestPairDataInit:
-    def test_pair_attribute_is_pair_state(self):
-        ps = PairState(entity_a_id="sensor.gps_a", entity_b_id="sensor.gps_b")
-        pd = PairData(pair=ps)
-        assert isinstance(pd.pair, PairState)
-
-    def test_pair_data_pair_identity(self):
-        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
-        pd = PairData(pair=ps)
-        # Mutating ps is reflected through pd.pair
-        ps.distance_m = 999.0
-        assert pd.pair.distance_m == 999.0

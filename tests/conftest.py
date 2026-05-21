@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 from homeassistant.config_entries import ConfigEntry
 import pytest
 
-from custom_components.entity_distance.models import GroupData, PairData, PairState, pair_key
+from custom_components.entity_distance.models import GroupData, PairState, pair_key
 
 
 @pytest.fixture
@@ -56,11 +56,6 @@ def mock_group_config_entry():
 @pytest.fixture
 def mock_pair_state():
     return PairState(entity_a_id="person.alice", entity_b_id="person.bob")
-
-
-@pytest.fixture
-def mock_pair_data(mock_pair_state):
-    return PairData(pair=mock_pair_state)
 
 
 @pytest.fixture

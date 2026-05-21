@@ -3,11 +3,23 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import date, datetime
 
+_DOMAIN_PRIORITY: dict[str, int] = {
+    "person": 0,
+    "device_tracker": 1,
+    "zone": 2,
+    "sensor": 3,
+}
+
+
+def _entity_priority(entity_id: str) -> tuple[int, str]:
+    domain = entity_id.split(".")[0]
+    return (_DOMAIN_PRIORITY.get(domain, 99), entity_id)
+
 
 def pair_key(a: str, b: str) -> tuple[str, str]:
-    """Return a stable sorted tuple key for an entity pair."""
-    s = sorted([a, b])
-    return (s[0], s[1])
+    """Return a stable priority-ordered tuple key for an entity pair."""
+    ordered = sorted([a, b], key=_entity_priority)
+    return (ordered[0], ordered[1])
 
 
 @dataclass
@@ -59,15 +71,3 @@ class GroupData:
     min_distance_m: float | None = None
     any_in_proximity: bool = False
     all_in_proximity: bool = False
-
-
-@dataclass
-class PairData:
-    """Legacy single-pair wrapper — kept so existing sensor/test code compiles unchanged."""
-
-    pair: PairState
-
-    @property
-    def pairs(self) -> dict[tuple[str, str], PairState]:
-        k = pair_key(self.pair.entity_a_id, self.pair.entity_b_id)
-        return {k: self.pair}

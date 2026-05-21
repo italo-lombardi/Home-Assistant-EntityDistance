@@ -45,3 +45,6 @@ htmlcov/
 
 # Home Assistant config (development)
 config/
+
+# Claude Code
+.claude/

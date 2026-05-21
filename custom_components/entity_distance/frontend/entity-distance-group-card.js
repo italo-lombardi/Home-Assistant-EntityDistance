@@ -337,7 +337,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     static getStubConfig(hass) {
       const groups = _discoverGroups(hass);
       const entities = groups.length > 0 ? groups[0].entities : [];
-      return { entities, title: "", height: 300 };
+      return { entities, title: "" };
     }
 
     constructor() {
@@ -355,12 +355,15 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       if (!config.entities || !Array.isArray(config.entities) || config.entities.length < 2) {
         throw new Error("entity-distance-group-card: 'entities' list with at least 2 items is required.");
       }
-      this._config = { title: "", height: 300, ...config };
+      this._config = { title: "", ...config };
       this._settled = false;
       this._nodes = [];
     }
 
-    getCardSize() { return Math.ceil((this._config?.height || 300) / 70); }
+    getCardSize() {
+      const n = this._config?.entities?.length || 2;
+      return Math.ceil(Math.max(300, n * 90 + 60) / 70);
+    }
 
     connectedCallback() {
       super.connectedCallback();
@@ -374,7 +377,8 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     // Build/update sim nodes and edges from current hass state
     _buildSim(width) {
       if (!this.hass || !this._config) return;
-      const { entities, height = 300 } = this._config;
+      const { entities } = this._config;
+      const height = Math.max(300, entities.length * 90 + 60);
       const pairs = _getPairsForEntities(this.hass, entities);
       this._pairs = pairs;
 
@@ -468,14 +472,20 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
 
     _getWidth() {
       const rect = this.shadowRoot?.querySelector(".graph-wrap")?.getBoundingClientRect();
-      return rect?.width || 360;
+      return (rect?.width > 10 ? rect.width : null) || this.offsetWidth || 360;
+    }
+
+    firstUpdated() {
+      // DOM is laid out — real width now available; rebuild and re-render
+      const width = this._getWidth();
+      this._buildSim(width);
+      this._startIdle();
     }
 
     updated(changed) {
       if (changed.has("hass") || changed.has("_config")) {
-        const width = this._getWidth() || 360;
+        const width = this._getWidth();
         this._buildSim(width);
-        this._settled = true;
         this._startIdle();
       }
     }
@@ -490,25 +500,29 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
 
     render() {
       if (!this._config || !this.hass) return html``;
-      const { entities, title, height = 300 } = this._config;
+      const { entities, title } = this._config;
+      const height = Math.max(300, entities.length * 90 + 60);
 
       if (!entities || entities.length < 2) {
         return html`<ha-card><div class="error-msg">Configure at least 2 entities.</div></ha-card>`;
       }
 
-      const width = this._getWidth() || 360;
-      if (!this._nodes.length) {
-        this._buildSim(width);
-      }
-
+      const width = this._getWidth();
       const nodes = this._nodes;
       const pairs = this._pairs;
 
-      // Group-level badge: any in proximity?
-      const anyInProx = pairs.some(p => {
+      if (!nodes.length) {
+        return html`<ha-card>
+          <div class="card-header"><div class="card-title"><span>🗺</span><span>${entities.map(e => _personName(this.hass, e)).join(" · ")}</span></div></div>
+          <div class="graph-wrap" style="height:${height}px"></div>
+        </ha-card>`;
+      }
+
+      const proxCount = pairs.filter(p => {
         const s = this.hass.states[`binary_sensor.${p.slug}_in_proximity`];
         return s?.state === "on";
-      });
+      }).length;
+      const totalPairs = pairs.length;
 
       const cardTitle = title || entities.map(e => _personName(this.hass, e)).join(" · ");
 
@@ -519,8 +533,8 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
               <span>🗺</span>
               <span>${cardTitle}</span>
             </div>
-            <span class="group-badge ${anyInProx ? "any-prox" : "no-prox"}">
-              ${anyInProx ? "In Proximity" : "Not in Proximity"}
+            <span class="group-badge ${proxCount > 0 ? "any-prox" : "no-prox"}">
+              ${proxCount} of ${totalPairs} pair${totalPairs !== 1 ? "s" : ""} in proximity
             </span>
           </div>
 
@@ -749,7 +763,6 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
 
     _input(key, e) { this._update(key, e.target.value || undefined); }
     _select(key, e) { this._update(key, e.target.value); }
-    _range(key, e) { this._update(key, parseInt(e.target.value, 10)); }
 
     render() {
       if (!this._config) return html``;
@@ -784,12 +797,6 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
             <input type="text" .value=${this._config.title || ""}
               placeholder="Leave blank to use entity names"
               @input=${e => this._input("title", e)} />
-          </div>
-          <div class="row">
-            <label>Height: ${this._config.height || 300}px</label>
-            <input type="range" min="200" max="500" step="20"
-              .value=${String(this._config.height || 300)}
-              @input=${e => this._range("height", e)} />
           </div>
 
         </div>

@@ -79,12 +79,35 @@ async def _async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None
     await hass.config_entries.async_reload(entry.entry_id)
 
 
+KNOWN_FILENAMES = {CARD_FILENAME, PEOPLE_CARD_FILENAME, GROUP_CARD_FILENAME}
+
+
+async def _async_purge_stale_resources(hass: HomeAssistant) -> None:
+    """Remove Lovelace resources for old/renamed entity_distance card filenames."""
+    try:
+        resources = hass.data["lovelace"].resources
+    except (KeyError, AttributeError):
+        return
+    if not resources.loaded:
+        await resources.async_load()
+        resources.loaded = True
+    if not isinstance(resources, ResourceStorageCollection):
+        return
+    for r in list(resources.async_items()):
+        url = r.get("url", "")
+        if f"/{DOMAIN}/" in url and not any(f in url for f in KNOWN_FILENAMES):
+            await resources.async_delete_item(r["id"])
+            _LOGGER.info("entity_distance: removed stale Lovelace resource %s", url)
+
+
 async def _async_install_card(hass: HomeAssistant) -> None:
     global _CARD_INSTALLED
     if _CARD_INSTALLED:
         return
 
     version = await hass.async_add_executor_job(_get_version)
+
+    await _async_purge_stale_resources(hass)
 
     for filename, url in [
         (CARD_FILENAME, CARD_URL),

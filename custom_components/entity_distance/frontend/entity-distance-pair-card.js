@@ -733,7 +733,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
                 ${showLast ? html`
                   <div class="stat-box ${todayLastCount === 1 ? "full-width" : ""}" style="background:rgba(251,146,60,0.1);border:1px solid rgba(251,146,60,0.25)">
                     <span class="stat-box-label">👁 Last seen together</span>
-                    <span class="stat-box-value" style="color:#ea580c">${_formatTs(lastSeen)}</span>
+                    <span class="stat-box-value" style="color:#ea580c">${isProx ? "Together now" : _formatTs(lastSeen)}</span>
                   </div>` : nothing}
                 ${showUnaccounted ? html`
                   <div class="stat-box full-width" style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.35)">

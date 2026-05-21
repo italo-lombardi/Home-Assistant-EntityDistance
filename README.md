@@ -484,7 +484,7 @@ The visual editor (pencil icon in Lovelace) shows a dropdown of all configured p
 
 ### Entity Distance — Group Card (`entity-distance-group-card`)
 
-A force-directed graph showing all entities in a group as circles connected by labeled lines. Each line shows distance, direction arrow, and proximity zone. Lines glow when entities are in proximity. Tap a line to open the pair detail.
+A force-directed SVG graph showing all entities in a group as circles connected by labeled lines. Lines are colored by proximity zone and glow when entities are in proximity. Each line shows the distance, a direction arrow (↑ diverging, ↓ approaching, • stationary), and the zone name. Tap a line to open the HA more-info panel for that pair's distance sensor.
 
 ```yaml
 type: custom:entity-distance-group-card
@@ -492,21 +492,31 @@ entities:
   - person.italo
   - person.dercy
   - zone.home
-  - device_tracker.xceed_location
+  - device_tracker.kia_xceed
+title: ""           # optional, defaults to entity names joined with ·
+fixed_layout: false # equal spacing regardless of real distance
+hidden_entities: [] # entity IDs to hide from graph
+pair_settings:
+  "person.dercy,person.italo":  # sorted alphabetically
+    show_distance: true
+    show_zone: true
 ```
 
-**All options:**
-```yaml
-type: custom:entity-distance-group-card
-entities:
-  - person.italo
-  - person.dercy
-  - zone.home
-  - device_tracker.xceed_location
-title: ""    # optional custom title; defaults to entity names joined with ·
-```
+**Options:**
 
-The visual editor auto-discovers available groups from hass.states and presents them in a dropdown — no manual entity ID entry required.
+| Option | Default | Description |
+|--------|---------|-------------|
+| `entities` | required | List of 2–5 entity IDs to show in the graph |
+| `title` | `""` | Card title; defaults to entity friendly names joined with `·` |
+| `fixed_layout` | `false` | Equal edge lengths regardless of real distance |
+| `hidden_entities` | `[]` | Entity IDs to hide — their nodes and all connecting lines are removed; hidden pairs are excluded from the badge count |
+| `pair_settings` | `{}` | Per-pair overrides, keyed by sorted entity ID pair (`"entity_a,entity_b"`). Each entry supports `show_distance` (bool) and `show_zone` (bool) |
+
+**Layout behaviour:**
+
+Nodes are placed in a grid based on entity count: 2 = vertical pair, 3 = triangle, 4 = 2×2 grid, 5 = 3-row with center middle node. Labels appear above the circle for top-row nodes and below for bottom-row nodes. A slow idle drift animation plays for 6 s after the last state update.
+
+The visual editor auto-discovers available groups from hass.states and presents them in a dropdown — no manual entity ID entry required. Use the editor's entity list to reorder nodes, toggle per-entity visibility (eye icon), set the title, enable equal spacing, and configure per-pair distance and zone label visibility.
 
 <!-- SCREENSHOT NEEDED: lovelace_entity_distance_group_card.png
      What to capture:

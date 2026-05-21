@@ -445,11 +445,11 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         if not ps.proximity and dist_m <= self._entry_threshold_m:
             ps.proximity = True
             ps.proximity_since = now
-            ps.last_seen_together = now
             if ps.proximity_tracking_started is None:
                 ps.proximity_tracking_started = now
         elif ps.proximity and dist_m > self._exit_threshold_m:
             ps.proximity = False
+            ps.last_seen_together = now
             if ps.proximity_since:
                 ps.proximity_duration_s += (now - ps.proximity_since).total_seconds()
             ps.proximity_since = None

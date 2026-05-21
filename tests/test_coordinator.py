@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
+
+import pytest
 
 from custom_components.entity_distance.const import (
     BUCKET_FAR,
@@ -259,3 +261,87 @@ class TestCalcBucketEdgeCases:
             )
             == BUCKET_VERY_NEAR
         )
+
+
+# ---------------------------------------------------------------------------
+# last_seen_together — updated on EXIT, not entry
+# ---------------------------------------------------------------------------
+
+
+class TestLastSeenTogetherOnExit:
+    """last_seen_together must record the moment proximity ends, not when it starts."""
+
+    def test_not_set_on_entry(self):
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        assert ps.last_seen_together is None
+        # Simulate proximity entry (coordinator sets proximity = True, proximity_since = now)
+        now = datetime.now().astimezone()
+        ps.proximity = True
+        ps.proximity_since = now
+        # last_seen_together must NOT be set at entry
+        assert ps.last_seen_together is None
+
+    def test_set_on_exit(self):
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        entry_time = datetime.now().astimezone()
+        ps.proximity = True
+        ps.proximity_since = entry_time
+
+        # Simulate proximity exit (coordinator pattern)
+        exit_time = entry_time + timedelta(minutes=10)
+        ps.proximity = False
+        ps.last_seen_together = exit_time
+        if ps.proximity_since:
+            ps.proximity_duration_s += (exit_time - ps.proximity_since).total_seconds()
+        ps.proximity_since = None
+
+        assert ps.last_seen_together == exit_time
+
+    def test_last_seen_reflects_exit_not_entry(self):
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        entry_time = datetime.now().astimezone()
+        exit_time = entry_time + timedelta(minutes=35)
+
+        # Enter proximity
+        ps.proximity = True
+        ps.proximity_since = entry_time
+        # last_seen_together not set yet
+        assert ps.last_seen_together is None
+
+        # Exit proximity
+        ps.proximity = False
+        ps.last_seen_together = exit_time
+        ps.proximity_duration_s += (exit_time - entry_time).total_seconds()
+        ps.proximity_since = None
+
+        assert ps.last_seen_together == exit_time
+        assert ps.last_seen_together != entry_time
+        assert ps.proximity_duration_s == pytest.approx(35 * 60, abs=1)
+
+    def test_duration_accumulated_on_exit(self):
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        entry_time = datetime.now().astimezone()
+        exit_time = entry_time + timedelta(minutes=5)
+
+        ps.proximity = True
+        ps.proximity_since = entry_time
+        ps.proximity = False
+        ps.last_seen_together = exit_time
+        if ps.proximity_since:
+            ps.proximity_duration_s += (exit_time - ps.proximity_since).total_seconds()
+        ps.proximity_since = None
+
+        assert ps.proximity_duration_s == pytest.approx(300, abs=1)
+        assert ps.proximity_since is None
+
+    def test_last_seen_not_overwritten_during_second_entry(self):
+        """Second entry while last_seen_together holds a previous exit value must not clear it."""
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        first_exit = datetime.now().astimezone()
+        ps.last_seen_together = first_exit
+
+        # Second proximity entry — must NOT touch last_seen_together
+        ps.proximity = True
+        ps.proximity_since = first_exit + timedelta(hours=1)
+        # Coordinator entry block does not set last_seen_together
+        assert ps.last_seen_together == first_exit

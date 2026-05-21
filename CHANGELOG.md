@@ -5,7 +5,22 @@
 ## [0.2.1] - upcoming
 
 ### Added
-- **Group Card** (`entity-distance-group-card`) — force-directed SVG graph showing all group entities as circles with labeled connecting lines (distance, direction arrow, proximity zone). Lines glow when in proximity. Tap a line to open the pair detail. Auto-discovers groups from hass.states in the visual editor.
+- **Group Card** (`entity-distance-group-card`) — force-directed SVG graph showing all group entities as circles with labeled connecting lines
+  - Lines colored by proximity zone; thicker with glow effect when a pair is in proximity
+  - Per-line labels: distance and/or zone text independently configurable per pair
+  - Direction arrow on each line (↑ diverging, ↓ approaching, • stationary); hidden when both distance and zone labels are disabled
+  - Grid-based initial node layout by entity count: 2 = vertical pair, 3 = triangle, 4 = 2×2, 5 = 3-row with center middle node
+  - Adaptive label placement: entity name + state above circle for top-row nodes, below for bottom-row nodes
+  - Background rectangles behind text labels to prevent line overlap
+  - `fixed_layout` option: equal spacing regardless of real distance
+  - Per-entity hide toggle in editor (eye icon) — hidden entities and all their connecting lines are removed from the graph
+  - Badge: "X of N pairs in proximity" counting only visible pairs
+  - `pair_settings` per-pair config keyed by sorted entity ID pair (`"entity_a,entity_b"`)
+  - Tap a line to open the HA more-info panel for that pair's distance sensor
+  - Editor: group selector dropdown, entity order list with ↑/↓ reorder and hide toggle, title field, equal spacing checkbox, per-pair distance/zone label toggles
+  - Auto-discovers available groups from hass.states in the visual editor
+  - `ResizeObserver` ensures correct width in the HA sections layout
+  - Idle animation: slow node drift for 6 s after last state update
 
 ### Fixed
 - `UpdateCountSensor` returned stale count after 30-min window expired — now returns `0` when window has elapsed (`sensor.py`)
@@ -16,6 +31,7 @@
 - Stale Lovelace resources from renamed cards (`entity-distance-card.js`, `entity-distance-people-card.js`) now auto-purged on startup
 - Group card blank in `sections` layout — `ResizeObserver` now triggers layout after real card width is known
 - `shouldUpdate` in Pair Card and Avatar Card accessed `old.states[id]` without optional chaining — could throw on first render
+- `last_seen_together` now records when proximity **ends** (exit) rather than when it begins (entry) — "Last seen together" now means the last completed together session; Pair Card shows "Together now" while `in_proximity` is on
 
 ### Changed
 - `TodayZoneTimeSensor` exposes `range_from_m` / `range_to_m` state attributes so users can see the distance bounds of each zone bucket

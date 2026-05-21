@@ -4,10 +4,10 @@
  * People-focused layout: two avatars side-by-side with distance in the middle.
  */
 
-const PEOPLE_CARD_VERSION = "0.1.0";
+const PEOPLE_CARD_VERSION = "0.2.0";
 
 console.info(
-  `%c ENTITY-DISTANCE-PEOPLE-CARD %c v${PEOPLE_CARD_VERSION} %c`,
+  `%c ENTITY-DISTANCE-AVATAR-CARD %c v${PEOPLE_CARD_VERSION} %c — github.com/italo-lombardi`,
   "color: white; background: #9c27b0; font-weight: bold; padding: 2px 6px; border-radius: 3px 0 0 3px;",
   "color: #9c27b0; background: #f3e5f5; font-weight: bold; padding: 2px 6px;",
   "color: #9e9e9e; background: #f3e5f5; padding: 2px 6px; border-radius: 0 3px 3px 0;"
@@ -15,15 +15,15 @@ console.info(
 
 window.customCards = window.customCards || [];
 window.customCards.push({
-  type: "entity-distance-people-card",
-  name: "Entity Distance People Card",
+  type: "entity-distance-avatar-card",
+  name: "Entity Distance — Avatar Card",
   description: "Shows two people's avatars side-by-side with distance, direction, and proximity stats for a configured entity pair.",
   preview: true,
   documentationURL: "https://github.com/italo-lombardi/Home-Assistant-EntityDistance",
 });
 
 customElements.whenDefined("ha-panel-lovelace").then(() => {
-  if (customElements.get("entity-distance-people-card")) return;
+  if (customElements.get("entity-distance-avatar-card")) return;
 
   const haPanel = customElements.get("ha-panel-lovelace");
   if (!haPanel) return;
@@ -42,15 +42,20 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
 
   // ─── helpers ────────────────────────────────────────────────────────────────
 
+  // Pair sensors have entity_a/entity_b attributes set by DistanceSensor.
+  // Slug = entity_id minus "sensor." prefix and "_distance" suffix.
   function _slug(id) {
-    return id.startsWith("sensor.entity_distance_")
-      ? id.replace("sensor.entity_distance_", "").replace(/_distance$/, "")
-      : null;
+    if (!id.startsWith("sensor.") || !id.endsWith("_distance")) return null;
+    return id.slice("sensor.".length, -"_distance".length);
   }
 
   function _getPairs(hass) {
     return Object.keys(hass.states)
-      .filter(id => id.startsWith("sensor.entity_distance_") && id.endsWith("_distance"))
+      .filter(id => {
+        if (!id.startsWith("sensor.") || !id.endsWith("_distance")) return false;
+        const s = hass.states[id];
+        return s?.attributes?.entity_a != null;
+      })
       .map(id => {
         const slug = _slug(id);
         const label = _pairLabel(hass, slug);
@@ -60,7 +65,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
   }
 
   function _pairLabel(hass, slug) {
-    const distState = hass.states[`sensor.entity_distance_${slug}_distance`];
+    const distState = hass.states[`sensor.${slug}_distance`];
     if (distState?.attributes?.friendly_name) {
       return distState.attributes.friendly_name
         .replace(/^Entity Distance[^\w]*/i, "")
@@ -71,7 +76,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
   }
 
   function _val(hass, slug, suffix, fallback = null) {
-    const s = hass.states[`sensor.entity_distance_${slug}_${suffix}`] || null;
+    const s = hass.states[`sensor.${slug}_${suffix}`] || null;
     if (!s || s.state === "unknown" || s.state === "unavailable") return fallback;
     return s.state;
   }
@@ -425,7 +430,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
 
   // ─── card ────────────────────────────────────────────────────────────────────
 
-  class EntityDistancePeopleCard extends LitElement {
+  class EntityDistanceAvatarCard extends LitElement {
     static get properties() {
       return {
         hass: { attribute: false },
@@ -436,7 +441,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     static get styles() { return cardStyles; }
 
     static getConfigElement() {
-      return document.createElement("entity-distance-people-card-editor");
+      return document.createElement("entity-distance-avatar-card-editor");
     }
 
     static getStubConfig(hass) {
@@ -463,7 +468,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     }
 
     setConfig(config) {
-      if (!config.slug) throw new Error("entity-distance-people-card: 'slug' is required.");
+      if (!config.slug) throw new Error("entity-distance-avatar-card: 'slug' is required.");
       this._config = {
         entity_a: "",
         entity_b: "",
@@ -498,9 +503,9 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     }
 
     _watchIds(slug) {
-      const p = `sensor.entity_distance_${slug}`;
+      const p = `sensor.${slug}`;
       const ids = [
-        `binary_sensor.entity_distance_${slug}_in_proximity`,
+        `binary_sensor.${slug}_in_proximity`,
         `${p}_distance`, `${p}_direction`, `${p}_proximity_zone`,
         `${p}_approach_speed`, `${p}_estimated_arrival_time`,
         `${p}_proximity_duration`, `${p}_proximity_tracking_started`,
@@ -558,7 +563,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         return html`<ha-card><div class="error-msg">No entity pair configured.</div></ha-card>`;
       }
 
-      const proxState = this.hass.states[`binary_sensor.entity_distance_${slug}_in_proximity`];
+      const proxState = this.hass.states[`binary_sensor.${slug}_in_proximity`];
       if (!proxState) {
         return html`<ha-card><div class="error-msg">Pair "${slug}" not found. Check integration is loaded.</div></ha-card>`;
       }
@@ -595,7 +600,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       const displayNameB = (entityB && _personName(this.hass, entityB)) || nameB;
 
       // Entity states
-      const distState = this.hass.states[`sensor.entity_distance_${slug}_distance`];
+      const distState = this.hass.states[`sensor.${slug}_distance`];
       const resolvedEntityA = entityA || distState?.attributes?.entity_a || null;
       const resolvedEntityB = entityB || distState?.attributes?.entity_b || null;
       const stateA = _entityStateLabel(this.hass, resolvedEntityA);
@@ -722,13 +727,13 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       `;
     }
 
-  } // end EntityDistancePeopleCard
+  } // end EntityDistanceAvatarCard
 
-  customElements.define("entity-distance-people-card", EntityDistancePeopleCard);
+  customElements.define("entity-distance-avatar-card", EntityDistanceAvatarCard);
 
   // ─── editor ──────────────────────────────────────────────────────────────────
 
-  class EntityDistancePeopleCardEditor extends LitElement {
+  class EntityDistanceAvatarCardEditor extends LitElement {
     static get properties() {
       return {
         hass: { attribute: false },
@@ -894,6 +899,6 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     }
   }
 
-  customElements.define("entity-distance-people-card-editor", EntityDistancePeopleCardEditor);
+  customElements.define("entity-distance-avatar-card-editor", EntityDistanceAvatarCardEditor);
 
 }); // end whenDefined

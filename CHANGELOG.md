@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+### Fixed
+- `UpdateCountSensor` returned stale count after 30-min window expired — now returns `0` when window has elapsed (`sensor.py`)
+- Pair Card diagnostics showed full device-prefixed label ("Dercy & Italo GPS Accuracy") instead of short metric label — labels are now hardcoded, `friendly_name` parsing removed (`entity-distance-pair-card.js`)
+- Pair Card and Avatar Card `_getPairs()` and all entity ID lookups used v0.1.0 `sensor.entity_distance_` prefix — now discovers pairs via `entity_a` attribute presence; all lookups use `sensor.${slug}_` pattern
+- Entity state badges overlapped the divider line below the hero row — added top padding to `.entity-states`
+- Lovelace resource updater skipped non-`ResourceStorageCollection` setups — added fallback direct assignment (`__init__.py`)
+
+### Changed
+- `TodayZoneTimeSensor` exposes `range_from_m` / `range_to_m` state attributes so users can see the distance bounds of each zone bucket
+- Proximity duration and proximity rate stat boxes now share one row when both are enabled
+- Lovelace cards renamed: `entity-distance-card` → `entity-distance-pair-card`, `entity-distance-people-card` → `entity-distance-avatar-card`; JS files, `__init__.py` constants, and README updated accordingly
+- Card versions bumped to `0.2.0`; console log now includes `— github.com/italo-lombardi` suffix
+
 ## [0.2.0] - 2026-05-21
 
 > **Breaking change:** v0.2.0 is not compatible with v0.1.0 config entries. Delete and recreate all Entity Distance integrations after upgrading.

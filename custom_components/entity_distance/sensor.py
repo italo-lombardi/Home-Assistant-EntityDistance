@@ -29,6 +29,7 @@ from .const import (
     DIRECTION_STATIONARY,
     DIRECTIONS,
     DOMAIN,
+    UPDATES_FREQUENCY_WINDOW_S,
 )
 from .coordinator import EntityDistanceCoordinator, _calc_bucket
 from .models import PairState, pair_key
@@ -285,6 +286,20 @@ class TodayZoneTimeSensor(EntityDistanceSensorBase):
             return None
         return round(self._pair.today_zone_seconds.get(self._bucket, 0.0) / 60, 1)
 
+    @property
+    def extra_state_attributes(self) -> dict:
+        thresholds = self.coordinator.bucket_thresholds
+        buckets = list(thresholds.keys())
+        upper = thresholds.get(self._bucket)
+        idx = buckets.index(self._bucket) if self._bucket in buckets else -1
+        lower = thresholds[buckets[idx - 1]] if idx > 0 else 0
+        attrs: dict = {}
+        if idx >= 0:
+            attrs["range_from_m"] = lower
+        if upper is not None:
+            attrs["range_to_m"] = upper
+        return attrs
+
 
 class DirectionSensor(EntityDistanceSensorBase):
     _attr_device_class = SensorDeviceClass.ENUM
@@ -393,7 +408,18 @@ class UpdateCountSensor(EntityDistanceSensorBase):
     def native_value(self) -> int | None:
         if not self._pair.data_valid:
             return None
-        return self._pair.update_count_a if self._which == "a" else self._pair.update_count_b
+        if self._which == "a":
+            window_start = self._pair.update_window_start_a
+            count = self._pair.update_count_a
+        else:
+            window_start = self._pair.update_window_start_b
+            count = self._pair.update_count_b
+        if window_start is None:
+            return count
+        now = datetime.now().astimezone()
+        if (now - window_start).total_seconds() > UPDATES_FREQUENCY_WINDOW_S:
+            return 0
+        return count
 
 
 class EntityStateSensor(EntityDistanceSensorBase):

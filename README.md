@@ -68,7 +68,16 @@ Select 2–5 entities to track. Supported types: `person`, `device_tracker`, `se
 
 For a 2-entity selection you get 1 pair. For 3 entities you get 3 pairs. For 4 entities you get 6 pairs. Each pair gets its own sub-device under the group.
 
-<!-- screenshot: step 1 entity pair -->
+<!-- SCREENSHOT NEEDED: config_flow_step1_entity_select.png
+     What to capture:
+     - Settings → Devices & Services → Add Integration → Entity Distance
+     - Step 1 of the config flow showing the multi-select entity picker
+     - Select 3–4 entities (e.g. person.italo, person.dercy, zone.home, device_tracker.xceed)
+     - Show the entity list expanded so it is clear multiple selections are possible
+     - Recommended: 1200×800 px, light theme
+-->
+
+![Config flow step 1 — select entities](docs/screenshots/config_flow_step1_entity_select.png)
 
 ### Step 2: Proximity Settings
 
@@ -80,7 +89,16 @@ For a 2-entity selection you get 1 pair. For 3 entities you get 3 pairs. For 4 e
 | Configure proximity zone thresholds | Off | Turn on to customize Very Near / Near / Mid / Far zone distances |
 | Configure advanced filters | Off | Turn on to configure GPS accuracy, speed, and reliability filters |
 
-<!-- screenshot: step 2 proximity settings -->
+<!-- SCREENSHOT NEEDED: config_flow_step2_proximity_settings.png
+     What to capture:
+     - Step 2 of the config flow: proximity/threshold settings form
+     - Show all fields: Nearby threshold, Away threshold, Location update delay,
+       "Configure proximity zone thresholds" toggle, "Configure advanced filters" toggle
+     - Leave all values at their defaults
+     - Recommended: 1200×800 px, light theme
+-->
+
+![Config flow step 2 — proximity settings](docs/screenshots/config_flow_step2_proximity_settings.png)
 
 ### Step 3: Zone Thresholds (optional)
 
@@ -95,7 +113,15 @@ Only shown when "Configure proximity zone thresholds" is enabled in Step 2.
 
 Thresholds must be strictly increasing: Very Near < Near < Mid < Far.
 
-<!-- screenshot: step 3 zone thresholds -->
+<!-- SCREENSHOT NEEDED: config_flow_step3_zone_thresholds.png
+     What to capture:
+     - Step 3 of the config flow: zone threshold settings form
+     - Shown only when "Configure proximity zone thresholds" was enabled in step 2
+     - Show all 4 fields: Very Near, Near, Mid, Far thresholds with default values
+     - Recommended: 1200×800 px, light theme
+-->
+
+![Config flow step 3 — zone thresholds](docs/screenshots/config_flow_step3_zone_thresholds.png)
 
 ### Step 4: Advanced Filters (optional)
 
@@ -108,7 +134,17 @@ Only shown when "Configure advanced filters" is enabled in Step 2.
 | Only trigger when data is reliable | Off | Require several consistent updates before firing proximity events |
 | Consecutive updates required for reliability | 3 | Consecutive updates required before data is considered reliable |
 
-<!-- screenshot: step 4 advanced filters -->
+<!-- SCREENSHOT NEEDED: config_flow_step4_advanced_filters.png
+     What to capture:
+     - Step 4 of the config flow: advanced filter settings form
+     - Shown only when "Configure advanced filters" was enabled in step 2
+     - Show all fields: Max GPS error radius, Max speed filter, Only trigger when reliable,
+       Consecutive updates required
+     - Leave all values at their defaults
+     - Recommended: 1200×800 px, light theme
+-->
+
+![Config flow step 4 — advanced filters](docs/screenshots/config_flow_step4_advanced_filters.png)
 
 All settings can be changed after setup via **Configure** on the integration card.
 
@@ -178,7 +214,18 @@ Each configured group creates one HA device (the group) with per-pair sub-device
 |--------|-------------|
 | Refresh Location | Sends a silent push notification to request an immediate location update from both entities (iOS and Android) |
 
-<!-- screenshot: device card with all entities -->
+<!-- SCREENSHOT NEEDED: device_card_entities.png
+     What to capture:
+     - Settings → Devices & Services → Entity Distance → click a pair sub-device
+       (e.g. "Italo & Home" or "Dercy & Italo")
+     - Show the full device card with all entities listed
+     - Scroll to show all 28 entities (sensors, binary sensor, button)
+     - Alternatively: two side-by-side screenshots showing top and bottom halves
+     - Recommended: 1200×1600 px (tall), light theme
+     - Tip: use browser DevTools to reduce zoom so more fits in one shot
+-->
+
+![Pair device card — all entities](docs/screenshots/device_card_entities.png)
 
 ---
 
@@ -196,7 +243,16 @@ Default thresholds (configurable via **Configure** → **Configure proximity zon
 
 The **Proximity Zone Level** sensor exposes the same information as a number (1–5), useful for automations that compare or threshold on zone level without working with strings.
 
-<!-- screenshot: zone thresholds config step -->
+<!-- SCREENSHOT NEEDED: zone_thresholds_config.png
+     What to capture:
+     - Settings → Devices & Services → Entity Distance → Configure (on an existing entry)
+     - Navigate to the zone thresholds step (enable "Configure proximity zone thresholds")
+     - Show the form with custom (non-default) values to make it more illustrative
+       e.g. Very Near=50, Near=300, Mid=1500, Far=8000
+     - Recommended: 1200×800 px, light theme
+-->
+
+![Zone thresholds configuration](docs/screenshots/zone_thresholds_config.png)
 
 ---
 
@@ -359,18 +415,18 @@ automation:
 
 The integration ships two custom Lovelace cards, automatically registered as resources when the integration loads.
 
-### Entity Distance Card (`entity-distance-card`)
+### Entity Distance — Pair Card (`entity-distance-pair-card`)
 
 A data-focused card showing distance, direction, proximity status, and stats.
 
 ```yaml
-type: custom:entity-distance-card
+type: custom:entity-distance-pair-card
 slug: italo_home        # auto-detected from dropdown in the visual editor
 ```
 
 **All options:**
 ```yaml
-type: custom:entity-distance-card
+type: custom:entity-distance-pair-card
 slug: italo_home
 title: ""                     # optional custom title
 show_distance: true
@@ -392,12 +448,12 @@ show_update_count: false      # update count last 30 min
 compact: false
 ```
 
-### Entity Distance People Card (`entity-distance-people-card`)
+### Entity Distance — Avatar Card (`entity-distance-avatar-card`)
 
 A people-focused card with entity avatars side-by-side.
 
 ```yaml
-type: custom:entity-distance-people-card
+type: custom:entity-distance-avatar-card
 slug: italo_home
 entity_a: person.italo        # optional: for avatar lookup
 entity_b: person.dercy        # optional: for avatar lookup
@@ -405,7 +461,7 @@ entity_b: person.dercy        # optional: for avatar lookup
 
 **All options:**
 ```yaml
-type: custom:entity-distance-people-card
+type: custom:entity-distance-avatar-card
 slug: italo_home
 entity_a: person.italo
 entity_b: person.dercy
@@ -430,15 +486,32 @@ If auto-registration fails (e.g. YAML-only Lovelace mode), add manually:
 
 ```yaml
 resources:
-  - url: /entity_distance/entity-distance-card.js?0.2.0
+  - url: /entity_distance/entity-distance-pair-card.js?0.2.0
     type: module
-  - url: /entity_distance/entity-distance-people-card.js?0.2.0
+  - url: /entity_distance/entity-distance-avatar-card.js?0.2.0
     type: module
 ```
 
-<!-- screenshot: entity-distance-card -->
+<!-- SCREENSHOT NEEDED: lovelace_entity_distance_card.png
+     What to capture:
+     - A Lovelace dashboard showing the entity-distance-pair-card
+     - Ideal state: entities NOT in proximity, with a real distance value (e.g. 3.5 km)
+       so the card shows distance, direction, zone, speed fields populated
+     - Show at least one card, ideally two side-by-side (one person-to-person, one person-to-zone)
+     - Recommended: 800×500 px, light or dark theme (pick the one that looks better)
+-->
 
-<!-- screenshot: entity-distance-people-card -->
+![Entity Distance — Pair Card](docs/screenshots/lovelace_entity_distance_card.png)
+
+<!-- SCREENSHOT NEEDED: lovelace_entity_distance_people_card.png
+     What to capture:
+     - A Lovelace dashboard showing the entity-distance-avatar-card
+     - Ideal state: two people with avatars visible, NOT in proximity (so the badge shows "Not in Proximity")
+     - The card should show entity avatars side-by-side with distance and zone info between them
+     - Recommended: 800×400 px, light or dark theme (pick the one that looks better)
+-->
+
+![Entity Distance — Avatar Card](docs/screenshots/lovelace_entity_distance_people_card.png)
 
 ---
 

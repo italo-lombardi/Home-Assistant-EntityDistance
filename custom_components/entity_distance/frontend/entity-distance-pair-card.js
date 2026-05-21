@@ -3,10 +3,10 @@
  * Lovelace custom card for the Entity Distance integration.
  */
 
-const CARD_VERSION = "0.1.0";
+const CARD_VERSION = "0.2.0";
 
 console.info(
-  `%c ENTITY-DISTANCE-CARD %c v${CARD_VERSION} %c`,
+  `%c ENTITY-DISTANCE-PAIR-CARD %c v${CARD_VERSION} %c — github.com/italo-lombardi`,
   "color: white; background: #2196f3; font-weight: bold; padding: 2px 6px; border-radius: 3px 0 0 3px;",
   "color: #2196f3; background: #e3f2fd; font-weight: bold; padding: 2px 6px;",
   "color: #9e9e9e; background: #e3f2fd; padding: 2px 6px; border-radius: 0 3px 3px 0;"
@@ -14,15 +14,15 @@ console.info(
 
 window.customCards = window.customCards || [];
 window.customCards.push({
-  type: "entity-distance-card",
-  name: "Entity Distance Card",
+  type: "entity-distance-pair-card",
+  name: "Entity Distance — Pair Card",
   description: "Shows distance, direction, proximity status, and time-together stats for a configured entity pair.",
   preview: true,
   documentationURL: "https://github.com/italo-lombardi/Home-Assistant-EntityDistance",
 });
 
 customElements.whenDefined("ha-panel-lovelace").then(() => {
-  if (customElements.get("entity-distance-card")) return;
+  if (customElements.get("entity-distance-pair-card")) return;
 
   const haPanel = customElements.get("ha-panel-lovelace");
   if (!haPanel) return;
@@ -41,11 +41,21 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
 
   // ─── helpers ────────────────────────────────────────────────────────────────
 
-  function _slug(id) { return id.startsWith("sensor.entity_distance_") ? id.replace("sensor.entity_distance_", "").replace(/_distance$/, "") : null; }
+  // Pair sensors have entity_a/entity_b attributes set by DistanceSensor.
+  // Group sensors (entity_distance_ prefix) do NOT have these attributes.
+  // Slug = entity_id minus "sensor." prefix and "_distance" suffix.
+  function _slug(id) {
+    if (!id.startsWith("sensor.") || !id.endsWith("_distance")) return null;
+    return id.slice("sensor.".length, -"_distance".length);
+  }
 
   function _getPairs(hass) {
     return Object.keys(hass.states)
-      .filter(id => id.startsWith("sensor.entity_distance_") && id.endsWith("_distance"))
+      .filter(id => {
+        if (!id.startsWith("sensor.") || !id.endsWith("_distance")) return false;
+        const s = hass.states[id];
+        return s?.attributes?.entity_a != null;
+      })
       .map(id => {
         const slug = _slug(id);
         const label = _pairLabel(hass, slug);
@@ -55,7 +65,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
   }
 
   function _pairLabel(hass, slug) {
-    const distState = hass.states[`sensor.entity_distance_${slug}_distance`];
+    const distState = hass.states[`sensor.${slug}_distance`];
     if (distState?.attributes?.friendly_name) {
       return distState.attributes.friendly_name
         .replace(/^Entity Distance[^\w]*/i, "")
@@ -66,7 +76,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
   }
 
   function _s(hass, slug, suffix) {
-    return hass.states[`sensor.entity_distance_${slug}_${suffix}`] || null;
+    return hass.states[`sensor.${slug}_${suffix}`] || null;
   }
 
   function _val(hass, slug, suffix, fallback = null) {
@@ -262,7 +272,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     .entity-states {
       display: flex;
       gap: 8px;
-      padding: 0 16px 10px;
+      padding: 10px 16px 10px;
       flex-wrap: wrap;
     }
 
@@ -474,7 +484,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
 
   // ─── card ────────────────────────────────────────────────────────────────────
 
-  class EntityDistanceCard extends LitElement {
+  class EntityDistancePairCard extends LitElement {
     static get properties() {
       return {
         hass: { attribute: false },
@@ -485,7 +495,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     static get styles() { return cardStyles; }
 
     static getConfigElement() {
-      return document.createElement("entity-distance-card-editor");
+      return document.createElement("entity-distance-pair-card-editor");
     }
 
     static getStubConfig(hass) {
@@ -514,7 +524,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     }
 
     setConfig(config) {
-      if (!config.slug) throw new Error("entity-distance-card: 'slug' is required.");
+      if (!config.slug) throw new Error("entity-distance-pair-card: 'slug' is required.");
       this._config = {
         show_distance: true,
         show_direction: true,
@@ -551,9 +561,9 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     }
 
     _watchIds(slug) {
-      const p = `sensor.entity_distance_${slug}`;
+      const p = `sensor.${slug}`;
       const base = [
-        `binary_sensor.entity_distance_${slug}_in_proximity`,
+        `binary_sensor.${slug}_in_proximity`,
         `${p}_distance`, `${p}_direction`, `${p}_direction_level`, `${p}_proximity_zone`,
         `${p}_approach_speed`, `${p}_estimated_arrival_time`,
         `${p}_proximity_duration`, `${p}_proximity_tracking_started`,
@@ -584,7 +594,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         return html`<ha-card><div class="error-msg">No entity pair configured.</div></ha-card>`;
       }
 
-      const proxState = this.hass.states[`binary_sensor.entity_distance_${slug}_in_proximity`];
+      const proxState = this.hass.states[`binary_sensor.${slug}_in_proximity`];
       if (!proxState) {
         return html`<ha-card><div class="error-msg">Pair "${slug}" not found. Check integration is loaded.</div></ha-card>`;
       }
@@ -617,7 +627,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       const dirColor = _dirColor(direction);
 
       // Entity states
-      const distState = this.hass.states[`sensor.entity_distance_${slug}_distance`];
+      const distState = this.hass.states[`sensor.${slug}_distance`];
       const entityA = distState?.attributes?.entity_a;
       const entityB = distState?.attributes?.entity_b;
       const nameA = entityA ? (this.hass.states[entityA]?.attributes?.friendly_name || entityA.replace(/^[^.]+\./, "").replace(/_/g, " ").replace(/\b\w/g, x => x.toUpperCase())) : null;
@@ -699,18 +709,18 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
             const showToday = c.show_today_time && todayMin !== null;
             const showLast = c.show_last_seen;
             const showUnaccounted = c.show_unaccounted_time && unaccountedMin !== null && unaccountedMin > 0;
-            // duration always full-width; rate full-width; today+last share one row; unaccounted full-width
             const todayLastCount = [showToday, showLast].filter(Boolean).length;
+            const durRateCount = [showDur, showRate].filter(Boolean).length;
             return html`
               <div class="stat-boxes">
                 ${showDur ? html`
-                  <div class="stat-box full-width" style="background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.25)">
+                  <div class="stat-box ${durRateCount === 1 ? "full-width" : ""}" style="background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.25)">
                     <span class="stat-box-label">⏳ Proximity duration</span>
                     <span class="stat-box-value" style="color:#6366f1">${_formatMinutes(proxDurMin)}</span>
                     ${proxTrackingStarted ? html`<span class="stat-box-sub">since ${_formatDate(proxTrackingStarted)}</span>` : nothing}
                   </div>` : nothing}
                 ${showRate ? html`
-                  <div class="stat-box full-width" style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2)">
+                  <div class="stat-box ${durRateCount === 1 ? "full-width" : ""}" style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2)">
                     <span class="stat-box-label">📊 Proximity rate</span>
                     <span class="stat-box-value" style="color:#6366f1">${proxRate.toFixed(1)}%</span>
                     <span class="stat-box-sub">of time since tracking started</span>
@@ -788,11 +798,10 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
 
     // Returns { a: {metric, val}, b: {metric, val} } ordered by entity_a/entity_b from distance sensor.
     _diagSplit(slug, prefix, unit, isTs) {
-      const p = `sensor.entity_distance_${slug}_${prefix}`;
-      const distState = this.hass.states[`sensor.entity_distance_${slug}_distance`];
+      const p = `sensor.${slug}_${prefix}`;
+      const distState = this.hass.states[`sensor.${slug}_distance`];
       const entityA = distState?.attributes?.entity_a;
       const entityB = distState?.attributes?.entity_b;
-      // Derive expected name suffixes from entity friendly names (lowercase, no spaces)
       const nameA = entityA ? this._personNameFromId(entityA) : null;
       const nameB = entityB ? this._personNameFromId(entityB) : null;
 
@@ -800,10 +809,6 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
 
       const _parse = (id) => {
         const s = this.hass.states[id];
-        const rawLabel = s?.attributes?.friendly_name || id.replace(`sensor.entity_distance_${slug}_`, "");
-        const afterDevice = rawLabel.includes(" — ") ? rawLabel.slice(rawLabel.lastIndexOf(" — ") + 3) : rawLabel;
-        const parenMatch = afterDevice.match(/^(.+?)\s*\((.+?)\)\s*$/);
-        const metric = parenMatch ? parenMatch[1].trim() : afterDevice;
         const rawVal = s && s.state !== "unknown" && s.state !== "unavailable" ? s.state : null;
         let val;
         if (isTs) {
@@ -815,19 +820,18 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
             ? `${isInt ? num : num.toFixed(1)}${unit ? " " + unit : ""}`
             : `${rawVal}${unit ? " " + unit : ""}`);
         }
-        return { metric, val };
+        return { val };
       };
 
-      // Match IDs to A/B by checking if entity friendly name appears in the sensor ID suffix
+      // Match IDs to A/B: suffix after prefix = person name slug
       let idA = null, idB = null;
       for (const id of ids) {
         const suffix = id.slice(p.length).toLowerCase();
-        const aMatch = nameA && suffix.startsWith(nameA.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, ""));
-        if (aMatch) { idA = id; } else { idB = id; }
+        const aSlug = nameA ? nameA.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "") : null;
+        if (aSlug && suffix === aSlug) { idA = id; } else { idB = id; }
       }
-      // Fallback: if only one entity configured, just use first
-      if (!idA && !idB && ids.length > 0) idA = ids[0];
       if (!idA && ids.length > 1) { idA = ids[0]; idB = ids[1]; }
+      else if (!idA && ids.length > 0) { idA = ids[0]; }
 
       return {
         a: idA ? _parse(idA) : null,
@@ -840,37 +844,29 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       const rowsA = [], rowsB = [];
       let nameA = null, nameB = null;
 
-      const addSplit = (prefix, unit, isTs) => {
+      const addSplit = (prefix, label, unit, isTs) => {
         const r = this._diagSplit(slug, prefix, unit, isTs);
         if (!nameA && r.nameA) nameA = r.nameA;
         if (!nameB && r.nameB) nameB = r.nameB;
-        if (r.a) rowsA.push(r.a);
-        if (r.b) rowsB.push(r.b);
+        if (r.a) rowsA.push({ metric: label, val: r.a.val });
+        if (r.b) rowsB.push({ metric: label, val: r.b.val });
       };
 
-      if (c.show_gps_accuracy) addSplit("gps_accuracy_", "m", false);
-      if (c.show_last_update) addSplit("last_update_", "", true);
-      if (c.show_update_count) addSplit("update_count_", "", false);
+      if (c.show_gps_accuracy) addSplit("gps_accuracy_", "📡 GPS Accuracy", "m", false);
+      if (c.show_last_update) addSplit("last_update_", "🕐 Last Update", "", true);
+      if (c.show_update_count) addSplit("update_count_", "🔄 Updates (30 min)", "", false);
 
       if (!rowsA.length && !rowsB.length) return nothing;
-
-      const _iconFor = (metric) => {
-        const m = metric.toLowerCase();
-        if (m.includes("gps") || m.includes("accuracy")) return "📡";
-        if (m.includes("update") && m.includes("count")) return "🔄";
-        if (m.includes("update") || m.includes("last")) return "🕐";
-        return "";
-      };
 
       return html`
         <div class="diag-cols">
           <div>
             ${nameA ? html`<div class="diag-col-header">${nameA}</div>` : nothing}
-            ${rowsA.map(r => this._diagItem(`${_iconFor(r.metric)} ${r.metric}`, r.val))}
+            ${rowsA.map(r => this._diagItem(r.metric, r.val))}
           </div>
           <div>
             ${nameB ? html`<div class="diag-col-header">${nameB}</div>` : nothing}
-            ${rowsB.map(r => this._diagItem(`${_iconFor(r.metric)} ${r.metric}`, r.val))}
+            ${rowsB.map(r => this._diagItem(r.metric, r.val))}
           </div>
         </div>`;
     }
@@ -891,11 +887,11 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     }
   }
 
-  customElements.define("entity-distance-card", EntityDistanceCard);
+  customElements.define("entity-distance-pair-card", EntityDistancePairCard);
 
   // ─── editor ──────────────────────────────────────────────────────────────────
 
-  class EntityDistanceCardEditor extends LitElement {
+  class EntityDistancePairCardEditor extends LitElement {
     static get properties() {
       return {
         hass: { attribute: false },
@@ -1039,6 +1035,6 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     }
   }
 
-  customElements.define("entity-distance-card-editor", EntityDistanceCardEditor);
+  customElements.define("entity-distance-pair-card-editor", EntityDistancePairCardEditor);
 
 }); // end whenDefined

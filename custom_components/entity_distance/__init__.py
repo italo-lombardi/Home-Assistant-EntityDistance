@@ -21,10 +21,12 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.BUTTON]
 
-CARD_FILENAME = "entity-distance-card.js"
+CARD_FILENAME = "entity-distance-pair-card.js"
 CARD_URL = f"/{DOMAIN}/{CARD_FILENAME}"
-PEOPLE_CARD_FILENAME = "entity-distance-people-card.js"
+PEOPLE_CARD_FILENAME = "entity-distance-avatar-card.js"
 PEOPLE_CARD_URL = f"/{DOMAIN}/{PEOPLE_CARD_FILENAME}"
+GROUP_CARD_FILENAME = "entity-distance-group-card.js"
+GROUP_CARD_URL = f"/{DOMAIN}/{GROUP_CARD_FILENAME}"
 _CARD_INSTALLED = False
 
 
@@ -87,6 +89,7 @@ async def _async_install_card(hass: HomeAssistant) -> None:
     for filename, url in [
         (CARD_FILENAME, CARD_URL),
         (PEOPLE_CARD_FILENAME, PEOPLE_CARD_URL),
+        (GROUP_CARD_FILENAME, GROUP_CARD_URL),
     ]:
         source = Path(__file__).parent / "frontend" / filename
         if not source.exists():
@@ -138,6 +141,11 @@ async def _async_register_lovelace_resource(
             _LOGGER.info("entity_distance: removed duplicate Lovelace resource %s", r["url"])
 
     first = existing[0]
-    if first.get("url") != resource_url and isinstance(resources, ResourceStorageCollection):
-        await resources.async_update_item(first["id"], {"res_type": "module", "url": resource_url})
-        _LOGGER.info("entity_distance: updated Lovelace resource to %s", resource_url)
+    if first.get("url") != resource_url:
+        if isinstance(resources, ResourceStorageCollection):
+            await resources.async_update_item(
+                first["id"], {"res_type": "module", "url": resource_url}
+            )
+            _LOGGER.info("entity_distance: updated Lovelace resource to %s", resource_url)
+        else:
+            first["url"] = resource_url

@@ -2,15 +2,13 @@
   "config": {
     "step": {
       "user": {
-        "title": "Entitätspaar",
-        "description": "Wählen Sie zwei Entitäten zur Abstandsverfolgung aus.",
+        "title": "Entitäten auswählen",
+        "description": "Wählen Sie zwei oder mehr Entitäten aus, um Abstände zwischen ihnen zu verfolgen. Unterstützte Typen: Person, Geräteverfolger, Sensor oder Zone.\n\nFür eine Gruppe von 3 oder mehr werden alle paarweisen Abstände automatisch verfolgt. Nach der Einrichtung zeigen die Sensoren 'Unbekannt', bis Entitäten einen Standort gemeldet haben.",
         "data": {
-          "entity_a": "Erste Entität",
-          "entity_b": "Zweite Entität"
+          "entities": "Entitäten"
         },
         "data_description": {
-          "entity_a": "Die erste zu verfolgende Entität. Kann eine Person, ein Geräteverfolger, ein Sensor oder eine Zone sein.",
-          "entity_b": "Die zweite zu verfolgende Entität. Muss sich von der ersten unterscheiden."
+          "entities": "Wählen Sie 2–5 Entitäten aus. Jedes Paar erhält einen eigenen Satz von Abstands- und Näherungssensoren."
         }
       },
       "thresholds": {
@@ -65,7 +63,9 @@
       }
     },
     "error": {
-      "same_entity": "Entität A und Entität B müssen unterschiedlich sein.",
+      "too_few_entities": "Wählen Sie mindestens 2 Entitäten aus.",
+      "too_many_entities": "Wählen Sie höchstens 5 Entitäten aus.",
+      "duplicate_entities": "Jede Entität darf nur einmal vorkommen.",
       "exit_below_entry": "Austrittsschwelle muss größer oder gleich der Eintrittsschwelle sein.",
       "zone_thresholds_not_ascending": "Zonenschwellenwerte müssen aufsteigend sein: Sehr nah < Nah < Mittel < Weit."
     },
@@ -223,11 +223,20 @@
       },
       "today_unaccounted_time": {
         "name": "Nicht erfasste Zeit heute"
+      },
+      "min_distance": {
+        "name": "Mindestabstand"
       }
     },
     "binary_sensor": {
       "proximity": {
         "name": "In der Nähe"
+      },
+      "any_in_proximity": {
+        "name": "Irgendeine in der Nähe"
+      },
+      "all_in_proximity": {
+        "name": "Alle in der Nähe"
       }
     },
     "button": {

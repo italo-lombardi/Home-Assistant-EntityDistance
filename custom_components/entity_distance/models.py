@@ -1,7 +1,13 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime
+
+
+def pair_key(a: str, b: str) -> tuple[str, str]:
+    """Return a stable sorted tuple key for an entity pair."""
+    s = sorted([a, b])
+    return (s[0], s[1])
 
 
 @dataclass
@@ -46,5 +52,22 @@ class PairState:
 
 
 @dataclass
+class GroupData:
+    """Coordinator data for a group of entities (one or more pairs)."""
+
+    pairs: dict[tuple[str, str], PairState] = field(default_factory=dict)
+    min_distance_m: float | None = None
+    any_in_proximity: bool = False
+    all_in_proximity: bool = False
+
+
+@dataclass
 class PairData:
+    """Legacy single-pair wrapper — kept so existing sensor/test code compiles unchanged."""
+
     pair: PairState
+
+    @property
+    def pairs(self) -> dict[tuple[str, str], PairState]:
+        k = pair_key(self.pair.entity_a_id, self.pair.entity_b_id)
+        return {k: self.pair}

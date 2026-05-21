@@ -2,15 +2,13 @@
   "config": {
     "step": {
       "user": {
-        "title": "Para encji",
-        "description": "Wybierz dwie encje do śledzenia odległości między nimi.",
+        "title": "Wybierz encje",
+        "description": "Wybierz dwie lub więcej encji do śledzenia odległości między nimi. Obsługiwane typy: osoba, tracker urządzenia, czujnik lub strefa.\n\nDla grupy 3 lub więcej encji wszystkie odległości parami są śledzone automatycznie. Po konfiguracji sensory będą pokazywać 'Nieznany' do momentu, gdy encje zgłoszą lokalizację.",
         "data": {
-          "entity_a": "Pierwsza encja",
-          "entity_b": "Druga encja"
+          "entities": "Encje"
         },
         "data_description": {
-          "entity_a": "Pierwsza encja do śledzenia. Może być osobą, trackerem urządzenia, czujnikiem lub strefą.",
-          "entity_b": "Druga encja do śledzenia. Musi być inna niż pierwsza."
+          "entities": "Wybierz od 2 do 5 encji do śledzenia. Każda para otrzyma własny zestaw czujników odległości i bliskości."
         }
       },
       "thresholds": {
@@ -65,7 +63,9 @@
       }
     },
     "error": {
-      "same_entity": "Encja A i encja B muszą być różne.",
+      "too_few_entities": "Wybierz co najmniej 2 encje.",
+      "too_many_entities": "Wybierz co najwyżej 5 encji.",
+      "duplicate_entities": "Każda encja może pojawić się tylko raz.",
       "exit_below_entry": "Próg wyjścia musi być większy lub równy progowi wejścia.",
       "zone_thresholds_not_ascending": "Progi stref muszą rosnąć w kolejności: Bardzo blisko < Blisko < Średnio < Daleko."
     },
@@ -223,11 +223,20 @@
       },
       "today_unaccounted_time": {
         "name": "Czas nieuwzględniony dzisiaj"
+      },
+      "min_distance": {
+        "name": "Minimalna odległość"
       }
     },
     "binary_sensor": {
       "proximity": {
         "name": "W pobliżu"
+      },
+      "any_in_proximity": {
+        "name": "Jakakolwiek w pobliżu"
+      },
+      "all_in_proximity": {
+        "name": "Wszystkie w pobliżu"
       }
     },
     "button": {

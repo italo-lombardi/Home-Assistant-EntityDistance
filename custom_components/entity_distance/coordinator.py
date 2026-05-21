@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
+import itertools
 import logging
 
 from homeassistant.config_entries import ConfigEntry
@@ -19,6 +20,7 @@ from .const import (
     BUCKET_VERY_FAR,
     BUCKET_VERY_NEAR,
     CONF_DEBOUNCE_S,
+    CONF_ENTITIES,
     CONF_ENTITY_A,
     CONF_ENTITY_B,
     CONF_ENTRY_THRESHOLD_M,
@@ -59,7 +61,7 @@ from .const import (
     STATIONARY_THRESHOLD_M,
     UPDATES_FREQUENCY_WINDOW_S,
 )
-from .models import PairData, PairState
+from .models import GroupData, PairState, pair_key
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -136,7 +138,16 @@ def _calc_bucket(distance_m: float, thresholds: dict[str, float]) -> str:
     return BUCKET_VERY_FAR
 
 
-class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
+def _resolve_entities(data: dict) -> list[str]:
+    """Return entity list from either new CONF_ENTITIES or legacy CONF_ENTITY_A/B."""
+    if CONF_ENTITIES in data:
+        return list(data[CONF_ENTITIES])
+    if CONF_ENTITY_A in data and CONF_ENTITY_B in data:
+        return [data[CONF_ENTITY_A], data[CONF_ENTITY_B]]
+    return []
+
+
+class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         super().__init__(
             hass,
@@ -149,8 +160,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
         self._debouncer: Debouncer | None = None
 
         data = {**entry.data, **entry.options}
-        self._entity_a: str = data[CONF_ENTITY_A]
-        self._entity_b: str = data[CONF_ENTITY_B]
+        self._entities: list[str] = _resolve_entities(data)
         self._entry_threshold_m: float = data.get(CONF_ENTRY_THRESHOLD_M, DEFAULT_ENTRY_THRESHOLD_M)
         self._exit_threshold_m: float = data.get(CONF_EXIT_THRESHOLD_M, DEFAULT_EXIT_THRESHOLD_M)
         self._debounce_s: float = data.get(CONF_DEBOUNCE_S, DEFAULT_DEBOUNCE_S)
@@ -170,15 +180,29 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
             BUCKET_FAR: data.get(CONF_ZONE_FAR_M, DEFAULT_ZONE_FAR_M),
         }
 
-        self._pair_state = PairState(
-            entity_a_id=self._entity_a,
-            entity_b_id=self._entity_b,
+        self._pair_states: dict[tuple[str, str], PairState] = {}
+        for a, b in itertools.combinations(self._entities, 2):
+            k = pair_key(a, b)
+            self._pair_states[k] = PairState(entity_a_id=k[0], entity_b_id=k[1])
+
+        # Reverse index: entity_id → list of pair keys it belongs to (O(1) lookup in state_changed)
+        self._entity_to_pairs: dict[str, list[tuple[str, str]]] = {e: [] for e in self._entities}
+        for k in self._pair_states:
+            self._entity_to_pairs[k[0]].append(k)
+            self._entity_to_pairs[k[1]].append(k)
+
+        # Per-pair resync state
+        self._resync_holding: dict[tuple[str, str], bool] = dict.fromkeys(self._pair_states, False)
+        self._resync_hold_until: dict[tuple[str, str], datetime | None] = dict.fromkeys(
+            self._pair_states
         )
-        self._resync_holding: bool = False
-        self._resync_hold_until: datetime | None = None
-        self._store: Store = Store(hass, 1, f"{DOMAIN}_state_{entry.entry_id}")
-        self._pending_update_a: bool = False
-        self._pending_update_b: bool = False
+
+        self._pending_updates: set[str] = set()
+        self._store: Store = Store(hass, 1, f"{DOMAIN}_group_state_{entry.entry_id}")
+
+    @property
+    def entities(self) -> list[str]:
+        return self._entities
 
     @property
     def bucket_thresholds(self) -> dict[str, float]:
@@ -186,9 +210,13 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
 
     async def async_setup(self) -> None:
         await self._async_load_state()
-        if self._pair_state.proximity_tracking_started is None:
-            self._pair_state.proximity_tracking_started = datetime.now().astimezone()
-            await self._async_save_state()
+
+        now = datetime.now().astimezone()
+        for ps in self._pair_states.values():
+            if ps.proximity_tracking_started is None:
+                ps.proximity_tracking_started = now
+
+        await self._async_save_state()
 
         self._debouncer = Debouncer(
             self.hass,
@@ -198,15 +226,10 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
             function=self._async_recalculate,
         )
 
-        unsub_a = async_track_state_change_event(
-            self.hass, [self._entity_a], self._async_state_changed
-        )
-        unsub_b = async_track_state_change_event(
-            self.hass, [self._entity_b], self._async_state_changed
-        )
+        unsub = async_track_state_change_event(self.hass, self._entities, self._async_state_changed)
         unsub_tick = async_track_time_interval(self.hass, self._async_tick, timedelta(minutes=1))
-        self._unsub_listeners = [unsub_a, unsub_b, unsub_tick]
-        _LOGGER.debug("entity_distance: tracking %s and %s", self._entity_a, self._entity_b)
+        self._unsub_listeners = [unsub, unsub_tick]
+        _LOGGER.debug("entity_distance: tracking %s", self._entities)
 
     @callback
     def async_unload(self) -> None:
@@ -236,62 +259,93 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
             new_state.state if new_state else "none",
         )
         now = datetime.now().astimezone()
-        if entity_id == self._entity_a:
-            self._pair_state.last_update_a = now
-            self._pending_update_a = True
-        elif entity_id == self._entity_b:
-            self._pair_state.last_update_b = now
-            self._pending_update_b = True
+        # Mark last_update for all pairs involving this entity (O(1) via reverse index)
+        for k in self._entity_to_pairs.get(entity_id, []):
+            ps = self._pair_states[k]
+            if entity_id == ps.entity_a_id:
+                ps.last_update_a = now
+            else:
+                ps.last_update_b = now
+        self._pending_updates.add(entity_id)
         self.hass.async_create_task(self._debouncer.async_call())
 
     async def _async_recalculate(self) -> None:
-        state_a = self.hass.states.get(self._entity_a)
-        state_b = self.hass.states.get(self._entity_b)
-
-        ps = self._pair_state
         now = datetime.now().astimezone()
+        pending = set(self._pending_updates)
+        self._pending_updates.clear()
+
+        pair_states_out: dict[tuple[str, str], PairState] = {}
+
+        for k, ps in self._pair_states.items():
+            entity_a = ps.entity_a_id
+            entity_b = ps.entity_b_id
+            pair_states_out[k] = self._calc_pair(ps, entity_a, entity_b, now, pending)
+
+        self._pair_states = pair_states_out
+
+        # Compute group aggregates — only count pairs with valid data
+        valid_pairs = [
+            ps for ps in self._pair_states.values() if ps.data_valid and ps.distance_m is not None
+        ]
+        min_dist: float | None = min((ps.distance_m for ps in valid_pairs), default=None)
+        any_prox = any(ps.proximity for ps in self._pair_states.values() if ps.data_valid)
+        all_prox = (
+            bool(valid_pairs)
+            and len(valid_pairs) == len(self._pair_states)
+            and all(ps.proximity for ps in valid_pairs)
+        )
+
+        group = GroupData(
+            pairs=dict(self._pair_states),
+            min_distance_m=min_dist,
+            any_in_proximity=any_prox,
+            all_in_proximity=all_prox,
+        )
+        self.async_set_updated_data(group)
+        await self._async_save_state()
+
+    def _calc_pair(
+        self,
+        ps: PairState,
+        entity_a: str,
+        entity_b: str,
+        now: datetime,
+        pending: set[str],
+    ) -> PairState:
+        k = pair_key(entity_a, entity_b)
+        state_a = self.hass.states.get(entity_a)
+        state_b = self.hass.states.get(entity_b)
 
         _LOGGER.debug(
-            "entity_distance: recalculate — a=%s(%s) b=%s(%s)",
-            self._entity_a,
+            "entity_distance: recalculate pair (%s, %s) — a=%s b=%s",
+            entity_a,
+            entity_b,
             state_a.state if state_a else "missing",
-            self._entity_b,
             state_b.state if state_b else "missing",
         )
 
-        if state_a is None or state_b is None:
-            _LOGGER.warning("entity_distance: one or both entities not found")
+        def _invalidate(reason: str) -> PairState:
             ps.data_valid = False
+            ps.last_error = reason
             ps.prev_calc_time = None
             ps.prev_distance_m = None
-            self.async_set_updated_data(PairData(pair=ps))
-            return
+            return ps
+
+        if state_a is None or state_b is None:
+            _LOGGER.warning("entity_distance: pair (%s, %s) — entity not found", entity_a, entity_b)
+            return _invalidate("entity_not_found")
 
         if state_a.state in (STATE_UNAVAILABLE, STATE_UNKNOWN) or state_b.state in (
             STATE_UNAVAILABLE,
             STATE_UNKNOWN,
         ):
-            _LOGGER.warning(
-                "entity_distance: entity unavailable — a=%s b=%s",
-                state_a.state,
-                state_b.state,
-            )
-            ps.data_valid = False
-            ps.prev_calc_time = None
-            ps.prev_distance_m = None
-            self.async_set_updated_data(PairData(pair=ps))
-            return
+            return _invalidate("entity_unavailable")
 
         coords_a = _get_coords(state_a)
         coords_b = _get_coords(state_b)
 
         if coords_a is None or coords_b is None:
-            ps.data_valid = False
-            ps.last_error = "coord_extraction_failed"
-            ps.prev_calc_time = None
-            ps.prev_distance_m = None
-            self.async_set_updated_data(PairData(pair=ps))
-            return
+            return _invalidate("coord_extraction_failed")
 
         lat_a, lon_a, acc_a = coords_a
         lat_b, lon_b, acc_b = coords_b
@@ -307,14 +361,13 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
         ):
             _LOGGER.warning(
                 "entity_distance: accuracy filter rejected %s (acc=%.1fm > max=%.1fm)",
-                self._entity_a,
+                entity_a,
                 acc_a,
                 self._max_accuracy_m,
             )
             ps.prev_calc_time = None
             ps.prev_distance_m = None
-            self.async_set_updated_data(PairData(pair=ps))
-            return
+            return ps
 
         if (
             not is_zone_b
@@ -324,34 +377,30 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
         ):
             _LOGGER.warning(
                 "entity_distance: accuracy filter rejected %s (acc=%.1fm > max=%.1fm)",
-                self._entity_b,
+                entity_b,
                 acc_b,
                 self._max_accuracy_m,
             )
             ps.prev_calc_time = None
             ps.prev_distance_m = None
-            self.async_set_updated_data(PairData(pair=ps))
-            return
+            return ps
 
         dist_m = ha_distance(lat_a, lon_a, lat_b, lon_b)
-        if dist_m is None:
+        if dist_m is None or not (0 <= dist_m < float("inf")):
             _LOGGER.error(
-                "entity_distance: ha_distance returned None for %s/%s",
-                self._entity_a,
-                self._entity_b,
+                "entity_distance: ha_distance returned invalid value %r for pair (%s, %s)",
+                dist_m,
+                entity_a,
+                entity_b,
             )
-            ps.data_valid = False
-            ps.prev_calc_time = None
-            ps.prev_distance_m = None
-            self.async_set_updated_data(PairData(pair=ps))
-            return
+            return _invalidate("ha_distance_invalid")
 
         _LOGGER.debug(
-            "entity_distance: distance computed — %.1fm (a=%s acc=%s, b=%s acc=%s)",
+            "entity_distance: pair (%s, %s) dist=%.1fm a_acc=%s b_acc=%s",
+            entity_a,
+            entity_b,
             dist_m,
-            self._entity_a,
             f"{acc_a:.1f}m" if acc_a is not None else "none",
-            self._entity_b,
             f"{acc_b:.1f}m" if acc_b is not None else "none",
         )
 
@@ -367,14 +416,15 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
                 implied_speed_kmh = abs(dist_m - ps.prev_distance_m) / delta_s * 3.6
                 if implied_speed_kmh > self._max_speed_kmh:
                     _LOGGER.warning(
-                        "entity_distance: speed filter rejected update (%.1f km/h > max %.1f km/h)",
+                        "entity_distance: speed filter rejected pair (%s, %s) — %.1f km/h > max %.1f km/h",
+                        entity_a,
+                        entity_b,
                         implied_speed_kmh,
                         self._max_speed_kmh,
                     )
                     ps.prev_calc_time = None
                     ps.prev_distance_m = None
-                    self.async_set_updated_data(PairData(pair=ps))
-                    return
+                    return ps
 
         direction: str | None = None
         closing_speed_kmh: float | None = None
@@ -426,7 +476,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
                 ps.today_zone_seconds.get(current_bucket, 0.0) + elapsed
             )
 
-        if self._pending_update_a:
+        if entity_a in pending:
             ps.update_count_a = self._update_frequency(
                 ps.update_count_a, ps.update_window_start_a, now
             )
@@ -435,9 +485,8 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
                 or (now - ps.update_window_start_a).total_seconds() > UPDATES_FREQUENCY_WINDOW_S
             ):
                 ps.update_window_start_a = now
-            self._pending_update_a = False
 
-        if self._pending_update_b:
+        if entity_b in pending:
             ps.update_count_b = self._update_frequency(
                 ps.update_count_b, ps.update_window_start_b, now
             )
@@ -446,7 +495,6 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
                 or (now - ps.update_window_start_b).total_seconds() > UPDATES_FREQUENCY_WINDOW_S
             ):
                 ps.update_window_start_b = now
-            self._pending_update_b = False
 
         ps.distance_m = dist_m
         ps.prev_distance_m = dist_m
@@ -461,17 +509,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
 
         reliable = self._is_reliable(ps)
 
-        _LOGGER.debug(
-            "entity_distance: calc result — dist=%.1fm dir=%s speed=%s prox=%s→%s reliable=%s",
-            dist_m,
-            direction or "none",
-            f"{closing_speed_kmh:.1f}km/h" if closing_speed_kmh is not None else "none",
-            was_proximity,
-            ps.proximity,
-            reliable,
-        )
-
-        # resync silence: if both entities silent for resync_silence_s, hold updates
+        # resync silence
         if (
             self._resync_silence_s > 0
             and ps.last_update_a is not None
@@ -482,33 +520,41 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
             if (
                 staleness_a >= self._resync_silence_s
                 and staleness_b >= self._resync_silence_s
-                and not self._resync_holding
+                and not self._resync_holding.get(k, False)
             ):
-                self._resync_holding = True
-                self._resync_hold_until = datetime.fromtimestamp(
+                self._resync_holding[k] = True
+                self._resync_hold_until[k] = datetime.fromtimestamp(
                     now.timestamp() + self._resync_hold_s, tz=now.tzinfo
                 )
                 _LOGGER.warning(
-                    "entity_distance: resync silence detected — holding updates for %.0fs",
+                    "entity_distance: resync silence detected for pair (%s, %s) — holding for %.0fs",
+                    entity_a,
+                    entity_b,
                     self._resync_hold_s,
                 )
 
-        if self._resync_holding and self._resync_hold_until:
-            if now < self._resync_hold_until:
-                _LOGGER.debug("entity_distance: in resync hold, skipping update")
-                self.async_set_updated_data(PairData(pair=ps))
-                return
-            self._resync_holding = False
-            self._resync_hold_until = None
+        if self._resync_holding.get(k, False):
+            hold_until = self._resync_hold_until.get(k)
+            if hold_until and now < hold_until:
+                _LOGGER.debug(
+                    "entity_distance: in resync hold for pair (%s, %s)", entity_a, entity_b
+                )
+                return ps
+            self._resync_holding[k] = False
+            self._resync_hold_until[k] = None
 
-        # require_reliable: block proximity=True entry when data unreliable
         if self._require_reliable and not reliable and not was_proximity and ps.proximity:
             ps.proximity = False
             ps.proximity_since = None
-            _LOGGER.debug("entity_distance: proximity entry blocked — data not yet reliable")
+            _LOGGER.debug(
+                "entity_distance: proximity entry blocked for pair (%s, %s) — not yet reliable",
+                entity_a,
+                entity_b,
+            )
+
         event_data = {
-            "entity_a": self._entity_a,
-            "entity_b": self._entity_b,
+            "entity_a": entity_a,
+            "entity_b": entity_b,
             "distance_m": dist_m,
             "entry_threshold_m": self._entry_threshold_m,
             "exit_threshold_m": self._exit_threshold_m,
@@ -520,22 +566,20 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
         if not was_proximity and ps.proximity:
             event = EVENT_ENTER if reliable else EVENT_ENTER_UNRELIABLE
             self.hass.bus.fire(event, event_data)
-            _LOGGER.debug("entity_distance: fired %s", event)
+            _LOGGER.debug("entity_distance: fired %s for pair (%s, %s)", event, entity_a, entity_b)
         elif was_proximity and not ps.proximity:
             self.hass.bus.fire(EVENT_LEAVE, event_data)
-            _LOGGER.debug("entity_distance: fired %s", EVENT_LEAVE)
         else:
             self.hass.bus.fire(EVENT_UPDATE, event_data)
 
-        self.async_set_updated_data(PairData(pair=ps))
-        await self._async_save_state()
+        return ps
 
     def _update_frequency(self, count: int, window_start: datetime | None, now: datetime) -> int:
         if window_start is None:
             return 1
         elapsed = (now - window_start).total_seconds()
         if elapsed > UPDATES_FREQUENCY_WINDOW_S:
-            return 1  # caller must reset window_start too
+            return 1
         return count + 1
 
     def _is_reliable(self, ps: PairState) -> bool:
@@ -544,16 +588,14 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
             and ps.update_count_b >= self._min_updates_reliable
         )
 
-    async def _async_update_data(self) -> PairData:
-        return PairData(pair=self._pair_state)
+    async def _async_update_data(self) -> GroupData:
+        return GroupData(pairs=dict(self._pair_states))
 
     async def _async_save_state(self) -> None:
-        ps = self._pair_state
-        today = ps.today_reset_date
-        await self._store.async_save(
-            {
-                "entity_a": self._entity_a,
-                "entity_b": self._entity_b,
+        payload: dict = {}
+        for k, ps in self._pair_states.items():
+            today = ps.today_reset_date
+            payload[f"{k[0]}__{k[1]}"] = {
                 "today_reset_date": today.isoformat() if today else None,
                 "today_proximity_seconds": ps.today_proximity_seconds,
                 "today_zone_seconds": ps.today_zone_seconds,
@@ -565,42 +607,32 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[PairData]):
                 if ps.last_seen_together
                 else None,
             }
-        )
+        await self._store.async_save(payload)
 
     async def _async_load_state(self) -> None:
         stored = await self._store.async_load()
         if not stored:
             return
         try:
-            # If entities changed (reconfiguration), discard history — rate/duration would be meaningless
-            stored_a = stored.get("entity_a")
-            stored_b = stored.get("entity_b")
-            if stored_a and stored_b and (stored_a != self._entity_a or stored_b != self._entity_b):
-                _LOGGER.info(
-                    "entity_distance: entity pair changed (%s/%s → %s/%s), resetting tracking history",
-                    stored_a,
-                    stored_b,
-                    self._entity_a,
-                    self._entity_b,
-                )
-                await self._store.async_remove()
-                return
-            stored_date_str = stored.get("today_reset_date")
-            if not stored_date_str:
-                return
-            stored_date = date.fromisoformat(stored_date_str)
             today = datetime.now().astimezone().date()
-            ps = self._pair_state
-            if stored_date == today:
-                ps.today_proximity_seconds = float(stored.get("today_proximity_seconds", 0.0))
-                ps.today_zone_seconds = dict(stored.get("today_zone_seconds", {}))
-                ps.today_reset_date = stored_date
-            last_seen_str = stored.get("last_seen_together")
-            if last_seen_str:
-                ps.last_seen_together = datetime.fromisoformat(last_seen_str)
-            ps.proximity_duration_s = float(stored.get("proximity_duration_s", 0.0))
-            tracking_started_str = stored.get("proximity_tracking_started")
-            if tracking_started_str:
-                ps.proximity_tracking_started = datetime.fromisoformat(tracking_started_str)
+            for k, ps in self._pair_states.items():
+                store_key = f"{k[0]}__{k[1]}"
+                blob = stored.get(store_key)
+                if not blob:
+                    continue
+                stored_date_str = blob.get("today_reset_date")
+                if stored_date_str:
+                    stored_date = date.fromisoformat(stored_date_str)
+                    if stored_date == today:
+                        ps.today_proximity_seconds = float(blob.get("today_proximity_seconds", 0.0))
+                        ps.today_zone_seconds = dict(blob.get("today_zone_seconds", {}))
+                        ps.today_reset_date = stored_date
+                last_seen_str = blob.get("last_seen_together")
+                if last_seen_str:
+                    ps.last_seen_together = datetime.fromisoformat(last_seen_str)
+                ps.proximity_duration_s = float(blob.get("proximity_duration_s", 0.0))
+                tracking_started_str = blob.get("proximity_tracking_started")
+                if tracking_started_str:
+                    ps.proximity_tracking_started = datetime.fromisoformat(tracking_started_str)
         except Exception:
             _LOGGER.warning("entity_distance: failed to restore persisted state, starting fresh")

@@ -2,15 +2,13 @@
   "config": {
     "step": {
       "user": {
-        "title": "Enhedspar",
-        "description": "Vælg to enheder til at spore afstand mellem.",
+        "title": "Vælg enheder",
+        "description": "Vælg to eller flere enheder til at spore afstande mellem. Understøttede typer: person, enhedssporer, sensor eller zone.\n\nFor en gruppe på 3 eller flere spores alle parvis afstande automatisk. Efter opsætning viser sensorer 'Ukendt', indtil enheder har rapporteret en placering.",
         "data": {
-          "entity_a": "Første enhed",
-          "entity_b": "Anden enhed"
+          "entities": "Enheder"
         },
         "data_description": {
-          "entity_a": "Den første enhed at spore. Kan være en person, enhedssporer, sensor eller zone.",
-          "entity_b": "Den anden enhed at spore. Skal være forskellig fra den første."
+          "entities": "Vælg 2–5 enheder at spore. Hvert par får sit eget sæt afstands- og nærhedssensorer."
         }
       },
       "thresholds": {
@@ -65,7 +63,9 @@
       }
     },
     "error": {
-      "same_entity": "Enhed A og enhed B skal være forskellige.",
+      "too_few_entities": "Vælg mindst 2 enheder.",
+      "too_many_entities": "Vælg højst 5 enheder.",
+      "duplicate_entities": "Hver enhed må kun forekomme én gang.",
       "exit_below_entry": "Udgangstærskel skal være større end eller lig med indgangstærskel.",
       "zone_thresholds_not_ascending": "Zonetærskler skal stige i rækkefølge: Meget tæt < Tæt < Middel < Langt."
     },
@@ -223,11 +223,20 @@
       },
       "today_unaccounted_time": {
         "name": "Uberedsret tid i dag"
+      },
+      "min_distance": {
+        "name": "Minimumsafstand"
       }
     },
     "binary_sensor": {
       "proximity": {
         "name": "I nærheden"
+      },
+      "any_in_proximity": {
+        "name": "Nogen i nærheden"
+      },
+      "all_in_proximity": {
+        "name": "Alle i nærheden"
       }
     },
     "button": {

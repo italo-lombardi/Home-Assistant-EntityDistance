@@ -3,14 +3,12 @@
     "step": {
       "user": {
         "title": "Choose Entities",
-        "description": "Choose the two entities whose distance you want to track. Supported types: person, device tracker, sensor, or zone.\n\nAfter setup, sensors will show 'Unknown' until both entities have reported a location. You can press the Refresh Location button to speed this up, or just wait for the next GPS update.",
+        "description": "Select two or more entities to track distances between. Supported types: person, device tracker, sensor, or zone.\n\nFor a group of 3 or more, all pairwise distances are tracked automatically. After setup, sensors will show 'Unknown' until entities have reported a location.",
         "data": {
-          "entity_a": "First entity",
-          "entity_b": "Second entity"
+          "entities": "Entities"
         },
         "data_description": {
-          "entity_a": "The first entity to track. Can be a person, device tracker, sensor, or zone.",
-          "entity_b": "The second entity to track. Must be different from the first."
+          "entities": "Select 2–5 entities to track. Each pair will get its own set of distance and proximity sensors."
         }
       },
       "thresholds": {
@@ -66,6 +64,9 @@
     },
     "error": {
       "same_entity": "The two entities must be different.",
+      "too_few_entities": "Select at least 2 entities.",
+      "too_many_entities": "Select at most 5 entities.",
+      "duplicate_entities": "Each entity must appear only once.",
       "exit_below_entry": "The away threshold must be greater than or equal to the nearby threshold.",
       "zone_thresholds_not_ascending": "Zone thresholds must increase in order: Very Near < Near < Medium < Far."
     },
@@ -223,11 +224,20 @@
       },
       "today_unaccounted_time": {
         "name": "Today Unaccounted Time"
+      },
+      "min_distance": {
+        "name": "Min Distance"
       }
     },
     "binary_sensor": {
       "proximity": {
         "name": "In Proximity"
+      },
+      "any_in_proximity": {
+        "name": "Any In Proximity"
+      },
+      "all_in_proximity": {
+        "name": "All In Proximity"
       }
     },
     "button": {

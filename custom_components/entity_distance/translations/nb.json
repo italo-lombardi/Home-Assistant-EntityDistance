@@ -2,15 +2,13 @@
   "config": {
     "step": {
       "user": {
-        "title": "Enhetspar",
-        "description": "Velg to enheter for å spore avstand mellom dem.",
+        "title": "Velg enheter",
+        "description": "Velg to eller flere enheter for å spore avstander mellom dem. Støttede typer: person, enhetssporer, sensor eller sone.\n\nFor en gruppe på 3 eller flere spores alle parvis avstander automatisk. Etter oppsett vil sensorer vise 'Ukjent' til enheter har rapportert en posisjon.",
         "data": {
-          "entity_a": "Første enhet",
-          "entity_b": "Andre enhet"
+          "entities": "Enheter"
         },
         "data_description": {
-          "entity_a": "Den første enheten å spore. Kan være en person, enhetssporer, sensor eller sone.",
-          "entity_b": "Den andre enheten å spore. Må være forskjellig fra den første."
+          "entities": "Velg 2–5 enheter å spore. Hvert par får sitt eget sett med avstand- og nærhetssensorer."
         }
       },
       "thresholds": {
@@ -65,7 +63,9 @@
       }
     },
     "error": {
-      "same_entity": "Enhet A og enhet B må være forskjellige.",
+      "too_few_entities": "Velg minst 2 enheter.",
+      "too_many_entities": "Velg høyst 5 enheter.",
+      "duplicate_entities": "Hver enhet må bare forekomme én gang.",
       "exit_below_entry": "Utgangsterskel må være større enn eller lik inngangsterskel.",
       "zone_thresholds_not_ascending": "Sonetersklene må øke i rekkefølge: Veldig nær < Nær < Middels < Langt."
     },
@@ -223,11 +223,20 @@
       },
       "today_unaccounted_time": {
         "name": "Tid uten data i dag"
+      },
+      "min_distance": {
+        "name": "Minimumsavstand"
       }
     },
     "binary_sensor": {
       "proximity": {
         "name": "I nærheten"
+      },
+      "any_in_proximity": {
+        "name": "Noen i nærheten"
+      },
+      "all_in_proximity": {
+        "name": "Alle i nærheten"
       }
     },
     "button": {

@@ -11,8 +11,7 @@ from pytest_homeassistant_custom_component.common import mock_config_flow
 from custom_components.entity_distance.config_flow import EntityDistanceConfigFlow
 from custom_components.entity_distance.const import (
     CONF_DEBOUNCE_S,
-    CONF_ENTITY_A,
-    CONF_ENTITY_B,
+    CONF_ENTITIES,
     CONF_ENTRY_THRESHOLD_M,
     CONF_EXIT_THRESHOLD_M,
     CONF_ZONE_FAR_M,
@@ -29,9 +28,12 @@ from custom_components.entity_distance.const import (
     DOMAIN,
 )
 
-_USER_STEP_ENTITIES = {
-    CONF_ENTITY_A: "person.alice",
-    CONF_ENTITY_B: "person.bob",
+_USER_STEP_TWO_ENTITIES = {
+    CONF_ENTITIES: ["person.alice", "person.bob"],
+}
+
+_USER_STEP_THREE_ENTITIES = {
+    CONF_ENTITIES: ["person.alice", "person.bob", "person.carol"],
 }
 
 _THRESHOLDS_NO_EXTRAS = {
@@ -52,20 +54,14 @@ _VALID_ZONE_THRESHOLDS = {
 
 @pytest.fixture
 def flow_manager(hass):
-    """Return the config_entries flow manager with our handler registered.
-
-    The HA loader skips loading the integration if the config_flow module is
-    already marked as loaded in hass.data[DATA_COMPONENTS].  We set that flag
-    and register our handler via mock_config_flow so async_init works without
-    a real integration manifest on disk.
-    """
+    """Return the config_entries flow manager with our handler registered."""
     hass.data.setdefault(DATA_COMPONENTS, {})[f"{DOMAIN}.config_flow"] = object()
     with mock_config_flow(DOMAIN, EntityDistanceConfigFlow):
         yield hass.config_entries.flow
 
 
 class TestConfigFlowUserStep:
-    async def test_same_entity_returns_form_with_error(self, flow_manager):
+    async def test_too_few_entities_returns_error(self, flow_manager):
         result = await flow_manager.async_init(
             DOMAIN,
             context={"source": SOURCE_USER},
@@ -75,22 +71,34 @@ class TestConfigFlowUserStep:
 
         result2 = await flow_manager.async_configure(
             result["flow_id"],
-            user_input={
-                CONF_ENTITY_A: "person.alice",
-                CONF_ENTITY_B: "person.alice",
-            },
+            user_input={CONF_ENTITIES: ["person.alice"]},
         )
         assert result2["type"] == FlowResultType.FORM
-        assert result2["errors"]["base"] == "same_entity"
+        assert result2["errors"]["base"] == "too_few_entities"
 
-    async def test_different_entities_advances_to_thresholds(self, flow_manager):
-        result = await flow_manager.async_init(
-            DOMAIN,
-            context={"source": SOURCE_USER},
-        )
+    async def test_duplicate_entities_returns_error(self, flow_manager):
+        result = await flow_manager.async_init(DOMAIN, context={"source": SOURCE_USER})
         result2 = await flow_manager.async_configure(
             result["flow_id"],
-            user_input=_USER_STEP_ENTITIES,
+            user_input={CONF_ENTITIES: ["person.alice", "person.alice"]},
+        )
+        assert result2["type"] == FlowResultType.FORM
+        assert result2["errors"]["base"] == "duplicate_entities"
+
+    async def test_two_entities_advances_to_thresholds(self, flow_manager):
+        result = await flow_manager.async_init(DOMAIN, context={"source": SOURCE_USER})
+        result2 = await flow_manager.async_configure(
+            result["flow_id"],
+            user_input=_USER_STEP_TWO_ENTITIES,
+        )
+        assert result2["type"] == FlowResultType.FORM
+        assert result2["step_id"] == "thresholds"
+
+    async def test_three_entities_advances_to_thresholds(self, flow_manager):
+        result = await flow_manager.async_init(DOMAIN, context={"source": SOURCE_USER})
+        result2 = await flow_manager.async_configure(
+            result["flow_id"],
+            user_input=_USER_STEP_THREE_ENTITIES,
         )
         assert result2["type"] == FlowResultType.FORM
         assert result2["step_id"] == "thresholds"
@@ -100,7 +108,7 @@ class TestConfigFlowThresholdsStep:
     async def _init_to_thresholds(self, flow_manager):
         result = await flow_manager.async_init(DOMAIN, context={"source": SOURCE_USER})
         result2 = await flow_manager.async_configure(
-            result["flow_id"], user_input=_USER_STEP_ENTITIES
+            result["flow_id"], user_input=_USER_STEP_TWO_ENTITIES
         )
         assert result2["step_id"] == "thresholds"
         return result2["flow_id"]
@@ -111,7 +119,7 @@ class TestConfigFlowThresholdsStep:
             flow_id,
             user_input={
                 CONF_ENTRY_THRESHOLD_M: 500,
-                CONF_EXIT_THRESHOLD_M: 300,  # below entry
+                CONF_EXIT_THRESHOLD_M: 300,
                 CONF_DEBOUNCE_S: DEFAULT_DEBOUNCE_S,
                 "show_zone_thresholds": False,
                 "show_advanced": False,
@@ -127,8 +135,7 @@ class TestConfigFlowThresholdsStep:
             user_input=_THRESHOLDS_NO_EXTRAS,
         )
         assert result["type"] == FlowResultType.CREATE_ENTRY
-        assert CONF_ENTITY_A in result["data"]
-        assert CONF_ENTITY_B in result["data"]
+        assert CONF_ENTITIES in result["data"]
 
     async def test_show_advanced_key_not_in_entry_data(self, flow_manager):
         flow_id = await self._init_to_thresholds(flow_manager)
@@ -161,7 +168,7 @@ class TestConfigFlowZoneThresholdsStep:
     async def _init_to_zone_thresholds(self, flow_manager):
         result = await flow_manager.async_init(DOMAIN, context={"source": SOURCE_USER})
         flow_id = result["flow_id"]
-        await flow_manager.async_configure(flow_id, user_input=_USER_STEP_ENTITIES)
+        await flow_manager.async_configure(flow_id, user_input=_USER_STEP_TWO_ENTITIES)
         result2 = await flow_manager.async_configure(
             flow_id,
             user_input={
@@ -181,7 +188,7 @@ class TestConfigFlowZoneThresholdsStep:
             flow_id,
             user_input={
                 CONF_ZONE_VERY_NEAR_M: 500,
-                CONF_ZONE_NEAR_M: 500,  # vn == n → not ascending
+                CONF_ZONE_NEAR_M: 500,
                 CONF_ZONE_MID_M: DEFAULT_ZONE_MID_M,
                 CONF_ZONE_FAR_M: DEFAULT_ZONE_FAR_M,
             },
@@ -195,7 +202,7 @@ class TestConfigFlowZoneThresholdsStep:
             flow_id,
             user_input={
                 CONF_ZONE_VERY_NEAR_M: 100,
-                CONF_ZONE_NEAR_M: 2500,  # n > m
+                CONF_ZONE_NEAR_M: 2500,
                 CONF_ZONE_MID_M: 2000,
                 CONF_ZONE_FAR_M: DEFAULT_ZONE_FAR_M,
             },
@@ -210,7 +217,7 @@ class TestConfigFlowZoneThresholdsStep:
             user_input={
                 CONF_ZONE_VERY_NEAR_M: 100,
                 CONF_ZONE_NEAR_M: 500,
-                CONF_ZONE_MID_M: 12000,  # m > f
+                CONF_ZONE_MID_M: 12000,
                 CONF_ZONE_FAR_M: 10000,
             },
         )
@@ -239,3 +246,12 @@ class TestConfigFlowZoneThresholdsStep:
         assert result["type"] == FlowResultType.CREATE_ENTRY
         assert "_show_advanced" not in result["data"]
         assert "show_advanced" not in result["data"]
+
+    async def test_three_entities_entry_contains_all_three(self, flow_manager):
+        result = await flow_manager.async_init(DOMAIN, context={"source": SOURCE_USER})
+        flow_id = result["flow_id"]
+        await flow_manager.async_configure(flow_id, user_input=_USER_STEP_THREE_ENTITIES)
+        result2 = await flow_manager.async_configure(flow_id, user_input=_THRESHOLDS_NO_EXTRAS)
+        assert result2["type"] == FlowResultType.CREATE_ENTRY
+        entities = result2["data"][CONF_ENTITIES]
+        assert set(entities) == {"person.alice", "person.bob", "person.carol"}

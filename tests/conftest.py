@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import itertools
 from unittest.mock import MagicMock
 
 from homeassistant.config_entries import ConfigEntry
 import pytest
 
-from custom_components.entity_distance.models import PairData, PairState
+from custom_components.entity_distance.models import GroupData, PairData, PairState, pair_key
 
 
 @pytest.fixture
@@ -15,8 +16,28 @@ def mock_config_entry():
     entry = MagicMock(spec=ConfigEntry)
     entry.entry_id = "test_entry_id"
     entry.data = {
-        "entity_a": "person.alice",
-        "entity_b": "person.bob",
+        "entities": ["person.alice", "person.bob"],
+        "entry_threshold_m": 500,
+        "exit_threshold_m": 700,
+        "debounce_s": 0,
+        "max_accuracy_m": 200,
+        "max_speed_kmh": 150,
+        "resync_silence_s": 600,
+        "resync_hold_s": 60,
+        "min_updates_reliable": 3,
+        "updates_window_s": 300,
+        "require_reliable": False,
+    }
+    entry.options = {}
+    return entry
+
+
+@pytest.fixture
+def mock_group_config_entry():
+    entry = MagicMock(spec=ConfigEntry)
+    entry.entry_id = "test_group_entry_id"
+    entry.data = {
+        "entities": ["person.alice", "person.bob", "person.carol"],
         "entry_threshold_m": 500,
         "exit_threshold_m": 700,
         "debounce_s": 0,
@@ -40,6 +61,16 @@ def mock_pair_state():
 @pytest.fixture
 def mock_pair_data(mock_pair_state):
     return PairData(pair=mock_pair_state)
+
+
+@pytest.fixture
+def mock_group_data(mock_group_config_entry):
+    entities = mock_group_config_entry.data["entities"]
+    pairs = {}
+    for a, b in itertools.combinations(entities, 2):
+        k = pair_key(a, b)
+        pairs[k] = PairState(entity_a_id=k[0], entity_b_id=k[1])
+    return GroupData(pairs=pairs)
 
 
 def make_state(

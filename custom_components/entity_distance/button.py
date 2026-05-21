@@ -30,10 +30,17 @@ async def async_setup_entry(
             return state.name
         return entity_id.split(".")[-1].replace("_", " ").title()
 
-    entity_a_name = _friendly_name(entry.data["entity_a"])
-    entity_b_name = _friendly_name(entry.data["entity_b"])
+    entities_list = coordinator.entities
+    group_name = " & ".join(_friendly_name(e) for e in entities_list)
 
-    async_add_entities([RefreshButton(coordinator, entry, entity_a_name, entity_b_name)])
+    group_dev = DeviceInfo(
+        identifiers={(DOMAIN, entry.entry_id)},
+        name=f"Entity Distance — {group_name}",
+        manufacturer="Entity Distance",
+        entry_type=DeviceEntryType.SERVICE,
+    )
+
+    async_add_entities([RefreshButton(coordinator, entry, group_dev)])
 
 
 class RefreshButton(CoordinatorEntity[EntityDistanceCoordinator], ButtonEntity):
@@ -44,25 +51,17 @@ class RefreshButton(CoordinatorEntity[EntityDistanceCoordinator], ButtonEntity):
         self,
         coordinator: EntityDistanceCoordinator,
         entry: ConfigEntry,
-        entity_a_name: str,
-        entity_b_name: str,
+        device_info: DeviceInfo,
     ) -> None:
         super().__init__(coordinator)
         self._entry = entry
         self._attr_unique_id = f"{entry.entry_id}_refresh"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry.entry_id)},
-            name=f"Entity Distance — {entity_a_name} & {entity_b_name}",
-            manufacturer="Entity Distance",
-            entry_type=DeviceEntryType.SERVICE,
-        )
+        self._attr_device_info = device_info
 
     async def async_press(self) -> None:
         registry = er.async_get(self.hass)
-        entity_a = self._entry.data["entity_a"]
-        entity_b = self._entry.data["entity_b"]
-
-        for entity_id in (entity_a, entity_b):
+        # Deduplicate — each entity appears in multiple pairs but refreshes only once
+        for entity_id in set(self.coordinator.entities):
             if entity_id.startswith("zone."):
                 continue
             device_id = self._resolve_device_id(registry, entity_id)

@@ -2,15 +2,13 @@
   "config": {
     "step": {
       "user": {
-        "title": "Coppia di entità",
-        "description": "Seleziona due entità per monitorare la distanza tra loro.",
+        "title": "Scegli le entità",
+        "description": "Seleziona due o più entità per monitorare le distanze tra loro. Tipi supportati: persona, tracker dispositivo, sensore o zona.\n\nPer un gruppo di 3 o più, tutte le distanze a coppie vengono tracciate automaticamente. Dopo la configurazione, i sensori mostreranno 'Sconosciuto' finché le entità non hanno riportato una posizione.",
         "data": {
-          "entity_a": "Prima entità",
-          "entity_b": "Seconda entità"
+          "entities": "Entità"
         },
         "data_description": {
-          "entity_a": "La prima entità da tracciare. Può essere una persona, tracker dispositivo, sensore o zona.",
-          "entity_b": "La seconda entità da tracciare. Deve essere diversa dalla prima."
+          "entities": "Seleziona da 2 a 5 entità da tracciare. Ogni coppia avrà il proprio set di sensori di distanza e prossimità."
         }
       },
       "thresholds": {
@@ -65,7 +63,9 @@
       }
     },
     "error": {
-      "same_entity": "L'entità A e l'entità B devono essere diverse.",
+      "too_few_entities": "Seleziona almeno 2 entità.",
+      "too_many_entities": "Seleziona al massimo 5 entità.",
+      "duplicate_entities": "Ogni entità deve comparire solo una volta.",
       "exit_below_entry": "La soglia di uscita deve essere maggiore o uguale alla soglia di ingresso.",
       "zone_thresholds_not_ascending": "Le soglie di zona devono aumentare in ordine: Molto vicino < Vicino < Medio < Lontano."
     },
@@ -223,11 +223,20 @@
       },
       "today_unaccounted_time": {
         "name": "Tempo non contabilizzato oggi"
+      },
+      "min_distance": {
+        "name": "Distanza minima"
       }
     },
     "binary_sensor": {
       "proximity": {
         "name": "In prossimità"
+      },
+      "any_in_proximity": {
+        "name": "Almeno una in prossimità"
+      },
+      "all_in_proximity": {
+        "name": "Tutte in prossimità"
       }
     },
     "button": {

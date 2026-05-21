@@ -8,13 +8,15 @@
 [![Add to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=italo-lombardi&repository=Home-Assistant-EntityDistance&category=integration)
 [![Add to Home Assistant](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=entity_distance)
 
-Track the distance between any two entities — people, devices, or zones — with sensors for direction, closing speed, ETA, and proximity detection.
+Track the distance between any two or more entities — people, devices, or zones — with sensors for direction, closing speed, ETA, and proximity detection. Track a whole family with a single setup.
 
 ---
 
 ## Features
 
 - **Person-to-person, person-to-zone, device-to-zone, zone-to-zone** — any combination of `person`, `device_tracker`, `sensor`, or `zone` entities
+- **Group tracking** — select 2–5 entities; all pairwise distances are tracked under one config entry (2 entities = 1 pair, 3 = 3 pairs, 4 = 6 pairs)
+- **Group sensors** — for 3+ entities: Min Distance, Any In Proximity, All In Proximity
 - **26 sensors per pair** — distance, proximity zone, proximity zone level, proximity duration, proximity rate, proximity tracking started, last seen together, today proximity time, direction, direction level, closing speed, ETA, today zone times, GPS accuracy, last update, update count, entity state, today unaccounted time (per entity where applicable)
 - **Proximity binary sensor** — ON/OFF with configurable entry/exit hysteresis to prevent flickering
 - **Direction of travel** — approaching, diverging, or stationary
@@ -56,14 +58,15 @@ Track the distance between any two entities — people, devices, or zones — wi
 
 Go to **Settings → Devices & Services → Add Integration → Entity Distance**.
 
-### Step 1: Entity Pair
+### Step 1: Select Entities
 
-Select the two entities to track. Supported types: `person`, `device_tracker`, `sensor`, `zone`.
+Select 2–5 entities to track. Supported types: `person`, `device_tracker`, `sensor`, `zone`.
 
 | Field | Description |
 |-------|-------------|
-| First entity | First entity to track |
-| Second entity | Second entity to track — must be different from the first |
+| Entities | Select 2 to 5 entities — all pairwise distances are tracked automatically |
+
+For a 2-entity selection you get 1 pair. For 3 entities you get 3 pairs. For 4 entities you get 6 pairs. Each pair gets its own sub-device under the group.
 
 <!-- screenshot: step 1 entity pair -->
 
@@ -113,9 +116,16 @@ All settings can be changed after setup via **Configure** on the integration car
 
 ## Entities
 
-Each configured pair creates one HA device with 27 entities.
+Each configured group creates one HA device (the group) with per-pair sub-devices. A 2-entity group creates 28 entities (26 sensors + 1 binary sensor + 1 button). A 3-entity group creates 84 pair entities + 3 group sensors.
 
-### Sensors
+| Group size | Pairs | Total entities (approx) |
+|-----------|-------|------------------------|
+| 2 | 1 | 28 |
+| 3 | 3 | 84 + 3 group |
+| 4 | 6 | 168 + 3 group |
+| 5 | 10 | 280 + 3 group |
+
+### Pair Sensors
 
 | Entity | Description | Device Class |
 |--------|-------------|--------------|
@@ -148,11 +158,19 @@ Each configured pair creates one HA device with 27 entities.
 
 > GPS Accuracy, Last Update, and Update Count are diagnostic sensors — collapsed by default in the HA UI.
 
-### Binary Sensor
+### Binary Sensor (per pair)
 
 | Entity | Description | Device Class |
 |--------|-------------|--------------|
 | In Proximity | ON when within nearby distance, OFF when beyond away distance | `presence` |
+
+### Group Sensors (3+ entities only)
+
+| Entity | Description | Device Class |
+|--------|-------------|--------------|
+| Min Distance | Smallest distance across all pairs in the group | `distance` |
+| Any In Proximity | ON when any pair is in proximity | `presence` |
+| All In Proximity | ON when every pair is in proximity | `presence` |
 
 ### Button
 
@@ -412,9 +430,9 @@ If auto-registration fails (e.g. YAML-only Lovelace mode), add manually:
 
 ```yaml
 resources:
-  - url: /entity_distance/entity-distance-card.js?0.1.0
+  - url: /entity_distance/entity-distance-card.js?0.2.0
     type: module
-  - url: /entity_distance/entity-distance-people-card.js?0.1.0
+  - url: /entity_distance/entity-distance-people-card.js?0.2.0
     type: module
 ```
 

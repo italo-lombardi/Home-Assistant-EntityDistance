@@ -26,9 +26,20 @@ jobs:
           echo "$NOTES" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
+      - name: Detect pre-release
+        id: prerelease
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if echo "$VERSION" | grep -qE '[ab][0-9]|rc[0-9]'; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
           body: ${{ steps.changelog.outputs.notes }}
+          prerelease: ${{ steps.prerelease.outputs.is_prerelease }}

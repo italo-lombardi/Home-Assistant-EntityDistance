@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from custom_components.entity_distance.models import PairData, PairState
+from custom_components.entity_distance.models import GroupData, PairState, pair_key
 from custom_components.entity_distance.sensor import (
     EntityStateSensor,
     TodayUnaccountedTimeSensor,
@@ -18,19 +18,21 @@ _DEFAULT_THRESHOLDS = {}
 
 def _make_sensor(cls, pair_state: PairState, extra=None):
     coordinator = MagicMock()
-    coordinator.data = PairData(pair=pair_state)
+    k = pair_key(pair_state.entity_a_id, pair_state.entity_b_id)
+    coordinator.data = GroupData(pairs={k: pair_state})
     coordinator.bucket_thresholds = _DEFAULT_THRESHOLDS
     entry = MagicMock()
     entry.entry_id = "test_entry"
     sensor = cls.__new__(cls)
     sensor.coordinator = coordinator
     sensor._entry = entry
+    sensor._pair_key = k
     sensor._sensor_key = "test"
     sensor._attr_unique_id = "test_sensor"
     sensor._attr_device_info = {}
     if extra:
-        for k, v in extra.items():
-            setattr(sensor, k, v)
+        for k2, v in extra.items():
+            setattr(sensor, k2, v)
     return sensor
 
 
@@ -110,20 +112,15 @@ class TestTodayUnaccountedTimeSensor:
         assert val >= 0.0
 
     def test_gap_capped_at_midnight_for_yesterday_calc(self):
-        # prev_calc_time is before today's midnight — gap is capped to today only,
-        # so the result is at most time since midnight (not a full 2+ days).
         now = datetime.now().astimezone()
         yesterday = now - timedelta(days=1)
         sensor = self._make(yesterday)
         val = sensor.native_value
         assert val is not None
-        # Capped at today's midnight: always < 24h = 1440 min
         assert val < 1440.0
         assert val >= 0.0
 
     def test_two_hours_ago_within_today(self):
-        # prev_calc_time 2 hours ago within today.
-        # Skip if before 02:00 to avoid test-time-of-day failures.
         now = datetime.now().astimezone()
         today_midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
         two_hours_ago = now - timedelta(hours=2)
@@ -148,8 +145,7 @@ class TestPersistence:
         entry = MagicMock()
         entry.entry_id = "test_entry"
         entry.data = {
-            "entity_a": "person.alice",
-            "entity_b": "person.bob",
+            "entities": ["person.alice", "person.bob"],
         }
         entry.options = {}
 
@@ -157,15 +153,14 @@ class TestPersistence:
         store.async_load = AsyncMock(return_value=stored_data)
         store.async_save = AsyncMock()
 
+        k = pair_key("person.alice", "person.bob")
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+
         coordinator = EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)
         coordinator.hass = hass
         coordinator._entry = entry
-        coordinator._entity_a = "person.alice"
-        coordinator._entity_b = "person.bob"
-        coordinator._pair_state = PairState(
-            entity_a_id="person.alice",
-            entity_b_id="person.bob",
-        )
+        coordinator._entities = ["person.alice", "person.bob"]
+        coordinator._pair_states = {k: ps}
         coordinator._store = store
         coordinator.logger = MagicMock()
         return coordinator
@@ -173,16 +168,19 @@ class TestPersistence:
     @pytest.mark.asyncio
     async def test_load_restores_today_counters_same_day(self):
         today = date.today().isoformat()
+        k = pair_key("person.alice", "person.bob")
         stored = {
-            "today_reset_date": today,
-            "today_proximity_seconds": 1800.0,
-            "today_zone_seconds": {"very_far": 3600.0},
-            "proximity_duration_s": 600.0,
-            "last_seen_together": None,
+            f"{k[0]}__{k[1]}": {
+                "today_reset_date": today,
+                "today_proximity_seconds": 1800.0,
+                "today_zone_seconds": {"very_far": 3600.0},
+                "proximity_duration_s": 600.0,
+                "last_seen_together": None,
+            }
         }
         coordinator = self._make_coordinator(stored)
         await coordinator._async_load_state()
-        ps = coordinator._pair_state
+        ps = coordinator._pair_states[k]
         assert ps.today_proximity_seconds == 1800.0
         assert ps.today_zone_seconds == {"very_far": 3600.0}
         assert ps.proximity_duration_s == 600.0
@@ -190,36 +188,40 @@ class TestPersistence:
     @pytest.mark.asyncio
     async def test_load_discards_today_counters_stale_day(self):
         yesterday = (date.today() - timedelta(days=1)).isoformat()
+        k = pair_key("person.alice", "person.bob")
         stored = {
-            "today_reset_date": yesterday,
-            "today_proximity_seconds": 9999.0,
-            "today_zone_seconds": {"very_near": 9999.0},
-            "proximity_duration_s": 100.0,
-            "last_seen_together": None,
+            f"{k[0]}__{k[1]}": {
+                "today_reset_date": yesterday,
+                "today_proximity_seconds": 9999.0,
+                "today_zone_seconds": {"very_near": 9999.0},
+                "proximity_duration_s": 100.0,
+                "last_seen_together": None,
+            }
         }
         coordinator = self._make_coordinator(stored)
         await coordinator._async_load_state()
-        ps = coordinator._pair_state
-        # today counters should NOT be restored (stale date)
+        ps = coordinator._pair_states[k]
         assert ps.today_proximity_seconds == 0.0
         assert ps.today_zone_seconds == {}
-        # but proximity_duration_s always restored
         assert ps.proximity_duration_s == 100.0
 
     @pytest.mark.asyncio
     async def test_load_restores_last_seen_together(self):
         today = date.today().isoformat()
         ts = "2026-05-13T10:00:00+00:00"
+        k = pair_key("person.alice", "person.bob")
         stored = {
-            "today_reset_date": today,
-            "today_proximity_seconds": 0.0,
-            "today_zone_seconds": {},
-            "proximity_duration_s": 0.0,
-            "last_seen_together": ts,
+            f"{k[0]}__{k[1]}": {
+                "today_reset_date": today,
+                "today_proximity_seconds": 0.0,
+                "today_zone_seconds": {},
+                "proximity_duration_s": 0.0,
+                "last_seen_together": ts,
+            }
         }
         coordinator = self._make_coordinator(stored)
         await coordinator._async_load_state()
-        ps = coordinator._pair_state
+        ps = coordinator._pair_states[k]
         assert ps.last_seen_together is not None
         assert ps.last_seen_together.isoformat() == ts
 
@@ -227,14 +229,16 @@ class TestPersistence:
     async def test_load_handles_no_stored_data(self):
         coordinator = self._make_coordinator(None)
         await coordinator._async_load_state()
-        ps = coordinator._pair_state
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
         assert ps.today_proximity_seconds == 0.0
         assert ps.proximity_duration_s == 0.0
 
     @pytest.mark.asyncio
     async def test_save_persists_today_counters(self):
         coordinator = self._make_coordinator()
-        ps = coordinator._pair_state
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
         ps.today_reset_date = date.today()
         ps.today_proximity_seconds = 300.0
         ps.today_zone_seconds = {"very_far": 1200.0}
@@ -243,6 +247,7 @@ class TestPersistence:
         await coordinator._async_save_state()
         coordinator._store.async_save.assert_called_once()
         saved = coordinator._store.async_save.call_args[0][0]
-        assert saved["today_proximity_seconds"] == 300.0
-        assert saved["today_zone_seconds"] == {"very_far": 1200.0}
-        assert saved["proximity_duration_s"] == 60.0
+        store_key = f"{k[0]}__{k[1]}"
+        assert saved[store_key]["today_proximity_seconds"] == 300.0
+        assert saved[store_key]["today_zone_seconds"] == {"very_far": 1200.0}
+        assert saved[store_key]["proximity_duration_s"] == 60.0

@@ -2,15 +2,13 @@
   "config": {
     "step": {
       "user": {
-        "title": "Enhetspar",
-        "description": "Välj två enheter för att spåra avstånd mellan dem.",
+        "title": "Välj enheter",
+        "description": "Välj två eller fler enheter för att spåra avstånd mellan dem. Typer som stöds: person, enhetsspårare, sensor eller zon.\n\nFör en grupp på 3 eller fler spåras alla parvis avstånd automatiskt. Efter konfiguration visar sensorer 'Okänt' tills enheter har rapporterat en plats.",
         "data": {
-          "entity_a": "Första enheten",
-          "entity_b": "Andra enheten"
+          "entities": "Enheter"
         },
         "data_description": {
-          "entity_a": "Den första entiteten att spåra. Kan vara en person, enhetsspårare, sensor eller zon.",
-          "entity_b": "Den andra entiteten att spåra. Måste skilja sig från den första."
+          "entities": "Välj 2–5 enheter att spåra. Varje par får sitt eget set av avstånds- och nährhetssensorer."
         }
       },
       "thresholds": {
@@ -65,7 +63,9 @@
       }
     },
     "error": {
-      "same_entity": "Enhet A och enhet B måste vara olika.",
+      "too_few_entities": "Välj minst 2 enheter.",
+      "too_many_entities": "Välj högst 5 enheter.",
+      "duplicate_entities": "Varje enhet får bara förekomma en gång.",
       "exit_below_entry": "Utgångsgräns måste vara större än eller lika med ingångsgränsen.",
       "zone_thresholds_not_ascending": "Zontrösklar måste öka i ordning: Mycket nära < Nära < Medel < Långt."
     },
@@ -223,11 +223,20 @@
       },
       "today_unaccounted_time": {
         "name": "Ej redovisad tid idag"
+      },
+      "min_distance": {
+        "name": "Minimiavstånd"
       }
     },
     "binary_sensor": {
       "proximity": {
         "name": "I närheten"
+      },
+      "any_in_proximity": {
+        "name": "Någon i närheten"
+      },
+      "all_in_proximity": {
+        "name": "Alla i närheten"
       }
     },
     "button": {

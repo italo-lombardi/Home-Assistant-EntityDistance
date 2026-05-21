@@ -2,15 +2,13 @@
   "config": {
     "step": {
       "user": {
-        "title": "Paire d'entités",
-        "description": "Sélectionnez deux entités pour suivre la distance entre elles.",
+        "title": "Choisir les entités",
+        "description": "Sélectionnez deux entités ou plus pour suivre les distances entre elles. Types pris en charge : personne, traqueur de dispositif, capteur ou zone.\n\nPour un groupe de 3 entités ou plus, toutes les distances par paires sont suivies automatiquement. Après la configuration, les capteurs afficheront 'Inconnu' jusqu'à ce que les entités aient signalé une position.",
         "data": {
-          "entity_a": "Première entité",
-          "entity_b": "Deuxième entité"
+          "entities": "Entités"
         },
         "data_description": {
-          "entity_a": "La première entité à suivre. Peut être une personne, un traqueur de dispositif, un capteur ou une zone.",
-          "entity_b": "La deuxième entité à suivre. Doit être différente de la première."
+          "entities": "Sélectionnez 2 à 5 entités à suivre. Chaque paire aura son propre ensemble de capteurs de distance et de proximité."
         }
       },
       "thresholds": {
@@ -65,7 +63,9 @@
       }
     },
     "error": {
-      "same_entity": "L'entité A et l'entité B doivent être différentes.",
+      "too_few_entities": "Sélectionnez au moins 2 entités.",
+      "too_many_entities": "Sélectionnez au plus 5 entités.",
+      "duplicate_entities": "Chaque entité ne doit apparaître qu'une seule fois.",
       "exit_below_entry": "Le seuil de sortie doit être supérieur ou égal au seuil d'entrée.",
       "zone_thresholds_not_ascending": "Les seuils de zone doivent augmenter dans l'ordre : Très proche < Proche < Moyen < Loin."
     },
@@ -223,11 +223,20 @@
       },
       "today_unaccounted_time": {
         "name": "Temps non comptabilisé aujourd'hui"
+      },
+      "min_distance": {
+        "name": "Distance minimale"
       }
     },
     "binary_sensor": {
       "proximity": {
         "name": "En proximité"
+      },
+      "any_in_proximity": {
+        "name": "Au moins une en proximité"
+      },
+      "all_in_proximity": {
+        "name": "Toutes en proximité"
       }
     },
     "button": {

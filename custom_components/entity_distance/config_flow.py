@@ -14,8 +14,7 @@ import voluptuous as vol
 
 from .const import (
     CONF_DEBOUNCE_S,
-    CONF_ENTITY_A,
-    CONF_ENTITY_B,
+    CONF_ENTITIES,
     CONF_ENTRY_THRESHOLD_M,
     CONF_EXIT_THRESHOLD_M,
     CONF_MAX_ACCURACY_M,
@@ -38,6 +37,7 @@ from .const import (
     DEFAULT_ZONE_NEAR_M,
     DEFAULT_ZONE_VERY_NEAR_M,
     DOMAIN,
+    MAX_GROUP_ENTITIES,
 )
 
 ENTITY_DOMAINS = ["person", "device_tracker", "sensor", "zone"]
@@ -59,8 +59,14 @@ _ZONE_OPTIONS_KEYS = {
 }
 
 
+def _entry_title(entities: list[str]) -> str:
+    names = [e.split(".")[-1].replace("_", " ").title() for e in entities]
+    return " & ".join(names)
+
+
 class EntityDistanceConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    VERSION = 1
+    VERSION = 2
+    MINOR_VERSION = 1
 
     def __init__(self) -> None:
         self._data: dict = {}
@@ -73,14 +79,18 @@ class EntityDistanceConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self.hass.config_entries.flow.async_abort(flow["flow_id"])
         errors = {}
         if user_input is not None:
-            entity_a = user_input[CONF_ENTITY_A]
-            entity_b = user_input[CONF_ENTITY_B]
+            raw = user_input.get(CONF_ENTITIES, [])
+            entities: list[str] = list(raw) if isinstance(raw, (list, tuple)) else []
 
-            if entity_a == entity_b:
-                errors["base"] = "same_entity"
+            if len(entities) < 2:
+                errors["base"] = "too_few_entities"
+            elif len(set(entities)) != len(entities):
+                errors["base"] = "duplicate_entities"
+            elif len(entities) > MAX_GROUP_ENTITIES:
+                errors["base"] = "too_many_entities"
             else:
-                pair = tuple(sorted([entity_a, entity_b]))
-                await self.async_set_unique_id(f"{DOMAIN}_{pair[0]}_{pair[1]}")
+                uid = f"{DOMAIN}_{'__'.join(sorted(entities))}"
+                await self.async_set_unique_id(uid)
                 self._abort_if_unique_id_configured()
 
                 self._data.update(user_input)
@@ -90,11 +100,8 @@ class EntityDistanceConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_ENTITY_A): EntitySelector(
-                        EntitySelectorConfig(domain=ENTITY_DOMAINS)
-                    ),
-                    vol.Required(CONF_ENTITY_B): EntitySelector(
-                        EntitySelectorConfig(domain=ENTITY_DOMAINS)
+                    vol.Required(CONF_ENTITIES): EntitySelector(
+                        EntitySelectorConfig(domain=ENTITY_DOMAINS, multiple=True)
                     ),
                 }
             ),
@@ -115,13 +122,10 @@ class EntityDistanceConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     return await self.async_step_zone_thresholds()
                 if show_advanced:
                     return await self.async_step_advanced()
-                entity_a = self._data[CONF_ENTITY_A]
-                entity_b = self._data[CONF_ENTITY_B]
-                a_name = entity_a.split(".")[-1].replace("_", " ").title()
-                b_name = entity_b.split(".")[-1].replace("_", " ").title()
+                entities = self._data[CONF_ENTITIES]
                 clean = {k: v for k, v in self._data.items() if not k.startswith("_")}
                 return self.async_create_entry(
-                    title=f"{a_name} & {b_name}",
+                    title=_entry_title(entities),
                     data=clean,
                 )
 
@@ -178,13 +182,10 @@ class EntityDistanceConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self._data.update(user_input)
                 if show_advanced:
                     return await self.async_step_advanced()
-                entity_a = self._data[CONF_ENTITY_A]
-                entity_b = self._data[CONF_ENTITY_B]
-                a_name = entity_a.split(".")[-1].replace("_", " ").title()
-                b_name = entity_b.split(".")[-1].replace("_", " ").title()
+                entities = self._data[CONF_ENTITIES]
                 clean = {k: v for k, v in self._data.items() if not k.startswith("_")}
                 return self.async_create_entry(
-                    title=f"{a_name} & {b_name}",
+                    title=_entry_title(entities),
                     data=clean,
                 )
 
@@ -222,13 +223,10 @@ class EntityDistanceConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_advanced(self, user_input=None):
         if user_input is not None:
             self._data.update(user_input)
-            entity_a = self._data[CONF_ENTITY_A]
-            entity_b = self._data[CONF_ENTITY_B]
-            a_name = entity_a.split(".")[-1].replace("_", " ").title()
-            b_name = entity_b.split(".")[-1].replace("_", " ").title()
+            entities = self._data[CONF_ENTITIES]
             clean = {k: v for k, v in self._data.items() if not k.startswith("_")}
             return self.async_create_entry(
-                title=f"{a_name} & {b_name}",
+                title=_entry_title(entities),
                 data=clean,
             )
 

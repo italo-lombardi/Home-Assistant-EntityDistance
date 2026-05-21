@@ -2,15 +2,13 @@
   "config": {
     "step": {
       "user": {
-        "title": "Par de entidades",
-        "description": "Seleccione dos entidades para rastrear la distancia entre ellas.",
+        "title": "Elegir entidades",
+        "description": "Seleccione dos o más entidades para rastrear las distancias entre ellas. Tipos compatibles: persona, rastreador de dispositivo, sensor o zona.\n\nPara un grupo de 3 o más, todas las distancias por pares se rastrean automáticamente. Tras la configuración, los sensores mostrarán 'Desconocido' hasta que las entidades reporten una ubicación.",
         "data": {
-          "entity_a": "Primera entidad",
-          "entity_b": "Segunda entidad"
+          "entities": "Entidades"
         },
         "data_description": {
-          "entity_a": "La primera entidad a rastrear. Puede ser una persona, rastreador de dispositivo, sensor o zona.",
-          "entity_b": "La segunda entidad a rastrear. Debe ser diferente de la primera."
+          "entities": "Seleccione 2–5 entidades para rastrear. Cada par tendrá su propio conjunto de sensores de distancia y proximidad."
         }
       },
       "thresholds": {
@@ -65,7 +63,9 @@
       }
     },
     "error": {
-      "same_entity": "La entidad A y la entidad B deben ser diferentes.",
+      "too_few_entities": "Seleccione al menos 2 entidades.",
+      "too_many_entities": "Seleccione como máximo 5 entidades.",
+      "duplicate_entities": "Cada entidad debe aparecer solo una vez.",
       "exit_below_entry": "El umbral de salida debe ser mayor o igual al umbral de entrada.",
       "zone_thresholds_not_ascending": "Los umbrales de zona deben aumentar en orden: Muy cerca < Cerca < Medio < Lejos."
     },
@@ -223,11 +223,20 @@
       },
       "today_unaccounted_time": {
         "name": "Tiempo no contabilizado hoy"
+      },
+      "min_distance": {
+        "name": "Distancia mínima"
       }
     },
     "binary_sensor": {
       "proximity": {
         "name": "En proximidad"
+      },
+      "any_in_proximity": {
+        "name": "Alguna en proximidad"
+      },
+      "all_in_proximity": {
+        "name": "Todas en proximidad"
       }
     },
     "button": {

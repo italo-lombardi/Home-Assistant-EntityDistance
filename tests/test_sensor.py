@@ -19,7 +19,7 @@ from custom_components.entity_distance.const import (
     DIRECTION_DIVERGING,
     DIRECTION_STATIONARY,
 )
-from custom_components.entity_distance.models import PairData, PairState
+from custom_components.entity_distance.models import GroupData, PairState, pair_key
 from custom_components.entity_distance.sensor import (
     BucketLevelSensor,
     DirectionLevelSensor,
@@ -48,13 +48,15 @@ _DEFAULT_THRESHOLDS = {
 def _make_sensor(cls, pair_state: PairState):
     """Build a sensor instance with a minimal coordinator/entry mock."""
     coordinator = MagicMock()
-    coordinator.data = PairData(pair=pair_state)
+    k = pair_key(pair_state.entity_a_id, pair_state.entity_b_id)
+    coordinator.data = GroupData(pairs={k: pair_state})
     coordinator.bucket_thresholds = _DEFAULT_THRESHOLDS
     entry = MagicMock()
     entry.entry_id = "test_entry"
     sensor = cls.__new__(cls)
     sensor.coordinator = coordinator
     sensor._entry = entry
+    sensor._pair_key = k
     sensor._sensor_key = "test"
     sensor._attr_unique_id = "test_sensor"
     sensor._attr_device_info = {}
@@ -209,13 +211,15 @@ class TestProximityDurationSensor:
 def _make_zone_sensor(bucket: str, pair_state: PairState) -> TodayZoneTimeSensor:
     """Build a TodayZoneTimeSensor with the given bucket and PairState."""
     coordinator = MagicMock()
-    coordinator.data = PairData(pair=pair_state)
+    k = pair_key(pair_state.entity_a_id, pair_state.entity_b_id)
+    coordinator.data = GroupData(pairs={k: pair_state})
     coordinator.bucket_thresholds = _DEFAULT_THRESHOLDS
     entry = MagicMock()
     entry.entry_id = "test_entry"
     sensor = TodayZoneTimeSensor.__new__(TodayZoneTimeSensor)
     sensor.coordinator = coordinator
     sensor._entry = entry
+    sensor._pair_key = k
     sensor._bucket = bucket
     sensor._sensor_key = f"today_zone_time_{bucket}"
     sensor._attr_unique_id = f"test_sensor_{bucket}"
@@ -226,13 +230,15 @@ def _make_zone_sensor(bucket: str, pair_state: PairState) -> TodayZoneTimeSensor
 def _make_count_sensor(which: str, pair_state: PairState) -> UpdateCountSensor:
     """Build an UpdateCountSensor for entity 'a' or 'b'."""
     coordinator = MagicMock()
-    coordinator.data = PairData(pair=pair_state)
+    k = pair_key(pair_state.entity_a_id, pair_state.entity_b_id)
+    coordinator.data = GroupData(pairs={k: pair_state})
     coordinator.bucket_thresholds = _DEFAULT_THRESHOLDS
     entry = MagicMock()
     entry.entry_id = "test_entry"
     sensor = UpdateCountSensor.__new__(UpdateCountSensor)
     sensor.coordinator = coordinator
     sensor._entry = entry
+    sensor._pair_key = k
     sensor._which = which
     sensor._sensor_key = f"update_count_{which}"
     sensor._attr_unique_id = f"test_sensor_count_{which}"
@@ -497,13 +503,15 @@ def _make_unaccounted_sensor(pair_state):
     from custom_components.entity_distance.sensor import TodayUnaccountedTimeSensor
 
     coordinator = MagicMock()
-    coordinator.data = PairData(pair=pair_state)
+    k = pair_key(pair_state.entity_a_id, pair_state.entity_b_id)
+    coordinator.data = GroupData(pairs={k: pair_state})
     coordinator.bucket_thresholds = _DEFAULT_THRESHOLDS
     entry = MagicMock()
     entry.entry_id = "test_entry"
     sensor = TodayUnaccountedTimeSensor.__new__(TodayUnaccountedTimeSensor)
     sensor.coordinator = coordinator
     sensor._entry = entry
+    sensor._pair_key = k
     sensor._sensor_key = "today_unaccounted_time"
     sensor._attr_unique_id = "test_unaccounted"
     sensor._attr_device_info = {}

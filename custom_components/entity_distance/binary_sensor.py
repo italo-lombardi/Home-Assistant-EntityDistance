@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import itertools
 import logging
 
 from homeassistant.components.binary_sensor import (
@@ -15,7 +16,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import EntityDistanceCoordinator
-from .models import PairState
+from .models import PairState, pair_key
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -33,17 +34,42 @@ async def async_setup_entry(
             return state.name
         return entity_id.split(".")[-1].replace("_", " ").title()
 
-    entity_a_name = _friendly_name(entry.data["entity_a"])
-    entity_b_name = _friendly_name(entry.data["entity_b"])
+    entities_list = coordinator.entities
+    group_name = " & ".join(_friendly_name(e) for e in entities_list)
 
     _LOGGER.debug(
-        "entity_distance: binary_sensor platform setup — entry=%s a=%s b=%s",
+        "entity_distance: binary_sensor platform setup — entry=%s entities=%s",
         entry.entry_id,
-        entry.data["entity_a"],
-        entry.data["entity_b"],
+        entities_list,
     )
 
-    async_add_entities([ProximityBinarySensor(coordinator, entry, entity_a_name, entity_b_name)])
+    sensors: list = []
+
+    for a, b in itertools.combinations(entities_list, 2):
+        k = pair_key(a, b)
+        a_name = _friendly_name(k[0])
+        b_name = _friendly_name(k[1])
+        pair_dev = DeviceInfo(
+            identifiers={(DOMAIN, f"{entry.entry_id}_{k[0]}__{k[1]}")},
+            name=f"{a_name} & {b_name}",
+            manufacturer="Entity Distance",
+            entry_type=DeviceEntryType.SERVICE,
+            via_device=(DOMAIN, entry.entry_id),
+        )
+        sensors.append(ProximityBinarySensor(coordinator, entry, pair_dev, k, a_name, b_name))
+
+    # Group-level: any_in_proximity (only useful for 3+ entities)
+    if len(entities_list) > 2:
+        group_dev = DeviceInfo(
+            identifiers={(DOMAIN, entry.entry_id)},
+            name=f"Entity Distance — {group_name}",
+            manufacturer="Entity Distance",
+            entry_type=DeviceEntryType.SERVICE,
+        )
+        sensors.append(AnyInProximityBinarySensor(coordinator, entry, group_dev, group_name))
+        sensors.append(AllInProximityBinarySensor(coordinator, entry, group_dev, group_name))
+
+    async_add_entities(sensors)
 
 
 class ProximityBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], BinarySensorEntity):
@@ -55,25 +81,70 @@ class ProximityBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], Binary
         self,
         coordinator: EntityDistanceCoordinator,
         entry: ConfigEntry,
+        device_info: DeviceInfo,
+        pair_key_val: tuple[str, str],
         entity_a_name: str,
         entity_b_name: str,
     ) -> None:
         super().__init__(coordinator)
         self._entry = entry
-        self._attr_unique_id = f"{entry.entry_id}_proximity"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry.entry_id)},
-            name=f"Entity Distance — {entity_a_name} & {entity_b_name}",
-            manufacturer="Entity Distance",
-            entry_type=DeviceEntryType.SERVICE,
-        )
+        self._pair_key = pair_key_val
+        key_str = f"{pair_key_val[0]}__{pair_key_val[1]}"
+        self._attr_unique_id = f"{entry.entry_id}_{key_str}_proximity"
+        self._attr_device_info = device_info
 
     @property
     def _pair(self) -> PairState:
-        return self.coordinator.data.pair
+        return self.coordinator.data.pairs[self._pair_key]
 
     @property
     def is_on(self) -> bool | None:
         if not self._pair.data_valid:
             return None
         return self._pair.proximity
+
+
+class AnyInProximityBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], BinarySensorEntity):
+    _attr_has_entity_name = True
+    _attr_device_class = BinarySensorDeviceClass.PRESENCE
+    _attr_translation_key = "any_in_proximity"
+
+    def __init__(
+        self,
+        coordinator: EntityDistanceCoordinator,
+        entry: ConfigEntry,
+        device_info: DeviceInfo,
+        group_name: str,
+    ) -> None:
+        super().__init__(coordinator)
+        self._entry = entry
+        self._attr_unique_id = f"{entry.entry_id}_any_in_proximity"
+        self._attr_device_info = device_info
+        self._attr_name = f"Any In Proximity ({group_name})"
+
+    @property
+    def is_on(self) -> bool | None:
+        return self.coordinator.data.any_in_proximity
+
+
+class AllInProximityBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], BinarySensorEntity):
+    _attr_has_entity_name = True
+    _attr_device_class = BinarySensorDeviceClass.PRESENCE
+    _attr_translation_key = "all_in_proximity"
+
+    def __init__(
+        self,
+        coordinator: EntityDistanceCoordinator,
+        entry: ConfigEntry,
+        device_info: DeviceInfo,
+        group_name: str,
+    ) -> None:
+        super().__init__(coordinator)
+        self._entry = entry
+        self._attr_unique_id = f"{entry.entry_id}_all_in_proximity"
+        self._attr_device_info = device_info
+        self._attr_name = f"All In Proximity ({group_name})"
+
+    @property
+    def is_on(self) -> bool | None:
+        return self.coordinator.data.all_in_proximity

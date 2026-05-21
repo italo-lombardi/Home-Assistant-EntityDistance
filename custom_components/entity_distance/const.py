@@ -4,6 +4,8 @@ DOMAIN = "entity_distance"
 
 CONF_ENTITY_A = "entity_a"
 CONF_ENTITY_B = "entity_b"
+CONF_ENTITIES = "entities"  # list of entity IDs for group tracking
+MAX_GROUP_ENTITIES = 5
 CONF_ENTRY_THRESHOLD_M = "entry_threshold_m"
 CONF_EXIT_THRESHOLD_M = "exit_threshold_m"
 CONF_DEBOUNCE_S = "debounce_s"

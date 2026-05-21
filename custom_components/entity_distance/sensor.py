@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import itertools
 import logging
 
 from homeassistant.components.sensor import (
@@ -30,7 +31,7 @@ from .const import (
     DOMAIN,
 )
 from .coordinator import EntityDistanceCoordinator, _calc_bucket
-from .models import PairState
+from .models import PairState, pair_key
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -50,6 +51,27 @@ _DIRECTION_LEVEL = {
 }
 
 
+def _group_device_info(entry: ConfigEntry, group_name: str) -> DeviceInfo:
+    return DeviceInfo(
+        identifiers={(DOMAIN, entry.entry_id)},
+        name=f"Entity Distance — {group_name}",
+        manufacturer="Entity Distance",
+        entry_type=DeviceEntryType.SERVICE,
+    )
+
+
+def _pair_device_info(
+    entry: ConfigEntry, pair_key_val: tuple[str, str], a_name: str, b_name: str
+) -> DeviceInfo:
+    return DeviceInfo(
+        identifiers={(DOMAIN, f"{entry.entry_id}_{pair_key_val[0]}__{pair_key_val[1]}")},
+        name=f"{a_name} & {b_name}",
+        manufacturer="Entity Distance",
+        entry_type=DeviceEntryType.SERVICE,
+        via_device=(DOMAIN, entry.entry_id),
+    )
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -63,50 +85,67 @@ async def async_setup_entry(
             return state.name
         return entity_id.split(".")[-1].replace("_", " ").title()
 
-    entity_a_name = _friendly_name(entry.data["entity_a"])
-    entity_b_name = _friendly_name(entry.data["entity_b"])
+    entities_list = coordinator.entities
+    group_name = " & ".join(_friendly_name(e) for e in entities_list)
 
     _LOGGER.debug(
-        "entity_distance: sensor platform setup — entry=%s a=%s b=%s",
+        "entity_distance: sensor platform setup — entry=%s entities=%s",
         entry.entry_id,
-        entry.data["entity_a"],
-        entry.data["entity_b"],
+        entities_list,
     )
 
-    async_add_entities(
-        [
-            EntityStateSensor(
-                coordinator, entry, entity_a_name, entity_b_name, "a", entry.data["entity_a"]
-            ),
-            EntityStateSensor(
-                coordinator, entry, entity_a_name, entity_b_name, "b", entry.data["entity_b"]
-            ),
-            TodayUnaccountedTimeSensor(coordinator, entry, entity_a_name, entity_b_name),
-            DistanceSensor(coordinator, entry, entity_a_name, entity_b_name),
-            BucketSensor(coordinator, entry, entity_a_name, entity_b_name),
-            BucketLevelSensor(coordinator, entry, entity_a_name, entity_b_name),
-            ProximityDurationSensor(coordinator, entry, entity_a_name, entity_b_name),
-            ProximityTrackingStartedSensor(coordinator, entry, entity_a_name, entity_b_name),
-            ProximityRateSensor(coordinator, entry, entity_a_name, entity_b_name),
-            LastSeenTogetherSensor(coordinator, entry, entity_a_name, entity_b_name),
-            TodayProximityTimeSensor(coordinator, entry, entity_a_name, entity_b_name),
-            TodayZoneTimeSensor(coordinator, entry, entity_a_name, entity_b_name, BUCKET_VERY_NEAR),
-            TodayZoneTimeSensor(coordinator, entry, entity_a_name, entity_b_name, BUCKET_NEAR),
-            TodayZoneTimeSensor(coordinator, entry, entity_a_name, entity_b_name, BUCKET_MID),
-            TodayZoneTimeSensor(coordinator, entry, entity_a_name, entity_b_name, BUCKET_FAR),
-            TodayZoneTimeSensor(coordinator, entry, entity_a_name, entity_b_name, BUCKET_VERY_FAR),
-            DirectionSensor(coordinator, entry, entity_a_name, entity_b_name),
-            DirectionLevelSensor(coordinator, entry, entity_a_name, entity_b_name),
-            ClosingSpeedSensor(coordinator, entry, entity_a_name, entity_b_name),
-            EtaSensor(coordinator, entry, entity_a_name, entity_b_name),
-            GpsAccuracySensor(coordinator, entry, entity_a_name, entity_b_name, "a"),
-            GpsAccuracySensor(coordinator, entry, entity_a_name, entity_b_name, "b"),
-            LastUpdateSensor(coordinator, entry, entity_a_name, entity_b_name, "a"),
-            LastUpdateSensor(coordinator, entry, entity_a_name, entity_b_name, "b"),
-            UpdateCountSensor(coordinator, entry, entity_a_name, entity_b_name, "a"),
-            UpdateCountSensor(coordinator, entry, entity_a_name, entity_b_name, "b"),
-        ]
-    )
+    all_sensors: list = []
+
+    for a, b in itertools.combinations(entities_list, 2):
+        k = pair_key(a, b)
+        a_name = _friendly_name(k[0])
+        b_name = _friendly_name(k[1])
+        pair_dev = _pair_device_info(entry, k, a_name, b_name)
+        all_sensors.extend(
+            [
+                EntityStateSensor(coordinator, entry, pair_dev, k, a_name, b_name, "a", k[0]),
+                EntityStateSensor(coordinator, entry, pair_dev, k, a_name, b_name, "b", k[1]),
+                TodayUnaccountedTimeSensor(coordinator, entry, pair_dev, k),
+                DistanceSensor(coordinator, entry, pair_dev, k),
+                BucketSensor(coordinator, entry, pair_dev, k),
+                BucketLevelSensor(coordinator, entry, pair_dev, k),
+                ProximityDurationSensor(coordinator, entry, pair_dev, k),
+                ProximityTrackingStartedSensor(coordinator, entry, pair_dev, k),
+                ProximityRateSensor(coordinator, entry, pair_dev, k),
+                LastSeenTogetherSensor(coordinator, entry, pair_dev, k),
+                TodayProximityTimeSensor(coordinator, entry, pair_dev, k),
+                TodayZoneTimeSensor(coordinator, entry, pair_dev, k, BUCKET_VERY_NEAR),
+                TodayZoneTimeSensor(coordinator, entry, pair_dev, k, BUCKET_NEAR),
+                TodayZoneTimeSensor(coordinator, entry, pair_dev, k, BUCKET_MID),
+                TodayZoneTimeSensor(coordinator, entry, pair_dev, k, BUCKET_FAR),
+                TodayZoneTimeSensor(coordinator, entry, pair_dev, k, BUCKET_VERY_FAR),
+                DirectionSensor(coordinator, entry, pair_dev, k),
+                DirectionLevelSensor(coordinator, entry, pair_dev, k),
+                ClosingSpeedSensor(coordinator, entry, pair_dev, k),
+                EtaSensor(coordinator, entry, pair_dev, k),
+                GpsAccuracySensor(coordinator, entry, pair_dev, k, a_name, b_name, "a"),
+                GpsAccuracySensor(coordinator, entry, pair_dev, k, a_name, b_name, "b"),
+                LastUpdateSensor(coordinator, entry, pair_dev, k, a_name, b_name, "a"),
+                LastUpdateSensor(coordinator, entry, pair_dev, k, a_name, b_name, "b"),
+                UpdateCountSensor(coordinator, entry, pair_dev, k, a_name, b_name, "a"),
+                UpdateCountSensor(coordinator, entry, pair_dev, k, a_name, b_name, "b"),
+            ]
+        )
+
+    # Group-level sensors (on the parent group device)
+    if len(entities_list) > 2:
+        group_dev = _group_device_info(entry, group_name)
+        all_sensors.extend(
+            [
+                MinDistanceSensor(coordinator, entry, group_dev, group_name),
+            ]
+        )
+
+    async_add_entities(all_sensors)
+
+
+def _pair_key_str(k: tuple[str, str]) -> str:
+    return f"{k[0]}__{k[1]}"
 
 
 class EntityDistanceSensorBase(CoordinatorEntity[EntityDistanceCoordinator], SensorEntity):
@@ -116,24 +155,20 @@ class EntityDistanceSensorBase(CoordinatorEntity[EntityDistanceCoordinator], Sen
         self,
         coordinator: EntityDistanceCoordinator,
         entry: ConfigEntry,
-        entity_a_name: str,
-        entity_b_name: str,
+        device_info: DeviceInfo,
+        pair_key_val: tuple[str, str],
         sensor_key: str,
     ) -> None:
         super().__init__(coordinator)
         self._entry = entry
+        self._pair_key = pair_key_val
         self._sensor_key = sensor_key
-        self._attr_unique_id = f"{entry.entry_id}_{sensor_key}"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry.entry_id)},
-            name=f"Entity Distance — {entity_a_name} & {entity_b_name}",
-            manufacturer="Entity Distance",
-            entry_type=DeviceEntryType.SERVICE,
-        )
+        self._attr_unique_id = f"{entry.entry_id}_{_pair_key_str(pair_key_val)}_{sensor_key}"
+        self._attr_device_info = device_info
 
     @property
     def _pair(self) -> PairState:
-        return self.coordinator.data.pair
+        return self.coordinator.data.pairs[self._pair_key]
 
 
 class DistanceSensor(EntityDistanceSensorBase):
@@ -142,10 +177,8 @@ class DistanceSensor(EntityDistanceSensorBase):
     _attr_native_unit_of_measurement = UnitOfLength.METERS
     _attr_translation_key = "distance"
 
-    def __init__(self, coordinator, entry, a_name, b_name):
-        super().__init__(coordinator, entry, a_name, b_name, "distance")
-        self._entity_a_id: str = entry.data["entity_a"]
-        self._entity_b_id: str = entry.data["entity_b"]
+    def __init__(self, coordinator, entry, device_info, k):
+        super().__init__(coordinator, entry, device_info, k, "distance")
 
     @property
     def native_value(self) -> float | None:
@@ -154,8 +187,8 @@ class DistanceSensor(EntityDistanceSensorBase):
     @property
     def extra_state_attributes(self) -> dict:
         return {
-            "entity_a": self._entity_a_id,
-            "entity_b": self._entity_b_id,
+            "entity_a": self._pair.entity_a_id,
+            "entity_b": self._pair.entity_b_id,
         }
 
 
@@ -164,8 +197,8 @@ class BucketSensor(EntityDistanceSensorBase):
     _attr_options = BUCKETS
     _attr_translation_key = "bucket"
 
-    def __init__(self, coordinator, entry, a_name, b_name):
-        super().__init__(coordinator, entry, a_name, b_name, "bucket")
+    def __init__(self, coordinator, entry, device_info, k):
+        super().__init__(coordinator, entry, device_info, k, "bucket")
 
     @property
     def native_value(self) -> str | None:
@@ -178,8 +211,8 @@ class BucketLevelSensor(EntityDistanceSensorBase):
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_translation_key = "bucket_level"
 
-    def __init__(self, coordinator, entry, a_name, b_name):
-        super().__init__(coordinator, entry, a_name, b_name, "bucket_level")
+    def __init__(self, coordinator, entry, device_info, k):
+        super().__init__(coordinator, entry, device_info, k, "bucket_level")
 
     @property
     def native_value(self) -> int | None:
@@ -195,8 +228,8 @@ class ProximityDurationSensor(EntityDistanceSensorBase):
     _attr_native_unit_of_measurement = UnitOfTime.MINUTES
     _attr_translation_key = "proximity_duration"
 
-    def __init__(self, coordinator, entry, a_name, b_name):
-        super().__init__(coordinator, entry, a_name, b_name, "proximity_duration")
+    def __init__(self, coordinator, entry, device_info, k):
+        super().__init__(coordinator, entry, device_info, k, "proximity_duration")
 
     @property
     def native_value(self) -> float | None:
@@ -212,8 +245,8 @@ class LastSeenTogetherSensor(EntityDistanceSensorBase):
     _attr_device_class = SensorDeviceClass.TIMESTAMP
     _attr_translation_key = "last_seen_together"
 
-    def __init__(self, coordinator, entry, a_name, b_name):
-        super().__init__(coordinator, entry, a_name, b_name, "last_seen_together")
+    def __init__(self, coordinator, entry, device_info, k):
+        super().__init__(coordinator, entry, device_info, k, "last_seen_together")
 
     @property
     def native_value(self) -> datetime | None:
@@ -226,8 +259,8 @@ class TodayProximityTimeSensor(EntityDistanceSensorBase):
     _attr_native_unit_of_measurement = UnitOfTime.MINUTES
     _attr_translation_key = "today_proximity_time"
 
-    def __init__(self, coordinator, entry, a_name, b_name):
-        super().__init__(coordinator, entry, a_name, b_name, "today_proximity_time")
+    def __init__(self, coordinator, entry, device_info, k):
+        super().__init__(coordinator, entry, device_info, k, "today_proximity_time")
 
     @property
     def native_value(self) -> float | None:
@@ -241,8 +274,8 @@ class TodayZoneTimeSensor(EntityDistanceSensorBase):
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
     _attr_native_unit_of_measurement = UnitOfTime.MINUTES
 
-    def __init__(self, coordinator, entry, a_name, b_name, bucket: str):
-        super().__init__(coordinator, entry, a_name, b_name, f"today_zone_time_{bucket}")
+    def __init__(self, coordinator, entry, device_info, k, bucket: str):
+        super().__init__(coordinator, entry, device_info, k, f"today_zone_time_{bucket}")
         self._bucket = bucket
         self._attr_translation_key = f"today_zone_time_{bucket}"
 
@@ -258,8 +291,8 @@ class DirectionSensor(EntityDistanceSensorBase):
     _attr_options = DIRECTIONS
     _attr_translation_key = "direction"
 
-    def __init__(self, coordinator, entry, a_name, b_name):
-        super().__init__(coordinator, entry, a_name, b_name, "direction")
+    def __init__(self, coordinator, entry, device_info, k):
+        super().__init__(coordinator, entry, device_info, k, "direction")
 
     @property
     def native_value(self) -> str | None:
@@ -270,8 +303,8 @@ class DirectionLevelSensor(EntityDistanceSensorBase):
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_translation_key = "direction_level"
 
-    def __init__(self, coordinator, entry, a_name, b_name):
-        super().__init__(coordinator, entry, a_name, b_name, "direction_level")
+    def __init__(self, coordinator, entry, device_info, k):
+        super().__init__(coordinator, entry, device_info, k, "direction_level")
 
     @property
     def native_value(self) -> int | None:
@@ -286,8 +319,8 @@ class ClosingSpeedSensor(EntityDistanceSensorBase):
     _attr_native_unit_of_measurement = UnitOfSpeed.KILOMETERS_PER_HOUR
     _attr_translation_key = "closing_speed"
 
-    def __init__(self, coordinator, entry, a_name, b_name):
-        super().__init__(coordinator, entry, a_name, b_name, "closing_speed")
+    def __init__(self, coordinator, entry, device_info, k):
+        super().__init__(coordinator, entry, device_info, k, "closing_speed")
 
     @property
     def native_value(self) -> float | None:
@@ -304,8 +337,8 @@ class EtaSensor(EntityDistanceSensorBase):
     _attr_native_unit_of_measurement = UnitOfTime.MINUTES
     _attr_translation_key = "eta"
 
-    def __init__(self, coordinator, entry, a_name, b_name):
-        super().__init__(coordinator, entry, a_name, b_name, "eta")
+    def __init__(self, coordinator, entry, device_info, k):
+        super().__init__(coordinator, entry, device_info, k, "eta")
 
     @property
     def native_value(self) -> float | None:
@@ -318,8 +351,8 @@ class GpsAccuracySensor(EntityDistanceSensorBase):
     _attr_native_unit_of_measurement = UnitOfLength.METERS
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
-    def __init__(self, coordinator, entry, a_name, b_name, which: str):
-        super().__init__(coordinator, entry, a_name, b_name, f"gps_accuracy_{which}")
+    def __init__(self, coordinator, entry, device_info, k, a_name, b_name, which: str):
+        super().__init__(coordinator, entry, device_info, k, f"gps_accuracy_{which}")
         self._which = which
         name = a_name if which == "a" else b_name
         self._attr_name = f"GPS Accuracy ({name})"
@@ -333,8 +366,8 @@ class LastUpdateSensor(EntityDistanceSensorBase):
     _attr_device_class = SensorDeviceClass.TIMESTAMP
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
-    def __init__(self, coordinator, entry, a_name, b_name, which: str):
-        super().__init__(coordinator, entry, a_name, b_name, f"last_update_{which}")
+    def __init__(self, coordinator, entry, device_info, k, a_name, b_name, which: str):
+        super().__init__(coordinator, entry, device_info, k, f"last_update_{which}")
         self._which = which
         name = a_name if which == "a" else b_name
         self._attr_name = f"Last Update ({name})"
@@ -350,8 +383,8 @@ class UpdateCountSensor(EntityDistanceSensorBase):
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_icon = "mdi:update"
 
-    def __init__(self, coordinator, entry, a_name, b_name, which: str):
-        super().__init__(coordinator, entry, a_name, b_name, f"update_count_{which}")
+    def __init__(self, coordinator, entry, device_info, k, a_name, b_name, which: str):
+        super().__init__(coordinator, entry, device_info, k, f"update_count_{which}")
         self._which = which
         name = a_name if which == "a" else b_name
         self._attr_name = f"Update Count Last 30 min ({name})"
@@ -366,8 +399,10 @@ class UpdateCountSensor(EntityDistanceSensorBase):
 class EntityStateSensor(EntityDistanceSensorBase):
     _attr_icon = "mdi:account-circle-outline"
 
-    def __init__(self, coordinator, entry, a_name, b_name, which: str, entity_id: str):
-        super().__init__(coordinator, entry, a_name, b_name, f"entity_state_{which}")
+    def __init__(
+        self, coordinator, entry, device_info, k, a_name, b_name, which: str, entity_id: str
+    ):
+        super().__init__(coordinator, entry, device_info, k, f"entity_state_{which}")
         self._which = which
         self._tracked_entity_id = entity_id
         name = a_name if which == "a" else b_name
@@ -385,8 +420,8 @@ class ProximityTrackingStartedSensor(EntityDistanceSensorBase):
     _attr_device_class = SensorDeviceClass.TIMESTAMP
     _attr_translation_key = "proximity_tracking_started"
 
-    def __init__(self, coordinator, entry, a_name, b_name):
-        super().__init__(coordinator, entry, a_name, b_name, "proximity_tracking_started")
+    def __init__(self, coordinator, entry, device_info, k):
+        super().__init__(coordinator, entry, device_info, k, "proximity_tracking_started")
 
     @property
     def native_value(self) -> datetime | None:
@@ -399,8 +434,8 @@ class ProximityRateSensor(EntityDistanceSensorBase):
     _attr_translation_key = "proximity_rate"
     _attr_suggested_display_precision = 1
 
-    def __init__(self, coordinator, entry, a_name, b_name):
-        super().__init__(coordinator, entry, a_name, b_name, "proximity_rate")
+    def __init__(self, coordinator, entry, device_info, k):
+        super().__init__(coordinator, entry, device_info, k, "proximity_rate")
 
     @property
     def native_value(self) -> float | None:
@@ -423,8 +458,8 @@ class TodayUnaccountedTimeSensor(EntityDistanceSensorBase):
     _attr_native_unit_of_measurement = UnitOfTime.MINUTES
     _attr_translation_key = "today_unaccounted_time"
 
-    def __init__(self, coordinator, entry, a_name, b_name):
-        super().__init__(coordinator, entry, a_name, b_name, "today_unaccounted_time")
+    def __init__(self, coordinator, entry, device_info, k):
+        super().__init__(coordinator, entry, device_info, k, "today_unaccounted_time")
 
     @property
     def native_value(self) -> float | None:
@@ -436,3 +471,30 @@ class TodayUnaccountedTimeSensor(EntityDistanceSensorBase):
         effective_prev = max(ps.prev_calc_time, today_midnight)
         gap_s = (now - effective_prev).total_seconds()
         return round(max(gap_s, 0) / 60, 1)
+
+
+class MinDistanceSensor(CoordinatorEntity[EntityDistanceCoordinator], SensorEntity):
+    """Minimum distance across all pairs in the group. Only shown for groups with 3+ entities."""
+
+    _attr_has_entity_name = True
+    _attr_device_class = SensorDeviceClass.DISTANCE
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = UnitOfLength.METERS
+    _attr_translation_key = "min_distance"
+
+    def __init__(
+        self,
+        coordinator: EntityDistanceCoordinator,
+        entry: ConfigEntry,
+        device_info: DeviceInfo,
+        group_name: str,
+    ) -> None:
+        super().__init__(coordinator)
+        self._entry = entry
+        self._attr_unique_id = f"{entry.entry_id}_min_distance"
+        self._attr_device_info = device_info
+        self._attr_name = f"Min Distance ({group_name})"
+
+    @property
+    def native_value(self) -> float | None:
+        return self.coordinator.data.min_distance_m

@@ -2,15 +2,13 @@
   "config": {
     "step": {
       "user": {
-        "title": "Entiteitenpaar",
-        "description": "Selecteer twee entiteiten om de afstand tussen te volgen.",
+        "title": "Entiteiten kiezen",
+        "description": "Selecteer twee of meer entiteiten om afstanden tussen te volgen. Ondersteunde typen: persoon, apparaattracker, sensor of zone.\n\nVoor een groep van 3 of meer worden alle paarsgewijze afstanden automatisch gevolgd. Na de instelling tonen sensoren 'Onbekend' totdat entiteiten een locatie hebben gemeld.",
         "data": {
-          "entity_a": "Eerste entiteit",
-          "entity_b": "Tweede entiteit"
+          "entities": "Entiteiten"
         },
         "data_description": {
-          "entity_a": "De eerste te volgen entiteit. Kan een persoon, apparaattracker, sensor of zone zijn.",
-          "entity_b": "De tweede te volgen entiteit. Moet verschillen van de eerste."
+          "entities": "Selecteer 2–5 entiteiten om te volgen. Elk paar krijgt zijn eigen set afstands- en nabijheidssensoren."
         }
       },
       "thresholds": {
@@ -65,7 +63,9 @@
       }
     },
     "error": {
-      "same_entity": "Entiteit A en entiteit B moeten verschillend zijn.",
+      "too_few_entities": "Selecteer minimaal 2 entiteiten.",
+      "too_many_entities": "Selecteer maximaal 5 entiteiten.",
+      "duplicate_entities": "Elke entiteit mag maar één keer voorkomen.",
       "exit_below_entry": "Uitgangsdrempel moet groter dan of gelijk aan de ingangsdrempel zijn.",
       "zone_thresholds_not_ascending": "Zoneverlopen moeten stijgen in volgorde: Zeer dichtbij < Dichtbij < Middel < Ver."
     },
@@ -223,11 +223,20 @@
       },
       "today_unaccounted_time": {
         "name": "Niet bijgehouden tijd vandaag"
+      },
+      "min_distance": {
+        "name": "Minimale afstand"
       }
     },
     "binary_sensor": {
       "proximity": {
         "name": "In de buurt"
+      },
+      "any_in_proximity": {
+        "name": "Eén of meer in de buurt"
+      },
+      "all_in_proximity": {
+        "name": "Alle in de buurt"
       }
     },
     "button": {

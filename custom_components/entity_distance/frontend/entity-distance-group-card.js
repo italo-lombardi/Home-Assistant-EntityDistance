@@ -324,7 +324,6 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       return {
         hass: { attribute: false },
         _config: { state: true },
-        _nodes: { state: true },
       };
     }
 
@@ -438,6 +437,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         if (!this._sim || !this.isConnected) return;
         this._sim.tick(IDLE_ALPHA);
         this._nodes = [...this._sim.nodes];
+        this._renderSVG();
         this._rafId = requestAnimationFrame(step);
       };
       this._rafId = requestAnimationFrame(step);
@@ -483,10 +483,10 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         if (w > 10) {
           this._settled = false;
           this._buildSim(w);
+          this._renderSVG();
           this._startIdle();
         }
       };
-      // ResizeObserver catches layout-deferred width in sections grid
       this._ro = new ResizeObserver(() => {
         if (this._ro) { this._ro.disconnect(); this._ro = null; }
         rebuild();
@@ -502,6 +502,91 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         this._buildSim(width);
         this._startIdle();
       }
+      this._renderSVG();
+    }
+
+    _renderSVG() {
+      const wrap = this.shadowRoot?.querySelector(".graph-wrap");
+      if (!wrap || !this._nodes.length || !this.hass || !this._config) return;
+      const { entities } = this._config;
+      const height = Math.max(300, entities.length * 90 + 60);
+      const width = wrap.getBoundingClientRect().width || 360;
+      const nodes = this._nodes;
+      const pairs = this._pairs;
+
+      const edgesHTML = pairs.map(p => {
+        const ni = nodes.findIndex(n => n.id === p.entityA);
+        const nj = nodes.findIndex(n => n.id === p.entityB);
+        if (ni < 0 || nj < 0) return "";
+        const a = nodes[ni], b = nodes[nj];
+        const distState = this.hass.states[`sensor.${p.slug}_distance`];
+        const dirState = this.hass.states[`sensor.${p.slug}_direction`];
+        const zoneState = this.hass.states[`sensor.${p.slug}_proximity_zone`];
+        const proxState = this.hass.states[`binary_sensor.${p.slug}_in_proximity`];
+        const distM = distState?.state !== "unknown" && distState?.state !== "unavailable" ? parseFloat(distState?.state) : null;
+        const zone = zoneState?.state;
+        const inProx = proxState?.state === "on";
+        const color = _zoneColor(zone);
+        const strokeW = inProx ? 3 : 1.5;
+        const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+        const dx = b.x - a.x, dy = b.y - a.y;
+        const len = Math.sqrt(dx * dx + dy * dy) || 1;
+        const ox = -dy / len * 14, oy = dx / len * 14;
+        const distLabel = _formatDistance(distM);
+        const arrow = _dirArrow(dirState?.state);
+        const zoneLabel = zone ? zone.replace(/_/g, " ") : "";
+        const lineLabel = [distLabel, arrow, zoneLabel].filter(Boolean).join(" ");
+        const lx = mx + ox, ly = my + oy;
+        const labelW = lineLabel.length * 6.4;
+        const eid = p.distEntityId.replace(/"/g, "");
+        return `
+          <g style="cursor:pointer" data-entity="${eid}">
+            ${inProx ? `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${color}" stroke-width="8" stroke-opacity="0.18" filter="url(#prox-glow)" class="prox-glow"/>` : ""}
+            <line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${color}" stroke-width="${strokeW}" stroke-opacity="0.9"/>
+            <rect x="${lx - labelW / 2}" y="${ly - 9}" width="${labelW}" height="16" rx="4" fill="var(--card-background-color,#fff)" fill-opacity="0.88"/>
+            <text x="${lx}" y="${ly + 4}" text-anchor="middle" font-size="10" font-family="inherit" font-weight="600" fill="${color}">${lineLabel}</text>
+          </g>`;
+      }).join("");
+
+      const nodesHTML = nodes.map(n => {
+        const pic = _entityPicture(this.hass, n.id);
+        const name = _personName(this.hass, n.id);
+        const stateLabel = _entityStateLabel(this.hass, n.id);
+        const hue = _nameHue(name);
+        const clipId = `clip-${n.id.replace(/[^a-z0-9]/gi, "_")}`;
+        const initials = _initials(name).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+        const safeName = name.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+        const safeState = (stateLabel || "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
+        return `
+          <g>
+            <circle cx="${n.x}" cy="${n.y}" r="${NODE_RADIUS + 1}" fill="none" stroke="var(--divider-color,rgba(0,0,0,0.12))" stroke-width="1.5"/>
+            <circle cx="${n.x}" cy="${n.y}" r="${NODE_RADIUS - 2}" fill="hsl(${hue},45%,42%)"/>
+            ${pic
+              ? `<clipPath id="${clipId}"><circle cx="${n.x}" cy="${n.y}" r="${NODE_RADIUS - 2}"/></clipPath>
+                 <image href="${pic}" x="${n.x - NODE_RADIUS + 2}" y="${n.y - NODE_RADIUS + 2}" width="${(NODE_RADIUS - 2) * 2}" height="${(NODE_RADIUS - 2) * 2}" clip-path="url(#${clipId})" preserveAspectRatio="xMidYMid slice"/>`
+              : `<text x="${n.x}" y="${n.y + 5}" text-anchor="middle" font-size="15" font-weight="700" font-family="inherit" fill="#fff" pointer-events="none">${initials}</text>`}
+            <text x="${n.x}" y="${n.y + NODE_RADIUS + 14}" text-anchor="middle" font-size="11" font-weight="600" font-family="inherit" fill="var(--primary-text-color)">${safeName}</text>
+            ${safeState ? `<text x="${n.x}" y="${n.y + NODE_RADIUS + 26}" text-anchor="middle" font-size="9.5" font-family="inherit" fill="var(--secondary-text-color)">${safeState}</text>` : ""}
+          </g>`;
+      }).join("");
+
+      const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="display:block;width:100%;overflow:visible">
+        <defs>
+          <filter id="prox-glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+            <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        ${edgesHTML}
+        ${nodesHTML}
+      </svg>`;
+
+      wrap.innerHTML = svgStr;
+
+      // Re-attach click listeners (innerHTML wipes them)
+      wrap.querySelectorAll("g[data-entity]").forEach(g => {
+        g.addEventListener("click", () => this._onLineClick(g.dataset.entity));
+      });
     }
 
     _onLineClick(distEntityId) {
@@ -515,29 +600,17 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     render() {
       if (!this._config || !this.hass) return html``;
       const { entities, title } = this._config;
-      const height = Math.max(300, entities.length * 90 + 60);
+      const height = Math.max(300, (entities?.length || 2) * 90 + 60);
 
       if (!entities || entities.length < 2) {
         return html`<ha-card><div class="error-msg">Configure at least 2 entities.</div></ha-card>`;
       }
 
-      const width = this._getWidth();
-      const nodes = this._nodes;
-      const pairs = this._pairs;
-
-      if (!nodes.length) {
-        return html`<ha-card>
-          <div class="card-header"><div class="card-title"><span>🗺</span><span>${entities.map(e => _personName(this.hass, e)).join(" · ")}</span></div></div>
-          <div class="graph-wrap" style="height:${height}px"></div>
-        </ha-card>`;
-      }
-
-      const proxCount = pairs.filter(p => {
+      const proxCount = (this._pairs || []).filter(p => {
         const s = this.hass.states[`binary_sensor.${p.slug}_in_proximity`];
         return s?.state === "on";
       }).length;
-      const totalPairs = pairs.length;
-
+      const totalPairs = (this._pairs || []).length;
       const cardTitle = title || entities.map(e => _personName(this.hass, e)).join(" · ");
 
       return html`
@@ -551,162 +624,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
               ${proxCount} of ${totalPairs} pair${totalPairs !== 1 ? "s" : ""} in proximity
             </span>
           </div>
-
-          <div class="graph-wrap">
-            <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-
-              <!-- defs for clip paths and glow filter -->
-              <defs>
-                ${nodes.map(n => html`
-                  <clipPath id="clip-${n.id.replace(/[^a-z0-9]/gi, "_")}">
-                    <circle cx="${n.x}" cy="${n.y}" r="${NODE_RADIUS - 2}"></circle>
-                  </clipPath>
-                `)}
-                <filter id="prox-glow" x="-50%" y="-50%" width="200%" height="200%">
-                  <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-                  <feMerge>
-                    <feMergeNode in="coloredBlur"/>
-                    <feMergeNode in="SourceGraphic"/>
-                  </feMerge>
-                </filter>
-              </defs>
-
-              <!-- edges -->
-              ${pairs.map(p => {
-                const ni = nodes.findIndex(n => n.id === p.entityA);
-                const nj = nodes.findIndex(n => n.id === p.entityB);
-                if (ni < 0 || nj < 0) return nothing;
-                const a = nodes[ni], b = nodes[nj];
-
-                const distState = this.hass.states[`sensor.${p.slug}_distance`];
-                const dirState = this.hass.states[`sensor.${p.slug}_direction`];
-                const zoneState = this.hass.states[`sensor.${p.slug}_proximity_zone`];
-                const proxState = this.hass.states[`binary_sensor.${p.slug}_in_proximity`];
-
-                const distM = distState?.state !== "unknown" && distState?.state !== "unavailable"
-                  ? parseFloat(distState?.state) : null;
-                const dir = dirState?.state;
-                const zone = zoneState?.state;
-                const inProx = proxState?.state === "on";
-
-                const color = _zoneColor(zone);
-                const strokeW = inProx ? 3 : 1.5;
-                const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
-
-                // Perpendicular offset for label
-                const dx = b.x - a.x, dy = b.y - a.y;
-                const len = Math.sqrt(dx * dx + dy * dy) || 1;
-                const ox = -dy / len * 14, oy = dx / len * 14;
-
-                const distLabel = _formatDistance(distM);
-                const arrow = _dirArrow(dir);
-                const zoneLabel = zone ? zone.replace(/_/g, " ") : "";
-                const lineLabel = [distLabel, arrow, zoneLabel].filter(Boolean).join(" ");
-
-                return html`
-                  <g
-                    style="cursor:pointer"
-                    @click=${() => this._onLineClick(p.distEntityId)}
-                  >
-                    ${inProx ? html`
-                      <line
-                        x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"
-                        stroke="${color}" stroke-width="8" stroke-opacity="0.18"
-                        filter="url(#prox-glow)"
-                        class="prox-glow"
-                      ></line>
-                    ` : nothing}
-                    <line
-                      x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"
-                      stroke="${color}" stroke-width="${strokeW}" stroke-opacity="0.9"
-                    ></line>
-                    <!-- line label bg -->
-                    <rect
-                      x="${mx + ox - lineLabel.length * 3.2}"
-                      y="${my + oy - 9}"
-                      width="${lineLabel.length * 6.4}"
-                      height="16"
-                      rx="4"
-                      fill="var(--card-background-color, #fff)"
-                      fill-opacity="0.88"
-                    ></rect>
-                    <text
-                      x="${mx + ox}" y="${my + oy + 4}"
-                      text-anchor="middle"
-                      font-size="10"
-                      font-family="inherit"
-                      fill="${color}"
-                      font-weight="600"
-                    >${lineLabel}</text>
-                  </g>
-                `;
-              })}
-
-              <!-- nodes -->
-              ${nodes.map(n => {
-                const pic = _entityPicture(this.hass, n.id);
-                const name = _personName(this.hass, n.id);
-                const stateLabel = _entityStateLabel(this.hass, n.id);
-                const hue = _nameHue(name);
-                const clipId = `clip-${n.id.replace(/[^a-z0-9]/gi, "_")}`;
-
-                return html`
-                  <g>
-                    <!-- shadow ring -->
-                    <circle
-                      cx="${n.x}" cy="${n.y}" r="${NODE_RADIUS + 1}"
-                      fill="none"
-                      stroke="var(--divider-color, rgba(0,0,0,0.12))"
-                      stroke-width="1.5"
-                    ></circle>
-                    <!-- avatar background -->
-                    <circle
-                      cx="${n.x}" cy="${n.y}" r="${NODE_RADIUS - 2}"
-                      fill="hsl(${hue}, 45%, 42%)"
-                    ></circle>
-                    ${pic ? html`
-                      <image
-                        href="${pic.startsWith("/") ? pic : pic}"
-                        x="${n.x - NODE_RADIUS + 2}" y="${n.y - NODE_RADIUS + 2}"
-                        width="${(NODE_RADIUS - 2) * 2}" height="${(NODE_RADIUS - 2) * 2}"
-                        clip-path="url(#${clipId})"
-                        preserveAspectRatio="xMidYMid slice"
-                      ></image>
-                    ` : html`
-                      <text
-                        x="${n.x}" y="${n.y + 5}"
-                        text-anchor="middle"
-                        font-size="15"
-                        font-weight="700"
-                        font-family="inherit"
-                        fill="#fff"
-                        pointer-events="none"
-                      >${_initials(name)}</text>
-                    `}
-                    <!-- name below -->
-                    <text
-                      x="${n.x}" y="${n.y + NODE_RADIUS + 14}"
-                      text-anchor="middle"
-                      font-size="11"
-                      font-weight="600"
-                      font-family="inherit"
-                      fill="var(--primary-text-color)"
-                    >${name}</text>
-                    ${stateLabel ? html`
-                      <text
-                        x="${n.x}" y="${n.y + NODE_RADIUS + 26}"
-                        text-anchor="middle"
-                        font-size="9.5"
-                        font-family="inherit"
-                        fill="var(--secondary-text-color)"
-                      >${stateLabel}</text>
-                    ` : nothing}
-                  </g>
-                `;
-              })}
-
-            </svg>
-          </div>
+          <div class="graph-wrap" style="height:${height}px;overflow:hidden"></div>
         </ha-card>
       `;
     }

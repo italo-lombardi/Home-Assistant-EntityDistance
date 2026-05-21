@@ -2,17 +2,26 @@
 
 ## [Unreleased]
 
+## [0.2.1] - upcoming
+
+### Added
+- **Group Card** (`entity-distance-group-card`) — force-directed SVG graph showing all group entities as circles with labeled connecting lines (distance, direction arrow, proximity zone). Lines glow when in proximity. Tap a line to open the pair detail. Auto-discovers groups from hass.states in the visual editor.
+
 ### Fixed
 - `UpdateCountSensor` returned stale count after 30-min window expired — now returns `0` when window has elapsed (`sensor.py`)
-- Pair Card diagnostics showed full device-prefixed label ("Dercy & Italo GPS Accuracy") instead of short metric label — labels are now hardcoded, `friendly_name` parsing removed (`entity-distance-pair-card.js`)
-- Pair Card and Avatar Card `_getPairs()` and all entity ID lookups used v0.1.0 `sensor.entity_distance_` prefix — now discovers pairs via `entity_a` attribute presence; all lookups use `sensor.${slug}_` pattern
+- Pair Card diagnostics showed full device-prefixed label ("Dercy & Italo GPS Accuracy") instead of short metric label — labels are now hardcoded, `friendly_name` parsing removed
+- Pair Card and Avatar Card pair discovery used v0.1.0 `sensor.entity_distance_` prefix — now discovers pairs via `entity_a` attribute presence; all entity ID lookups use `sensor.${slug}_` pattern
 - Entity state badges overlapped the divider line below the hero row — added top padding to `.entity-states`
-- Lovelace resource updater skipped non-`ResourceStorageCollection` setups — added fallback direct assignment (`__init__.py`)
+- Lovelace resource updater skipped non-`ResourceStorageCollection` setups — added fallback direct assignment
+- Stale Lovelace resources from renamed cards (`entity-distance-card.js`, `entity-distance-people-card.js`) now auto-purged on startup
+- Group card blank in `sections` layout — `ResizeObserver` now triggers layout after real card width is known
+- `shouldUpdate` in Pair Card and Avatar Card accessed `old.states[id]` without optional chaining — could throw on first render
 
 ### Changed
 - `TodayZoneTimeSensor` exposes `range_from_m` / `range_to_m` state attributes so users can see the distance bounds of each zone bucket
 - Proximity duration and proximity rate stat boxes now share one row when both are enabled
 - Lovelace cards renamed: `entity-distance-card` → `entity-distance-pair-card`, `entity-distance-people-card` → `entity-distance-avatar-card`; JS files, `__init__.py` constants, and README updated accordingly
+- Group card badge shows "X of N pairs in proximity" instead of generic "In Proximity" label
 - Card versions bumped to `0.2.0`; console log now includes `— github.com/italo-lombardi` suffix
 
 ## [0.2.0] - 2026-05-21

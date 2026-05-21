@@ -482,13 +482,52 @@ compact: false
 
 The visual editor (pencil icon in Lovelace) shows a dropdown of all configured pairs and checkboxes for each option — no YAML editing required.
 
+### Entity Distance — Group Card (`entity-distance-group-card`)
+
+A force-directed graph showing all entities in a group as circles connected by labeled lines. Each line shows distance, direction arrow, and proximity zone. Lines glow when entities are in proximity. Tap a line to open the pair detail.
+
+```yaml
+type: custom:entity-distance-group-card
+entities:
+  - person.italo
+  - person.dercy
+  - zone.home
+  - device_tracker.xceed_location
+```
+
+**All options:**
+```yaml
+type: custom:entity-distance-group-card
+entities:
+  - person.italo
+  - person.dercy
+  - zone.home
+  - device_tracker.xceed_location
+title: ""    # optional custom title; defaults to entity names joined with ·
+```
+
+The visual editor auto-discovers available groups from hass.states and presents them in a dropdown — no manual entity ID entry required.
+
+<!-- SCREENSHOT NEEDED: lovelace_entity_distance_group_card.png
+     What to capture:
+     - A Lovelace dashboard showing the entity-distance-group-card
+     - Use a 4-entity group (person + person + zone + device_tracker) so 6 lines are shown
+     - Ideal state: at least one pair in proximity (green glowing line) and others not
+     - Show the full card including the header badge ("X of 6 pairs in proximity")
+     - Recommended: 800×500 px, light or dark theme
+-->
+
+![Entity Distance — Group Card](docs/screenshots/lovelace_entity_distance_group_card.png)
+
 If auto-registration fails (e.g. YAML-only Lovelace mode), add manually:
 
 ```yaml
 resources:
-  - url: /entity_distance/entity-distance-pair-card.js?0.2.0
+  - url: /entity_distance/entity-distance-pair-card.js?0.2.1
     type: module
-  - url: /entity_distance/entity-distance-avatar-card.js?0.2.0
+  - url: /entity_distance/entity-distance-avatar-card.js?0.2.1
+    type: module
+  - url: /entity_distance/entity-distance-group-card.js?0.2.1
     type: module
 ```
 

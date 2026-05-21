@@ -557,7 +557,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       const slug = this._config?.slug;
       if (!slug) return false;
       const watchIds = this._watchIds(slug);
-      return watchIds.some(id => old.states[id] !== this.hass.states[id]);
+      return watchIds.some(id => old.states?.[id] !== this.hass.states[id]);
     }
 
     _watchIds(slug) {

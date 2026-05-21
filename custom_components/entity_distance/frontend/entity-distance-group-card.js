@@ -349,6 +349,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       this._rafId = null;
       this._idleTimer = null;
       this._settled = false;
+      this._ro = null;
     }
 
     setConfig(config) {
@@ -372,6 +373,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     disconnectedCallback() {
       super.disconnectedCallback();
       this._stopIdle();
+      if (this._ro) { this._ro.disconnect(); this._ro = null; }
     }
 
     // Build/update sim nodes and edges from current hass state
@@ -476,10 +478,22 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     }
 
     firstUpdated() {
-      // DOM is laid out — real width now available; rebuild and re-render
-      const width = this._getWidth();
-      this._buildSim(width);
-      this._startIdle();
+      const rebuild = () => {
+        const w = this._getWidth();
+        if (w > 10) {
+          this._settled = false;
+          this._buildSim(w);
+          this._startIdle();
+        }
+      };
+      // ResizeObserver catches layout-deferred width in sections grid
+      this._ro = new ResizeObserver(() => {
+        if (this._ro) { this._ro.disconnect(); this._ro = null; }
+        rebuild();
+      });
+      const wrap = this.shadowRoot?.querySelector(".graph-wrap");
+      if (wrap) this._ro.observe(wrap);
+      rebuild();
     }
 
     updated(changed) {

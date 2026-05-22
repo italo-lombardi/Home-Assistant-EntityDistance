@@ -149,15 +149,26 @@ class TestProximityDurationSensor:
     def _make_sensor(self, ps: PairState) -> ProximityDurationSensor:
         return _make_sensor(ProximityDurationSensor, ps)
 
-    def test_returns_none_when_data_invalid(self):
+    def test_returns_none_when_tracking_not_started(self):
+        # proximity_tracking_started=None means no tracking yet → None
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
-        ps.data_valid = False
+        ps.proximity_tracking_started = None
         sensor = self._make_sensor(ps)
         assert sensor.native_value is None
+
+    def test_returns_value_even_when_data_invalid(self):
+        # data_valid=False should not suppress duration (GPS bad but session ongoing)
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.data_valid = False
+        ps.proximity_tracking_started = datetime.now().astimezone()
+        ps.proximity_duration_s = 300.0
+        sensor = self._make_sensor(ps)
+        assert sensor.native_value == 5.0
 
     def test_no_live_session_returns_stored_minutes(self):
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.data_valid = True
+        ps.proximity_tracking_started = datetime.now().astimezone()
         ps.proximity = False
         ps.proximity_duration_s = 3600.0  # 60 minutes stored
         ps.proximity_since = None
@@ -170,6 +181,7 @@ class TestProximityDurationSensor:
         past = now - timedelta(seconds=120)
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.data_valid = True
+        ps.proximity_tracking_started = past
         ps.proximity = True
         ps.proximity_since = past
         ps.proximity_duration_s = 0.0
@@ -184,6 +196,7 @@ class TestProximityDurationSensor:
         past = now - timedelta(seconds=60)  # 1 minute live
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.data_valid = True
+        ps.proximity_tracking_started = past
         ps.proximity = True
         ps.proximity_since = past
         ps.proximity_duration_s = 3600.0  # 60 min stored
@@ -196,6 +209,7 @@ class TestProximityDurationSensor:
     def test_zero_stored_zero_live_returns_zero(self):
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.data_valid = True
+        ps.proximity_tracking_started = datetime.now().astimezone()
         ps.proximity = False
         ps.proximity_since = None
         ps.proximity_duration_s = 0.0
@@ -608,6 +622,7 @@ class TestProximityDurationSensorEdgeCases:
         # proximity=True but proximity_since=None: can't add live elapsed → use stored only
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.data_valid = True
+        ps.proximity_tracking_started = datetime.now().astimezone()
         ps.proximity = True
         ps.proximity_since = None
         ps.proximity_duration_s = 120.0  # 2 min stored
@@ -618,6 +633,7 @@ class TestProximityDurationSensorEdgeCases:
         # 100 s / 60 = 1.6666... → 1.7
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.data_valid = True
+        ps.proximity_tracking_started = datetime.now().astimezone()
         ps.proximity = False
         ps.proximity_since = None
         ps.proximity_duration_s = 100.0

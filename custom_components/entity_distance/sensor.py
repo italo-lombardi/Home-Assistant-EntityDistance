@@ -234,11 +234,12 @@ class ProximityDurationSensor(EntityDistanceSensorBase):
 
     @property
     def native_value(self) -> float | None:
-        if not self._pair.data_valid:
+        ps = self._pair
+        if ps.proximity_tracking_started is None:
             return None
-        total_s = self._pair.proximity_duration_s
-        if self._pair.proximity and self._pair.proximity_since:
-            total_s += (datetime.now().astimezone() - self._pair.proximity_since).total_seconds()
+        total_s = ps.proximity_duration_s
+        if ps.proximity and ps.proximity_since:
+            total_s += (datetime.now().astimezone() - ps.proximity_since).total_seconds()
         return round(total_s / 60, 1)
 
 

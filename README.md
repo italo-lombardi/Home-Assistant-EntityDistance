@@ -171,7 +171,7 @@ Each configured group creates one HA device (the group) with per-pair sub-device
 | Proximity Duration | Minutes currently in proximity (live, includes current session) | `duration` |
 | Proximity Tracking Started | Timestamp when tracking began for this pair (set once) | `timestamp` |
 | Proximity Rate | Percentage of tracked time spent in proximity | `%` |
-| Last Seen Together | Timestamp of last proximity entry | `timestamp` |
+| Last Seen Together | Timestamp when the last proximity session ended (exit) — shows "Together now" in the Pair Card while currently in proximity | `timestamp` |
 | Today Proximity Time | Total minutes together today — resets at midnight | `duration` |
 | Today Very Near Time | Minutes spent Very Near today | `duration` |
 | Today Near Time | Minutes spent Near today | `duration` |
@@ -180,7 +180,7 @@ Each configured group creates one HA device (the group) with per-pair sub-device
 | Today Very Far Time | Minutes spent Very Far today | `duration` |
 | Direction | Approaching / Diverging / Stationary | `enum` |
 | Direction Level | Numeric direction: -1 approaching, 0 stationary, 1 diverging | — |
-| Approach Speed | Convergence rate in km/h | `speed` |
+| Closing Speed | Convergence or separation rate in km/h — shown as "Approach speed" when approaching, "Diverging speed" when separating | `speed` |
 | Estimated Arrival Time | Minutes until together (only when approaching) | `duration` |
 | GPS Accuracy (Name A) | GPS fix accuracy of entity A in meters | `distance` |
 | GPS Accuracy (Name B) | GPS fix accuracy of entity B in meters | `distance` |
@@ -309,6 +309,7 @@ Hysteresis logic prevents flickering:
 - **ON** when `distance ≤ entry threshold` (default 200 m)
 - **OFF** when `distance > exit threshold` (default 500 m)
 - State unchanged while distance is between the two thresholds
+- Entry and exit thresholds must differ — equal values are rejected at setup time
 
 ### State (Entity A / B)
 

@@ -358,9 +358,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 acc_a,
                 self._max_accuracy_m,
             )
-            ps.prev_calc_time = None
-            ps.prev_distance_m = None
-            return ps
+            return _invalidate("accuracy_filter_a")
 
         if (
             not is_zone_b
@@ -374,9 +372,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 acc_b,
                 self._max_accuracy_m,
             )
-            ps.prev_calc_time = None
-            ps.prev_distance_m = None
-            return ps
+            return _invalidate("accuracy_filter_b")
 
         dist_m = ha_distance(lat_a, lon_a, lat_b, lon_b)
         if dist_m is None or not (0 <= dist_m < float("inf")):
@@ -415,9 +411,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                         implied_speed_kmh,
                         self._max_speed_kmh,
                     )
-                    ps.prev_calc_time = None
-                    ps.prev_distance_m = None
-                    return ps
+                    return _invalidate("speed_filter")
 
         direction: str | None = None
         closing_speed_kmh: float | None = None
@@ -530,6 +524,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 _LOGGER.debug(
                     "entity_distance: in resync hold for pair (%s, %s)", entity_a, entity_b
                 )
+                ps.data_valid = False
                 return ps
             self._resync_holding[k] = False
             self._resync_hold_until[k] = None
@@ -630,5 +625,5 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 if proximity_since_str:
                     ps.proximity_since = datetime.fromisoformat(proximity_since_str)
                     ps.proximity = True
-        except Exception:
+        except Exception:  # noqa: BLE001
             _LOGGER.warning("entity_distance: failed to restore persisted state, starting fresh")

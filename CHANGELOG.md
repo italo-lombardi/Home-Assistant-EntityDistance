@@ -23,6 +23,10 @@
   - Idle animation: slow node drift for 6 s after last state update
 
 ### Fixed
+- Accuracy filter and speed filter no longer leave `data_valid = True` after rejecting a GPS reading — both now call `_invalidate()` so downstream sensors correctly reflect unavailable data
+- Proximity duration sensor no longer returns `None` when `data_valid` is `False` but tracking has started — gates on `proximity_tracking_started` instead
+- Config flow now rejects equal entry/exit threshold values (previously only rejected exit < entry, allowing a deadlock where entry could never be exited)
+- Resync hold now marks `data_valid = False` while the hold is active — prevents stale data from appearing valid to sensors during the silence window
 - `UpdateCountSensor` returned stale count after 30-min window expired — now returns `0` when window has elapsed (`sensor.py`)
 - Pair Card diagnostics showed full device-prefixed label ("Dercy & Italo GPS Accuracy") instead of short metric label — labels are now hardcoded, `friendly_name` parsing removed
 - Pair Card and Avatar Card pair discovery used v0.1.0 `sensor.entity_distance_` prefix — now discovers pairs via `entity_a` attribute presence; all entity ID lookups use `sensor.${slug}_` pattern
@@ -44,6 +48,14 @@
 - Lovelace cards renamed: `entity-distance-card` → `entity-distance-pair-card`, `entity-distance-people-card` → `entity-distance-avatar-card`; JS files, `__init__.py` constants, and README updated accordingly
 - Group card badge shows "X of N pairs in proximity" instead of generic "In Proximity" label
 - Card versions bumped to `0.2.0`; console log now includes `— github.com/italo-lombardi` suffix
+
+## [0.2.1b7] - 2026-05-22
+
+### Fixed
+- Accuracy filter and speed filter no longer leave `data_valid = True` after rejecting a GPS reading — both now call `_invalidate()` so downstream sensors correctly reflect unavailable data
+- Proximity duration sensor no longer returns `None` when `data_valid` is `False` but tracking has started — gates on `proximity_tracking_started` instead
+- Config flow now rejects equal entry/exit threshold values (previously only rejected exit < entry, allowing a deadlock where entry could never be exited)
+- Resync hold now marks `data_valid = False` while the hold is active — prevents stale data from appearing valid to sensors during the silence window
 
 ## [0.2.0] - 2026-05-21
 

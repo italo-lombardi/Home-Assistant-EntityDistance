@@ -111,7 +111,7 @@ class EntityDistanceConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_thresholds(self, user_input=None):
         errors = {}
         if user_input is not None:
-            if user_input[CONF_EXIT_THRESHOLD_M] < user_input[CONF_ENTRY_THRESHOLD_M]:
+            if user_input[CONF_EXIT_THRESHOLD_M] <= user_input[CONF_ENTRY_THRESHOLD_M]:
                 errors["base"] = "exit_below_entry"
             else:
                 show_advanced = user_input.pop(_CONF_SHOW_ADVANCED, False)
@@ -282,7 +282,7 @@ class EntityDistanceOptionsFlow(config_entries.OptionsFlow):
     async def async_step_thresholds(self, user_input=None):
         errors = {}
         if user_input is not None:
-            if user_input[CONF_EXIT_THRESHOLD_M] < user_input[CONF_ENTRY_THRESHOLD_M]:
+            if user_input[CONF_EXIT_THRESHOLD_M] <= user_input[CONF_ENTRY_THRESHOLD_M]:
                 errors["base"] = "exit_below_entry"
             else:
                 show_advanced = user_input.pop(_CONF_SHOW_ADVANCED, False)

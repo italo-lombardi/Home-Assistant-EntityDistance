@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-## [0.2.1] - upcoming
+## [0.2.1] - 2026-05-22
 
 ### Added
 - **Group Card** (`entity-distance-group-card`) — force-directed SVG graph showing all group entities as circles with labeled connecting lines

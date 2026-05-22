@@ -32,6 +32,11 @@
 - Group card blank in `sections` layout — `ResizeObserver` now triggers layout after real card width is known
 - `shouldUpdate` in Pair Card and Avatar Card accessed `old.states[id]` without optional chaining — could throw on first render
 - `last_seen_together` now records when proximity **ends** (exit) rather than when it begins (entry) — "Last seen together" now means the last completed together session; Pair Card shows "Together now" while `in_proximity` is on
+- Proximity duration sensor no longer resets to near-zero after HA restart — `proximity_since` is now persisted and restored, so an active session continues accumulating correctly across restarts
+- Pair Card "Proximity duration since" timestamp now includes time-of-day, not just date
+- Pair Card speed stat box label now reads "Diverging speed" when entities are moving apart instead of "Approach speed"
+- `datetime.fromtimestamp` in resync hold replaced with `now + timedelta(seconds=...)` for timezone consistency
+- `except Exception` in `button.py` now carries `# noqa: BLE001` suppression comment
 
 ### Changed
 - `TodayZoneTimeSensor` exposes `range_from_m` / `range_to_m` state attributes so users can see the distance bounds of each zone bucket

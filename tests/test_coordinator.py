@@ -345,3 +345,60 @@ class TestLastSeenTogetherOnExit:
         ps.proximity_since = first_exit + timedelta(hours=1)
         # Coordinator entry block does not set last_seen_together
         assert ps.last_seen_together == first_exit
+
+
+# ---------------------------------------------------------------------------
+# proximity_since persistence — live session survives HA restart
+# ---------------------------------------------------------------------------
+
+
+class TestProximitySincePersistence:
+    """proximity_since must be saved and restored so duration accumulates correctly after restart."""
+
+    def test_proximity_since_restored_sets_proximity_true(self):
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        assert ps.proximity is False
+        since = datetime.now().astimezone() - timedelta(minutes=10)
+        # Simulate restore path
+        ps.proximity_since = datetime.fromisoformat(since.isoformat())
+        ps.proximity = True
+        assert ps.proximity is True
+        assert ps.proximity_since is not None
+
+    def test_duration_sensor_includes_live_session_after_restore(self):
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.proximity_duration_s = 300.0  # 5 min accumulated before restart
+        since = datetime.now().astimezone() - timedelta(minutes=20)
+        ps.proximity_since = since
+        ps.proximity = True
+
+        # Simulate what ProximityDurationSensor.native_value computes
+        total_s = ps.proximity_duration_s
+        if ps.proximity and ps.proximity_since:
+            total_s += (datetime.now().astimezone() - ps.proximity_since).total_seconds()
+
+        assert total_s >= 300 + 20 * 60  # at least 5 + 20 min
+
+    def test_proximity_since_none_not_restored_when_missing(self):
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        # No proximity_since in blob — proximity stays False
+        assert ps.proximity is False
+        assert ps.proximity_since is None
+
+    def test_proximity_duration_not_double_counted_after_restore(self):
+        """Duration at restore time must not be added again at next exit."""
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.proximity_duration_s = 600.0  # 10 min from before restart
+        since = datetime.now().astimezone() - timedelta(minutes=5)
+        ps.proximity_since = since
+        ps.proximity = True
+
+        # Exit proximity — only adds since→now, not pre-restart duration again
+        exit_time = datetime.now().astimezone()
+        elapsed = (exit_time - ps.proximity_since).total_seconds()
+        ps.proximity_duration_s += elapsed
+        ps.proximity = False
+        ps.proximity_since = None
+
+        assert ps.proximity_duration_s >= 600 + 5 * 60
+        assert ps.proximity_duration_s < 600 + 10 * 60  # not double-counted

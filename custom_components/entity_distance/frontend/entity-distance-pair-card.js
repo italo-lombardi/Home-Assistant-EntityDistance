@@ -114,7 +114,8 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     if (!isoStr || isoStr === "unknown" || isoStr === "unavailable") return null;
     const d = new Date(isoStr);
     if (isNaN(d.getTime())) return null;
-    return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
+      + " " + d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
   }
 
   function _formatTs(isoStr) {
@@ -690,7 +691,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
             <div class="stat-boxes">
               ${c.show_speed && speedKmh !== null ? html`
                 <div class="stat-box" style="background:rgba(14,165,233,0.1);border:1px solid rgba(14,165,233,0.25)">
-                  <span class="stat-box-label">💨 Approach speed</span>
+                  <span class="stat-box-label">💨 ${direction === "diverging" ? "Diverging speed" : "Approach speed"}</span>
                   <span class="stat-box-value" style="color:#0284c7">${speedKmh.toFixed(1)} km/h</span>
                 </div>` : nothing}
               ${c.show_eta && direction === "approaching" && etaMin !== null ? html`

@@ -516,9 +516,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 and not self._resync_holding.get(k, False)
             ):
                 self._resync_holding[k] = True
-                self._resync_hold_until[k] = datetime.fromtimestamp(
-                    now.timestamp() + self._resync_hold_s, tz=now.tzinfo
-                )
+                self._resync_hold_until[k] = now + timedelta(seconds=self._resync_hold_s)
                 _LOGGER.warning(
                     "entity_distance: resync silence detected for pair (%s, %s) — holding for %.0fs",
                     entity_a,
@@ -599,6 +597,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 "last_seen_together": ps.last_seen_together.isoformat()
                 if ps.last_seen_together
                 else None,
+                "proximity_since": ps.proximity_since.isoformat() if ps.proximity_since else None,
             }
         await self._store.async_save(payload)
 
@@ -627,5 +626,9 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 tracking_started_str = blob.get("proximity_tracking_started")
                 if tracking_started_str:
                     ps.proximity_tracking_started = datetime.fromisoformat(tracking_started_str)
+                proximity_since_str = blob.get("proximity_since")
+                if proximity_since_str:
+                    ps.proximity_since = datetime.fromisoformat(proximity_since_str)
+                    ps.proximity = True
         except Exception:
             _LOGGER.warning("entity_distance: failed to restore persisted state, starting fresh")

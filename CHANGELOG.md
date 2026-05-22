@@ -12,42 +12,58 @@
   - Grid-based initial node layout by entity count: 2 = vertical pair, 3 = triangle, 4 = 2×2, 5 = 3-row with center middle node
   - Adaptive label placement: entity name + state above circle for top-row nodes, below for bottom-row nodes
   - Background rectangles behind text labels to prevent line overlap
-  - `fixed_layout` option: equal spacing regardless of real distance
+  - `fixed_layout` option: equal spacing regardless of real distance (default on)
   - Per-entity hide toggle in editor (eye icon) — hidden entities and all their connecting lines are removed from the graph
   - Badge: "X of N pairs in proximity" counting only visible pairs
   - `pair_settings` per-pair config keyed by sorted entity ID pair (`"entity_a,entity_b"`)
   - Tap a line to open the HA more-info panel for that pair's distance sensor
   - Editor: group selector dropdown, entity order list with ↑/↓ reorder and hide toggle, title field, equal spacing checkbox, per-pair distance/zone label toggles
-  - Auto-discovers available groups from hass.states in the visual editor
+  - Auto-discovers available groups from hass.states using clique detection — correctly separates multiple config entries
   - `ResizeObserver` ensures correct width in the HA sections layout
   - Idle animation: slow node drift for 6 s after last state update
+  - `touch-action: manipulation` on SVG — no tap delay on mobile/Companion app
 
 ### Fixed
 - Accuracy filter and speed filter no longer leave `data_valid = True` after rejecting a GPS reading — both now call `_invalidate()` so downstream sensors correctly reflect unavailable data
 - Proximity duration sensor no longer returns `None` when `data_valid` is `False` but tracking has started — gates on `proximity_tracking_started` instead
 - Config flow now rejects equal entry/exit threshold values (previously only rejected exit < entry, allowing a deadlock where entry could never be exited)
-- Resync hold now marks `data_valid = False` while the hold is active — prevents stale data from appearing valid to sensors during the silence window
-- `UpdateCountSensor` returned stale count after 30-min window expired — now returns `0` when window has elapsed (`sensor.py`)
-- Pair Card diagnostics showed full device-prefixed label ("Dercy & Italo GPS Accuracy") instead of short metric label — labels are now hardcoded, `friendly_name` parsing removed
-- Pair Card and Avatar Card pair discovery used v0.1.0 `sensor.entity_distance_` prefix — now discovers pairs via `entity_a` attribute presence; all entity ID lookups use `sensor.${slug}_` pattern
+- Resync hold now marks `data_valid = False` while the hold is active — prevents stale data appearing valid during silence window
+- Group card group discovery uses clique detection instead of BFS — multiple config entries sharing an entity no longer merge into one combined group
+- `UpdateCountSensor` returned stale count after 30-min window expired — now returns `0` when window has elapsed
+- Pair Card diagnostics showed full device-prefixed label ("Dercy & Italo GPS Accuracy") — labels now hardcoded, `friendly_name` parsing removed
+- Pair Card and Avatar Card pair discovery used v0.1.0 `sensor.entity_distance_` prefix — now discovers pairs via `entity_a` attribute; entity ID lookups use `sensor.${slug}_` pattern
 - Entity state badges overlapped the divider line below the hero row — added top padding to `.entity-states`
 - Lovelace resource updater skipped non-`ResourceStorageCollection` setups — added fallback direct assignment
 - Stale Lovelace resources from renamed cards (`entity-distance-card.js`, `entity-distance-people-card.js`) now auto-purged on startup
 - Group card blank in `sections` layout — `ResizeObserver` now triggers layout after real card width is known
 - `shouldUpdate` in Pair Card and Avatar Card accessed `old.states[id]` without optional chaining — could throw on first render
-- `last_seen_together` now records when proximity **ends** (exit) rather than when it begins (entry) — "Last seen together" now means the last completed together session; Pair Card shows "Together now" while `in_proximity` is on
-- Proximity duration sensor no longer resets to near-zero after HA restart — `proximity_since` is now persisted and restored, so an active session continues accumulating correctly across restarts
+- `last_seen_together` now records when proximity **ends** (exit) rather than when it begins (entry) — Pair Card shows "Together now" while `in_proximity` is on
+- Proximity duration sensor no longer resets to near-zero after HA restart — `proximity_since` is now persisted and restored
 - Pair Card "Proximity duration since" timestamp now includes time-of-day, not just date
-- Pair Card speed stat box label now reads "Diverging speed" when entities are moving apart instead of "Approach speed"
+- Pair Card speed stat box label now reads "Diverging speed" when entities are moving apart
 - `datetime.fromtimestamp` in resync hold replaced with `now + timedelta(seconds=...)` for timezone consistency
 - `except Exception` in `button.py` now carries `# noqa: BLE001` suppression comment
+- `validate.yml` CI workflow now has `permissions: contents: read` — resolves GitHub code scanning warnings
 
 ### Changed
-- `TodayZoneTimeSensor` exposes `range_from_m` / `range_to_m` state attributes so users can see the distance bounds of each zone bucket
+- `TodayZoneTimeSensor` exposes `range_from_m` / `range_to_m` state attributes
 - Proximity duration and proximity rate stat boxes now share one row when both are enabled
-- Lovelace cards renamed: `entity-distance-card` → `entity-distance-pair-card`, `entity-distance-people-card` → `entity-distance-avatar-card`; JS files, `__init__.py` constants, and README updated accordingly
+- Lovelace cards renamed: `entity-distance-card` → `entity-distance-pair-card`, `entity-distance-people-card` → `entity-distance-avatar-card`
 - Group card badge shows "X of N pairs in proximity" instead of generic "In Proximity" label
-- Card versions bumped to `0.2.0`; console log now includes `— github.com/italo-lombardi` suffix
+- Card versions bumped to `0.2.0`; console log includes `— github.com/italo-lombardi` suffix
+
+## [0.2.1b8] - 2026-05-22
+
+### Fixed
+- Group card group discovery uses clique detection instead of connected-components BFS — multiple config entries sharing an entity no longer merge into one combined group
+- Group card `getStubConfig` no longer produces a merged entity list when multiple config entries exist
+
+### Changed
+- Group card `fixed_layout` defaults to `true` (equal spacing) for new cards
+- Group card SVG gets `touch-action: manipulation` — eliminates 300 ms tap delay on mobile/Companion app
+- `validate.yml` CI workflow gets `permissions: contents: read` — resolves GitHub code scanning warnings
+- README screenshot paths corrected to `custom_components/entity_distance/docs/screenshots/`
+- `info.md` updated with Lovelace Cards section describing all three cards
 
 ## [0.2.1b7] - 2026-05-22
 

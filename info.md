@@ -11,7 +11,7 @@ Track the distance between any two or more entities — people, devices, or zone
 - Proximity binary sensor with configurable entry/exit hysteresis thresholds
 - Direction of travel — approaching, diverging, or stationary (GPS jitter filtered)
 - ETA sensor — estimated minutes until together (only when approaching)
-- Closing speed sensor — convergence rate in km/h
+- Closing speed sensor — convergence rate in km/h (labelled "Diverging speed" when separating)
 - Today proximity time — total minutes together today, resets at midnight
 - GPS accuracy and implied speed filters — reject unreliable location updates
 - Reliability tracking — min update count in rolling window before proximity events fire
@@ -19,6 +19,15 @@ Track the distance between any two or more entities — people, devices, or zone
 - Diagnostic sensors — GPS accuracy, last update, update count per entity
 - Refresh button — triggers mobile app location update for all entities in the group
 - Event-driven updates, no polling
+- State persistence — proximity duration, today times, and last seen together survive HA restarts
+
+## Lovelace Cards
+
+Three custom cards are auto-registered on startup — no manual resource setup needed.
+
+- **Pair Card** (`entity-distance-pair-card`) — data-focused card: distance, direction, zone, speed, ETA, proximity stats
+- **Avatar Card** (`entity-distance-avatar-card`) — people-focused card with entity avatars side-by-side
+- **Group Card** (`entity-distance-group-card`) — force-directed SVG graph showing all group entities as circles connected by labeled, color-coded lines; lines glow when a pair is in proximity
 
 ## Setup
 

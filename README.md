@@ -77,7 +77,7 @@ For a 2-entity selection you get 1 pair. For 3 entities you get 3 pairs. For 4 e
      - Recommended: 1200×800 px, light theme
 -->
 
-![Config flow step 1 — select entities](docs/screenshots/config_flow_step1_entity_select.png)
+![Config flow step 1 — select entities](custom_components/entity_distance/docs/screenshots/config_flow_step1_entity_select.png)
 
 ### Step 2: Proximity Settings
 
@@ -98,7 +98,7 @@ For a 2-entity selection you get 1 pair. For 3 entities you get 3 pairs. For 4 e
      - Recommended: 1200×800 px, light theme
 -->
 
-![Config flow step 2 — proximity settings](docs/screenshots/config_flow_step2_proximity_settings.png)
+![Config flow step 2 — proximity settings](custom_components/entity_distance/docs/screenshots/config_flow_step2_proximity_settings.png)
 
 ### Step 3: Zone Thresholds (optional)
 
@@ -121,7 +121,7 @@ Thresholds must be strictly increasing: Very Near < Near < Mid < Far.
      - Recommended: 1200×800 px, light theme
 -->
 
-![Config flow step 3 — zone thresholds](docs/screenshots/config_flow_step3_zone_thresholds.png)
+![Config flow step 3 — zone thresholds](custom_components/entity_distance/docs/screenshots/config_flow_step3_zone_thresholds.png)
 
 ### Step 4: Advanced Filters (optional)
 
@@ -144,7 +144,7 @@ Only shown when "Configure advanced filters" is enabled in Step 2.
      - Recommended: 1200×800 px, light theme
 -->
 
-![Config flow step 4 — advanced filters](docs/screenshots/config_flow_step4_advanced_filters.png)
+![Config flow step 4 — advanced filters](custom_components/entity_distance/docs/screenshots/config_flow_step4_advanced_filters.png)
 
 All settings can be changed after setup via **Configure** on the integration card.
 
@@ -225,7 +225,7 @@ Each configured group creates one HA device (the group) with per-pair sub-device
      - Tip: use browser DevTools to reduce zoom so more fits in one shot
 -->
 
-![Pair device card — all entities](docs/screenshots/device_card_entities.png)
+![Pair device card — all entities](custom_components/entity_distance/docs/screenshots/device_card_entities.png)
 
 ---
 
@@ -242,17 +242,6 @@ Default thresholds (configurable via **Configure** → **Configure proximity zon
 | Very Far | > 10 km | 5 |
 
 The **Proximity Zone Level** sensor exposes the same information as a number (1–5), useful for automations that compare or threshold on zone level without working with strings.
-
-<!-- SCREENSHOT NEEDED: zone_thresholds_config.png
-     What to capture:
-     - Settings → Devices & Services → Entity Distance → Configure (on an existing entry)
-     - Navigate to the zone thresholds step (enable "Configure proximity zone thresholds")
-     - Show the form with custom (non-default) values to make it more illustrative
-       e.g. Very Near=50, Near=300, Mid=1500, Far=8000
-     - Recommended: 1200×800 px, light theme
--->
-
-![Zone thresholds configuration](docs/screenshots/zone_thresholds_config.png)
 
 ---
 
@@ -509,7 +498,7 @@ pair_settings:
 |--------|---------|-------------|
 | `entities` | required | List of 2–5 entity IDs to show in the graph |
 | `title` | `""` | Card title; defaults to entity friendly names joined with `·` |
-| `fixed_layout` | `false` | Equal edge lengths regardless of real distance |
+| `fixed_layout` | `true` | Equal edge lengths regardless of real distance |
 | `hidden_entities` | `[]` | Entity IDs to hide — their nodes and all connecting lines are removed; hidden pairs are excluded from the badge count |
 | `pair_settings` | `{}` | Per-pair overrides, keyed by sorted entity ID pair (`"entity_a,entity_b"`). Each entry supports `show_distance` (bool) and `show_zone` (bool) |
 
@@ -528,7 +517,7 @@ The visual editor auto-discovers available groups from hass.states and presents 
      - Recommended: 800×500 px, light or dark theme
 -->
 
-![Entity Distance — Group Card](docs/screenshots/lovelace_entity_distance_group_card.png)
+![Entity Distance — Group Card](custom_components/entity_distance/docs/screenshots/lovelace_entity_distance_group_card.png)
 
 If auto-registration fails (e.g. YAML-only Lovelace mode), add manually:
 
@@ -551,7 +540,7 @@ resources:
      - Recommended: 800×500 px, light or dark theme (pick the one that looks better)
 -->
 
-![Entity Distance — Pair Card](docs/screenshots/lovelace_entity_distance_card.png)
+![Entity Distance — Pair Card](custom_components/entity_distance/docs/screenshots/lovelace_entity_distance_card.png)
 
 <!-- SCREENSHOT NEEDED: lovelace_entity_distance_people_card.png
      What to capture:
@@ -561,7 +550,7 @@ resources:
      - Recommended: 800×400 px, light or dark theme (pick the one that looks better)
 -->
 
-![Entity Distance — Avatar Card](docs/screenshots/lovelace_entity_distance_people_card.png)
+![Entity Distance — Avatar Card](custom_components/entity_distance/docs/screenshots/lovelace_entity_distance_people_card.png)
 
 ---
 

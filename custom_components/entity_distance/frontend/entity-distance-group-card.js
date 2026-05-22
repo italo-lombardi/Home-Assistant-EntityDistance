@@ -147,7 +147,33 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       s.attributes?.entity_a != null
     );
 
-    // Build adjacency to find clusters
+    // Build a set of all known pairs keyed as "a|b" (sorted)
+    const pairSet = new Set();
+    const allEntities = new Set();
+    for (const s of pairSensors) {
+      const a = s.attributes.entity_a;
+      const b = s.attributes.entity_b;
+      const key = [a, b].sort().join("|");
+      pairSet.add(key);
+      allEntities.add(a);
+      allEntities.add(b);
+    }
+
+    // Find all maximal cliques: groups where every pair has a distance sensor.
+    // Enumerate candidate groups by checking if a set of entities forms a complete graph.
+    // Strategy: for each entity, find its neighbors, then check all subsets of those
+    // neighbors (+ the entity itself) for completeness.
+    function isCompleteGroup(entities) {
+      for (let i = 0; i < entities.length; i++) {
+        for (let j = i + 1; j < entities.length; j++) {
+          const key = [entities[i], entities[j]].sort().join("|");
+          if (!pairSet.has(key)) return false;
+        }
+      }
+      return true;
+    }
+
+    // Build adjacency
     const adj = new Map();
     for (const s of pairSensors) {
       const a = s.attributes.entity_a;
@@ -158,26 +184,49 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       adj.get(b).add(a);
     }
 
-    // Find connected components
-    const visited = new Set();
+    // For each entity, find the maximal clique it belongs to by taking its
+    // neighborhood and greedily building the largest complete subgraph.
+    // Since groups are at most 5 entities, brute-force subset check is fine.
+    const groupKeys = new Set();
     const groups = [];
+
     for (const start of adj.keys()) {
-      if (visited.has(start)) continue;
-      const component = [];
-      const queue = [start];
-      while (queue.length) {
-        const node = queue.shift();
-        if (visited.has(node)) continue;
-        visited.add(node);
-        component.push(node);
-        for (const neighbor of (adj.get(node) || [])) {
-          if (!visited.has(neighbor)) queue.push(neighbor);
+      const neighbors = [start, ...(adj.get(start) || [])];
+      // Try all subsets of size 2..5
+      for (let size = neighbors.length; size >= 2; size--) {
+        // Generate combinations of `size` from neighbors
+        const combos = [];
+        function combine(offset, current) {
+          if (current.length === size) { combos.push([...current]); return; }
+          for (let i = offset; i < neighbors.length; i++) {
+            current.push(neighbors[i]);
+            combine(i + 1, current);
+            current.pop();
+          }
+        }
+        combine(0, []);
+        for (const combo of combos) {
+          const sorted = combo.sort();
+          const key = sorted.join("|");
+          if (groupKeys.has(key)) continue;
+          if (isCompleteGroup(sorted)) {
+            groupKeys.add(key);
+            groups.push(sorted);
+          }
         }
       }
-      if (component.length >= 2) groups.push(component.sort());
     }
 
-    return groups.map(entities => ({
+    // Remove subsets: if group A is a subset of group B, drop A
+    const maximalGroups = groups.filter(g => {
+      const gSet = new Set(g);
+      return !groups.some(other => {
+        if (other === g || other.length <= g.length) return false;
+        return g.every(e => other.includes(e));
+      });
+    });
+
+    return maximalGroups.map(entities => ({
       entities,
       label: entities.map(e => {
         const s = hass.states[e];
@@ -336,7 +385,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     static getStubConfig(hass) {
       const groups = _discoverGroups(hass);
       const entities = groups.length > 0 ? groups[0].entities : [];
-      return { entities, title: "" };
+      return { entities, title: "", fixed_layout: true };
     }
 
     constructor() {
@@ -355,7 +404,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       if (!config.entities || !Array.isArray(config.entities) || config.entities.length < 2) {
         throw new Error("entity-distance-group-card: 'entities' list with at least 2 items is required.");
       }
-      this._config = { title: "", fixed_layout: false, ...config };
+      this._config = { title: "", fixed_layout: true, ...config };
       this._settled = false;
       this._nodes = [];
     }
@@ -649,7 +698,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
           </g>`;
       }).join("");
 
-      const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="${minX} ${minY} ${vbW} ${vbH}" style="display:block;width:100%;overflow:visible">
+      const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="${minX} ${minY} ${vbW} ${vbH}" style="display:block;width:100%;overflow:visible;touch-action:manipulation">
         <defs>
           <filter id="prox-glow" x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur stdDeviation="3" result="coloredBlur"/>

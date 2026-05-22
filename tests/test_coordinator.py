@@ -402,3 +402,140 @@ class TestProximitySincePersistence:
 
         assert ps.proximity_duration_s >= 600 + 5 * 60
         assert ps.proximity_duration_s < 600 + 10 * 60  # not double-counted
+
+
+# ---------------------------------------------------------------------------
+# _update_frequency and _is_reliable
+# ---------------------------------------------------------------------------
+
+
+class TestUpdateFrequency:
+    """Test EntityDistanceCoordinator._update_frequency helper."""
+
+    def _make_coordinator(self):
+        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+
+        coordinator = EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)
+        coordinator._min_updates_reliable = 3
+        return coordinator
+
+    def test_first_call_no_window_returns_1(self):
+        coordinator = self._make_coordinator()
+        now = datetime.now().astimezone()
+        result = coordinator._update_frequency(0, None, now)
+        assert result == 1
+
+    def test_within_window_increments(self):
+        coordinator = self._make_coordinator()
+        now = datetime.now().astimezone()
+        window_start = now - timedelta(seconds=60)
+        result = coordinator._update_frequency(5, window_start, now)
+        assert result == 6
+
+    def test_elapsed_window_resets_to_1(self):
+        from custom_components.entity_distance.const import UPDATES_FREQUENCY_WINDOW_S
+
+        coordinator = self._make_coordinator()
+        now = datetime.now().astimezone()
+        old_window = now - timedelta(seconds=UPDATES_FREQUENCY_WINDOW_S + 10)
+        result = coordinator._update_frequency(10, old_window, now)
+        assert result == 1
+
+    def test_at_exactly_window_boundary_resets(self):
+        from custom_components.entity_distance.const import UPDATES_FREQUENCY_WINDOW_S
+
+        coordinator = self._make_coordinator()
+        now = datetime.now().astimezone()
+        exactly_at_boundary = now - timedelta(seconds=UPDATES_FREQUENCY_WINDOW_S + 1)
+        result = coordinator._update_frequency(5, exactly_at_boundary, now)
+        assert result == 1
+
+
+class TestIsReliable:
+    """Test EntityDistanceCoordinator._is_reliable helper."""
+
+    def _make_coordinator(self, min_updates: int = 3):
+        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+
+        coordinator = EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)
+        coordinator._min_updates_reliable = min_updates
+        return coordinator
+
+    def test_reliable_when_both_counts_meet_threshold(self):
+        coordinator = self._make_coordinator(3)
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.update_count_a = 3
+        ps.update_count_b = 3
+        assert coordinator._is_reliable(ps) is True
+
+    def test_reliable_when_counts_exceed_threshold(self):
+        coordinator = self._make_coordinator(3)
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.update_count_a = 10
+        ps.update_count_b = 5
+        assert coordinator._is_reliable(ps) is True
+
+    def test_not_reliable_when_a_below_threshold(self):
+        coordinator = self._make_coordinator(3)
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.update_count_a = 2
+        ps.update_count_b = 5
+        assert coordinator._is_reliable(ps) is False
+
+    def test_not_reliable_when_b_below_threshold(self):
+        coordinator = self._make_coordinator(3)
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.update_count_a = 5
+        ps.update_count_b = 1
+        assert coordinator._is_reliable(ps) is False
+
+    def test_not_reliable_when_both_zero(self):
+        coordinator = self._make_coordinator(3)
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.update_count_a = 0
+        ps.update_count_b = 0
+        assert coordinator._is_reliable(ps) is False
+
+    def test_reliable_with_min_1(self):
+        coordinator = self._make_coordinator(1)
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.update_count_a = 1
+        ps.update_count_b = 1
+        assert coordinator._is_reliable(ps) is True
+
+    def test_not_reliable_with_min_1_when_zero(self):
+        coordinator = self._make_coordinator(1)
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.update_count_a = 0
+        ps.update_count_b = 1
+        assert coordinator._is_reliable(ps) is False
+
+
+# ---------------------------------------------------------------------------
+# _resolve_entities
+# ---------------------------------------------------------------------------
+
+
+class TestResolveEntities:
+    """Test _resolve_entities helper."""
+
+    def test_returns_list_from_data(self):
+        from custom_components.entity_distance.coordinator import _resolve_entities
+
+        data = {"entities": ["person.alice", "person.bob"]}
+        result = _resolve_entities(data)
+        assert result == ["person.alice", "person.bob"]
+
+    def test_returns_empty_when_key_missing(self):
+        from custom_components.entity_distance.coordinator import _resolve_entities
+
+        result = _resolve_entities({})
+        assert result == []
+
+    def test_returns_list_copy(self):
+        from custom_components.entity_distance.coordinator import _resolve_entities
+
+        data = {"entities": ["person.alice"]}
+        result = _resolve_entities(data)
+        result.append("person.bob")
+        assert data["entities"] == ["person.alice"]

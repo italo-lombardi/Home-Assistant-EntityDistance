@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 import itertools
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
+
+from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
+from homeassistant.core import State
 
 from custom_components.entity_distance.models import GroupData, PairState, pair_key
 
@@ -121,3 +125,430 @@ class TestGroupSensors:
         gd = GroupData(pairs=pairs, min_distance_m=min_dist)
         sensor = self._make_min_distance_sensor(gd)
         assert sensor.native_value == 100.0
+
+
+# ---------------------------------------------------------------------------
+# Helpers shared by _calc_pair test classes
+# ---------------------------------------------------------------------------
+
+_NOW = datetime(2024, 6, 1, 12, 0, 0, tzinfo=UTC)
+
+_BUCKET_THRESHOLDS = {"very_near": 100, "near": 500, "mid": 2000, "far": 10000}
+
+
+def _make_coordinator(
+    max_accuracy_m: float = 200.0,
+    max_speed_kmh: float = 1000.0,
+    entry_threshold_m: float = 500.0,
+    exit_threshold_m: float = 700.0,
+    require_reliable: bool = False,
+    min_updates_reliable: int = 3,
+):
+    """Create a minimal EntityDistanceCoordinator without calling __init__."""
+    from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+
+    coord = EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)
+    coord.hass = MagicMock()
+    coord._entry = MagicMock()
+    coord._entities = ["person.alice", "person.bob"]
+    coord._pair_states = {}
+    coord._max_accuracy_m = max_accuracy_m
+    coord._max_speed_kmh = max_speed_kmh
+    coord._entry_threshold_m = entry_threshold_m
+    coord._exit_threshold_m = exit_threshold_m
+    coord._bucket_thresholds = _BUCKET_THRESHOLDS
+    coord._resync_silence_s = 0  # disable resync logic by default
+    coord._resync_hold_s = 60
+    coord._resync_holding = {}
+    coord._resync_hold_until = {}
+    coord._min_updates_reliable = min_updates_reliable
+    coord._require_reliable = require_reliable
+    return coord
+
+
+def _make_state(entity_id: str, lat: float, lon: float, accuracy: float | None = None) -> State:
+    attrs: dict = {"latitude": lat, "longitude": lon}
+    if accuracy is not None:
+        attrs["gps_accuracy"] = accuracy
+    return State(entity_id, "home", attrs)
+
+
+def _fresh_pair() -> PairState:
+    k = pair_key("person.alice", "person.bob")
+    return PairState(entity_a_id=k[0], entity_b_id=k[1])
+
+
+# ---------------------------------------------------------------------------
+# TestCalcPairInvalidations
+# ---------------------------------------------------------------------------
+
+
+class TestCalcPairInvalidations:
+    def test_entity_a_missing(self):
+        coord = _make_coordinator()
+        state_b = _make_state("person.bob", 51.5, -0.1, 20)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: None if eid == "person.alice" else state_b
+        )
+        ps = _fresh_pair()
+
+        result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+
+        assert result.data_valid is False
+        assert result.last_error == "entity_not_found"
+
+    def test_entity_b_missing(self):
+        coord = _make_coordinator()
+        state_a = _make_state("person.alice", 51.5, -0.1, 20)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: state_a if eid == "person.alice" else None
+        )
+        ps = _fresh_pair()
+
+        result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+
+        assert result.data_valid is False
+        assert result.last_error == "entity_not_found"
+
+    def test_entity_a_unavailable(self):
+        coord = _make_coordinator()
+        state_a = State("person.alice", STATE_UNAVAILABLE, {"latitude": 51.5, "longitude": -0.1})
+        state_b = _make_state("person.bob", 51.5, -0.1, 20)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: state_a if eid == "person.alice" else state_b
+        )
+        ps = _fresh_pair()
+
+        result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+
+        assert result.data_valid is False
+        assert result.last_error == "entity_unavailable"
+
+    def test_entity_b_unknown(self):
+        coord = _make_coordinator()
+        state_a = _make_state("person.alice", 51.5, -0.1, 20)
+        state_b = State("person.bob", STATE_UNKNOWN, {"latitude": 51.5, "longitude": -0.09})
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: state_a if eid == "person.alice" else state_b
+        )
+        ps = _fresh_pair()
+
+        result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+
+        assert result.data_valid is False
+        assert result.last_error == "entity_unavailable"
+
+    def test_coord_extraction_fails(self):
+        coord = _make_coordinator()
+        # States present but no lat/lon attributes
+        state_a = State("person.alice", "home", {})
+        state_b = State("person.bob", "home", {})
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: state_a if eid == "person.alice" else state_b
+        )
+        ps = _fresh_pair()
+
+        result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+
+        assert result.data_valid is False
+        assert result.last_error == "coord_extraction_failed"
+
+    def test_accuracy_filter_a(self):
+        coord = _make_coordinator(max_accuracy_m=200.0)
+        # entity_a has accuracy 500m, which exceeds max_accuracy_m 200m
+        state_a = _make_state("person.alice", 51.5, -0.1, accuracy=500.0)
+        state_b = _make_state("person.bob", 51.501, -0.1, accuracy=20.0)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: state_a if eid == "person.alice" else state_b
+        )
+        ps = _fresh_pair()
+
+        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=111.0):
+            result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+
+        assert result.data_valid is False
+        assert result.last_error == "accuracy_filter_a"
+
+    def test_accuracy_filter_b(self):
+        coord = _make_coordinator(max_accuracy_m=200.0)
+        state_a = _make_state("person.alice", 51.5, -0.1, accuracy=20.0)
+        # entity_b has accuracy 500m, exceeds max
+        state_b = _make_state("person.bob", 51.501, -0.1, accuracy=500.0)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: state_a if eid == "person.alice" else state_b
+        )
+        ps = _fresh_pair()
+
+        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=111.0):
+            result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+
+        assert result.data_valid is False
+        assert result.last_error == "accuracy_filter_b"
+
+    def test_accuracy_filter_skipped_for_zone_entity(self):
+        """Zone entities should bypass the accuracy filter even with high gps_accuracy."""
+        coord = _make_coordinator(max_accuracy_m=200.0)
+        # zone entity with very poor accuracy — should not be filtered
+        state_a = State(
+            "zone.home", "zoning", {"latitude": 51.5, "longitude": -0.1, "gps_accuracy": 9999.0}
+        )
+        state_b = _make_state("person.bob", 51.501, -0.1, accuracy=20.0)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: state_a if eid == "zone.home" else state_b
+        )
+        ps = PairState(entity_a_id="person.bob", entity_b_id="zone.home")
+
+        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=111.0):
+            result = coord._calc_pair(ps, "zone.home", "person.bob", _NOW, set())
+
+        assert result.data_valid is True
+        assert result.last_error is None
+
+    def test_speed_filter(self):
+        coord = _make_coordinator(max_speed_kmh=150.0)
+        state_a = _make_state("person.alice", 51.5, -0.1, accuracy=20.0)
+        state_b = _make_state("person.bob", 51.501, -0.1, accuracy=20.0)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: state_a if eid == "person.alice" else state_b
+        )
+        ps = _fresh_pair()
+        # Simulate a previous distance and time so speed check fires
+        ps.prev_distance_m = 0.0
+        ps.prev_calc_time = datetime(2024, 6, 1, 11, 59, 0, tzinfo=UTC)  # 60s earlier
+
+        # Distance jumped 100_000m in 60s → implied speed = 100000/60*3.6 = 6000 km/h > 150
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance", return_value=100_000.0
+        ):
+            result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+
+        assert result.data_valid is False
+        assert result.last_error == "speed_filter"
+
+
+# ---------------------------------------------------------------------------
+# TestCalcPairProximityTransitions
+# ---------------------------------------------------------------------------
+
+
+class TestCalcPairProximityTransitions:
+    def test_enters_proximity(self):
+        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=700.0)
+        state_a = _make_state("person.alice", 51.5, -0.1, 20)
+        state_b = _make_state("person.bob", 51.501, -0.1, 20)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: state_a if eid == "person.alice" else state_b
+        )
+        ps = _fresh_pair()
+        ps.proximity = False
+
+        # 200m is well inside entry_threshold_m of 500m
+        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=200.0):
+            result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+
+        assert result.proximity is True
+        assert result.proximity_since == _NOW
+
+    def test_exits_proximity(self):
+        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=700.0)
+        state_a = _make_state("person.alice", 51.5, -0.1, 20)
+        state_b = _make_state("person.bob", 51.510, -0.1, 20)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: state_a if eid == "person.alice" else state_b
+        )
+        ps = _fresh_pair()
+        ps.proximity = True
+        ps.proximity_since = datetime(2024, 6, 1, 11, 0, 0, tzinfo=UTC)
+
+        # 800m is beyond exit_threshold_m of 700m
+        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=800.0):
+            result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+
+        assert result.proximity is False
+        assert result.last_seen_together == _NOW
+
+    def test_stays_in_proximity(self):
+        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=700.0)
+        state_a = _make_state("person.alice", 51.5, -0.1, 20)
+        state_b = _make_state("person.bob", 51.501, -0.1, 20)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: state_a if eid == "person.alice" else state_b
+        )
+        ps = _fresh_pair()
+        ps.proximity = True
+        ps.proximity_since = datetime(2024, 6, 1, 11, 0, 0, tzinfo=UTC)
+
+        # 150m — inside both thresholds, proximity stays True
+        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=150.0):
+            result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+
+        assert result.proximity is True
+
+    def test_stays_outside(self):
+        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=700.0)
+        state_a = _make_state("person.alice", 51.5, -0.1, 20)
+        state_b = _make_state("person.bob", 51.520, -0.1, 20)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: state_a if eid == "person.alice" else state_b
+        )
+        ps = _fresh_pair()
+        ps.proximity = False
+
+        # 2200m — outside entry threshold, stays False
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance", return_value=2200.0
+        ):
+            result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+
+        assert result.proximity is False
+
+
+# ---------------------------------------------------------------------------
+# TestCalcPairDirection
+# ---------------------------------------------------------------------------
+
+
+class TestCalcPairDirection:
+    def test_first_calc_no_prev_distance(self):
+        coord = _make_coordinator()
+        state_a = _make_state("person.alice", 51.5, -0.1, 20)
+        state_b = _make_state("person.bob", 51.501, -0.1, 20)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: state_a if eid == "person.alice" else state_b
+        )
+        ps = _fresh_pair()
+        # No previous data → direction stays None
+
+        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=300.0):
+            result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+
+        assert result.direction is None
+
+    def test_stationary(self):
+        coord = _make_coordinator()
+        state_a = _make_state("person.alice", 51.5, -0.1, 20)
+        state_b = _make_state("person.bob", 51.501, -0.1, 20)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: state_a if eid == "person.alice" else state_b
+        )
+        ps = _fresh_pair()
+        ps.prev_distance_m = 300.0  # current will also be 300.0 → delta < 50m
+        ps.prev_calc_time = datetime(2024, 6, 1, 11, 59, 0, tzinfo=UTC)
+
+        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=300.0):
+            result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+
+        assert result.direction == "stationary"
+
+    def test_approaching(self):
+        coord = _make_coordinator()
+        state_a = _make_state("person.alice", 51.5, -0.1, 20)
+        state_b = _make_state("person.bob", 51.501, -0.1, 20)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: state_a if eid == "person.alice" else state_b
+        )
+        ps = _fresh_pair()
+        ps.prev_distance_m = 600.0  # current 200m → delta = -400m → approaching
+        ps.prev_calc_time = datetime(2024, 6, 1, 11, 59, 0, tzinfo=UTC)
+
+        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=200.0):
+            result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+
+        assert result.direction == "approaching"
+        assert result.eta_minutes is not None
+
+    def test_diverging(self):
+        coord = _make_coordinator()
+        state_a = _make_state("person.alice", 51.5, -0.1, 20)
+        state_b = _make_state("person.bob", 51.501, -0.1, 20)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: state_a if eid == "person.alice" else state_b
+        )
+        ps = _fresh_pair()
+        ps.prev_distance_m = 200.0  # current 800m → delta = +600m → diverging
+        ps.prev_calc_time = datetime(2024, 6, 1, 11, 59, 0, tzinfo=UTC)
+
+        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=800.0):
+            result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+
+        assert result.direction == "diverging"
+
+
+# ---------------------------------------------------------------------------
+# TestCalcPairEvents
+# ---------------------------------------------------------------------------
+
+
+class TestCalcPairEvents:
+    def _setup(self, require_reliable: bool = False, min_updates: int = 1):
+        coord = _make_coordinator(
+            entry_threshold_m=500.0,
+            exit_threshold_m=700.0,
+            require_reliable=require_reliable,
+            min_updates_reliable=min_updates,
+        )
+        state_a = _make_state("person.alice", 51.5, -0.1, 20)
+        state_b = _make_state("person.bob", 51.501, -0.1, 20)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: state_a if eid == "person.alice" else state_b
+        )
+        return coord
+
+    def test_enter_fires_event_enter(self):
+        coord = self._setup(min_updates=1)
+        ps = _fresh_pair()
+        ps.proximity = False
+        ps.update_count_a = 5
+        ps.update_count_b = 5
+
+        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=200.0):
+            coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+
+        fired_events = [call.args[0] for call in coord.hass.bus.fire.call_args_list]
+        assert "entity_distance_enter" in fired_events
+
+    def test_leave_fires_event_leave(self):
+        coord = self._setup()
+        ps = _fresh_pair()
+        ps.proximity = True
+        ps.proximity_since = datetime(2024, 6, 1, 11, 0, 0, tzinfo=UTC)
+        ps.update_count_a = 5
+        ps.update_count_b = 5
+
+        # 800m > exit_threshold_m of 700m → exit
+        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=800.0):
+            coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+
+        fired_events = [call.args[0] for call in coord.hass.bus.fire.call_args_list]
+        assert "entity_distance_leave" in fired_events
+
+    def test_update_fires_event_update(self):
+        coord = self._setup()
+        ps = _fresh_pair()
+        ps.proximity = False
+        ps.update_count_a = 5
+        ps.update_count_b = 5
+
+        # 1200m → still outside, no proximity change → fires update
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance", return_value=1200.0
+        ):
+            coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+
+        fired_events = [call.args[0] for call in coord.hass.bus.fire.call_args_list]
+        assert "entity_distance_update" in fired_events
+
+    def test_enter_unreliable_fires_enter_unreliable(self):
+        # require_reliable=False but update counts are too low → not reliable
+        # fires entity_distance_enter_unreliable when entering proximity with low counts
+        coord = self._setup(min_updates=10)
+        ps = _fresh_pair()
+        ps.proximity = False
+        ps.update_count_a = 1  # below min_updates_reliable of 10
+        ps.update_count_b = 1
+
+        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=200.0):
+            coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+
+        fired_events = [call.args[0] for call in coord.hass.bus.fire.call_args_list]
+        assert "entity_distance_enter_unreliable" in fired_events

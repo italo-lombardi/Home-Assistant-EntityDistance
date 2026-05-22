@@ -615,6 +615,312 @@ class TestBucketSensor:
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# DistanceSensor native_value + extra_state_attributes
+# ---------------------------------------------------------------------------
+
+
+class TestDistanceSensor:
+    from custom_components.entity_distance.sensor import DistanceSensor as _DS
+
+    def _make(self, distance_m):
+        from custom_components.entity_distance.sensor import DistanceSensor
+
+        ps = PairState(entity_a_id="person.alice", entity_b_id="person.bob")
+        ps.distance_m = distance_m
+        ps.data_valid = True
+        return _make_sensor(DistanceSensor, ps)
+
+    def test_returns_distance_m(self):
+        sensor = self._make(250.0)
+        assert sensor.native_value == 250.0
+
+    def test_returns_none_when_no_distance(self):
+        sensor = self._make(None)
+        assert sensor.native_value is None
+
+    def test_extra_attrs_contain_entity_ids(self):
+        sensor = self._make(100.0)
+        attrs = sensor.extra_state_attributes
+        assert attrs["entity_a"] == "person.alice"
+        assert attrs["entity_b"] == "person.bob"
+
+
+# ---------------------------------------------------------------------------
+# ClosingSpeedSensor native_value
+# ---------------------------------------------------------------------------
+
+
+class TestClosingSpeedSensor:
+    def _make(self, closing_speed_kmh):
+        from custom_components.entity_distance.sensor import ClosingSpeedSensor
+
+        ps = PairState(entity_a_id="person.alice", entity_b_id="person.bob")
+        ps.closing_speed_kmh = closing_speed_kmh
+        ps.data_valid = True
+        return _make_sensor(ClosingSpeedSensor, ps)
+
+    def test_returns_rounded_speed(self):
+        sensor = self._make(55.555)
+        assert sensor.native_value == round(55.555, 1)
+
+    def test_returns_none_when_no_speed(self):
+        sensor = self._make(None)
+        assert sensor.native_value is None
+
+    def test_zero_speed(self):
+        sensor = self._make(0.0)
+        assert sensor.native_value == 0.0
+
+
+# ---------------------------------------------------------------------------
+# EtaSensor native_value
+# ---------------------------------------------------------------------------
+
+
+class TestEtaSensor:
+    def _make(self, eta_minutes):
+        from custom_components.entity_distance.sensor import EtaSensor
+
+        ps = PairState(entity_a_id="person.alice", entity_b_id="person.bob")
+        ps.eta_minutes = eta_minutes
+        ps.data_valid = True
+        return _make_sensor(EtaSensor, ps)
+
+    def test_returns_rounded_eta(self):
+        sensor = self._make(12.345)
+        assert sensor.native_value == round(12.345, 1)
+
+    def test_returns_none_when_no_eta(self):
+        sensor = self._make(None)
+        assert sensor.native_value is None
+
+
+# ---------------------------------------------------------------------------
+# GpsAccuracySensor native_value
+# ---------------------------------------------------------------------------
+
+
+def _make_gps_sensor(which: str, pair_state: PairState):
+    from custom_components.entity_distance.sensor import GpsAccuracySensor
+
+    coordinator = MagicMock()
+    k = pair_key(pair_state.entity_a_id, pair_state.entity_b_id)
+    coordinator.data = GroupData(pairs={k: pair_state})
+    coordinator.bucket_thresholds = _DEFAULT_THRESHOLDS
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    sensor = GpsAccuracySensor.__new__(GpsAccuracySensor)
+    sensor.coordinator = coordinator
+    sensor._entry = entry
+    sensor._pair_key = k
+    sensor._which = which
+    sensor._sensor_key = f"gps_accuracy_{which}"
+    sensor._attr_unique_id = f"test_gps_{which}"
+    sensor._attr_device_info = {}
+    return sensor
+
+
+class TestGpsAccuracySensor:
+    def test_returns_accuracy_a(self):
+        ps = PairState(entity_a_id="person.alice", entity_b_id="person.bob")
+        ps.accuracy_a = 15.0
+        ps.accuracy_b = 30.0
+        sensor = _make_gps_sensor("a", ps)
+        assert sensor.native_value == 15.0
+
+    def test_returns_accuracy_b(self):
+        ps = PairState(entity_a_id="person.alice", entity_b_id="person.bob")
+        ps.accuracy_a = 15.0
+        ps.accuracy_b = 30.0
+        sensor = _make_gps_sensor("b", ps)
+        assert sensor.native_value == 30.0
+
+    def test_returns_none_when_no_accuracy(self):
+        ps = PairState(entity_a_id="person.alice", entity_b_id="person.bob")
+        ps.accuracy_a = None
+        sensor = _make_gps_sensor("a", ps)
+        assert sensor.native_value is None
+
+
+# ---------------------------------------------------------------------------
+# LastUpdateSensor native_value
+# ---------------------------------------------------------------------------
+
+
+def _make_last_update_sensor(which: str, pair_state: PairState):
+    from custom_components.entity_distance.sensor import LastUpdateSensor
+
+    coordinator = MagicMock()
+    k = pair_key(pair_state.entity_a_id, pair_state.entity_b_id)
+    coordinator.data = GroupData(pairs={k: pair_state})
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    sensor = LastUpdateSensor.__new__(LastUpdateSensor)
+    sensor.coordinator = coordinator
+    sensor._entry = entry
+    sensor._pair_key = k
+    sensor._which = which
+    sensor._sensor_key = f"last_update_{which}"
+    sensor._attr_unique_id = f"test_last_update_{which}"
+    sensor._attr_device_info = {}
+    return sensor
+
+
+class TestLastUpdateSensor:
+    def test_returns_last_update_a(self):
+        ps = PairState(entity_a_id="person.alice", entity_b_id="person.bob")
+        now = datetime.now().astimezone()
+        ps.last_update_a = now
+        sensor = _make_last_update_sensor("a", ps)
+        assert sensor.native_value == now
+
+    def test_returns_last_update_b(self):
+        ps = PairState(entity_a_id="person.alice", entity_b_id="person.bob")
+        now = datetime.now().astimezone()
+        ps.last_update_b = now
+        sensor = _make_last_update_sensor("b", ps)
+        assert sensor.native_value == now
+
+    def test_returns_none_when_not_set(self):
+        ps = PairState(entity_a_id="person.alice", entity_b_id="person.bob")
+        sensor = _make_last_update_sensor("a", ps)
+        assert sensor.native_value is None
+
+
+# ---------------------------------------------------------------------------
+# LastSeenTogetherSensor native_value
+# ---------------------------------------------------------------------------
+
+
+class TestLastSeenTogetherSensor:
+    def _make(self, last_seen):
+        from custom_components.entity_distance.sensor import LastSeenTogetherSensor
+
+        ps = PairState(entity_a_id="person.alice", entity_b_id="person.bob")
+        ps.last_seen_together = last_seen
+        return _make_sensor(LastSeenTogetherSensor, ps)
+
+    def test_returns_timestamp(self):
+        now = datetime.now().astimezone()
+        sensor = self._make(now)
+        assert sensor.native_value == now
+
+    def test_returns_none_when_not_set(self):
+        sensor = self._make(None)
+        assert sensor.native_value is None
+
+
+# ---------------------------------------------------------------------------
+# TodayProximityTimeSensor native_value
+# ---------------------------------------------------------------------------
+
+
+class TestTodayProximityTimeSensor:
+    def _make(self, data_valid, today_proximity_seconds):
+        from custom_components.entity_distance.sensor import TodayProximityTimeSensor
+
+        ps = PairState(entity_a_id="person.alice", entity_b_id="person.bob")
+        ps.data_valid = data_valid
+        ps.today_proximity_seconds = today_proximity_seconds
+        return _make_sensor(TodayProximityTimeSensor, ps)
+
+    def test_returns_none_when_data_invalid(self):
+        sensor = self._make(False, 600.0)
+        assert sensor.native_value is None
+
+    def test_returns_minutes(self):
+        sensor = self._make(True, 600.0)
+        assert sensor.native_value == 10.0
+
+    def test_zero_returns_zero(self):
+        sensor = self._make(True, 0.0)
+        assert sensor.native_value == 0.0
+
+
+# ---------------------------------------------------------------------------
+# ProximityTrackingStartedSensor native_value
+# ---------------------------------------------------------------------------
+
+
+class TestProximityTrackingStartedSensor:
+    def _make(self, tracking_started):
+        from custom_components.entity_distance.sensor import ProximityTrackingStartedSensor
+
+        ps = PairState(entity_a_id="person.alice", entity_b_id="person.bob")
+        ps.proximity_tracking_started = tracking_started
+        return _make_sensor(ProximityTrackingStartedSensor, ps)
+
+    def test_returns_datetime(self):
+        now = datetime.now().astimezone()
+        sensor = self._make(now)
+        assert sensor.native_value == now
+
+    def test_returns_none_when_not_set(self):
+        sensor = self._make(None)
+        assert sensor.native_value is None
+
+
+# ---------------------------------------------------------------------------
+# MinDistanceSensor native_value
+# ---------------------------------------------------------------------------
+
+
+class TestMinDistanceSensor:
+    def _make(self, min_distance_m):
+        from custom_components.entity_distance.models import GroupData
+        from custom_components.entity_distance.sensor import MinDistanceSensor
+
+        coordinator = MagicMock()
+        coordinator.data = GroupData(min_distance_m=min_distance_m)
+        entry = MagicMock()
+        entry.entry_id = "test_entry"
+        sensor = MinDistanceSensor.__new__(MinDistanceSensor)
+        sensor.coordinator = coordinator
+        sensor._entry = entry
+        sensor._attr_unique_id = "test_min_distance"
+        sensor._attr_device_info = {}
+        return sensor
+
+    def test_returns_min_distance(self):
+        sensor = self._make(123.4)
+        assert sensor.native_value == 123.4
+
+    def test_returns_none_when_no_valid_pairs(self):
+        sensor = self._make(None)
+        assert sensor.native_value is None
+
+
+# ---------------------------------------------------------------------------
+# TodayZoneTimeSensor extra_state_attributes
+# ---------------------------------------------------------------------------
+
+
+class TestTodayZoneTimeSensorAttributes:
+    def test_very_near_has_range_from_zero(self):
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.data_valid = True
+        ps.today_zone_seconds = {}
+        sensor = _make_zone_sensor(BUCKET_VERY_NEAR, ps)
+        attrs = sensor.extra_state_attributes
+        assert attrs.get("range_from_m") == 0
+        assert "range_to_m" in attrs
+
+    def test_near_has_lower_bound(self):
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.data_valid = True
+        ps.today_zone_seconds = {}
+        sensor = _make_zone_sensor(BUCKET_NEAR, ps)
+        attrs = sensor.extra_state_attributes
+        assert "range_from_m" in attrs
+        assert "range_to_m" in attrs
+
+
+# ---------------------------------------------------------------------------
+# ProximityDurationSensor — additional edge cases
+# ---------------------------------------------------------------------------
+
+
 class TestProximityDurationSensorEdgeCases:
     """Additional edge cases for ProximityDurationSensor."""
 

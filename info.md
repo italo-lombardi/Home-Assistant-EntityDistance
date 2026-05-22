@@ -27,7 +27,7 @@ Three custom cards are auto-registered on startup — no manual resource setup n
 
 - **Pair Card** (`entity-distance-pair-card`) — data-focused card: distance, direction, zone, speed, ETA, proximity stats
 - **Avatar Card** (`entity-distance-avatar-card`) — people-focused card with entity avatars side-by-side
-- **Group Card** (`entity-distance-group-card`) — force-directed SVG graph showing all group entities as circles connected by labeled, color-coded lines; lines glow when a pair is in proximity
+- **Group Card** (`entity-distance-group-card`) — force-directed SVG graph showing all group entities as circles connected by labeled, color-coded lines; lines glow when a pair is in proximity; per-node label position and visibility configurable in the editor
 
 ## Setup
 

@@ -2,6 +2,24 @@
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-05-22
+
+### Added
+- **Group Card: per-node label settings** — `node_settings` config key allows per-entity control of label visibility and position
+  - `show_name`: show or hide the entity name label (default: `true`)
+  - `show_state`: show or hide the entity state label (default: `true`, inherits global `show_state`)
+  - `label_position`: `above`, `below`, or `auto` (default: `auto` — uses centroid-based detection)
+  - All three settings are editable in the card editor under a new "Node Labels" section
+
+### Fixed
+- **Group Card**: connection line labels on horizontal edges (top row and bottom row) now always appear on the outward-facing side of the line — top-row labels go above, bottom-row labels go below
+- **Group Card**: middle node (5-node layout) name/state label no longer flips between above and below on each hass state update — `_nodeLabelSide` cache now resets only on config change, not on every render
+- **Group Card**: idle animation (slow node drift) now skips entirely when `fixed_layout: true` — nodes stay on their grid positions with no movement
+- **Group Card**: node positions are now clamped to canvas bounds when an existing node is reused after a canvas resize
+- **Group Card**: entity list change (add/remove entity) now correctly resets the settled flag and re-runs the force simulation
+- **Group Card**: centroid epsilon guard prevents erratic line label flip when edge midpoint is very close to graph centroid
+- **Group Card** (code quality): `_zoneColor` and `_dirArrow` use lookup objects instead of if-chains; `_watchIds` uses `flatMap`; `combinations()` hoisted out of loop; node label above/below duplication extracted to `_nodeLabel()` helper; editor pair settings extracted to `_renderPairSettings()`
+
 ## [0.2.1] - 2026-05-22
 
 ### Added

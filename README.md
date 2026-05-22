@@ -490,6 +490,13 @@ pair_settings:
   "person.dercy,person.italo":  # sorted alphabetically
     show_distance: true
     show_zone: true
+node_settings:
+  person.italo:
+    show_name: true
+    show_state: true
+    label_position: above  # above | below | auto (default: auto)
+  person.dercy:
+    label_position: below
 ```
 
 **Options:**
@@ -501,12 +508,13 @@ pair_settings:
 | `fixed_layout` | `true` | Equal edge lengths regardless of real distance |
 | `hidden_entities` | `[]` | Entity IDs to hide — their nodes and all connecting lines are removed; hidden pairs are excluded from the badge count |
 | `pair_settings` | `{}` | Per-pair overrides, keyed by sorted entity ID pair (`"entity_a,entity_b"`). Each entry supports `show_distance` (bool) and `show_zone` (bool) |
+| `node_settings` | `{}` | Per-node label overrides, keyed by entity ID. Each entry supports `show_name` (bool), `show_state` (bool), and `label_position` (`above` \| `below` \| `auto`) |
 
 **Layout behaviour:**
 
-Nodes are placed in a grid based on entity count: 2 = vertical pair, 3 = triangle, 4 = 2×2 grid, 5 = 3-row with center middle node. Labels appear above the circle for top-row nodes and below for bottom-row nodes. A slow idle drift animation plays for 6 s after the last state update.
+Nodes are placed in a grid based on entity count: 2 = vertical pair, 3 = triangle, 4 = 2×2 grid, 5 = 3-row with center middle node. Node labels default to `auto` position (centroid-based detection); use `label_position: above` or `below` in `node_settings` for stable explicit placement. When `fixed_layout: true` (default), no idle animation plays — nodes stay on their grid positions.
 
-The visual editor auto-discovers available groups from hass.states and presents them in a dropdown — no manual entity ID entry required. Use the editor's entity list to reorder nodes, toggle per-entity visibility (eye icon), set the title, enable equal spacing, and configure per-pair distance and zone label visibility.
+The visual editor auto-discovers available groups from hass.states and presents them in a dropdown — no manual entity ID entry required. Use the editor's entity list to reorder nodes, toggle per-entity visibility (eye icon), set the title, enable equal spacing, configure per-node label settings, and configure per-pair distance and zone label visibility.
 
 <!-- SCREENSHOT NEEDED: lovelace_entity_distance_group_card.png
      What to capture:
@@ -523,11 +531,11 @@ If auto-registration fails (e.g. YAML-only Lovelace mode), add manually:
 
 ```yaml
 resources:
-  - url: /entity_distance/entity-distance-pair-card.js?0.2.1
+  - url: /entity_distance/entity-distance-pair-card.js?0.2.2
     type: module
-  - url: /entity_distance/entity-distance-avatar-card.js?0.2.1
+  - url: /entity_distance/entity-distance-avatar-card.js?0.2.2
     type: module
-  - url: /entity_distance/entity-distance-group-card.js?0.2.1
+  - url: /entity_distance/entity-distance-group-card.js?0.2.2
     type: module
 ```
 

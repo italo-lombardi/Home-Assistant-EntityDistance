@@ -4,7 +4,7 @@
  * Force-directed graph: one circle per entity, lines between every pair.
  */
 
-const GROUP_CARD_VERSION = "0.2.0";
+const GROUP_CARD_VERSION = "0.2.2";
 
 console.info(
   `%c ENTITY-DISTANCE-GROUP-CARD %c v${GROUP_CARD_VERSION} %c — github.com/italo-lombardi`,
@@ -55,20 +55,26 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
 
   // ─── helpers ─────────────────────────────────────────────────────────────────
 
+  const ZONE_COLORS = {
+    very_near: "#4caf50",
+    near: "#8bc34a",
+    mid: "#ff9800",
+    far: "#ff5722",
+    very_far: "#9e9e9e",
+  };
+
+  const DIR_ARROWS = {
+    approaching: "↓",
+    diverging: "↑",
+    stationary: "•",
+  };
+
   function _zoneColor(bucket) {
-    if (bucket === "very_near") return "#4caf50";
-    if (bucket === "near") return "#8bc34a";
-    if (bucket === "mid") return "#ff9800";
-    if (bucket === "far") return "#ff5722";
-    if (bucket === "very_far") return "#9e9e9e";
-    return "#9e9e9e";
+    return ZONE_COLORS[bucket] || "#9e9e9e";
   }
 
   function _dirArrow(dir) {
-    if (dir === "approaching") return "↓";
-    if (dir === "diverging") return "↑";
-    if (dir === "stationary") return "•";
-    return "";
+    return DIR_ARROWS[dir] || "";
   }
 
   function _formatDistance(m) {
@@ -118,6 +124,10 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
    * Discover all pairs in hass.states that involve only entities from the given list.
    * Returns array of { slug, entityA, entityB, distEntityId }
    */
+  /**
+   * Discover all pairs in hass.states that involve only entities from the given list.
+   * Returns array of { slug, entityA, entityB, distEntityId }
+   */
   function _getPairsForEntities(hass, entities) {
     const entitySet = new Set(entities);
     return Object.values(hass.states)
@@ -140,6 +150,10 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
    * Discover all distinct groups in hass.states.
    * Returns array of { entities: [...], label: "..." }
    */
+  /**
+   * Discover all distinct groups in hass.states.
+   * Returns array of { entities: [...], label: "..." }
+   */
   function _discoverGroups(hass) {
     const pairSensors = Object.values(hass.states).filter(s =>
       s.entity_id.startsWith("sensor.") &&
@@ -149,25 +163,15 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
 
     // Build a set of all known pairs keyed as "a|b" (sorted)
     const pairSet = new Set();
-    const allEntities = new Set();
     for (const s of pairSensors) {
-      const a = s.attributes.entity_a;
-      const b = s.attributes.entity_b;
-      const key = [a, b].sort().join("|");
-      pairSet.add(key);
-      allEntities.add(a);
-      allEntities.add(b);
+      pairSet.add([s.attributes.entity_a, s.attributes.entity_b].sort().join("|"));
     }
 
     // Find all maximal cliques: groups where every pair has a distance sensor.
-    // Enumerate candidate groups by checking if a set of entities forms a complete graph.
-    // Strategy: for each entity, find its neighbors, then check all subsets of those
-    // neighbors (+ the entity itself) for completeness.
     function isCompleteGroup(entities) {
       for (let i = 0; i < entities.length; i++) {
         for (let j = i + 1; j < entities.length; j++) {
-          const key = [entities[i], entities[j]].sort().join("|");
-          if (!pairSet.has(key)) return false;
+          if (!pairSet.has([entities[i], entities[j]].sort().join("|"))) return false;
         }
       }
       return true;
@@ -184,28 +188,25 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       adj.get(b).add(a);
     }
 
-    // For each entity, find the maximal clique it belongs to by taking its
-    // neighborhood and greedily building the largest complete subgraph.
-    // Since groups are at most 5 entities, brute-force subset check is fine.
+    // Generate combinations of `size` elements from `arr` starting at `offset`
+    function combinations(arr, size, offset = 0, current = []) {
+      if (current.length === size) return [current.slice()];
+      const result = [];
+      for (let i = offset; i < arr.length; i++) {
+        current.push(arr[i]);
+        result.push(...combinations(arr, size, i + 1, current));
+        current.pop();
+      }
+      return result;
+    }
+
     const groupKeys = new Set();
     const groups = [];
 
     for (const start of adj.keys()) {
       const neighbors = [start, ...(adj.get(start) || [])];
-      // Try all subsets of size 2..5
       for (let size = neighbors.length; size >= 2; size--) {
-        // Generate combinations of `size` from neighbors
-        const combos = [];
-        function combine(offset, current) {
-          if (current.length === size) { combos.push([...current]); return; }
-          for (let i = offset; i < neighbors.length; i++) {
-            current.push(neighbors[i]);
-            combine(i + 1, current);
-            current.pop();
-          }
-        }
-        combine(0, []);
-        for (const combo of combos) {
+        for (const combo of combinations(neighbors, size)) {
           const sorted = combo.sort();
           const key = sorted.join("|");
           if (groupKeys.has(key)) continue;
@@ -218,13 +219,11 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     }
 
     // Remove subsets: if group A is a subset of group B, drop A
-    const maximalGroups = groups.filter(g => {
-      const gSet = new Set(g);
-      return !groups.some(other => {
-        if (other === g || other.length <= g.length) return false;
-        return g.every(e => other.includes(e));
-      });
-    });
+    const maximalGroups = groups.filter(g =>
+      !groups.some(other =>
+        other !== g && other.length > g.length && g.every(e => other.includes(e))
+      )
+    );
 
     return maximalGroups.map(entities => ({
       entities,
@@ -398,6 +397,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       this._idleTimer = null;
       this._settled = false;
       this._ro = null;
+      this._nodeLabelSide = {};
     }
 
     setConfig(config) {
@@ -407,15 +407,12 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       this._config = { title: "", fixed_layout: true, ...config };
       this._settled = false;
       this._nodes = [];
+      this._nodeLabelSide = {};
     }
 
     getCardSize() {
       const n = this._config?.entities?.length || 2;
       return Math.ceil(Math.max(300, n * 90 + 60) / 70);
-    }
-
-    connectedCallback() {
-      super.connectedCallback();
     }
 
     disconnectedCallback() {
@@ -447,6 +444,12 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       const existingById = new Map((this._nodes || []).map(n => [n.id, n]));
       const cx = width / 2, cy = height / 2;
       const rx = width * 0.28, ry = height * 0.28;
+      const pad = NODE_RADIUS + 8;
+
+      // Reset settled flag if entity list changed (triggers re-simulation)
+      const prevIds = (this._nodes || []).map(n => n.id).sort().join(",");
+      const nextIds = [...visibleEntities].sort().join(",");
+      if (prevIds !== nextIds) this._settled = false;
 
       // Grid-based initial positions by count
       const GRID_POSITIONS = {
@@ -459,7 +462,13 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
 
       const nodes = visibleEntities.map((entityId, i) => {
         const existing = existingById.get(entityId);
-        if (existing) return { ...existing };
+        if (existing) {
+          // Clamp preserved positions to current canvas bounds
+          return { ...existing,
+            x: Math.max(pad, Math.min(width - pad, existing.x)),
+            y: Math.max(pad, Math.min(height - pad, existing.y)),
+          };
+        }
         const pos = grid ? grid[i] : null;
         return {
           id: entityId,
@@ -504,6 +513,8 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
 
     _startIdle() {
       this._stopIdle();
+      // Fixed layout: grid positions are already optimal, no animation needed
+      if (this._config?.fixed_layout === true) return;
       const step = () => {
         if (!this._sim || !this.isConnected) return;
         this._sim.tick(IDLE_ALPHA);
@@ -530,17 +541,14 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     }
 
     _watchIds() {
-      const ids = [];
-      for (const p of (this._pairs || [])) {
-        ids.push(
-          `sensor.${p.slug}_distance`,
-          `sensor.${p.slug}_direction`,
-          `sensor.${p.slug}_proximity_zone`,
-          `binary_sensor.${p.slug}_in_proximity`,
-        );
-        ids.push(p.entityA, p.entityB);
-      }
-      return ids;
+      return (this._pairs || []).flatMap(p => [
+        `sensor.${p.slug}_distance`,
+        `sensor.${p.slug}_direction`,
+        `sensor.${p.slug}_proximity_zone`,
+        `binary_sensor.${p.slug}_in_proximity`,
+        p.entityA,
+        p.entityB,
+      ]);
     }
 
     _getWidth() {
@@ -576,10 +584,22 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       this._renderSVG();
     }
 
+    _nodeLabel(n, above, safeName, safeState, showState) {
+      const nameW = Math.max(safeName.length * 6.5 + 8, 48);
+      const stateW = (showState && safeState) ? Math.max(safeState.length * 5.5 + 8, 40) : 0;
+      const nameY = above ? n.y - NODE_RADIUS - 5 : n.y + NODE_RADIUS + 13;
+      const stateY = above ? nameY - 13 : nameY + 13;
+      return `
+        <rect x="${n.x - nameW / 2}" y="${nameY - 11}" width="${nameW}" height="14" rx="3" fill="var(--card-background-color,#fff)" fill-opacity="0.82"/>
+        <text x="${n.x}" y="${nameY}" text-anchor="middle" font-size="11" font-weight="600" font-family="inherit" fill="var(--primary-text-color)" pointer-events="none">${safeName}</text>
+        ${safeState && showState ? `
+        <rect x="${n.x - stateW / 2}" y="${stateY - 10}" width="${stateW}" height="13" rx="3" fill="var(--card-background-color,#fff)" fill-opacity="0.82"/>
+        <text x="${n.x}" y="${stateY}" text-anchor="middle" font-size="9.5" font-family="inherit" fill="var(--secondary-text-color)" pointer-events="none">${safeState}</text>` : ""}`;
+    }
+
     _renderSVG() {
       const wrap = this.shadowRoot?.querySelector(".graph-wrap");
       if (!wrap || !this._nodes.length || !this.hass || !this._config) return;
-      const { entities } = this._config;
       const hiddenSet = new Set(this._config.hidden_entities || []);
       const width = wrap.getBoundingClientRect().width || 360;
       const nodes = this._nodes.filter(n => !hiddenSet.has(n.id));
@@ -605,6 +625,8 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       const height = Math.max(200, Math.round(vbH * scale));
 
       const pairSettings = this._config.pair_settings || {};
+      const graphCentroidX = nodes.reduce((s, n) => s + n.x, 0) / (nodes.length || 1);
+      const graphCentroidY = nodes.reduce((s, n) => s + n.y, 0) / (nodes.length || 1);
 
       const edgesHTML = pairs.map(p => {
         const ni = nodes.findIndex(n => n.id === p.entityA);
@@ -623,7 +645,11 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
         const dx = b.x - a.x, dy = b.y - a.y;
         const len = Math.sqrt(dx * dx + dy * dy) || 1;
-        const ox = -dy / len * 22, oy = dx / len * 22;
+        let ox = -dy / len * 22, oy = dx / len * 22;
+        // Flip offset to always face away from graph center (outer side of line)
+        // Epsilon guard: skip flip when edge midpoint is very close to centroid (avoids erratic behavior)
+        const towardDot = (graphCentroidX - mx) * ox + (graphCentroidY - my) * oy;
+        if (towardDot > 1) { ox = -ox; oy = -oy; }
         const pairKey = [p.entityA, p.entityB].sort().join(",");
         const ps = pairSettings[pairKey] || {};
         const showDistance = ps.show_distance !== false;
@@ -646,8 +672,11 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
           </g>`;
       }).join("");
 
-      // Midpoint Y to decide whether label goes above or below circle
-      const midY = (Math.min(...nodes.map(n => n.y)) + Math.max(...nodes.map(n => n.y))) / 2;
+      // Centroid Y to decide whether label goes above or below circle (more stable than min/max midpoint)
+      const midY = graphCentroidY;
+      const midYBand = 20; // deadband: nodes within ±20px of midY keep their last side
+      const nodeSide = this._nodeLabelSide;
+      const nodeSettings = this._config.node_settings || {};
 
       const nodesHTML = nodes.map(n => {
         const pic = _entityPicture(this.hass, n.id);
@@ -659,31 +688,20 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         const safeName = name.replace(/&/g, "&amp;").replace(/</g, "&lt;");
         const safeState = (stateLabel || "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
 
-        // Above circle if in top half, below if in bottom half
-        const above = n.y < midY;
-        const showState = this._config.show_state !== false;
-        const nameW = Math.max(safeName.length * 6.5 + 8, 48);
-        const stateW = (showState && safeState) ? Math.max(safeState.length * 5.5 + 8, 40) : 0;
-        let labelHTML;
-        if (above) {
-          // state label higher, name closer to circle
-          const nameY = n.y - NODE_RADIUS - 5;      // baseline of name text
-          const stateY = nameY - 13;                  // baseline of state text (above name)
-          labelHTML = `
-            <rect x="${n.x - nameW / 2}" y="${nameY - 11}" width="${nameW}" height="14" rx="3" fill="var(--card-background-color,#fff)" fill-opacity="0.82"/>
-            <text x="${n.x}" y="${nameY}" text-anchor="middle" font-size="11" font-weight="600" font-family="inherit" fill="var(--primary-text-color)" pointer-events="none">${safeName}</text>
-            ${safeState && showState ? `
-            <rect x="${n.x - stateW / 2}" y="${stateY - 10}" width="${stateW}" height="13" rx="3" fill="var(--card-background-color,#fff)" fill-opacity="0.82"/>
-            <text x="${n.x}" y="${stateY}" text-anchor="middle" font-size="9.5" font-family="inherit" fill="var(--secondary-text-color)" pointer-events="none">${safeState}</text>` : ""}`;
+        const ns = nodeSettings[n.id] || {};
+        const showName  = ns.show_name  !== false;
+        const showState = (ns.show_state !== false) && (this._config.show_state !== false);
+        const pos = ns.label_position || "auto"; // "above" | "below" | "auto"
+
+        let above;
+        if (pos === "above") {
+          above = true;
+        } else if (pos === "below") {
+          above = false;
         } else {
-          const nameY = n.y + NODE_RADIUS + 13;
-          const stateY = nameY + 13;
-          labelHTML = `
-            <rect x="${n.x - nameW / 2}" y="${nameY - 11}" width="${nameW}" height="14" rx="3" fill="var(--card-background-color,#fff)" fill-opacity="0.82"/>
-            <text x="${n.x}" y="${nameY}" text-anchor="middle" font-size="11" font-weight="600" font-family="inherit" fill="var(--primary-text-color)" pointer-events="none">${safeName}</text>
-            ${safeState && showState ? `
-            <rect x="${n.x - stateW / 2}" y="${stateY - 10}" width="${stateW}" height="13" rx="3" fill="var(--card-background-color,#fff)" fill-opacity="0.82"/>
-            <text x="${n.x}" y="${stateY}" text-anchor="middle" font-size="9.5" font-family="inherit" fill="var(--secondary-text-color)" pointer-events="none">${safeState}</text>` : ""}`;
+          // auto: centroid + deadband
+          if (Math.abs(n.y - midY) > midYBand) nodeSide[n.id] = n.y < midY;
+          above = nodeSide[n.id] ?? true;
         }
 
         return `
@@ -694,7 +712,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
               ? `<clipPath id="${clipId}"><circle cx="${n.x}" cy="${n.y}" r="${NODE_RADIUS - 2}"/></clipPath>
                  <image href="${pic}" x="${n.x - NODE_RADIUS + 2}" y="${n.y - NODE_RADIUS + 2}" width="${(NODE_RADIUS - 2) * 2}" height="${(NODE_RADIUS - 2) * 2}" clip-path="url(#${clipId})" preserveAspectRatio="xMidYMid slice"/>`
               : `<text x="${n.x}" y="${n.y + 5}" text-anchor="middle" font-size="15" font-weight="700" font-family="inherit" fill="#fff" pointer-events="none">${initials}</text>`}
-            ${labelHTML}
+            ${showName ? this._nodeLabel(n, above, safeName, safeState, showState) : ""}
           </g>`;
       }).join("");
 
@@ -713,6 +731,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       wrap.innerHTML = svgStr;
 
       // Re-attach click listeners (innerHTML wipes them)
+      // Re-attach click listeners (innerHTML wipes them)
       wrap.querySelectorAll("g[data-entity]").forEach(g => {
         g.addEventListener("click", () => this._onLineClick(g.dataset.entity));
       });
@@ -726,13 +745,9 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       }));
     }
 
-    // _toggleHidden is called from the card editor, not the card itself —
-    // but kept here for completeness (editor dispatches config-changed directly)
-
     render() {
       if (!this._config || !this.hass) return html``;
       const { entities, title } = this._config;
-      const height = Math.max(300, (entities?.length || 2) * 90 + 60);
 
       if (!entities || entities.length < 2) {
         return html`<ha-card><div class="error-msg">Configure at least 2 entities.</div></ha-card>`;
@@ -747,9 +762,9 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       }).length;
       const totalPairs = livePairs.length;
       const cardTitle = title || entities.map(e => _personName(this.hass, e)).join(" · ");
-
       // _renderSVG sets actual height after sim; initial height prevents layout jump
       const initHeight = Math.max(260, (entities?.length || 2) * 80);
+
       return html`
         <ha-card>
           <div class="card-header">
@@ -865,6 +880,12 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       this._update("pair_settings", pairSettings);
     }
 
+    _updateNode(entityId, subKey, value) {
+      const nodeSettings = { ...(this._config.node_settings || {}) };
+      nodeSettings[entityId] = { ...(nodeSettings[entityId] || {}), [subKey]: value };
+      this._update("node_settings", nodeSettings);
+    }
+
     _input(key, e) { this._update(key, e.target.value || undefined); }
 
     _moveEntity(idx, dir) {
@@ -880,6 +901,82 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       const i = hidden.indexOf(eid);
       if (i >= 0) hidden.splice(i, 1); else hidden.push(eid);
       this._update("hidden_entities", hidden.length ? hidden : undefined);
+    }
+
+    _renderNodeSettings(currentEntities) {
+      if (!currentEntities.length) return nothing;
+      const nodeSettings = this._config.node_settings || {};
+      return html`
+        <div class="section-title">Node Labels</div>
+        ${currentEntities.map(eid => {
+          const s = this.hass?.states[eid];
+          const name = s?.attributes?.friendly_name || eid.replace(/^[^.]+\./, "").replace(/_/g, " ");
+          const ns = nodeSettings[eid] || {};
+          return html`
+            <div style="margin-bottom:10px">
+              <div style="font-size:0.82rem;font-weight:600;color:var(--primary-text-color);margin-bottom:4px">${name}</div>
+              <div style="display:flex;flex-direction:column;gap:4px;padding-left:8px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <input type="checkbox" id="sname_${eid}"
+                    .checked=${ns.show_name !== false}
+                    @change=${e => this._updateNode(eid, "show_name", e.target.checked)} />
+                  <label for="sname_${eid}" style="font-size:0.82rem;margin:0;cursor:pointer">Show name</label>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <input type="checkbox" id="sstate_${eid}"
+                    .checked=${ns.show_state !== false}
+                    @change=${e => this._updateNode(eid, "show_state", e.target.checked)} />
+                  <label for="sstate_${eid}" style="font-size:0.82rem;margin:0;cursor:pointer">Show state</label>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <label for="lpos_${eid}" style="font-size:0.82rem;margin:0;min-width:90px">Label position</label>
+                  <select id="lpos_${eid}" style="width:auto;padding:4px 6px;font-size:0.82rem"
+                    @change=${e => this._updateNode(eid, "label_position", e.target.value)}>
+                    <option value="auto"   ?selected=${!ns.label_position || ns.label_position === "auto"}>Auto</option>
+                    <option value="above"  ?selected=${ns.label_position === "above"}>Above</option>
+                    <option value="below"  ?selected=${ns.label_position === "below"}>Below</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          `;
+        })}
+      `;
+    }
+
+    _renderPairSettings(currentEntities) {
+      if (currentEntities.length < 2 || !this.hass) return nothing;
+      const pairs = _getPairsForEntities(this.hass, currentEntities);
+      if (!pairs.length) return nothing;
+      const pairSettings = this._config.pair_settings || {};
+      return html`
+        <div class="section-title">Pairs</div>
+        ${pairs.map(p => {
+          const pairKey = [p.entityA, p.entityB].sort().join(",");
+          const ps = pairSettings[pairKey] || {};
+          const nameA = this.hass.states[p.entityA]?.attributes?.friendly_name || p.entityA.replace(/^[^.]+\./, "").replace(/_/g, " ");
+          const nameB = this.hass.states[p.entityB]?.attributes?.friendly_name || p.entityB.replace(/^[^.]+\./, "").replace(/_/g, " ");
+          return html`
+            <div style="margin-bottom:10px">
+              <div style="font-size:0.82rem;font-weight:600;color:var(--primary-text-color);margin-bottom:4px">${nameA} & ${nameB}</div>
+              <div style="display:flex;flex-direction:column;gap:4px;padding-left:8px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <input type="checkbox" id="dist_${pairKey}"
+                    .checked=${ps.show_distance !== false}
+                    @change=${e => this._updatePair(pairKey, "show_distance", e.target.checked)} />
+                  <label for="dist_${pairKey}" style="font-size:0.82rem;margin:0;cursor:pointer">Show distance</label>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <input type="checkbox" id="zone_${pairKey}"
+                    .checked=${ps.show_zone !== false}
+                    @change=${e => this._updatePair(pairKey, "show_zone", e.target.checked)} />
+                  <label for="zone_${pairKey}" style="font-size:0.82rem;margin:0;cursor:pointer">Show proximity zone (very near, near…)</label>
+                </div>
+              </div>
+            </div>
+          `;
+        })}
+      `;
     }
 
     render() {
@@ -953,40 +1050,8 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
             <label for="show_state" style="margin:0;cursor:pointer">Show entity state (Home, Away…)</label>
           </div>
 
-          ${currentEntities.length >= 2 && this.hass ? (() => {
-            const pairs = _getPairsForEntities(this.hass, currentEntities);
-            if (!pairs.length) return nothing;
-            const pairSettings = this._config.pair_settings || {};
-            return html`
-              <div class="section-title">Pairs</div>
-              ${pairs.map(p => {
-                const pairKey = [p.entityA, p.entityB].sort().join(",");
-                const ps = pairSettings[pairKey] || {};
-                const nameA = this.hass.states[p.entityA]?.attributes?.friendly_name || p.entityA.replace(/^[^.]+\./, "").replace(/_/g, " ");
-                const nameB = this.hass.states[p.entityB]?.attributes?.friendly_name || p.entityB.replace(/^[^.]+\./, "").replace(/_/g, " ");
-                const label = `${nameA} & ${nameB}`;
-                return html`
-                  <div style="margin-bottom:10px">
-                    <div style="font-size:0.82rem;font-weight:600;color:var(--primary-text-color);margin-bottom:4px">${label}</div>
-                    <div style="display:flex;flex-direction:column;gap:4px;padding-left:8px">
-                      <div style="display:flex;align-items:center;gap:8px">
-                        <input type="checkbox" id="dist_${pairKey}"
-                          .checked=${ps.show_distance !== false}
-                          @change=${e => this._updatePair(pairKey, "show_distance", e.target.checked)} />
-                        <label for="dist_${pairKey}" style="font-size:0.82rem;margin:0;cursor:pointer">Show distance</label>
-                      </div>
-                      <div style="display:flex;align-items:center;gap:8px">
-                        <input type="checkbox" id="zone_${pairKey}"
-                          .checked=${ps.show_zone !== false}
-                          @change=${e => this._updatePair(pairKey, "show_zone", e.target.checked)} />
-                        <label for="zone_${pairKey}" style="font-size:0.82rem;margin:0;cursor:pointer">Show proximity zone (very near, near…)</label>
-                      </div>
-                    </div>
-                  </div>
-                `;
-              })}
-            `;
-          })() : nothing}
+          ${this._renderNodeSettings(currentEntities)}
+          ${this._renderPairSettings(currentEntities)}
           </div>
       `;
     }

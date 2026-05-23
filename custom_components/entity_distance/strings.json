@@ -237,6 +237,9 @@
       },
       "all_in_proximity": {
         "name": "All In Proximity"
+      },
+      "same_zone": {
+        "name": "Same Zone"
       }
     },
     "button": {

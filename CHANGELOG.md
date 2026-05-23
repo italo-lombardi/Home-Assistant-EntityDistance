@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-05-23
+
+### Added
+- **Same Zone binary sensor** — `binary_sensor.*_same_zone` per pair: `ON` when both entities report the same named zone (e.g. both at `home`, both at `work`), `OFF` when they differ, `unavailable` when either entity is `not_home`, `unknown`, or `unavailable`
+- **Zone-zone pair sensor reduction** — pairs where both entities are `zone.*` now create only Distance, Proximity Zone, and Proximity Zone Number sensors (motion-dependent sensors skipped: proximity, today-time, direction, speed, ETA, GPS accuracy, state, update count)
+
 ## [0.2.2] - 2026-05-22
 
 ### Added

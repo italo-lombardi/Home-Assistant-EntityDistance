@@ -102,36 +102,46 @@ async def async_setup_entry(
         a_name = _friendly_name(k[0])
         b_name = _friendly_name(k[1])
         pair_dev = _pair_device_info(entry, k, a_name, b_name)
-        all_sensors.extend(
-            [
-                EntityStateSensor(coordinator, entry, pair_dev, k, a_name, b_name, "a", k[0]),
-                EntityStateSensor(coordinator, entry, pair_dev, k, a_name, b_name, "b", k[1]),
-                TodayUnaccountedTimeSensor(coordinator, entry, pair_dev, k),
-                DistanceSensor(coordinator, entry, pair_dev, k),
-                BucketSensor(coordinator, entry, pair_dev, k),
-                BucketLevelSensor(coordinator, entry, pair_dev, k),
-                ProximityDurationSensor(coordinator, entry, pair_dev, k),
-                ProximityTrackingStartedSensor(coordinator, entry, pair_dev, k),
-                ProximityRateSensor(coordinator, entry, pair_dev, k),
-                LastSeenTogetherSensor(coordinator, entry, pair_dev, k),
-                TodayProximityTimeSensor(coordinator, entry, pair_dev, k),
-                TodayZoneTimeSensor(coordinator, entry, pair_dev, k, BUCKET_VERY_NEAR),
-                TodayZoneTimeSensor(coordinator, entry, pair_dev, k, BUCKET_NEAR),
-                TodayZoneTimeSensor(coordinator, entry, pair_dev, k, BUCKET_MID),
-                TodayZoneTimeSensor(coordinator, entry, pair_dev, k, BUCKET_FAR),
-                TodayZoneTimeSensor(coordinator, entry, pair_dev, k, BUCKET_VERY_FAR),
-                DirectionSensor(coordinator, entry, pair_dev, k),
-                DirectionLevelSensor(coordinator, entry, pair_dev, k),
-                ClosingSpeedSensor(coordinator, entry, pair_dev, k),
-                EtaSensor(coordinator, entry, pair_dev, k),
-                GpsAccuracySensor(coordinator, entry, pair_dev, k, a_name, b_name, "a"),
-                GpsAccuracySensor(coordinator, entry, pair_dev, k, a_name, b_name, "b"),
-                LastUpdateSensor(coordinator, entry, pair_dev, k, a_name, b_name, "a"),
-                LastUpdateSensor(coordinator, entry, pair_dev, k, a_name, b_name, "b"),
-                UpdateCountSensor(coordinator, entry, pair_dev, k, a_name, b_name, "a"),
-                UpdateCountSensor(coordinator, entry, pair_dev, k, a_name, b_name, "b"),
-            ]
-        )
+        is_zone_pair = k[0].startswith("zone.") and k[1].startswith("zone.")
+        if is_zone_pair:
+            all_sensors.extend(
+                [
+                    DistanceSensor(coordinator, entry, pair_dev, k),
+                    BucketSensor(coordinator, entry, pair_dev, k),
+                    BucketLevelSensor(coordinator, entry, pair_dev, k),
+                ]
+            )
+        else:
+            all_sensors.extend(
+                [
+                    EntityStateSensor(coordinator, entry, pair_dev, k, a_name, b_name, "a", k[0]),
+                    EntityStateSensor(coordinator, entry, pair_dev, k, a_name, b_name, "b", k[1]),
+                    TodayUnaccountedTimeSensor(coordinator, entry, pair_dev, k),
+                    DistanceSensor(coordinator, entry, pair_dev, k),
+                    BucketSensor(coordinator, entry, pair_dev, k),
+                    BucketLevelSensor(coordinator, entry, pair_dev, k),
+                    ProximityDurationSensor(coordinator, entry, pair_dev, k),
+                    ProximityTrackingStartedSensor(coordinator, entry, pair_dev, k),
+                    ProximityRateSensor(coordinator, entry, pair_dev, k),
+                    LastSeenTogetherSensor(coordinator, entry, pair_dev, k),
+                    TodayProximityTimeSensor(coordinator, entry, pair_dev, k),
+                    TodayZoneTimeSensor(coordinator, entry, pair_dev, k, BUCKET_VERY_NEAR),
+                    TodayZoneTimeSensor(coordinator, entry, pair_dev, k, BUCKET_NEAR),
+                    TodayZoneTimeSensor(coordinator, entry, pair_dev, k, BUCKET_MID),
+                    TodayZoneTimeSensor(coordinator, entry, pair_dev, k, BUCKET_FAR),
+                    TodayZoneTimeSensor(coordinator, entry, pair_dev, k, BUCKET_VERY_FAR),
+                    DirectionSensor(coordinator, entry, pair_dev, k),
+                    DirectionLevelSensor(coordinator, entry, pair_dev, k),
+                    ClosingSpeedSensor(coordinator, entry, pair_dev, k),
+                    EtaSensor(coordinator, entry, pair_dev, k),
+                    GpsAccuracySensor(coordinator, entry, pair_dev, k, a_name, b_name, "a"),
+                    GpsAccuracySensor(coordinator, entry, pair_dev, k, a_name, b_name, "b"),
+                    LastUpdateSensor(coordinator, entry, pair_dev, k, a_name, b_name, "a"),
+                    LastUpdateSensor(coordinator, entry, pair_dev, k, a_name, b_name, "b"),
+                    UpdateCountSensor(coordinator, entry, pair_dev, k, a_name, b_name, "a"),
+                    UpdateCountSensor(coordinator, entry, pair_dev, k, a_name, b_name, "b"),
+                ]
+            )
 
     # Group-level sensors (on the parent group device)
     if len(entities_list) > 2:

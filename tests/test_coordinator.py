@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -539,3 +540,251 @@ class TestResolveEntities:
         result = _resolve_entities(data)
         result.append("person.bob")
         assert data["entities"] == ["person.alice"]
+
+
+# ---------------------------------------------------------------------------
+# _calc_pair — ha_distance invalid, resync hold, midnight reset
+# ---------------------------------------------------------------------------
+
+
+def _make_calc_pair_coordinator(
+    entities=None,
+    entry_threshold_m=500.0,
+    exit_threshold_m=700.0,
+    max_accuracy_m=0.0,
+    max_speed_kmh=0.0,
+    resync_silence_s=0.0,
+    resync_hold_s=60.0,
+    require_reliable=False,
+    min_updates_reliable=1,
+    updates_window_s=1800.0,
+):
+    from custom_components.entity_distance.const import (
+        BUCKET_FAR,
+        BUCKET_MID,
+        BUCKET_NEAR,
+        BUCKET_VERY_NEAR,
+        DEFAULT_ZONE_FAR_M,
+        DEFAULT_ZONE_MID_M,
+        DEFAULT_ZONE_NEAR_M,
+        DEFAULT_ZONE_VERY_NEAR_M,
+    )
+    from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+    from custom_components.entity_distance.models import PairState, pair_key
+
+    if entities is None:
+        entities = ["person.alice", "person.bob"]
+
+    coordinator = EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)
+    coordinator._entities = entities
+    coordinator._entry_threshold_m = entry_threshold_m
+    coordinator._exit_threshold_m = exit_threshold_m
+    coordinator._max_accuracy_m = max_accuracy_m
+    coordinator._max_speed_kmh = max_speed_kmh
+    coordinator._resync_silence_s = resync_silence_s
+    coordinator._resync_hold_s = resync_hold_s
+    coordinator._require_reliable = require_reliable
+    coordinator._min_updates_reliable = min_updates_reliable
+    coordinator._updates_window_s = updates_window_s
+    coordinator._bucket_thresholds = {
+        BUCKET_VERY_NEAR: DEFAULT_ZONE_VERY_NEAR_M,
+        BUCKET_NEAR: DEFAULT_ZONE_NEAR_M,
+        BUCKET_MID: DEFAULT_ZONE_MID_M,
+        BUCKET_FAR: DEFAULT_ZONE_FAR_M,
+    }
+
+    pairs = {}
+    resync_holding = {}
+    resync_hold_until = {}
+    for a, b in __import__("itertools").combinations(entities, 2):
+        k = pair_key(a, b)
+        pairs[k] = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        resync_holding[k] = False
+        resync_hold_until[k] = None
+
+    coordinator._pair_states = pairs
+    coordinator._resync_holding = resync_holding
+    coordinator._resync_hold_until = resync_hold_until
+    coordinator.hass = MagicMock()
+    return coordinator
+
+
+class TestCalcPairHaDistanceInvalid:
+    """_calc_pair must invalidate pair when ha_distance returns None or inf."""
+
+    def test_none_distance_invalidates(self):
+
+        from custom_components.entity_distance.models import pair_key
+        from tests.conftest import make_state
+
+        coordinator = _make_calc_pair_coordinator()
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+
+        state_a = make_state("person.alice", 51.5, -0.1)
+        state_b = make_state("person.bob", 51.6, -0.2)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+
+        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=None):
+            result = coordinator._calc_pair(
+                ps, "person.alice", "person.bob", datetime.now().astimezone(), set()
+            )
+
+        assert result.data_valid is False
+        assert result.last_error == "ha_distance_invalid"
+
+    def test_inf_distance_invalidates(self):
+
+        from custom_components.entity_distance.models import pair_key
+        from tests.conftest import make_state
+
+        coordinator = _make_calc_pair_coordinator()
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+
+        state_a = make_state("person.alice", 51.5, -0.1)
+        state_b = make_state("person.bob", 51.6, -0.2)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=float("inf"),
+        ):
+            result = coordinator._calc_pair(
+                ps, "person.alice", "person.bob", datetime.now().astimezone(), set()
+            )
+
+        assert result.data_valid is False
+        assert result.last_error == "ha_distance_invalid"
+
+
+class TestCalcPairResyncHold:
+    """_calc_pair must mark data_valid=False while resync hold is active."""
+
+    def test_data_invalid_during_hold(self):
+        from custom_components.entity_distance.models import pair_key
+        from tests.conftest import make_state
+
+        coordinator = _make_calc_pair_coordinator(resync_silence_s=0.0, resync_hold_s=3600.0)
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+
+        now = datetime.now().astimezone()
+        coordinator._resync_holding[k] = True
+        coordinator._resync_hold_until[k] = now + timedelta(seconds=3600)
+
+        state_a = make_state("person.alice", 51.5, -0.1)
+        state_b = make_state("person.bob", 51.6, -0.2)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance", return_value=5000.0
+        ):
+            result = coordinator._calc_pair(ps, "person.alice", "person.bob", now, set())
+
+        assert result.data_valid is False
+
+    def test_data_valid_after_hold_expires(self):
+        from custom_components.entity_distance.models import pair_key
+        from tests.conftest import make_state
+
+        coordinator = _make_calc_pair_coordinator(resync_silence_s=0.0, resync_hold_s=60.0)
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+
+        now = datetime.now().astimezone()
+        coordinator._resync_holding[k] = True
+        coordinator._resync_hold_until[k] = now - timedelta(seconds=1)  # already expired
+
+        state_a = make_state("person.alice", 51.5, -0.1)
+        state_b = make_state("person.bob", 51.6, -0.2)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance", return_value=5000.0
+        ):
+            result = coordinator._calc_pair(ps, "person.alice", "person.bob", now, set())
+
+        assert result.data_valid is True
+        assert coordinator._resync_holding[k] is False
+
+
+class TestCalcPairMissingState:
+    """_calc_pair must invalidate when entity state is missing."""
+
+    def test_missing_state_a_invalidates(self):
+        from custom_components.entity_distance.models import pair_key
+        from tests.conftest import make_state
+
+        coordinator = _make_calc_pair_coordinator()
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+
+        state_b = make_state("person.bob", 51.6, -0.2)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            None if eid == "person.alice" else state_b
+        )
+
+        result = coordinator._calc_pair(
+            ps, "person.alice", "person.bob", datetime.now().astimezone(), set()
+        )
+        assert result.data_valid is False
+
+    def test_missing_state_b_invalidates(self):
+        from custom_components.entity_distance.models import pair_key
+        from tests.conftest import make_state
+
+        coordinator = _make_calc_pair_coordinator()
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+
+        state_a = make_state("person.alice", 51.5, -0.1)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else None
+        )
+
+        result = coordinator._calc_pair(
+            ps, "person.alice", "person.bob", datetime.now().astimezone(), set()
+        )
+        assert result.data_valid is False
+
+
+class TestCalcPairMidnightReset:
+    """today_proximity_seconds and today_zone_seconds reset at midnight."""
+
+    def test_today_seconds_reset_on_new_day(self):
+        from custom_components.entity_distance.models import pair_key
+        from tests.conftest import make_state
+
+        coordinator = _make_calc_pair_coordinator()
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+
+        yesterday = (datetime.now().astimezone() - timedelta(days=1)).date()
+        ps.today_reset_date = yesterday
+        ps.today_proximity_seconds = 9999.0
+        ps.today_zone_seconds = {"very_near": 500.0}
+
+        state_a = make_state("person.alice", 51.5, -0.1)
+        state_b = make_state("person.bob", 51.6, -0.2)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance", return_value=5000.0
+        ):
+            result = coordinator._calc_pair(
+                ps, "person.alice", "person.bob", datetime.now().astimezone(), set()
+            )
+
+        assert result.today_proximity_seconds == 0.0
+        assert result.today_zone_seconds == {}

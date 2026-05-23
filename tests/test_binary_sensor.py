@@ -5,10 +5,14 @@ from __future__ import annotations
 import itertools
 from unittest.mock import MagicMock
 
+import pytest
+
 from custom_components.entity_distance.binary_sensor import (
     AllInProximityBinarySensor,
     AnyInProximityBinarySensor,
     ProximityBinarySensor,
+    SameZoneBinarySensor,
+    async_setup_entry,
 )
 from custom_components.entity_distance.models import GroupData, PairState, pair_key
 
@@ -69,7 +73,230 @@ def _make_all_sensor(group_data: GroupData) -> AllInProximityBinarySensor:
     return sensor
 
 
-class TestProximityBinarySensor:
+def _make_same_zone_sensor(
+    pair_key_val: tuple[str, str],
+    state_a: str | None,
+    state_b: str | None,
+) -> SameZoneBinarySensor:
+    coordinator = MagicMock()
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    sensor = SameZoneBinarySensor.__new__(SameZoneBinarySensor)
+    sensor.coordinator = coordinator
+    sensor._entry = entry
+    sensor._pair_key = pair_key_val
+
+    def _get_state(entity_id):
+        mapping = {pair_key_val[0]: state_a, pair_key_val[1]: state_b}
+        val = mapping.get(entity_id)
+        if val is None:
+            return None
+        s = MagicMock()
+        s.state = val
+        return s
+
+    sensor.hass = MagicMock()
+    sensor.hass.states.get = _get_state
+    sensor._attr_unique_id = f"test_{pair_key_val[0]}__{pair_key_val[1]}_same_zone"
+    sensor._attr_device_info = {}
+    return sensor
+
+
+class TestSameZoneBinarySensor:
+    def test_true_when_both_same_named_zone(self):
+        k = pair_key("person.alice", "person.bob")
+        sensor = _make_same_zone_sensor(k, "home", "home")
+        assert sensor.is_on is True
+
+    def test_true_when_both_same_non_home_zone(self):
+        k = pair_key("person.alice", "person.bob")
+        sensor = _make_same_zone_sensor(k, "work", "work")
+        assert sensor.is_on is True
+
+    def test_false_when_different_zones(self):
+        k = pair_key("person.alice", "person.bob")
+        sensor = _make_same_zone_sensor(k, "home", "work")
+        assert sensor.is_on is False
+
+    def test_none_when_either_not_home(self):
+        k = pair_key("person.alice", "person.bob")
+        sensor = _make_same_zone_sensor(k, "home", "not_home")
+        assert sensor.is_on is None
+
+    def test_none_when_both_not_home(self):
+        k = pair_key("person.alice", "person.bob")
+        sensor = _make_same_zone_sensor(k, "not_home", "not_home")
+        assert sensor.is_on is None
+
+    def test_none_when_either_unknown(self):
+        k = pair_key("person.alice", "person.bob")
+        sensor = _make_same_zone_sensor(k, "home", "unknown")
+        assert sensor.is_on is None
+
+    def test_none_when_either_unavailable(self):
+        k = pair_key("person.alice", "person.bob")
+        sensor = _make_same_zone_sensor(k, "unavailable", "home")
+        assert sensor.is_on is None
+
+    def test_none_when_state_a_missing(self):
+        k = pair_key("person.alice", "person.bob")
+        sensor = _make_same_zone_sensor(k, None, "home")
+        assert sensor.is_on is None
+
+    def test_none_when_state_b_missing(self):
+        k = pair_key("person.alice", "person.bob")
+        sensor = _make_same_zone_sensor(k, "home", None)
+        assert sensor.is_on is None
+
+    def test_unique_id_contains_pair_ids(self):
+        k = pair_key("person.alice", "person.bob")
+        sensor = _make_same_zone_sensor(k, "home", "home")
+        assert "person.alice" in sensor._attr_unique_id or "person.bob" in sensor._attr_unique_id
+        assert "same_zone" in sensor._attr_unique_id
+
+
+class TestAsyncSetupEntry:
+    @pytest.mark.asyncio
+    async def test_creates_proximity_and_same_zone_for_person_pair(self):
+        from custom_components.entity_distance.const import DOMAIN
+
+        coordinator = MagicMock()
+        coordinator.entities = ["person.alice", "person.bob"]
+        coordinator.data = MagicMock()
+
+        entry = MagicMock()
+        entry.entry_id = "test_entry"
+
+        hass = MagicMock()
+        hass.states.get.return_value = None
+        hass.data = {DOMAIN: {"test_entry": coordinator}}
+
+        added = []
+        mock_add = MagicMock(side_effect=lambda entities: added.extend(entities))
+
+        await async_setup_entry(hass, entry, mock_add)
+
+        types = [type(e).__name__ for e in added]
+        assert "ProximityBinarySensor" in types
+        assert "SameZoneBinarySensor" in types
+
+    @pytest.mark.asyncio
+    async def test_skips_same_zone_for_zone_pair(self):
+        from custom_components.entity_distance.const import DOMAIN
+
+        coordinator = MagicMock()
+        coordinator.entities = ["zone.home", "zone.work"]
+        coordinator.data = MagicMock()
+
+        entry = MagicMock()
+        entry.entry_id = "test_entry"
+
+        hass = MagicMock()
+        hass.states.get.return_value = None
+        hass.data = {DOMAIN: {"test_entry": coordinator}}
+
+        added = []
+        mock_add = MagicMock(side_effect=lambda entities: added.extend(entities))
+
+        await async_setup_entry(hass, entry, mock_add)
+
+        types = [type(e).__name__ for e in added]
+        assert "ProximityBinarySensor" in types
+        assert "SameZoneBinarySensor" not in types
+
+    @pytest.mark.asyncio
+    async def test_creates_group_sensors_for_three_entities(self):
+        from custom_components.entity_distance.const import DOMAIN
+
+        coordinator = MagicMock()
+        coordinator.entities = ["person.alice", "person.bob", "person.carol"]
+        coordinator.data = MagicMock()
+
+        entry = MagicMock()
+        entry.entry_id = "test_entry"
+
+        hass = MagicMock()
+        hass.states.get.return_value = None
+        hass.data = {DOMAIN: {"test_entry": coordinator}}
+
+        added = []
+        mock_add = MagicMock(side_effect=lambda entities: added.extend(entities))
+
+        await async_setup_entry(hass, entry, mock_add)
+
+        types = [type(e).__name__ for e in added]
+        assert "AnyInProximityBinarySensor" in types
+        assert "AllInProximityBinarySensor" in types
+
+    @pytest.mark.asyncio
+    async def test_no_group_sensors_for_two_entities(self):
+        from custom_components.entity_distance.const import DOMAIN
+
+        coordinator = MagicMock()
+        coordinator.entities = ["person.alice", "person.bob"]
+        coordinator.data = MagicMock()
+
+        entry = MagicMock()
+        entry.entry_id = "test_entry"
+
+        hass = MagicMock()
+        hass.states.get.return_value = None
+        hass.data = {DOMAIN: {"test_entry": coordinator}}
+
+        added = []
+        mock_add = MagicMock(side_effect=lambda entities: added.extend(entities))
+
+        await async_setup_entry(hass, entry, mock_add)
+
+        types = [type(e).__name__ for e in added]
+        assert "AnyInProximityBinarySensor" not in types
+        assert "AllInProximityBinarySensor" not in types
+
+    @pytest.mark.asyncio
+    async def test_friendly_name_falls_back_to_entity_id(self):
+        from custom_components.entity_distance.const import DOMAIN
+
+        coordinator = MagicMock()
+        coordinator.entities = ["person.alice", "person.bob"]
+        coordinator.data = MagicMock()
+
+        entry = MagicMock()
+        entry.entry_id = "test_entry"
+
+        hass = MagicMock()
+        hass.states.get.return_value = None
+        hass.data = {DOMAIN: {"test_entry": coordinator}}
+
+        added = []
+        mock_add = MagicMock(side_effect=lambda entities: added.extend(entities))
+
+        await async_setup_entry(hass, entry, mock_add)
+        assert len(added) > 0
+
+    @pytest.mark.asyncio
+    async def test_friendly_name_uses_state_name(self):
+        from custom_components.entity_distance.const import DOMAIN
+
+        coordinator = MagicMock()
+        coordinator.entities = ["person.alice", "person.bob"]
+        coordinator.data = MagicMock()
+
+        entry = MagicMock()
+        entry.entry_id = "test_entry"
+
+        state_mock = MagicMock()
+        state_mock.name = "Alice"
+
+        hass = MagicMock()
+        hass.states.get.return_value = state_mock
+        hass.data = {DOMAIN: {"test_entry": coordinator}}
+
+        added = []
+        mock_add = MagicMock(side_effect=lambda entities: added.extend(entities))
+
+        await async_setup_entry(hass, entry, mock_add)
+        assert len(added) > 0
+
     def test_is_on_when_proximity_true(self):
         k = pair_key("person.alice", "person.bob")
         gd = _make_group_data(["person.alice", "person.bob"], {k: True})

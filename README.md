@@ -19,6 +19,7 @@ Track the distance between any two or more entities — people, devices, or zone
 - **Group sensors** — for 3+ entities: Min Distance, Any In Proximity, All In Proximity
 - **26 sensors per pair** — distance, proximity zone, proximity zone level, proximity duration, proximity rate, proximity tracking started, last seen together, today proximity time, direction, direction level, closing speed, ETA, today zone times, GPS accuracy, last update, update count, entity state, today unaccounted time (per entity where applicable)
 - **Proximity binary sensor** — ON/OFF with configurable entry/exit hysteresis to prevent flickering
+- **Same Zone binary sensor** — ON when both entities share the same named zone; unavailable when either is `not_home`
 - **Direction of travel** — approaching, diverging, or stationary
 - **ETA** — estimated minutes until together, only when approaching
 - **Closing speed** — convergence rate in km/h
@@ -152,14 +153,14 @@ All settings can be changed after setup via **Configure** on the integration car
 
 ## Entities
 
-Each configured group creates one HA device (the group) with per-pair sub-devices. A 2-entity group creates 28 entities (26 sensors + 1 binary sensor + 1 button). A 3-entity group creates 84 pair entities + 3 group sensors.
+Each configured group creates one HA device (the group) with per-pair sub-devices. A 2-entity group creates 29 entities (26 sensors + 2 binary sensors + 1 button). A 3-entity group creates 87 pair entities + 3 group sensors.
 
 | Group size | Pairs | Total entities (approx) |
 |-----------|-------|------------------------|
-| 2 | 1 | 28 |
-| 3 | 3 | 84 + 3 group |
-| 4 | 6 | 168 + 3 group |
-| 5 | 10 | 280 + 3 group |
+| 2 | 1 | 29 |
+| 3 | 3 | 87 + 3 group |
+| 4 | 6 | 174 + 3 group |
+| 5 | 10 | 290 + 3 group |
 
 ### Pair Sensors
 
@@ -194,11 +195,14 @@ Each configured group creates one HA device (the group) with per-pair sub-device
 
 > GPS Accuracy, Last Update, and Update Count are diagnostic sensors — collapsed by default in the HA UI.
 
-### Binary Sensor (per pair)
+### Binary Sensors (per pair)
 
 | Entity | Description | Device Class |
 |--------|-------------|--------------|
 | In Proximity | ON when within nearby distance, OFF when beyond away distance | `presence` |
+| Same Zone | ON when both entities are in the same named zone (e.g. both `home`); unavailable when either is `not_home` / `unknown` / `unavailable` | — |
+
+> `Same Zone` is not created for zone-zone pairs (always trivially true).
 
 ### Group Sensors (3+ entities only)
 
@@ -219,7 +223,7 @@ Each configured group creates one HA device (the group) with per-pair sub-device
      - Settings → Devices & Services → Entity Distance → click a pair sub-device
        (e.g. "Italo & Home" or "Dercy & Italo")
      - Show the full device card with all entities listed
-     - Scroll to show all 28 entities (sensors, binary sensor, button)
+     - Scroll to show all 29 entities (sensors, binary sensors, button)
      - Alternatively: two side-by-side screenshots showing top and bottom halves
      - Recommended: 1200×1600 px (tall), light theme
      - Tip: use browser DevTools to reduce zoom so more fits in one shot
@@ -531,11 +535,11 @@ If auto-registration fails (e.g. YAML-only Lovelace mode), add manually:
 
 ```yaml
 resources:
-  - url: /entity_distance/entity-distance-pair-card.js?0.2.2
+  - url: /entity_distance/entity-distance-pair-card.js?0.2.3
     type: module
-  - url: /entity_distance/entity-distance-avatar-card.js?0.2.2
+  - url: /entity_distance/entity-distance-avatar-card.js?0.2.3
     type: module
-  - url: /entity_distance/entity-distance-group-card.js?0.2.2
+  - url: /entity_distance/entity-distance-group-card.js?0.2.3
     type: module
 ```
 

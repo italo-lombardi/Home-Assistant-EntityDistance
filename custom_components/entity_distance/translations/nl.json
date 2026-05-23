@@ -237,6 +237,9 @@
       },
       "all_in_proximity": {
         "name": "Alle in de buurt"
+      },
+      "same_zone": {
+        "name": "Zelfde zone"
       }
     },
     "button": {

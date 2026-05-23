@@ -5,6 +5,8 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock
 
+import pytest
+
 from custom_components.entity_distance.const import (
     BUCKET_FAR,
     BUCKET_MID,
@@ -945,3 +947,281 @@ class TestProximityDurationSensorEdgeCases:
         ps.proximity_duration_s = 100.0
         sensor = _make_sensor(ProximityDurationSensor, ps)
         assert sensor.native_value == round(100.0 / 60, 1)
+
+
+# ---------------------------------------------------------------------------
+# Sensors tested via _make_extra_sensor helper (new-style, no duplicate names)
+# DirectionSensor, EntityStateSensor, ProximityTrackingStartedSensor
+# ---------------------------------------------------------------------------
+
+
+def _make_extra_sensor(cls, ps: PairState, **kwargs):
+    coordinator = MagicMock()
+    k = pair_key(ps.entity_a_id, ps.entity_b_id)
+    coordinator.data = GroupData(pairs={k: ps})
+    coordinator.bucket_thresholds = _DEFAULT_THRESHOLDS
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    sensor = cls.__new__(cls)
+    sensor.coordinator = coordinator
+    sensor._entry = entry
+    sensor._pair_key = k
+    sensor._sensor_key = "test"
+    sensor._attr_unique_id = "test_sensor"
+    sensor._attr_device_info = {}
+    for attr, val in kwargs.items():
+        setattr(sensor, attr, val)
+    return sensor
+
+
+class TestDirectionSensor:
+    def test_returns_direction(self):
+        from custom_components.entity_distance.sensor import DirectionSensor
+
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.direction = DIRECTION_APPROACHING
+        sensor = _make_extra_sensor(DirectionSensor, ps)
+        assert sensor.native_value == DIRECTION_APPROACHING
+
+    def test_returns_none_when_no_direction(self):
+        from custom_components.entity_distance.sensor import DirectionSensor
+
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.direction = None
+        sensor = _make_extra_sensor(DirectionSensor, ps)
+        assert sensor.native_value is None
+
+
+class TestClosingSpeedSensorExtra:
+    def test_returns_rounded_speed(self):
+        from custom_components.entity_distance.sensor import ClosingSpeedSensor
+
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.closing_speed_kmh = 12.3456
+        sensor = _make_extra_sensor(ClosingSpeedSensor, ps)
+        assert sensor.native_value == 12.3
+
+    def test_returns_none_when_no_speed(self):
+        from custom_components.entity_distance.sensor import ClosingSpeedSensor
+
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.closing_speed_kmh = None
+        sensor = _make_extra_sensor(ClosingSpeedSensor, ps)
+        assert sensor.native_value is None
+
+
+class TestEtaSensorExtra:
+    def test_returns_rounded_eta(self):
+        from custom_components.entity_distance.sensor import EtaSensor
+
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.eta_minutes = 7.777
+        sensor = _make_extra_sensor(EtaSensor, ps)
+        assert sensor.native_value == 7.8
+
+    def test_returns_none_when_no_eta(self):
+        from custom_components.entity_distance.sensor import EtaSensor
+
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.eta_minutes = None
+        sensor = _make_extra_sensor(EtaSensor, ps)
+        assert sensor.native_value is None
+
+
+class TestGpsAccuracySensorExtra:
+    def test_returns_accuracy_a(self):
+        from custom_components.entity_distance.sensor import GpsAccuracySensor
+
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.accuracy_a = 12.5
+        ps.accuracy_b = 30.0
+        sensor = _make_extra_sensor(GpsAccuracySensor, ps, _which="a")
+        assert sensor.native_value == 12.5
+
+    def test_returns_accuracy_b(self):
+        from custom_components.entity_distance.sensor import GpsAccuracySensor
+
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.accuracy_a = 12.5
+        ps.accuracy_b = 30.0
+        sensor = _make_extra_sensor(GpsAccuracySensor, ps, _which="b")
+        assert sensor.native_value == 30.0
+
+    def test_returns_none_when_accuracy_missing(self):
+        from custom_components.entity_distance.sensor import GpsAccuracySensor
+
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.accuracy_a = None
+        sensor = _make_extra_sensor(GpsAccuracySensor, ps, _which="a")
+        assert sensor.native_value is None
+
+
+class TestLastUpdateSensorExtra:
+    def test_returns_last_update_a(self):
+        from custom_components.entity_distance.sensor import LastUpdateSensor
+
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ts = datetime.now().astimezone()
+        ps.last_update_a = ts
+        sensor = _make_extra_sensor(LastUpdateSensor, ps, _which="a")
+        assert sensor.native_value == ts
+
+    def test_returns_last_update_b(self):
+        from custom_components.entity_distance.sensor import LastUpdateSensor
+
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ts = datetime.now().astimezone()
+        ps.last_update_b = ts
+        sensor = _make_extra_sensor(LastUpdateSensor, ps, _which="b")
+        assert sensor.native_value == ts
+
+    def test_returns_none_when_no_update(self):
+        from custom_components.entity_distance.sensor import LastUpdateSensor
+
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        sensor = _make_extra_sensor(LastUpdateSensor, ps, _which="a")
+        assert sensor.native_value is None
+
+
+class TestEntityStateSensor:
+    def test_returns_state_string(self):
+        from custom_components.entity_distance.sensor import EntityStateSensor
+
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        sensor = _make_extra_sensor(EntityStateSensor, ps, _tracked_entity_id="person.a")
+        hass = MagicMock()
+        state_mock = MagicMock()
+        state_mock.state = "home"
+        hass.states.get.return_value = state_mock
+        sensor.hass = hass
+        assert sensor.native_value == "home"
+
+    def test_returns_none_when_entity_missing(self):
+        from custom_components.entity_distance.sensor import EntityStateSensor
+
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        sensor = _make_extra_sensor(EntityStateSensor, ps, _tracked_entity_id="person.a")
+        hass = MagicMock()
+        hass.states.get.return_value = None
+        sensor.hass = hass
+        assert sensor.native_value is None
+
+
+class TestProximityTrackingStartedSensorExtra:
+    def test_returns_none_when_not_set(self):
+        from custom_components.entity_distance.sensor import ProximityTrackingStartedSensor
+
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        sensor = _make_extra_sensor(ProximityTrackingStartedSensor, ps)
+        assert sensor.native_value is None
+
+    def test_returns_timestamp(self):
+        from custom_components.entity_distance.sensor import ProximityTrackingStartedSensor
+
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ts = datetime.now().astimezone()
+        ps.proximity_tracking_started = ts
+        sensor = _make_extra_sensor(ProximityTrackingStartedSensor, ps)
+        assert sensor.native_value == ts
+
+
+class TestAsyncSetupEntrySensor:
+    """Test sensor.py async_setup_entry zone-pair branching."""
+
+    @pytest.mark.asyncio
+    async def test_zone_pair_gets_only_three_sensors(self):
+        from custom_components.entity_distance.const import DOMAIN
+        from custom_components.entity_distance.sensor import async_setup_entry
+
+        coordinator = MagicMock()
+        coordinator.entities = ["zone.home", "zone.work"]
+        coordinator.data = MagicMock()
+
+        entry = MagicMock()
+        entry.entry_id = "test_entry"
+
+        hass = MagicMock()
+        hass.states.get.return_value = None
+        hass.data = {DOMAIN: {"test_entry": coordinator}}
+
+        added = []
+        mock_add = MagicMock(side_effect=lambda entities: added.extend(entities))
+
+        await async_setup_entry(hass, entry, mock_add)
+
+        types = [type(e).__name__ for e in added]
+        assert set(types) == {"DistanceSensor", "BucketSensor", "BucketLevelSensor"}
+
+    @pytest.mark.asyncio
+    async def test_person_pair_gets_full_sensor_set(self):
+        from custom_components.entity_distance.const import DOMAIN
+        from custom_components.entity_distance.sensor import async_setup_entry
+
+        coordinator = MagicMock()
+        coordinator.entities = ["person.alice", "person.bob"]
+        coordinator.data = MagicMock()
+
+        entry = MagicMock()
+        entry.entry_id = "test_entry"
+
+        hass = MagicMock()
+        hass.states.get.return_value = None
+        hass.data = {DOMAIN: {"test_entry": coordinator}}
+
+        added = []
+        mock_add = MagicMock(side_effect=lambda entities: added.extend(entities))
+
+        await async_setup_entry(hass, entry, mock_add)
+
+        types = [type(e).__name__ for e in added]
+        assert "EntityStateSensor" in types
+        assert "ClosingSpeedSensor" in types
+        assert "TodayZoneTimeSensor" in types
+
+    @pytest.mark.asyncio
+    async def test_three_entities_get_group_sensor(self):
+        from custom_components.entity_distance.const import DOMAIN
+        from custom_components.entity_distance.sensor import async_setup_entry
+
+        coordinator = MagicMock()
+        coordinator.entities = ["person.alice", "person.bob", "person.carol"]
+        coordinator.data = MagicMock()
+
+        entry = MagicMock()
+        entry.entry_id = "test_entry"
+
+        hass = MagicMock()
+        hass.states.get.return_value = None
+        hass.data = {DOMAIN: {"test_entry": coordinator}}
+
+        added = []
+        mock_add = MagicMock(side_effect=lambda entities: added.extend(entities))
+
+        await async_setup_entry(hass, entry, mock_add)
+
+        types = [type(e).__name__ for e in added]
+        assert "MinDistanceSensor" in types
+
+    @pytest.mark.asyncio
+    async def test_two_entities_no_group_sensor(self):
+        from custom_components.entity_distance.const import DOMAIN
+        from custom_components.entity_distance.sensor import async_setup_entry
+
+        coordinator = MagicMock()
+        coordinator.entities = ["person.alice", "person.bob"]
+        coordinator.data = MagicMock()
+
+        entry = MagicMock()
+        entry.entry_id = "test_entry"
+
+        hass = MagicMock()
+        hass.states.get.return_value = None
+        hass.data = {DOMAIN: {"test_entry": coordinator}}
+
+        added = []
+        mock_add = MagicMock(side_effect=lambda entities: added.extend(entities))
+
+        await async_setup_entry(hass, entry, mock_add)
+
+        types = [type(e).__name__ for e in added]
+        assert "MinDistanceSensor" not in types

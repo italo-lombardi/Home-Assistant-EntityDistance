@@ -56,7 +56,10 @@ async def async_setup_entry(
             entry_type=DeviceEntryType.SERVICE,
             via_device=(DOMAIN, entry.entry_id),
         )
+        is_zone_pair = k[0].startswith("zone.") and k[1].startswith("zone.")
         sensors.append(ProximityBinarySensor(coordinator, entry, pair_dev, k, a_name, b_name))
+        if not is_zone_pair:
+            sensors.append(SameZoneBinarySensor(coordinator, entry, pair_dev, k))
 
     # Group-level: any_in_proximity (only useful for 3+ entities)
     if len(entities_list) > 2:
@@ -102,6 +105,38 @@ class ProximityBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], Binary
         if not self._pair.data_valid:
             return None
         return self._pair.proximity
+
+
+class SameZoneBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], BinarySensorEntity):
+    _attr_has_entity_name = True
+    _attr_translation_key = "same_zone"
+
+    def __init__(
+        self,
+        coordinator: EntityDistanceCoordinator,
+        entry: ConfigEntry,
+        device_info: DeviceInfo,
+        pair_key_val: tuple[str, str],
+    ) -> None:
+        super().__init__(coordinator)
+        self._entry = entry
+        self._pair_key = pair_key_val
+        key_str = f"{pair_key_val[0]}__{pair_key_val[1]}"
+        self._attr_unique_id = f"{entry.entry_id}_{key_str}_same_zone"
+        self._attr_device_info = device_info
+
+    @property
+    def is_on(self) -> bool | None:
+        state_a = self.hass.states.get(self._pair_key[0])
+        state_b = self.hass.states.get(self._pair_key[1])
+        if state_a is None or state_b is None:
+            return None
+        zone_a = state_a.state
+        zone_b = state_b.state
+        _unknown = {"unknown", "unavailable", "not_home"}
+        if zone_a in _unknown or zone_b in _unknown:
+            return None
+        return zone_a == zone_b
 
 
 class AnyInProximityBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], BinarySensorEntity):

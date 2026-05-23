@@ -554,14 +554,15 @@ class TestTodayUnaccountedTimeSensor:
         assert 0.0 <= value <= 1.0
 
     def test_long_gap_returns_expected_minutes(self):
-        # prev_calc_time 60 minutes ago → gap ≈ 60 min
+        # prev_calc_time 60 minutes ago, but clamped to today's midnight.
+        # Use a fixed gap of 10 min within the same day to avoid midnight truncation.
         now = datetime.now().astimezone()
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
-        ps.prev_calc_time = now - timedelta(minutes=60)
+        ps.prev_calc_time = now - timedelta(minutes=10)
         sensor = _make_unaccounted_sensor(ps)
         value = sensor.native_value
         assert value is not None
-        assert 59.0 <= value <= 61.0
+        assert 9.0 <= value <= 11.0
 
     def test_gap_never_negative(self):
         # prev_calc_time slightly in the future (clock drift) → max(gap, 0) = 0

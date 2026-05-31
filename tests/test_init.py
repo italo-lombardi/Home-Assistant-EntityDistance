@@ -343,9 +343,7 @@ class TestRegisterLovelaceResource:
         resources.async_create_item = AsyncMock()
         hass.data = {"lovelace": MagicMock(resources=resources)}
 
-        await _async_register_lovelace_resource(
-            hass, "entity-distance-pair-card.js", "/x", "0.2.4"
-        )
+        await _async_register_lovelace_resource(hass, "entity-distance-pair-card.js", "/x", "0.2.4")
 
         resources.async_create_item.assert_called_once()
 
@@ -363,9 +361,7 @@ class TestRegisterLovelaceResource:
         resources.async_create_item = AsyncMock()
         hass.data = {"lovelace": MagicMock(resources=resources)}
 
-        await _async_register_lovelace_resource(
-            hass, "entity-distance-pair-card.js", "/x", "0.2.4"
-        )
+        await _async_register_lovelace_resource(hass, "entity-distance-pair-card.js", "/x", "0.2.4")
 
         resources.async_load.assert_called_once()
 

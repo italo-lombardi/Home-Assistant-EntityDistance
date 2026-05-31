@@ -1204,12 +1204,12 @@ class TestCoordinatorLifecycle:
 
 
 # ---------------------------------------------------------------------------
-# _async_recalculate (lines 266-298)
+# async_recalculate (lines 266-298)
 # ---------------------------------------------------------------------------
 
 
 class TestCoordinatorAsyncRecalculate:
-    """Cover _async_recalculate."""
+    """Cover async_recalculate."""
 
     async def test_recalculate_calls_calc_pair_and_saves(self):
         from unittest.mock import AsyncMock, MagicMock, patch
@@ -1235,7 +1235,7 @@ class TestCoordinatorAsyncRecalculate:
             patch.object(coord, "_calc_pair", return_value=ps),
             patch.object(coord, "_async_save_state", new=AsyncMock()),
         ):
-            await coord._async_recalculate()
+            await coord.async_recalculate()
 
         coord.async_set_updated_data.assert_called_once()
         result_group = coord.async_set_updated_data.call_args[0][0]
@@ -1262,7 +1262,7 @@ class TestCoordinatorAsyncRecalculate:
             patch.object(coord, "_calc_pair", return_value=ps),
             patch.object(coord, "_async_save_state", new=AsyncMock()),
         ):
-            await coord._async_recalculate()
+            await coord.async_recalculate()
 
         result_group = coord.async_set_updated_data.call_args[0][0]
         assert result_group.min_distance_m is None

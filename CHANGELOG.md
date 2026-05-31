@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-05-31
+
+### Fixed
+- **Card install race**: replaced module-level `_CARD_INSTALLED` global with a `hass.data[DOMAIN]` flag, preventing duplicate Lovelace resource registration when multiple config entries set up concurrently
+- **Speed filter false rejects**: increased minimum elapsed-time gate from `>0` to `>=5s` before computing implied speed; eliminates spurious `speed_filter` invalidations caused by GPS jitter on rapid successive state events
+- **Coord-extraction log spam**: warning log now includes only the relevant location attributes (`latitude`, `longitude`, `location`, `gps_accuracy`) instead of the full state attribute dict, avoiding megabyte-sized log entries for entities with large attribute payloads (e.g. `media_player`)
+- **State restore visibility**: persisted state restore failures now log with `exc_info=True`, so the underlying exception is visible instead of being silently swallowed
+- **Lovelace `resources.loaded` mutation**: removed direct mutations of `ResourceStorageCollection.loaded`; Home Assistant manages this internally
+- **Coordinator API hygiene**: renamed `_async_recalculate` → `async_recalculate` since it is invoked from `async_setup_entry`; the leading underscore was misleading
+
 ## [0.2.3] - 2026-05-23
 
 ### Added

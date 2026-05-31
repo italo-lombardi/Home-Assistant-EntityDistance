@@ -27,7 +27,7 @@ PEOPLE_CARD_FILENAME = "entity-distance-avatar-card.js"
 PEOPLE_CARD_URL = f"/{DOMAIN}/{PEOPLE_CARD_FILENAME}"
 GROUP_CARD_FILENAME = "entity-distance-group-card.js"
 GROUP_CARD_URL = f"/{DOMAIN}/{GROUP_CARD_FILENAME}"
-_CARD_INSTALLED = False
+_CARD_INSTALLED_KEY = "_card_installed"
 
 
 def _get_version() -> str:
@@ -51,7 +51,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     coordinator = EntityDistanceCoordinator(hass, entry)
     await coordinator.async_setup()
-    await coordinator._async_recalculate()
+    await coordinator.async_recalculate()
 
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
@@ -90,7 +90,6 @@ async def _async_purge_stale_resources(hass: HomeAssistant) -> None:
         return
     if not resources.loaded:
         await resources.async_load()
-        resources.loaded = True
     if not isinstance(resources, ResourceStorageCollection):
         return
     for r in list(resources.async_items()):
@@ -101,8 +100,8 @@ async def _async_purge_stale_resources(hass: HomeAssistant) -> None:
 
 
 async def _async_install_card(hass: HomeAssistant) -> None:
-    global _CARD_INSTALLED
-    if _CARD_INSTALLED:
+    domain_data = hass.data.setdefault(DOMAIN, {})
+    if domain_data.get(_CARD_INSTALLED_KEY):
         return
 
     version = await hass.async_add_executor_job(_get_version)
@@ -124,7 +123,7 @@ async def _async_install_card(hass: HomeAssistant) -> None:
             _LOGGER.debug("entity_distance: static path %s already registered", url)
         await _async_register_lovelace_resource(hass, filename, url, version)
 
-    _CARD_INSTALLED = True
+    domain_data[_CARD_INSTALLED_KEY] = True
 
 
 async def _async_register_lovelace_resource(
@@ -145,7 +144,6 @@ async def _async_register_lovelace_resource(
 
     if not resources.loaded:
         await resources.async_load()
-        resources.loaded = True
 
     existing = [r for r in resources.async_items() if filename in r.get("url", "")]
 

@@ -97,11 +97,16 @@ def _get_coords(state: State) -> tuple[float, float, float | None] | None:
             lat = lon = None
 
     if lat is None or lon is None:
+        relevant_attrs = {
+            k: attrs.get(k)
+            for k in ("latitude", "longitude", "location", "gps_accuracy")
+            if k in attrs
+        }
         _LOGGER.warning(
             "entity_distance: cannot extract coords from %s (state=%r, attrs=%r)",
             state.entity_id,
             state.state,
-            dict(state.attributes),
+            relevant_attrs,
         )
         return None
 
@@ -216,7 +221,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             _LOGGER,
             cooldown=self._debounce_s,
             immediate=False,
-            function=self._async_recalculate,
+            function=self.async_recalculate,
         )
 
         unsub = async_track_state_change_event(self.hass, self._entities, self._async_state_changed)
@@ -262,7 +267,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         self._pending_updates.add(entity_id)
         self.hass.async_create_task(self._debouncer.async_call())
 
-    async def _async_recalculate(self) -> None:
+    async def async_recalculate(self) -> None:
         now = datetime.now().astimezone()
         pending = set(self._pending_updates)
         self._pending_updates.clear()
@@ -401,7 +406,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             and self._max_speed_kmh > 0
         ):
             delta_s = max(0.0, (now - ps.prev_calc_time).total_seconds())
-            if delta_s > 0:
+            if delta_s >= 5.0:
                 implied_speed_kmh = abs(dist_m - ps.prev_distance_m) / delta_s * 3.6
                 if implied_speed_kmh > self._max_speed_kmh:
                     _LOGGER.warning(
@@ -626,4 +631,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                     ps.proximity_since = datetime.fromisoformat(proximity_since_str)
                     ps.proximity = True
         except Exception:  # noqa: BLE001
-            _LOGGER.warning("entity_distance: failed to restore persisted state, starting fresh")
+            _LOGGER.warning(
+                "entity_distance: failed to restore persisted state, starting fresh",
+                exc_info=True,
+            )

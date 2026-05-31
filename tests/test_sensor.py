@@ -399,6 +399,42 @@ class TestUpdateCountSensor:
         sensor = _make_count_sensor("b", self._ps(True, count_a=99, count_b=0))
         assert sensor.native_value == 0
 
+    def test_expired_window_returns_zero_for_a(self):
+        from datetime import timedelta
+
+        from custom_components.entity_distance.const import UPDATES_FREQUENCY_WINDOW_S
+
+        ps = self._ps(True, count_a=5, count_b=3)
+        ps.update_window_start_a = datetime.now().astimezone() - timedelta(
+            seconds=UPDATES_FREQUENCY_WINDOW_S + 60
+        )
+        sensor = _make_count_sensor("a", ps)
+        assert sensor.native_value == 0
+
+    def test_active_window_returns_count_for_b(self):
+        ps = self._ps(True, count_a=1, count_b=7)
+        ps.update_window_start_b = datetime.now().astimezone()
+        sensor = _make_count_sensor("b", ps)
+        assert sensor.native_value == 7
+
+    def test_active_window_returns_count_for_a(self):
+        ps = self._ps(True, count_a=4, count_b=1)
+        ps.update_window_start_a = datetime.now().astimezone()
+        sensor = _make_count_sensor("a", ps)
+        assert sensor.native_value == 4
+
+    def test_expired_window_returns_zero_for_b(self):
+        from datetime import timedelta
+
+        from custom_components.entity_distance.const import UPDATES_FREQUENCY_WINDOW_S
+
+        ps = self._ps(True, count_a=2, count_b=9)
+        ps.update_window_start_b = datetime.now().astimezone() - timedelta(
+            seconds=UPDATES_FREQUENCY_WINDOW_S + 60
+        )
+        sensor = _make_count_sensor("b", ps)
+        assert sensor.native_value == 0
+
 
 # ---------------------------------------------------------------------------
 # ProximityRateSensor tests
@@ -1226,3 +1262,28 @@ class TestAsyncSetupEntrySensor:
 
         types = [type(e).__name__ for e in added]
         assert "MinDistanceSensor" not in types
+
+    @pytest.mark.asyncio
+    async def test_friendly_name_uses_state_name_when_available(self):
+        from custom_components.entity_distance.const import DOMAIN
+        from custom_components.entity_distance.sensor import async_setup_entry
+
+        coordinator = MagicMock()
+        coordinator.entities = ["person.alice", "person.bob"]
+        coordinator.data = MagicMock()
+
+        entry = MagicMock()
+        entry.entry_id = "test_entry"
+
+        def _get_state(eid):
+            s = MagicMock()
+            s.name = "Alice Smith" if "alice" in eid else "Bob Jones"
+            return s
+
+        hass = MagicMock()
+        hass.states.get.side_effect = _get_state
+        hass.data = {DOMAIN: {"test_entry": coordinator}}
+
+        added = []
+        await async_setup_entry(hass, entry, lambda entities: added.extend(entities))
+        assert len(added) > 0

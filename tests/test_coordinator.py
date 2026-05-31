@@ -788,3 +788,575 @@ class TestCalcPairMidnightReset:
 
         assert result.today_proximity_seconds == 0.0
         assert result.today_zone_seconds == {}
+
+
+# ---------------------------------------------------------------------------
+# _calc_pair — update window tracking (lines 467-474, 477-484)
+# ---------------------------------------------------------------------------
+
+
+class TestCalcPairUpdateWindowTracking:
+    """_calc_pair sets update_window_start when entity is in pending set."""
+
+    def test_entity_a_in_pending_sets_window_start(self):
+        from unittest.mock import patch
+
+        from tests.conftest import make_state
+
+        coordinator = _make_calc_pair_coordinator()
+        from custom_components.entity_distance.models import pair_key
+
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+        ps.update_window_start_a = None
+
+        state_a = make_state("person.alice", 51.5, -0.1)
+        state_b = make_state("person.bob", 51.6, -0.2)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance", return_value=5000.0
+        ):
+            result = coordinator._calc_pair(
+                ps, "person.alice", "person.bob", datetime.now().astimezone(), {"person.alice"}
+            )
+
+        assert result.update_window_start_a is not None
+
+    def test_entity_b_in_pending_sets_window_start(self):
+        from unittest.mock import patch
+
+        from tests.conftest import make_state
+
+        coordinator = _make_calc_pair_coordinator()
+        from custom_components.entity_distance.models import pair_key
+
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+        ps.update_window_start_b = None
+
+        state_a = make_state("person.alice", 51.5, -0.1)
+        state_b = make_state("person.bob", 51.6, -0.2)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance", return_value=5000.0
+        ):
+            result = coordinator._calc_pair(
+                ps, "person.alice", "person.bob", datetime.now().astimezone(), {"person.bob"}
+            )
+
+        assert result.update_window_start_b is not None
+
+
+# ---------------------------------------------------------------------------
+# _calc_pair — resync silence (lines 505-514)
+# ---------------------------------------------------------------------------
+
+
+class TestCalcPairResyncSilence:
+    """_calc_pair triggers resync hold when both entities are silent."""
+
+    def test_resync_silence_triggers_hold(self):
+        from unittest.mock import patch
+
+        from tests.conftest import make_state
+
+        coordinator = _make_calc_pair_coordinator(resync_silence_s=60.0, resync_hold_s=300.0)
+        from custom_components.entity_distance.models import pair_key
+
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+
+        stale_time = datetime.now().astimezone() - timedelta(seconds=120)
+        ps.last_update_a = stale_time
+        ps.last_update_b = stale_time
+
+        state_a = make_state("person.alice", 51.5, -0.1)
+        state_b = make_state("person.bob", 51.6, -0.2)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance", return_value=5000.0
+        ):
+            coordinator._calc_pair(
+                ps, "person.alice", "person.bob", datetime.now().astimezone(), set()
+            )
+
+        assert coordinator._resync_holding[k] is True
+
+
+# ---------------------------------------------------------------------------
+# _calc_pair — require_reliable blocks proximity entry (lines 532-535)
+# ---------------------------------------------------------------------------
+
+
+class TestCalcPairRequireReliable:
+    """_calc_pair blocks proximity entry when require_reliable=True and not yet reliable."""
+
+    def test_require_reliable_blocks_proximity_entry(self):
+        from unittest.mock import patch
+
+        from tests.conftest import make_state
+
+        coordinator = _make_calc_pair_coordinator(
+            require_reliable=True,
+            min_updates_reliable=10,  # very high — not reliable
+            entry_threshold_m=10000.0,  # well within range
+            exit_threshold_m=15000.0,
+        )
+        from custom_components.entity_distance.models import pair_key
+
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+        ps.update_count_a = 0
+        ps.update_count_b = 0
+        ps.proximity = False  # was not in proximity
+
+        state_a = make_state("person.alice", 51.5, -0.1)
+        state_b = make_state("person.bob", 51.50001, -0.10001)  # very close
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+
+        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=1.0):
+            result = coordinator._calc_pair(
+                ps, "person.alice", "person.bob", datetime.now().astimezone(), set()
+            )
+
+        # proximity entry blocked because not reliable
+        assert result.proximity is False
+
+
+# ---------------------------------------------------------------------------
+# Constructor + properties via __new__ bypass
+# ---------------------------------------------------------------------------
+
+
+class TestCoordinatorProperties:
+    """Cover entities / bucket_thresholds properties (lines 198, 202)."""
+
+    def _make(self):
+        from custom_components.entity_distance.const import (
+            BUCKET_FAR,
+            BUCKET_MID,
+            BUCKET_NEAR,
+            BUCKET_VERY_NEAR,
+            DEFAULT_ZONE_FAR_M,
+            DEFAULT_ZONE_MID_M,
+            DEFAULT_ZONE_NEAR_M,
+            DEFAULT_ZONE_VERY_NEAR_M,
+        )
+        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+
+        coord = EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)
+        coord._entities = ["person.alice", "person.bob"]
+        coord._bucket_thresholds = {
+            BUCKET_VERY_NEAR: DEFAULT_ZONE_VERY_NEAR_M,
+            BUCKET_NEAR: DEFAULT_ZONE_NEAR_M,
+            BUCKET_MID: DEFAULT_ZONE_MID_M,
+            BUCKET_FAR: DEFAULT_ZONE_FAR_M,
+        }
+        return coord
+
+    def test_entities_property(self):
+        coord = self._make()
+        assert coord.entities == ["person.alice", "person.bob"]
+
+    def test_bucket_thresholds_property(self):
+        from custom_components.entity_distance.const import BUCKET_VERY_NEAR
+
+        coord = self._make()
+        assert BUCKET_VERY_NEAR in coord.bucket_thresholds
+
+
+# ---------------------------------------------------------------------------
+# Constructor __init__ via real hass + MockConfigEntry
+# ---------------------------------------------------------------------------
+
+
+class TestCoordinatorInit:
+    """Cover EntityDistanceCoordinator.__init__ (lines 145-194)."""
+
+    async def test_constructor_two_entities(self, hass):
+        from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+        from custom_components.entity_distance.const import DOMAIN
+        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={
+                "entities": ["person.alice", "person.bob"],
+                "entry_threshold_m": 500,
+                "exit_threshold_m": 700,
+                "debounce_s": 1,
+                "max_accuracy_m": 200,
+                "max_speed_kmh": 150,
+                "resync_silence_s": 0,
+                "resync_hold_s": 60,
+                "min_updates_reliable": 3,
+                "updates_window_s": 1800,
+                "require_reliable": False,
+            },
+        )
+        entry.add_to_hass(hass)
+        coord = EntityDistanceCoordinator(hass, entry)
+
+        assert coord.entities == ["person.alice", "person.bob"]
+        assert len(coord._pair_states) == 1
+        assert coord._debouncer is None
+
+    async def test_constructor_three_entities_builds_pairs(self, hass):
+        from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+        from custom_components.entity_distance.const import DOMAIN
+        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={
+                "entities": ["person.a", "person.b", "person.c"],
+                "entry_threshold_m": 500,
+                "exit_threshold_m": 700,
+                "debounce_s": 1,
+                "max_accuracy_m": 200,
+                "max_speed_kmh": 150,
+                "resync_silence_s": 0,
+                "resync_hold_s": 60,
+                "min_updates_reliable": 3,
+                "updates_window_s": 1800,
+                "require_reliable": False,
+            },
+        )
+        entry.add_to_hass(hass)
+        coord = EntityDistanceCoordinator(hass, entry)
+
+        assert len(coord._pair_states) == 3  # C(3,2) = 3 pairs
+
+    async def test_constructor_uses_options_over_data(self, hass):
+        from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+        from custom_components.entity_distance.const import DOMAIN
+        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={
+                "entities": ["person.alice", "person.bob"],
+                "entry_threshold_m": 100,
+                "exit_threshold_m": 200,
+                "debounce_s": 1,
+                "max_accuracy_m": 200,
+                "max_speed_kmh": 150,
+                "resync_silence_s": 0,
+                "resync_hold_s": 60,
+                "min_updates_reliable": 3,
+                "updates_window_s": 1800,
+                "require_reliable": False,
+            },
+            options={"entry_threshold_m": 999},
+        )
+        entry.add_to_hass(hass)
+        coord = EntityDistanceCoordinator(hass, entry)
+
+        assert coord._entry_threshold_m == 999
+
+
+# ---------------------------------------------------------------------------
+# async_setup, async_unload, _async_tick, _async_state_changed
+# ---------------------------------------------------------------------------
+
+
+class TestCoordinatorLifecycle:
+    """Cover async_setup, async_unload, _async_tick, _async_state_changed."""
+
+    def _make_coord(self, hass, entities=None):
+        from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+        from custom_components.entity_distance.const import DOMAIN
+        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+
+        if entities is None:
+            entities = ["person.alice", "person.bob"]
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={
+                "entities": entities,
+                "entry_threshold_m": 500,
+                "exit_threshold_m": 700,
+                "debounce_s": 0.01,
+                "max_accuracy_m": 200,
+                "max_speed_kmh": 150,
+                "resync_silence_s": 0,
+                "resync_hold_s": 60,
+                "min_updates_reliable": 1,
+                "updates_window_s": 1800,
+                "require_reliable": False,
+            },
+        )
+        entry.add_to_hass(hass)
+        return EntityDistanceCoordinator(hass, entry)
+
+    async def test_async_setup_sets_debouncer(self, hass):
+        from unittest.mock import AsyncMock, patch
+
+        coord = self._make_coord(hass)
+        with (
+            patch.object(coord, "_async_load_state", new=AsyncMock()),
+            patch.object(coord, "_async_save_state", new=AsyncMock()),
+        ):
+            await coord.async_setup()
+
+        assert coord._debouncer is not None
+        assert len(coord._unsub_listeners) == 2
+
+        # Clean up to avoid lingering timers
+        coord.async_unload()
+
+    async def test_async_unload_clears_listeners(self, hass):
+        from unittest.mock import MagicMock
+
+        coord = self._make_coord(hass)
+        unsub1 = MagicMock()
+        unsub2 = MagicMock()
+        coord._unsub_listeners = [unsub1, unsub2]
+        coord._debouncer = MagicMock()
+        coord._debouncer.async_cancel = MagicMock()
+
+        coord.async_unload()
+
+        unsub1.assert_called_once()
+        unsub2.assert_called_once()
+        assert coord._unsub_listeners == []
+        coord._debouncer.async_cancel.assert_called_once()
+
+    async def test_async_unload_no_debouncer(self, hass):
+        coord = self._make_coord(hass)
+        coord._debouncer = None
+        coord._unsub_listeners = []
+        coord.async_unload()  # should not raise
+
+    async def test_async_tick_schedules_task(self, hass):
+        from unittest.mock import MagicMock, patch
+
+        coord = self._make_coord(hass)
+        debouncer = MagicMock()
+        debouncer.async_call = MagicMock(return_value=None)
+        coord._debouncer = debouncer
+
+        with patch.object(hass, "async_create_task") as mock_create:
+            coord._async_tick(None)
+
+        mock_create.assert_called_once()
+
+    async def test_async_state_changed_no_debouncer(self, hass):
+        coord = self._make_coord(hass)
+        coord._debouncer = None
+        event = MagicMock()
+        event.data = {"entity_id": "person.alice"}
+        # Should return early without error
+        coord._async_state_changed(event)
+
+    async def test_async_state_changed_adds_pending(self, hass):
+        from unittest.mock import MagicMock
+
+        coord = self._make_coord(hass)
+        coord._debouncer = MagicMock()
+        coord._debouncer.async_call = MagicMock(return_value=None)
+        coord._pending_updates = set()
+        coord.hass.async_create_task = MagicMock()
+
+        event = MagicMock()
+        event.data = {
+            "entity_id": "person.alice",
+            "old_state": MagicMock(),
+            "new_state": MagicMock(),
+        }
+
+        coord._async_state_changed(event)
+        assert "person.alice" in coord._pending_updates
+
+    async def test_async_state_changed_entity_b_last_update(self, hass):
+        from unittest.mock import MagicMock
+
+        coord = self._make_coord(hass)
+        coord._debouncer = MagicMock()
+        coord._debouncer.async_call = MagicMock(return_value=None)
+        coord._pending_updates = set()
+        coord.hass.async_create_task = MagicMock()
+
+        event = MagicMock()
+        event.data = {
+            "entity_id": "person.bob",
+            "old_state": MagicMock(),
+            "new_state": MagicMock(),
+        }
+
+        coord._async_state_changed(event)
+        assert "person.bob" in coord._pending_updates
+
+
+# ---------------------------------------------------------------------------
+# _async_recalculate (lines 266-298)
+# ---------------------------------------------------------------------------
+
+
+class TestCoordinatorAsyncRecalculate:
+    """Cover _async_recalculate."""
+
+    async def test_recalculate_calls_calc_pair_and_saves(self):
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+        from custom_components.entity_distance.models import GroupData, PairState, pair_key
+
+        coord = EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)
+        k = pair_key("person.alice", "person.bob")
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.data_valid = True
+        ps.distance_m = 500.0
+        coord._pair_states = {k: ps}
+        coord._pending_updates = {"person.alice"}
+
+        store = MagicMock()
+        store.async_save = AsyncMock()
+        coord._store = store
+
+        coord.async_set_updated_data = MagicMock()
+
+        with (
+            patch.object(coord, "_calc_pair", return_value=ps),
+            patch.object(coord, "_async_save_state", new=AsyncMock()),
+        ):
+            await coord._async_recalculate()
+
+        coord.async_set_updated_data.assert_called_once()
+        result_group = coord.async_set_updated_data.call_args[0][0]
+        assert isinstance(result_group, GroupData)
+        assert result_group.min_distance_m == 500.0
+
+    async def test_recalculate_no_valid_pairs_min_dist_none(self):
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+        from custom_components.entity_distance.models import PairState, pair_key
+
+        coord = EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)
+        k = pair_key("person.alice", "person.bob")
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.data_valid = False
+        ps.distance_m = None
+        coord._pair_states = {k: ps}
+        coord._pending_updates = set()
+
+        coord.async_set_updated_data = MagicMock()
+
+        with (
+            patch.object(coord, "_calc_pair", return_value=ps),
+            patch.object(coord, "_async_save_state", new=AsyncMock()),
+        ):
+            await coord._async_recalculate()
+
+        result_group = coord.async_set_updated_data.call_args[0][0]
+        assert result_group.min_distance_m is None
+
+
+# ---------------------------------------------------------------------------
+# _async_update_data and _async_load_state
+# ---------------------------------------------------------------------------
+
+
+class TestCoordinatorAsyncUpdateData:
+    """Cover _async_update_data (line 578)."""
+
+    async def test_returns_group_data_with_pair_states(self):
+        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+        from custom_components.entity_distance.models import GroupData, PairState, pair_key
+
+        coord = EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)
+        k = pair_key("person.alice", "person.bob")
+        coord._pair_states = {k: PairState(entity_a_id=k[0], entity_b_id=k[1])}
+
+        result = await coord._async_update_data()
+        assert isinstance(result, GroupData)
+        assert k in result.pairs
+
+
+class TestCoordinatorLoadState:
+    """Cover _async_load_state branches (lines 609, 623, 626-629)."""
+
+    def _make_coord_with_store(self, stored_data):
+        from unittest.mock import AsyncMock, MagicMock
+
+        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+        from custom_components.entity_distance.models import PairState, pair_key
+
+        coord = EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)
+        k = pair_key("person.alice", "person.bob")
+        coord._pair_states = {k: PairState(entity_a_id=k[0], entity_b_id=k[1])}
+        store = MagicMock()
+        store.async_load = AsyncMock(return_value=stored_data)
+        coord._store = store
+        return coord, k
+
+    async def test_no_stored_data_returns_early(self):
+        coord, _ = self._make_coord_with_store(None)
+        await coord._async_load_state()  # should not raise
+
+    async def test_empty_stored_dict_returns_early(self):
+        coord, _ = self._make_coord_with_store({})
+        await coord._async_load_state()  # should not raise
+
+    async def test_missing_blob_for_pair_skips(self):
+        coord, _ = self._make_coord_with_store({"other__key": {"proximity_duration_s": 5.0}})
+        await coord._async_load_state()  # should not raise
+
+    async def test_loads_proximity_duration(self):
+        coord, k = self._make_coord_with_store(
+            {
+                "person.alice__person.bob": {
+                    "proximity_duration_s": 123.5,
+                }
+            }
+        )
+        await coord._async_load_state()
+        assert coord._pair_states[k].proximity_duration_s == 123.5
+
+    async def test_loads_tracking_started(self):
+
+        coord, k = self._make_coord_with_store(
+            {
+                "person.alice__person.bob": {
+                    "proximity_duration_s": 0.0,
+                    "proximity_tracking_started": "2025-01-01T00:00:00+00:00",
+                }
+            }
+        )
+        await coord._async_load_state()
+        assert coord._pair_states[k].proximity_tracking_started is not None
+
+    async def test_loads_proximity_since_and_sets_proximity_true(self):
+        coord, k = self._make_coord_with_store(
+            {
+                "person.alice__person.bob": {
+                    "proximity_duration_s": 0.0,
+                    "proximity_since": "2025-01-01T00:00:00+00:00",
+                }
+            }
+        )
+        await coord._async_load_state()
+        assert coord._pair_states[k].proximity is True
+        assert coord._pair_states[k].proximity_since is not None
+
+    async def test_corrupt_data_does_not_raise(self):
+        coord, _ = self._make_coord_with_store(
+            {"person.alice__person.bob": {"proximity_duration_s": "not-a-float"}}
+        )
+        await coord._async_load_state()  # should catch exception silently

@@ -312,3 +312,72 @@ class TestAsyncPress:
             await btn.async_press()
 
         assert btn.hass.services.async_call.call_count == 2
+
+
+# ---------------------------------------------------------------------------
+# async_setup_entry + RefreshButton.__init__
+# ---------------------------------------------------------------------------
+
+
+class TestAsyncSetupEntry:
+    """Cover async_setup_entry (lines 25-43) and RefreshButton.__init__ (lines 56-59)."""
+
+    @pytest.mark.asyncio
+    async def test_setup_entry_adds_refresh_button(self):
+        from custom_components.entity_distance.button import RefreshButton, async_setup_entry
+        from custom_components.entity_distance.const import DOMAIN
+
+        coordinator = MagicMock()
+        coordinator.entities = ["person.alice", "person.bob"]
+
+        entry = MagicMock()
+        entry.entry_id = "test_entry"
+
+        hass = MagicMock()
+        hass.states.get.return_value = None
+        hass.data = {DOMAIN: {"test_entry": coordinator}}
+
+        added = []
+        await async_setup_entry(hass, entry, lambda entities: added.extend(entities))
+
+        assert len(added) == 1
+        assert isinstance(added[0], RefreshButton)
+
+    @pytest.mark.asyncio
+    async def test_setup_entry_friendly_name_from_state(self):
+        from custom_components.entity_distance.button import async_setup_entry
+        from custom_components.entity_distance.const import DOMAIN
+
+        coordinator = MagicMock()
+        coordinator.entities = ["person.alice", "person.bob"]
+
+        entry = MagicMock()
+        entry.entry_id = "test_entry"
+
+        def _get_state(eid):
+            s = MagicMock()
+            s.name = "Alice" if "alice" in eid else "Bob"
+            return s
+
+        hass = MagicMock()
+        hass.states.get.side_effect = _get_state
+        hass.data = {DOMAIN: {"test_entry": coordinator}}
+
+        added = []
+        await async_setup_entry(hass, entry, lambda entities: added.extend(entities))
+        assert len(added) == 1
+
+    @pytest.mark.asyncio
+    async def test_refresh_button_init_sets_attrs(self):
+        from custom_components.entity_distance.button import RefreshButton
+
+        coordinator = MagicMock()
+        entry = MagicMock()
+        entry.entry_id = "my_entry"
+        device_info = MagicMock()
+
+        btn = RefreshButton(coordinator, entry, device_info)
+
+        assert btn._attr_unique_id == "my_entry_refresh"
+        assert btn._attr_device_info is device_info
+        assert btn._entry is entry

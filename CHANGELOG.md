@@ -96,7 +96,7 @@
 - Group card `fixed_layout` defaults to `true` (equal spacing) for new cards
 - Group card SVG gets `touch-action: manipulation` — eliminates 300 ms tap delay on mobile/Companion app
 - `validate.yml` CI workflow gets `permissions: contents: read` — resolves GitHub code scanning warnings
-- README screenshot paths corrected to `custom_components/entity_distance/docs/screenshots/`
+- README screenshot paths corrected to `assets/screenshots/`
 - `info.md` updated with Lovelace Cards section describing all three cards
 
 ## [0.2.1b7] - 2026-05-22

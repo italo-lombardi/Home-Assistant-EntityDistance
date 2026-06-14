@@ -332,7 +332,7 @@ class TestProximityRestartGap:
 
 class TestCrossMidnightFlush:
     def test_proximity_time_flushed_before_midnight_reset(self):
-        """When date rolls over, elapsed time up to midnight is credited before reset."""
+        """When date rolls over while in proximity, pre-midnight slice goes to proximity_duration_s."""
         coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=700.0)
         state_a = _make_state("person.alice", 51.5, -0.1, 20)
         state_b = _make_state("person.bob", 51.501, -0.1, 20)
@@ -347,7 +347,8 @@ class TestCrossMidnightFlush:
         # prev_calc_time 30 min before midnight on June 1
         ps.prev_calc_time = datetime(2024, 6, 1, 23, 30, 0, tzinfo=UTC)
         ps.today_reset_date = date(2024, 6, 1)
-        ps.today_proximity_seconds = 1800.0  # 30 min already accumulated
+        ps.today_proximity_seconds = 0.0
+        ps.proximity_duration_s = 0.0
 
         # now = 00:10 on June 2 — crosses midnight
         now = datetime(2024, 6, 2, 0, 10, 0, tzinfo=UTC)
@@ -357,8 +358,10 @@ class TestCrossMidnightFlush:
 
         # today_proximity_seconds must have been reset (new day)
         assert result.today_reset_date == date(2024, 6, 2)
-        # The new day's accumulation is only the 10 min after midnight
+        # The new day's today_proximity_seconds is only the 10 min after midnight
         assert result.today_proximity_seconds == pytest.approx(600.0, abs=2.0)
+        # The 30 min pre-midnight slice was credited to the lifetime counter
+        assert result.proximity_duration_s == pytest.approx(1800.0, abs=2.0)
 
     def test_zone_seconds_also_flushed_before_midnight_reset(self):
         """today_zone_seconds flush before midnight also records zone bucket."""
@@ -689,3 +692,90 @@ class TestLastSeenTogetherSemantics:
 
         assert result.proximity is False
         assert result.last_seen_together is None
+
+
+# ---------------------------------------------------------------------------
+# New guards added in review pass
+# ---------------------------------------------------------------------------
+
+
+class TestMigrationNewGuards:
+    @pytest.mark.asyncio
+    async def test_v1_with_single_entity_returns_false(self):
+        """CONF_ENTITIES list with <2 items must return False (IndexError guard)."""
+        from custom_components.entity_distance import async_migrate_entry
+
+        hass = MagicMock()
+        entry = MagicMock()
+        entry.version = 1
+        entry.entry_id = "abc123"
+        entry.data = {CONF_ENTITIES: ["person.alice"]}  # only 1 entity
+
+        result = await async_migrate_entry(hass, entry)
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_unknown_version_returns_false(self):
+        """Version > 2 must return False rather than silently succeeding."""
+        from custom_components.entity_distance import async_migrate_entry
+
+        hass = MagicMock()
+        entry = MagicMock()
+        entry.version = 99
+        result = await async_migrate_entry(hass, entry)
+        assert result is False
+
+
+class TestSetupEntryResourceLeak:
+    @pytest.mark.asyncio
+    async def test_coordinator_unloaded_when_setup_raises(self):
+        """If async_setup or async_recalculate raises, coordinator.async_unload() is called."""
+        from custom_components.entity_distance import async_setup_entry
+
+        coordinator = MagicMock()
+        coordinator.async_setup = AsyncMock(side_effect=RuntimeError("boom"))
+        coordinator.async_unload = MagicMock()
+
+        hass = MagicMock()
+        hass.data = {}
+        entry = MagicMock()
+        entry.entry_id = "test_entry"
+        entry.data = {CONF_ENTITIES: ["person.alice", "person.bob"]}
+        entry.options = {}
+
+        with (
+            patch(
+                "custom_components.entity_distance.EntityDistanceCoordinator",
+                return_value=coordinator,
+            ),
+            pytest.raises(RuntimeError, match="boom"),
+        ):
+            await async_setup_entry(hass, entry)
+
+        coordinator.async_unload.assert_called_once()
+
+
+class TestInvalidateWhileInProximity:
+    def test_invalidate_while_in_proximity_credits_duration(self):
+        """_invalidate() must credit elapsed proximity time when pair is in proximity."""
+
+        coord = _make_coordinator()
+        state_b = _make_state("person.bob", 51.5, -0.1, 20)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: None if eid == "person.alice" else state_b
+        )
+
+        ps = _fresh_pair()
+        ps.proximity = True
+        ps.proximity_since = datetime(2024, 6, 1, 11, 0, 0, tzinfo=UTC)
+        ps.proximity_duration_s = 0.0
+
+        result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+
+        assert result.data_valid is False
+        assert result.last_error == "entity_not_found"
+        # proximity cleared
+        assert result.proximity is False
+        assert result.proximity_since is None
+        # 1 hour (11:00→12:00) credited
+        assert result.proximity_duration_s == pytest.approx(3600.0, abs=1.0)

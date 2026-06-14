@@ -418,6 +418,7 @@ class TestUpdateFrequency:
 
         coordinator = EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)
         coordinator._min_updates_reliable = 3
+        coordinator._updates_window_s = 1800.0
         return coordinator
 
     def test_first_call_no_window_returns_1(self):

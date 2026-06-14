@@ -4,7 +4,7 @@
  * Force-directed graph: one circle per entity, lines between every pair.
  */
 
-const GROUP_CARD_VERSION = "0.2.3";
+const GROUP_CARD_VERSION = "0.2.5";
 
 console.info(
   `%c ENTITY-DISTANCE-GROUP-CARD %c v${GROUP_CARD_VERSION} %c — github.com/italo-lombardi`,
@@ -115,6 +115,9 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     return state.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
   }
 
+  function _encodeAttr(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
   function _entityPicture(hass, entityId) {
     if (!entityId) return null;
     return hass.states[entityId]?.attributes?.entity_picture || null;
@@ -710,7 +713,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
             <circle cx="${n.x}" cy="${n.y}" r="${NODE_RADIUS - 2}" fill="hsl(${hue},45%,42%)"/>
             ${pic
               ? `<clipPath id="${clipId}"><circle cx="${n.x}" cy="${n.y}" r="${NODE_RADIUS - 2}"/></clipPath>
-                 <image href="${pic}" x="${n.x - NODE_RADIUS + 2}" y="${n.y - NODE_RADIUS + 2}" width="${(NODE_RADIUS - 2) * 2}" height="${(NODE_RADIUS - 2) * 2}" clip-path="url(#${clipId})" preserveAspectRatio="xMidYMid slice"/>`
+                 <image href="${_encodeAttr(pic)}" x="${n.x - NODE_RADIUS + 2}" y="${n.y - NODE_RADIUS + 2}" width="${(NODE_RADIUS - 2) * 2}" height="${(NODE_RADIUS - 2) * 2}" clip-path="url(#${clipId})" preserveAspectRatio="xMidYMid slice"/>`
               : `<text x="${n.x}" y="${n.y + 5}" text-anchor="middle" font-size="15" font-weight="700" font-family="inherit" fill="#fff" pointer-events="none">${initials}</text>`}
             ${showName ? this._nodeLabel(n, above, safeName, safeState, showState) : ""}
           </g>`;

@@ -59,6 +59,13 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 return False
 
         entities = new_data[CONF_ENTITIES]
+        if len(entities) < 2:
+            _LOGGER.error(
+                "entity_distance: cannot migrate entry %s — fewer than 2 entities",
+                entry.entry_id,
+            )
+            return False
+
         k = pair_key(entities[0], entities[1])
         pair_prefix = f"{k[0]}__{k[1]}_"
         entry_id_prefix = f"{entry.entry_id}_"
@@ -78,6 +85,13 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.info(
             "entity_distance: migrated entry %s from VERSION 1 to VERSION 2", entry.entry_id
         )
+    elif entry.version > 2:
+        _LOGGER.error(
+            "entity_distance: entry %s has unknown version %s — cannot migrate",
+            entry.entry_id,
+            entry.version,
+        )
+        return False
 
     return True
 
@@ -92,8 +106,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     coordinator = EntityDistanceCoordinator(hass, entry)
-    await coordinator.async_setup()
-    await coordinator.async_recalculate()
+    try:
+        await coordinator.async_setup()
+        await coordinator.async_recalculate()
+    except Exception:
+        coordinator.async_unload()
+        raise
 
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
@@ -161,12 +179,13 @@ async def _async_install_card(hass: HomeAssistant) -> None:
         (GROUP_CARD_FILENAME, GROUP_CARD_URL),
     ]:
         source = Path(__file__).parent / "frontend" / filename
-        if not source.exists():
+        exists = await hass.async_add_executor_job(source.exists)
+        if not exists:
             _LOGGER.warning("entity_distance: card JS not found at %s", source)
             continue
         try:
             await hass.http.async_register_static_paths([StaticPathConfig(url, str(source), True)])
-        except Exception as err:  # noqa: BLE001
+        except RuntimeError as err:
             _LOGGER.debug("entity_distance: static path %s already registered (%s)", url, err)
         await _async_register_lovelace_resource(hass, filename, url, version)
 

@@ -3,7 +3,7 @@
  * Lovelace custom card for the Entity Distance integration.
  */
 
-const CARD_VERSION = "0.2.3";
+const CARD_VERSION = "0.2.5";
 
 console.info(
   `%c ENTITY-DISTANCE-PAIR-CARD %c v${CARD_VERSION} %c — github.com/italo-lombardi`,
@@ -570,9 +570,9 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         `${p}_proximity_duration`, `${p}_proximity_tracking_started`,
         `${p}_proximity_rate`, `${p}_today_proximity_time`,
         `${p}_today_unaccounted_time`, `${p}_last_seen_together`,
-        `${p}_today_very_near_time`, `${p}_today_near_time`,
-        `${p}_today_medium_time`, `${p}_today_far_time`,
-        `${p}_today_very_far_time`,
+        `${p}_today_zone_time_very_near`, `${p}_today_zone_time_near`,
+        `${p}_today_zone_time_mid`, `${p}_today_zone_time_far`,
+        `${p}_today_zone_time_very_far`,
       ];
       const dynamic = Object.keys(this.hass?.states || {}).filter(id =>
         id.startsWith(`${p}_gps_accuracy_`) ||
@@ -753,7 +753,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
               <div class="zone-breakdown-title">🗺 Time by zone today</div>
               <div class="zone-chips">
                 ${["very_near", "near", "mid", "far", "very_far"].map(z => {
-                  const suffix = z === "mid" ? "today_medium_time" : `today_${z}_time`;
+                  const suffix = `today_zone_time_${z}`;
                   const min = _num(this.hass, slug, suffix);
                   if (min === null || min === 0) return nothing;
                   const zLabel = z === "mid" ? "Medium" : z.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());

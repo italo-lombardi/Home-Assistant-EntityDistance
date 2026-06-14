@@ -281,7 +281,7 @@ class LastSeenTogetherSensor(EntityDistanceSensorBase):
 
 class TodayProximityTimeSensor(EntityDistanceSensorBase):
     _attr_device_class = SensorDeviceClass.DURATION
-    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
     _attr_native_unit_of_measurement = UnitOfTime.MINUTES
     _attr_translation_key = "today_proximity_time"
 
@@ -297,7 +297,7 @@ class TodayProximityTimeSensor(EntityDistanceSensorBase):
 
 class TodayZoneTimeSensor(EntityDistanceSensorBase):
     _attr_device_class = SensorDeviceClass.DURATION
-    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
     _attr_native_unit_of_measurement = UnitOfTime.MINUTES
 
     def __init__(self, coordinator, entry, device_info, k, bucket: str):

@@ -227,7 +227,7 @@ class TestInstallCard:
 
         hass = MagicMock()
         hass.data = {}
-        hass.async_add_executor_job = AsyncMock(return_value="0.2.4")
+        hass.async_add_executor_job = AsyncMock(side_effect=lambda fn, *a: fn(*a))
         hass.http = MagicMock()
         hass.http.async_register_static_paths = AsyncMock()
 
@@ -240,6 +240,7 @@ class TestInstallCard:
                 "custom_components.entity_distance._async_register_lovelace_resource",
                 new=AsyncMock(),
             ),
+            patch("custom_components.entity_distance._get_version", return_value="0.2.5"),
             patch("custom_components.entity_distance.Path") as mock_path_cls,
         ):
             mock_path = MagicMock()
@@ -256,7 +257,7 @@ class TestInstallCard:
 
         hass = MagicMock()
         hass.data = {}
-        hass.async_add_executor_job = AsyncMock(return_value="0.2.4")
+        hass.async_add_executor_job = AsyncMock(side_effect=lambda fn, *a: fn(*a))
         hass.http = MagicMock()
         hass.http.async_register_static_paths = AsyncMock()
 
@@ -271,6 +272,7 @@ class TestInstallCard:
                 "custom_components.entity_distance._async_register_lovelace_resource",
                 new=register_resource,
             ),
+            patch("custom_components.entity_distance._get_version", return_value="0.2.5"),
             patch("custom_components.entity_distance.Path") as mock_path_cls,
         ):
             mock_path = MagicMock()
@@ -288,7 +290,7 @@ class TestInstallCard:
 
         hass = MagicMock()
         hass.data = {}
-        hass.async_add_executor_job = AsyncMock(return_value="0.2.4")
+        hass.async_add_executor_job = AsyncMock(side_effect=lambda fn, *a: fn(*a))
         hass.http = MagicMock()
         hass.http.async_register_static_paths = AsyncMock(side_effect=RuntimeError("dup"))
 
@@ -303,6 +305,7 @@ class TestInstallCard:
                 "custom_components.entity_distance._async_register_lovelace_resource",
                 new=register_resource,
             ),
+            patch("custom_components.entity_distance._get_version", return_value="0.2.5"),
             patch("custom_components.entity_distance.Path") as mock_path_cls,
         ):
             mock_path = MagicMock()

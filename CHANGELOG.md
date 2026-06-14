@@ -16,7 +16,7 @@
 - **`today_zone_seconds` dataclass field used `None` sentinel** — `PairState.today_zone_seconds` was declared as `None` with a `__post_init__` workaround, making `dataclasses.replace()` produce a broken copy. Now uses `field(default_factory=dict)`.
 - **`_CARD_INSTALLED_KEY` not cleared on last-entry unload** — the flag preventing duplicate Lovelace resource registration was never cleared when the last config entry was removed, causing stale resources after a full reload. Flag is now cleared when no entries remain.
 - **Static path exception swallowed without details** — exception object is now included in the debug log message.
-- **`DEFAULT_MAX_SPEED_KMH = 1000`** — a GPS jump of ~278 m/s passed the speed filter. Lowered to 250 km/h (~70 m/s), a realistic upper bound for ground-based tracking.
+- **`DEFAULT_MAX_SPEED_KMH` kept at 1000** — lower values incorrectly reject reconnects after long offline periods (e.g. flights), since the filter applies regardless of silence duration; users who only track pedestrians can lower it per-entry.
 - **Duplicate window constant** — `UPDATES_FREQUENCY_WINDOW_S` was hardcoded to `1800` separately from `DEFAULT_UPDATES_WINDOW_S`. `UPDATES_FREQUENCY_WINDOW_S` now derives from `DEFAULT_UPDATES_WINDOW_S` to prevent silent divergence.
 - **Dead constant removed** — `BUCKET_THRESHOLDS_DEFAULT` dict was never used by the coordinator or config flow; removed.
 

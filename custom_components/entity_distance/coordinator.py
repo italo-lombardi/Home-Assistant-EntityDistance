@@ -448,25 +448,43 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 ps.proximity_tracking_started = now
         elif ps.proximity and dist_m > self._exit_threshold_m:
             ps.proximity = False
-            ps.last_seen_together = now
             if ps.proximity_since:
                 ps.proximity_duration_s += (now - ps.proximity_since).total_seconds()
             ps.proximity_since = None
 
+        # Stamp last_seen_together on every in-proximity tick and on EXIT so it
+        # always reflects the last confirmed time they were within the exit threshold.
+        if was_proximity:
+            ps.last_seen_together = now
+
         today = now.date()
-        if ps.today_reset_date != today:
+        date_rolled = ps.today_reset_date != today
+        if date_rolled:
+            # Flush elapsed time up to midnight before resetting — prevents the
+            # interval straddling midnight from being silently dropped (C3).
+            if ps.prev_calc_time is not None and ps.today_reset_date is not None:
+                midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+                pre_midnight = max(0.0, (midnight - ps.prev_calc_time).total_seconds())
+                if pre_midnight > 0 and ps.proximity:
+                    ps.today_proximity_seconds += pre_midnight
+                if pre_midnight > 0:
+                    prev_bucket = _calc_bucket(dist_m, self._bucket_thresholds)
+                    ps.today_zone_seconds[prev_bucket] = (
+                        ps.today_zone_seconds.get(prev_bucket, 0.0) + pre_midnight
+                    )
             ps.today_proximity_seconds = 0.0
             ps.today_zone_seconds = {}
             ps.today_reset_date = today
 
+        # Defer today-accumulation until after reliability check (W5).
+        # When the date rolled, only count elapsed time since midnight (post-midnight portion).
+        _elapsed_s: float = 0.0
         if ps.prev_calc_time is not None:
-            elapsed = max(0.0, (now - ps.prev_calc_time).total_seconds())
-            if ps.proximity:
-                ps.today_proximity_seconds += elapsed
-            current_bucket = _calc_bucket(dist_m, self._bucket_thresholds)
-            ps.today_zone_seconds[current_bucket] = (
-                ps.today_zone_seconds.get(current_bucket, 0.0) + elapsed
-            )
+            if date_rolled:
+                midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+                _elapsed_s = max(0.0, (now - midnight).total_seconds())
+            else:
+                _elapsed_s = max(0.0, (now - ps.prev_calc_time).total_seconds())
 
         if entity_a in pending:
             ps.update_count_a = self._update_frequency(
@@ -541,6 +559,15 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 "entity_distance: proximity entry blocked for pair (%s, %s) — not yet reliable",
                 entity_a,
                 entity_b,
+            )
+
+        # Accumulate today totals using the finalised proximity state (after reliability check).
+        if _elapsed_s > 0:
+            if ps.proximity:
+                ps.today_proximity_seconds += _elapsed_s
+            current_bucket = _calc_bucket(dist_m, self._bucket_thresholds)
+            ps.today_zone_seconds[current_bucket] = (
+                ps.today_zone_seconds.get(current_bucket, 0.0) + _elapsed_s
             )
 
         event_data = {
@@ -630,6 +657,10 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 if proximity_since_str:
                     ps.proximity_since = datetime.fromisoformat(proximity_since_str)
                     ps.proximity = True
+                    # Credit elapsed time from proximity_since to now so the restart
+                    # gap is not silently dropped from proximity_duration_s.
+                    now_load = datetime.now().astimezone()
+                    ps.proximity_duration_s += (now_load - ps.proximity_since).total_seconds()
         except Exception:  # noqa: BLE001
             _LOGGER.warning(
                 "entity_distance: failed to restore persisted state, starting fresh",

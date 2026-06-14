@@ -12,6 +12,7 @@ from homeassistant.components.sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory, UnitOfLength, UnitOfSpeed, UnitOfTime
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceEntryType
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -96,6 +97,19 @@ async def async_setup_entry(
     )
 
     all_sensors: list = []
+
+    # Pre-register group device so pair devices can reference it via via_device.
+    try:
+        dev_reg = dr.async_get(hass)
+        dev_reg.async_get_or_create(
+            config_entry_id=entry.entry_id,
+            identifiers={(DOMAIN, entry.entry_id)},
+            name=f"Entity Distance — {group_name}",
+            manufacturer="Entity Distance",
+            entry_type=DeviceEntryType.SERVICE,
+        )
+    except Exception:  # noqa: BLE001
+        pass
 
     for a, b in itertools.combinations(entities_list, 2):
         k = pair_key(a, b)
@@ -267,7 +281,7 @@ class LastSeenTogetherSensor(EntityDistanceSensorBase):
 
 class TodayProximityTimeSensor(EntityDistanceSensorBase):
     _attr_device_class = SensorDeviceClass.DURATION
-    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_native_unit_of_measurement = UnitOfTime.MINUTES
     _attr_translation_key = "today_proximity_time"
 
@@ -283,7 +297,7 @@ class TodayProximityTimeSensor(EntityDistanceSensorBase):
 
 class TodayZoneTimeSensor(EntityDistanceSensorBase):
     _attr_device_class = SensorDeviceClass.DURATION
-    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_native_unit_of_measurement = UnitOfTime.MINUTES
 
     def __init__(self, coordinator, entry, device_info, k, bucket: str):

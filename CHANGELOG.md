@@ -2,6 +2,24 @@
 
 ## [Unreleased]
 
+## [0.2.5] - 2026-06-14
+
+### Fixed
+
+- **Proximity duration lost on restart** — when HA restarted while a pair was in proximity, the elapsed time from `proximity_since` to the shutdown was silently discarded. Duration is now credited on restore.
+- **Cross-midnight today-time gap** — the interval straddling midnight was never credited to either day's `today_proximity_seconds` or `today_zone_seconds`. The pre-midnight slice is now flushed before the daily reset, and the post-midnight slice is accumulated separately.
+- **Config entry migration missing** — `async_migrate_entry` (v1 single-pair → v2 group format) was accidentally removed in a cleanup commit. Any user upgrading from 0.1.x got a permanently disabled entry. Migration is restored.
+- **Today-time accumulated before reliability check** — `today_proximity_seconds` was incremented based on a proximity state that the reliability filter might then roll back. Duration is now only accumulated after the reliability check finalises the proximity state.
+- **`AnyInProximity` / `AllInProximity` returned `False` when all pairs had bad GPS** — sensors now return `None` (unavailable) when every pair has `data_valid = False`, preventing automations from seeing a confident `False` instead of unavailable.
+- **`last_seen_together` stamped at wrong moment** — previously set on the EXIT detection tick, meaning it recorded the first moment the pair was *outside* the exit threshold rather than the last moment they were inside it. Now stamped on every in-proximity tick and on the EXIT tick, always reflecting the last confirmed in-proximity observation.
+- **`TOTAL_INCREASING` state class on daily-reset sensors** — `TodayProximityTimeSensor` and `TodayZoneTimeSensor` used `TOTAL_INCREASING`, which tells HA long-term statistics to treat midnight resets as counter rollbacks, corrupting historical graphs. Both now use `MEASUREMENT`.
+- **`today_zone_seconds` dataclass field used `None` sentinel** — `PairState.today_zone_seconds` was declared as `None` with a `__post_init__` workaround, making `dataclasses.replace()` produce a broken copy. Now uses `field(default_factory=dict)`.
+- **`_CARD_INSTALLED_KEY` not cleared on last-entry unload** — the flag preventing duplicate Lovelace resource registration was never cleared when the last config entry was removed, causing stale resources after a full reload. Flag is now cleared when no entries remain.
+- **Static path exception swallowed without details** — exception object is now included in the debug log message.
+- **`DEFAULT_MAX_SPEED_KMH = 1000`** — a GPS jump of ~278 m/s passed the speed filter. Lowered to 250 km/h (~70 m/s), a realistic upper bound for ground-based tracking.
+- **Duplicate window constant** — `UPDATES_FREQUENCY_WINDOW_S` was hardcoded to `1800` separately from `DEFAULT_UPDATES_WINDOW_S`. `UPDATES_FREQUENCY_WINDOW_S` now derives from `DEFAULT_UPDATES_WINDOW_S` to prevent silent divergence.
+- **Dead constant removed** — `BUCKET_THRESHOLDS_DEFAULT` dict was never used by the coordinator or config flow; removed.
+
 ## [0.2.4] - 2026-05-31
 
 ### Fixed

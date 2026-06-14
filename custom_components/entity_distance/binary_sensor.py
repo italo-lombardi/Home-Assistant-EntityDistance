@@ -157,6 +157,9 @@ class AnyInProximityBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], B
 
     @property
     def is_on(self) -> bool | None:
+        pairs = self.coordinator.data.pairs
+        if not any(ps.data_valid for ps in pairs.values()):
+            return None
         return self.coordinator.data.any_in_proximity
 
 
@@ -178,4 +181,7 @@ class AllInProximityBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], B
 
     @property
     def is_on(self) -> bool | None:
+        pairs = self.coordinator.data.pairs
+        if not any(ps.data_valid for ps in pairs.values()):
+            return None
         return self.coordinator.data.all_in_proximity

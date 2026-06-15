@@ -1131,7 +1131,10 @@ class TestSensorAvailableFalseReturnsNone:
         from datetime import UTC, datetime
 
         from custom_components.entity_distance.sensor import LastSeenTogetherSensor
-        s = _make_unavailable_sensor(LastSeenTogetherSensor, {"last_seen_together": datetime.now(UTC)})
+
+        s = _make_unavailable_sensor(
+            LastSeenTogetherSensor, {"last_seen_together": datetime.now(UTC)}
+        )
         assert s.native_value is None
 
     def test_gps_accuracy_returns_none(self):
@@ -1145,7 +1148,10 @@ class TestSensorAvailableFalseReturnsNone:
         from datetime import UTC, datetime
 
         from custom_components.entity_distance.sensor import LastUpdateSensor
-        s = _make_unavailable_sensor(LastUpdateSensor, {"last_update_a": datetime.now(UTC)}, {"_which": "a"})
+
+        s = _make_unavailable_sensor(
+            LastUpdateSensor, {"last_update_a": datetime.now(UTC)}, {"_which": "a"}
+        )
         s._sensor_key = "last_update_a"
         assert s.native_value is None
 
@@ -1153,6 +1159,7 @@ class TestSensorAvailableFalseReturnsNone:
         from datetime import UTC, datetime
 
         from custom_components.entity_distance.sensor import ProximityTrackingStartedSensor
+
         s = _make_unavailable_sensor(
             ProximityTrackingStartedSensor,
             {"proximity_tracking_started": datetime.now(UTC)},
@@ -1164,6 +1171,7 @@ class TestSensorAvailableFalseReturnsNone:
         from datetime import UTC, datetime
 
         from custom_components.entity_distance.sensor import TodayUnaccountedTimeSensor
+
         s = _make_unavailable_sensor(
             TodayUnaccountedTimeSensor, {"prev_calc_time": datetime.now(UTC)}
         )
@@ -1202,6 +1210,7 @@ class TestSensorAvailableFalseReturnsNone:
         from datetime import UTC, datetime
 
         from custom_components.entity_distance.sensor import ProximityDurationSensor
+
         s = _make_unavailable_sensor(
             ProximityDurationSensor,
             {"proximity_tracking_started": datetime.now(UTC), "proximity_duration_s": 3600.0},
@@ -1410,7 +1419,9 @@ class TestEventLeaveFullPayload:
             side_effect=lambda eid: None if eid == "person.alice" else state_b
         )
         fired_events = []
-        coord.hass.bus.fire = MagicMock(side_effect=lambda evt, data: fired_events.append((evt, data)))
+        coord.hass.bus.fire = MagicMock(
+            side_effect=lambda evt, data: fired_events.append((evt, data))
+        )
 
         ps = _fresh_pair()
         ps.proximity = True
@@ -1423,9 +1434,18 @@ class TestEventLeaveFullPayload:
         assert len(fired_events) == 1
         event_name, payload = fired_events[0]
         from custom_components.entity_distance.const import EVENT_LEAVE
+
         assert event_name == EVENT_LEAVE
-        for field in ("entity_a", "entity_b", "distance_m", "entry_threshold_m",
-                      "exit_threshold_m", "reliable", "direction", "closing_speed_kmh"):
+        for field in (
+            "entity_a",
+            "entity_b",
+            "distance_m",
+            "entry_threshold_m",
+            "exit_threshold_m",
+            "reliable",
+            "direction",
+            "closing_speed_kmh",
+        ):
             assert field in payload, f"Missing field: {field}"
         assert payload["reliable"] is False
 
@@ -1446,7 +1466,9 @@ class TestEventLeaveFullPayload:
             side_effect=lambda eid: state_a if eid == "person.alice" else state_b
         )
         fired_events = []
-        coord.hass.bus.fire = MagicMock(side_effect=lambda evt, data: fired_events.append((evt, data)))
+        coord.hass.bus.fire = MagicMock(
+            side_effect=lambda evt, data: fired_events.append((evt, data))
+        )
 
         ps = _fresh_pair()
         ps.proximity = True
@@ -1459,11 +1481,20 @@ class TestEventLeaveFullPayload:
             coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
         from custom_components.entity_distance.const import EVENT_LEAVE
+
         leave_events = [(e, d) for e, d in fired_events if e == EVENT_LEAVE]
         assert len(leave_events) == 1
         payload = leave_events[0][1]
-        for field in ("entity_a", "entity_b", "distance_m", "entry_threshold_m",
-                      "exit_threshold_m", "reliable", "direction", "closing_speed_kmh"):
+        for field in (
+            "entity_a",
+            "entity_b",
+            "distance_m",
+            "entry_threshold_m",
+            "exit_threshold_m",
+            "reliable",
+            "direction",
+            "closing_speed_kmh",
+        ):
             assert field in payload, f"Missing field: {field}"
         assert payload["reliable"] is False
 
@@ -1518,4 +1549,3 @@ class TestRemainingCoverageBranches:
         s._attr_unique_id = "test_min"
         s._attr_device_info = {}
         assert s.native_value is None
-

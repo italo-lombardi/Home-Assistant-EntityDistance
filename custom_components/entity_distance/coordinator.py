@@ -342,16 +342,19 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             ps.prev_calc_time = None
             ps.prev_distance_m = None
             if was_prox:
-                self.hass.bus.fire(EVENT_LEAVE, {
-                    "entity_a": entity_a,
-                    "entity_b": entity_b,
-                    "distance_m": ps.distance_m,
-                    "entry_threshold_m": self._entry_threshold_m,
-                    "exit_threshold_m": self._exit_threshold_m,
-                    "reliable": False,
-                    "direction": None,
-                    "closing_speed_kmh": None,
-                })
+                self.hass.bus.fire(
+                    EVENT_LEAVE,
+                    {
+                        "entity_a": entity_a,
+                        "entity_b": entity_b,
+                        "distance_m": ps.distance_m,
+                        "entry_threshold_m": self._entry_threshold_m,
+                        "exit_threshold_m": self._exit_threshold_m,
+                        "reliable": False,
+                        "direction": None,
+                        "closing_speed_kmh": None,
+                    },
+                )
             return ps
 
         if state_a is None or state_b is None:
@@ -548,7 +551,9 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                     ps.proximity_duration_s += elapsed
                     # Only credit today counters when the date rolled — same-day hold must
                     # not double-count time already accumulated tick-by-tick in today_proximity_seconds.
-                    hold_date_rolled = ps.today_reset_date is None or ps.today_reset_date != now.date()
+                    hold_date_rolled = (
+                        ps.today_reset_date is None or ps.today_reset_date != now.date()
+                    )
                     if hold_date_rolled:
                         ps.today_proximity_seconds = 0.0
                         ps.today_zone_seconds = {}
@@ -566,16 +571,19 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                             )
                     ps.proximity = False
                     ps.proximity_since = None
-                    self.hass.bus.fire(EVENT_LEAVE, {
-                        "entity_a": entity_a,
-                        "entity_b": entity_b,
-                        "distance_m": ps.distance_m,
-                        "entry_threshold_m": self._entry_threshold_m,
-                        "exit_threshold_m": self._exit_threshold_m,
-                        "reliable": False,
-                        "direction": None,
-                        "closing_speed_kmh": None,
-                    })
+                    self.hass.bus.fire(
+                        EVENT_LEAVE,
+                        {
+                            "entity_a": entity_a,
+                            "entity_b": entity_b,
+                            "distance_m": ps.distance_m,
+                            "entry_threshold_m": self._entry_threshold_m,
+                            "exit_threshold_m": self._exit_threshold_m,
+                            "reliable": False,
+                            "direction": None,
+                            "closing_speed_kmh": None,
+                        },
+                    )
                 # Null the baseline so the first post-hold tick doesn't trigger a
                 # spurious speed-filter rejection against a stale prev_distance_m.
                 ps.prev_calc_time = None

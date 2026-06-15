@@ -564,15 +564,15 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     _watchIds(slug) {
       const p = `sensor.${slug}`;
       const base = [
-        `binary_sensor.${slug}_proximity`,
-        `${p}_distance`, `${p}_direction`, `${p}_direction_level`, `${p}_bucket`,
-        `${p}_closing_speed`, `${p}_eta`,
+        `binary_sensor.${slug}_in_proximity`,
+        `${p}_distance`, `${p}_direction`, `${p}_direction_level`, `${p}_proximity_zone`,
+        `${p}_approach_speed`, `${p}_estimated_arrival_time`,
         `${p}_proximity_duration`, `${p}_proximity_tracking_started`,
         `${p}_proximity_rate`, `${p}_today_proximity_time`,
         `${p}_today_unaccounted_time`, `${p}_last_seen_together`,
-        `${p}_today_zone_time_very_near`, `${p}_today_zone_time_near`,
-        `${p}_today_zone_time_mid`, `${p}_today_zone_time_far`,
-        `${p}_today_zone_time_very_far`,
+        `${p}_today_very_near_time`, `${p}_today_near_time`,
+        `${p}_today_medium_time`, `${p}_today_far_time`,
+        `${p}_today_very_far_time`,
       ];
       const dynamic = Object.keys(this.hass?.states || {}).filter(id =>
         id.startsWith(`${p}_gps_accuracy_`) ||
@@ -595,7 +595,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         return html`<ha-card><div class="error-msg">No entity pair configured.</div></ha-card>`;
       }
 
-      const proxState = this.hass.states[`binary_sensor.${slug}_proximity`];
+      const proxState = this.hass.states[`binary_sensor.${slug}_in_proximity`];
       if (!proxState) {
         return html`<ha-card><div class="error-msg">Pair "${slug}" not found. Check integration is loaded.</div></ha-card>`;
       }
@@ -613,9 +613,9 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
 
       const distM = _num(this.hass, slug, "distance");
       const direction = _val(this.hass, slug, "direction");
-      const bucket = _val(this.hass, slug, "bucket");
-      const speedKmh = _num(this.hass, slug, "closing_speed");
-      const etaMin = _num(this.hass, slug, "eta");
+      const bucket = _val(this.hass, slug, "proximity_zone");
+      const speedKmh = _num(this.hass, slug, "approach_speed");
+      const etaMin = _num(this.hass, slug, "estimated_arrival_time");
       const proxDurMin = _num(this.hass, slug, "proximity_duration");
       const proxTrackingStarted = _val(this.hass, slug, "proximity_tracking_started");
       const proxRate = _num(this.hass, slug, "proximity_rate");
@@ -753,7 +753,8 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
               <div class="zone-breakdown-title">🗺 Time by zone today</div>
               <div class="zone-chips">
                 ${["very_near", "near", "mid", "far", "very_far"].map(z => {
-                  const suffix = `today_zone_time_${z}`;
+                  const suffixMap = { very_near: "today_very_near_time", near: "today_near_time", mid: "today_medium_time", far: "today_far_time", very_far: "today_very_far_time" };
+                  const suffix = suffixMap[z];
                   const min = _num(this.hass, slug, suffix);
                   if (min === null || min === 0) return nothing;
                   const zLabel = z === "mid" ? "Medium" : z.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());

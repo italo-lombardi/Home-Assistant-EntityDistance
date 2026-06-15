@@ -497,8 +497,12 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
 
         # Resync silence — check before proximity transitions so hold returns early
         # without mutating ps.proximity, preventing EVENT_ENTER from being lost.
+        # Skip for zone entities — zones never emit state_changed so staleness is
+        # always huge; treating that as a resync condition causes a permanent loop.
         if (
             self._resync_silence_s > 0
+            and not is_zone_a
+            and not is_zone_b
             and ps.last_update_a is not None
             and ps.last_update_b is not None
         ):
@@ -511,7 +515,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             ):
                 self._resync_holding[k] = True
                 self._resync_hold_until[k] = now + timedelta(seconds=self._resync_hold_s)
-                _LOGGER.warning(
+                _LOGGER.debug(
                     "entity_distance: resync silence detected for pair (%s, %s) — holding for %.0fs",
                     entity_a,
                     entity_b,

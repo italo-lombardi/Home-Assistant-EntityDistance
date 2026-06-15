@@ -360,8 +360,8 @@ class TestCrossMidnightFlush:
         assert result.today_reset_date == date(2024, 6, 2)
         # The new day's today_proximity_seconds is only the 10 min after midnight
         assert result.today_proximity_seconds == pytest.approx(600.0, abs=2.0)
-        # The 30 min pre-midnight slice was credited to the lifetime counter
-        assert result.proximity_duration_s == pytest.approx(1800.0, abs=2.0)
+        # The 2h pre-midnight slice (proximity_since=22:00 → midnight) credited to lifetime
+        assert result.proximity_duration_s == pytest.approx(7200.0, abs=2.0)
 
     def test_zone_seconds_also_flushed_before_midnight_reset(self):
         """today_zone_seconds flush before midnight also records zone bucket."""

@@ -386,8 +386,8 @@ class TestCrossMidnightFlush:
             result = coord._calc_pair(ps, "person.alice", "person.bob", now, set())
 
         assert result.today_reset_date == date(2024, 6, 2)
-        # post-midnight (5 min) + pre-midnight flush (15 min) both go to "near"
-        assert result.today_zone_seconds.get("near", 0.0) == pytest.approx(1200.0, abs=2.0)
+        # Only post-midnight (5 min) goes to today's bucket — pre-midnight is yesterday's data
+        assert result.today_zone_seconds.get("near", 0.0) == pytest.approx(300.0, abs=2.0)
 
     def test_no_flush_when_prev_calc_time_is_none(self):
         """When prev_calc_time is None there is nothing to flush — no error."""
@@ -995,3 +995,96 @@ async def test_platform_setup_failure_cleans_up_coordinator():
 
     coordinator.async_unload.assert_called_once()
     assert "test_entry" not in hass.data.get(DOMAIN, {})
+
+
+class TestHoldFlushCrossMidnight:
+    def test_hold_after_midnight_resets_today_counters(self):
+        """Hold firing after midnight date-rolls today counters and credits post-midnight only."""
+        from custom_components.entity_distance.models import pair_key
+
+        coord = _make_coordinator()
+        coord._resync_silence_s = 10.0
+        coord._resync_hold_s = 300.0
+        k = pair_key("person.alice", "person.bob")
+        coord._resync_holding = {k: True}
+        hold_until = datetime(2024, 6, 2, 0, 10, 0, tzinfo=UTC) + timedelta(seconds=200)
+        coord._resync_hold_until = {k: hold_until}
+
+        state_a = _make_state("person.alice", 51.5, -0.1, 20)
+        state_b = _make_state("person.bob", 51.501, -0.1, 20)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: state_a if eid == "person.alice" else state_b
+        )
+        coord.hass.bus.fire = MagicMock()
+
+        ps = _fresh_pair()
+        ps.proximity = True
+        # Proximity started 23:55 on June 1
+        ps.proximity_since = datetime(2024, 6, 1, 23, 55, 0, tzinfo=UTC)
+        ps.distance_m = 50.0
+        ps.today_reset_date = date(2024, 6, 1)  # yesterday
+        ps.today_proximity_seconds = 3000.0
+        ps.proximity_duration_s = 0.0
+
+        # Hold fires at 00:10 on June 2 — crosses midnight
+        now = datetime(2024, 6, 2, 0, 10, 0, tzinfo=UTC)
+
+        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=50.0):
+            result = coord._calc_pair(ps, "person.alice", "person.bob", now, set())
+
+        # Date rolled → today counters reset
+        assert result.today_reset_date == date(2024, 6, 2)
+        assert result.today_proximity_seconds == pytest.approx(
+            600.0, abs=2.0
+        )  # 10 min post-midnight
+        # lifetime counter: 15 min total (23:55 → 00:10)
+        assert result.proximity_duration_s == pytest.approx(900.0, abs=2.0)
+        assert result.proximity is False
+
+
+class TestLoadStateLastBucketCredit:
+    @pytest.mark.asyncio
+    async def test_today_zone_seconds_credited_on_restart(self):
+        """last_bucket persisted and credited to today_zone_seconds on proximity restart."""
+        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+        from custom_components.entity_distance.models import pair_key
+
+        coord = EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)
+        coord._pair_states = {
+            pair_key("person.alice", "person.bob"): _fresh_pair(),
+        }
+        coord._bucket_thresholds = _BUCKET_THRESHOLDS
+
+        # Stored: in proximity since 14:00, prev_calc=14:30, last_bucket=very_near
+        stored = {
+            "person.alice__person.bob": {
+                "today_reset_date": "2024-06-01",
+                "today_proximity_seconds": 1800.0,
+                "today_zone_seconds": {"very_near": 1800.0},
+                "proximity_duration_s": 1800.0,
+                "proximity_tracking_started": "2024-06-01T12:00:00+00:00",
+                "last_seen_together": None,
+                "proximity_since": "2024-06-01T14:00:00+00:00",
+                "prev_calc_time": "2024-06-01T14:30:00+00:00",
+                "last_bucket": "very_near",
+            }
+        }
+        store_mock = MagicMock()
+        store_mock.async_load = AsyncMock(return_value=stored)
+        coord._store = store_mock
+
+        # Restart at 15:00 same day
+        now_load = datetime(2024, 6, 1, 15, 0, 0, tzinfo=UTC)
+        with patch(
+            "custom_components.entity_distance.coordinator.dt_util.now", return_value=now_load
+        ):
+            await coord._async_load_state()
+
+        k = pair_key("person.alice", "person.bob")
+        ps = coord._pair_states[k]
+        # 30 min gap (14:30→15:00) credited to proximity_duration_s
+        assert ps.proximity_duration_s == pytest.approx(1800.0 + 1800.0, abs=2.0)
+        # same 30 min credited to today's zone seconds
+        assert ps.today_zone_seconds.get("very_near", 0.0) == pytest.approx(
+            1800.0 + 1800.0, abs=2.0
+        )

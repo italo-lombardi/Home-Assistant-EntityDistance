@@ -118,6 +118,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
   function _encodeAttr(s) {
     return String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
+  const SAFE_SCHEMES = /^(https?:\/\/|\/\/|\/)/;
   function _entityPicture(hass, entityId) {
     if (!entityId) return null;
     return hass.states[entityId]?.attributes?.entity_picture || null;
@@ -712,7 +713,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
           <g>
             <circle cx="${n.x}" cy="${n.y}" r="${NODE_RADIUS + 1}" fill="none" stroke="var(--divider-color,rgba(0,0,0,0.12))" stroke-width="1.5"/>
             <circle cx="${n.x}" cy="${n.y}" r="${NODE_RADIUS - 2}" fill="hsl(${hue},45%,42%)"/>
-            ${pic
+            ${pic && SAFE_SCHEMES.test(pic)
               ? `<clipPath id="${clipId}"><circle cx="${n.x}" cy="${n.y}" r="${NODE_RADIUS - 2}"/></clipPath>
                  <image href="${_encodeAttr(pic)}" x="${n.x - NODE_RADIUS + 2}" y="${n.y - NODE_RADIUS + 2}" width="${(NODE_RADIUS - 2) * 2}" height="${(NODE_RADIUS - 2) * 2}" clip-path="url(#${clipId})" preserveAspectRatio="xMidYMid slice"/>`
               : `<text x="${n.x}" y="${n.y + 5}" text-anchor="middle" font-size="15" font-weight="700" font-family="inherit" fill="#fff" pointer-events="none">${initials}</text>`}

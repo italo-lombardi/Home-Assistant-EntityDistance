@@ -1169,6 +1169,7 @@ class TestEntityStateSensor:
         from custom_components.entity_distance.sensor import EntityStateSensor
 
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.data_valid = True
         sensor = _make_extra_sensor(EntityStateSensor, ps, _tracked_entity_id="person.a")
         hass = MagicMock()
         state_mock = MagicMock()
@@ -1181,6 +1182,7 @@ class TestEntityStateSensor:
         from custom_components.entity_distance.sensor import EntityStateSensor
 
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.data_valid = True
         sensor = _make_extra_sensor(EntityStateSensor, ps, _tracked_entity_id="person.a")
         hass = MagicMock()
         hass.states.get.return_value = None

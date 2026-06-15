@@ -780,8 +780,8 @@ class TestInvalidateWhileInProximity:
         # 1 hour (11:00→12:00) credited
         assert result.proximity_duration_s == pytest.approx(3600.0, abs=1.0)
 
-    def test_invalidate_while_in_proximity_credits_today_seconds(self):
-        """_invalidate() also credits today_proximity_seconds when same day."""
+    def test_invalidate_while_in_proximity_credits_today_seconds_same_day(self):
+        """_invalidate() same-day: today_proximity_seconds must NOT be re-added (already in ticks)."""
         coord = _make_coordinator()
         state_b = _make_state("person.bob", 51.5, -0.1, 20)
         coord.hass.states.get = MagicMock(
@@ -792,12 +792,40 @@ class TestInvalidateWhileInProximity:
         ps.proximity = True
         ps.proximity_since = datetime(2024, 6, 1, 11, 0, 0, tzinfo=UTC)
         ps.today_reset_date = _NOW.date()
-        ps.today_proximity_seconds = 0.0
+        # 3600s already accumulated tick-by-tick before _invalidate fires
+        ps.today_proximity_seconds = 3600.0
 
         result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
         assert result.data_valid is False
+        # today_proximity_seconds must stay 3600 — not 7200 (double-count)
         assert result.today_proximity_seconds == pytest.approx(3600.0, abs=1.0)
+
+    def test_invalidate_date_rolled_credits_post_midnight_only(self):
+        """_invalidate() cross-midnight: only post-midnight slice added to today counters."""
+        coord = _make_coordinator()
+        state_b = _make_state("person.bob", 51.5, -0.1, 20)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: None if eid == "person.alice" else state_b
+        )
+
+        ps = _fresh_pair()
+        ps.proximity = True
+        # Started 23:50 on June 1, invalidated 00:10 on June 2 → 20min total, 10min post-midnight
+        ps.proximity_since = datetime(2024, 6, 1, 23, 50, 0, tzinfo=UTC)
+        ps.today_reset_date = date(2024, 6, 1)
+        ps.today_proximity_seconds = 0.0
+        ps.distance_m = 50.0
+
+        now = datetime(2024, 6, 2, 0, 10, 0, tzinfo=UTC)
+        result = coord._calc_pair(ps, "person.alice", "person.bob", now, set())
+
+        assert result.data_valid is False
+        assert result.today_reset_date == date(2024, 6, 2)
+        # only 10 min post-midnight credited to today
+        assert result.today_proximity_seconds == pytest.approx(600.0, abs=2.0)
+        # lifetime gets full 20 min
+        assert result.proximity_duration_s == pytest.approx(1200.0, abs=2.0)
 
 
 class TestPrevCalcTimePersistence:
@@ -898,8 +926,8 @@ class TestCoordinatorUpdatesWindowProperty:
 
 
 class TestInvalidateCreditsZoneBucket:
-    def test_invalidate_credits_today_zone_seconds(self):
-        """_invalidate() credits today_zone_seconds for the elapsed proximity window."""
+    def test_invalidate_cross_midnight_credits_zone_bucket(self):
+        """_invalidate() cross-midnight credits today_zone_seconds for post-midnight slice."""
         coord = _make_coordinator()
         state_b = _make_state("person.bob", 51.5, -0.1, 20)
         coord.hass.states.get = MagicMock(
@@ -908,19 +936,21 @@ class TestInvalidateCreditsZoneBucket:
 
         ps = _fresh_pair()
         ps.proximity = True
-        ps.proximity_since = datetime(2024, 6, 1, 11, 0, 0, tzinfo=UTC)
-        ps.today_reset_date = _NOW.date()
+        # Started 23:50 June 1, invalidated 00:10 June 2 → 10 min post-midnight
+        ps.proximity_since = datetime(2024, 6, 1, 23, 50, 0, tzinfo=UTC)
+        ps.today_reset_date = date(2024, 6, 1)
         ps.today_proximity_seconds = 0.0
         ps.today_zone_seconds = {}
         ps.distance_m = 50.0  # very_near bucket
 
-        result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+        now = datetime(2024, 6, 2, 0, 10, 0, tzinfo=UTC)
+        result = coord._calc_pair(ps, "person.alice", "person.bob", now, set())
 
         assert result.data_valid is False
-        # 1 hour credited to proximity
-        assert result.today_proximity_seconds == pytest.approx(3600.0, abs=1.0)
-        # Same elapsed time credited to the very_near bucket
-        assert result.today_zone_seconds.get("very_near", 0.0) == pytest.approx(3600.0, abs=1.0)
+        assert result.today_reset_date == date(2024, 6, 2)
+        # 10 min post-midnight credited to proximity and zone
+        assert result.today_proximity_seconds == pytest.approx(600.0, abs=2.0)
+        assert result.today_zone_seconds.get("very_near", 0.0) == pytest.approx(600.0, abs=2.0)
 
 
 class TestResyncHoldFlushesProximity:

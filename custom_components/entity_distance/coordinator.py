@@ -324,17 +324,25 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             if ps.proximity and ps.proximity_since:
                 elapsed = max(0.0, (now - ps.proximity_since).total_seconds())
                 ps.proximity_duration_s += elapsed
-                # Ensure today counters are initialised for this date before crediting.
-                if ps.today_reset_date is None or ps.today_reset_date != now.date():
+                # Only credit today counters when the date rolled — same-day invalidation
+                # must not double-count time already accumulated tick-by-tick.
+                inv_date_rolled = ps.today_reset_date is None or ps.today_reset_date != now.date()
+                if inv_date_rolled:
                     ps.today_proximity_seconds = 0.0
                     ps.today_zone_seconds = {}
                     ps.today_reset_date = now.date()
-                ps.today_proximity_seconds += elapsed
-                if ps.distance_m is not None:
-                    inv_bucket = _calc_bucket(ps.distance_m, self._bucket_thresholds)
-                    ps.today_zone_seconds[inv_bucket] = (
-                        ps.today_zone_seconds.get(inv_bucket, 0.0) + elapsed
-                    )
+                    midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+                    midnight_utc = midnight.astimezone(UTC)
+                    prox_since_utc = ps.proximity_since.astimezone(UTC)
+                    pre_inv = max(0.0, (midnight_utc - prox_since_utc).total_seconds())
+                    post_inv = max(0.0, elapsed - pre_inv)
+                    ps.today_proximity_seconds += post_inv
+                    if ps.distance_m is not None and post_inv > 0:
+                        inv_bucket = _calc_bucket(ps.distance_m, self._bucket_thresholds)
+                        ps.today_zone_seconds[inv_bucket] = (
+                            ps.today_zone_seconds.get(inv_bucket, 0.0) + post_inv
+                        )
+                # same day: today counters already reflect prior ticks via _elapsed_s
             ps.proximity = False
             ps.proximity_since = None
             ps.data_valid = False

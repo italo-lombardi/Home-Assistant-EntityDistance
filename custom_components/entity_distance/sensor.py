@@ -484,7 +484,7 @@ class EntityStateSensor(EntityDistanceSensorBase):
 
     @property
     def native_value(self) -> str | None:
-        if not self.coordinator.last_update_success:
+        if not self.available:
             return None
         state = self.hass.states.get(self._tracked_entity_id)
         if state is None:

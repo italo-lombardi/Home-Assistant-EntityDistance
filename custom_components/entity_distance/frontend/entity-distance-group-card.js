@@ -668,7 +668,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         const labelHTML = lineLabel ? `
             <rect x="${lx - labelW / 2}" y="${ly - 9}" width="${labelW}" height="16" rx="4" fill="var(--card-background-color,#fff)" fill-opacity="0.88"/>
             <text x="${lx}" y="${ly + 4}" text-anchor="middle" font-size="10" font-family="inherit" font-weight="600" fill="${color}">${lineLabel}</text>` : "";
-        const eid = p.distEntityId.replace(/"/g, "");
+        const eid = _encodeAttr(p.distEntityId);
         return `
           <g style="cursor:pointer" data-entity="${eid}">
             ${inProx ? `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${color}" stroke-width="8" stroke-opacity="0.18" filter="url(#prox-glow)" class="prox-glow"/>` : ""}

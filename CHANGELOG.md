@@ -2,9 +2,20 @@
 
 ## [Unreleased]
 
-## [0.2.5] - 2026-06-14
+## [0.2.5] - 2026-06-15
 
 ### Fixed
+
+- **Same-day hold flush double-counted `today_proximity_seconds`** — resync hold firing on the same calendar day re-added the full elapsed session to today counters on top of what tick-by-tick accumulation had already credited. Today counters are now only written in the hold flush when the date actually rolled (matching the daily-reset guard). Cross-midnight hold still correctly credits only the post-midnight slice.
+- **`_invalidate()` double-counted `today_proximity_seconds`** — same bug as the hold flush: same-day invalidation (GPS gone unavailable, entity removed) re-added the full proximity session elapsed to today counters. Fixed with the same `inv_date_rolled` guard; cross-midnight invalidation credits only the post-midnight slice.
+- **`today_zone_seconds` accumulated on every tick regardless of proximity** — zone bucket seconds were written outside the `(ps.proximity or was_proximity)` guard, so every non-proximity tick inflated zone totals. Moved inside the guard so `sum(today_zone_seconds.values())` always equals `today_proximity_seconds`.
+- **`EVENT_LEAVE` payload missing 6 fields at `_invalidate()` and hold flush** — both sites fired `EVENT_LEAVE` with only `{entity_a, entity_b}`. Any automation reading `distance_m`, `reliable`, etc. got a `KeyError`. Both sites now emit the full 8-field payload matching the normal EXIT path, with `reliable=False` and `direction=None`.
+- **Sensors returned non-`None` when `available=False`** — `ProximityDurationSensor`, `LastSeenTogetherSensor`, `GpsAccuracySensor`, `LastUpdateSensor`, `TodayUnaccountedTimeSensor`, `ProximityTrackingStartedSensor`, and `MinDistanceSensor` all violated the HA contract that `native_value` must return `None` when `available=False`. All guarded. `MinDistanceSensor` gains its own `available` property. `EntityStateSensor` previously checked only `coordinator.last_update_success`; now checks `self.available` (which also gates on `data_valid`).
+- **DST boundary midnight arithmetic** — all 5 midnight-computation sites used naive `datetime.replace()` subtraction. On DST fall-back night the subtraction silently under-counted by 1h; on spring-forward it over-counted. All sites now route through UTC via `.astimezone(UTC)` before differencing.
+- **`data-entity` attribute in Group Card not fully encoded** — `p.distEntityId.replace(/"/g, "")` stripped only double-quotes. Replaced with the existing `_encodeAttr()` helper that encodes `&`, `"`, `<`, `>`.
+- **HA minimum version badge incorrect** — README badge showed `2024.1+` but `hacs.json` requires `2024.3.0`. Corrected.
+- **Manual Lovelace resource URLs outdated** — README snippet referenced `?0.2.4` cache-bust version. Updated to `?0.2.5`.
+- **`SECURITY.md` listed only `0.1.x` as supported** — updated to `0.2.x ✅ / 0.1.x ❌`.
 
 - **Config entry migration missing** — `async_migrate_entry` (v1 single-pair → v2 group format) was accidentally removed in a cleanup commit. Any user upgrading from 0.1.x got a permanently disabled entry. Migration is restored, with added guards: fewer-than-2-entity lists return `False`, and unknown future versions also return `False` instead of silently succeeding.
 - **Proximity duration lost on restart** — when HA restarted while a pair was in proximity, the elapsed time from `proximity_since` to the shutdown was silently discarded. Duration is now credited on restore, and `proximity_since` is advanced to `now` to prevent double-counting. `prev_calc_time` is also set to `now` on restore so the first tick's midnight-flush block does not attempt to flush a stale pre-restart timestamp.

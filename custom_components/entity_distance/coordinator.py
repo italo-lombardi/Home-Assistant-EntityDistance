@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 import itertools
 import logging
 
@@ -324,17 +324,25 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             if ps.proximity and ps.proximity_since:
                 elapsed = max(0.0, (now - ps.proximity_since).total_seconds())
                 ps.proximity_duration_s += elapsed
-                # Ensure today counters are initialised for this date before crediting.
-                if ps.today_reset_date is None or ps.today_reset_date != now.date():
+                # Only credit today counters when the date rolled — same-day invalidation
+                # must not double-count time already accumulated tick-by-tick.
+                inv_date_rolled = ps.today_reset_date is None or ps.today_reset_date != now.date()
+                if inv_date_rolled:
                     ps.today_proximity_seconds = 0.0
                     ps.today_zone_seconds = {}
                     ps.today_reset_date = now.date()
-                ps.today_proximity_seconds += elapsed
-                if ps.distance_m is not None:
-                    inv_bucket = _calc_bucket(ps.distance_m, self._bucket_thresholds)
-                    ps.today_zone_seconds[inv_bucket] = (
-                        ps.today_zone_seconds.get(inv_bucket, 0.0) + elapsed
-                    )
+                    midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+                    midnight_utc = midnight.astimezone(UTC)
+                    prox_since_utc = ps.proximity_since.astimezone(UTC)
+                    pre_inv = max(0.0, (midnight_utc - prox_since_utc).total_seconds())
+                    post_inv = max(0.0, elapsed - pre_inv)
+                    ps.today_proximity_seconds += post_inv
+                    if ps.distance_m is not None and post_inv > 0:
+                        inv_bucket = _calc_bucket(ps.distance_m, self._bucket_thresholds)
+                        ps.today_zone_seconds[inv_bucket] = (
+                            ps.today_zone_seconds.get(inv_bucket, 0.0) + post_inv
+                        )
+                # same day: today counters already reflect prior ticks via _elapsed_s
             ps.proximity = False
             ps.proximity_since = None
             ps.data_valid = False
@@ -342,7 +350,19 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             ps.prev_calc_time = None
             ps.prev_distance_m = None
             if was_prox:
-                self.hass.bus.fire(EVENT_LEAVE, {"entity_a": entity_a, "entity_b": entity_b})
+                self.hass.bus.fire(
+                    EVENT_LEAVE,
+                    {
+                        "entity_a": entity_a,
+                        "entity_b": entity_b,
+                        "distance_m": ps.distance_m,
+                        "entry_threshold_m": self._entry_threshold_m,
+                        "exit_threshold_m": self._exit_threshold_m,
+                        "reliable": False,
+                        "direction": None,
+                        "closing_speed_kmh": None,
+                    },
+                )
             return ps
 
         if state_a is None or state_b is None:
@@ -537,23 +557,41 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 if ps.proximity and ps.proximity_since:
                     elapsed = max(0.0, (now - ps.proximity_since).total_seconds())
                     ps.proximity_duration_s += elapsed
-                    # Split elapsed at midnight so post-midnight seconds go to today.
-                    if ps.today_reset_date is None or ps.today_reset_date != now.date():
+                    # Only credit today counters when the date rolled — same-day hold must
+                    # not double-count time already accumulated tick-by-tick in today_proximity_seconds.
+                    hold_date_rolled = (
+                        ps.today_reset_date is None or ps.today_reset_date != now.date()
+                    )
+                    if hold_date_rolled:
                         ps.today_proximity_seconds = 0.0
                         ps.today_zone_seconds = {}
                         ps.today_reset_date = now.date()
-                    midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
-                    pre_hold = max(0.0, (midnight - ps.proximity_since).total_seconds())
-                    post_hold = max(0.0, elapsed - pre_hold)
-                    ps.today_proximity_seconds += post_hold
-                    if ps.distance_m is not None and post_hold > 0:
-                        hold_bucket = _calc_bucket(ps.distance_m, self._bucket_thresholds)
-                        ps.today_zone_seconds[hold_bucket] = (
-                            ps.today_zone_seconds.get(hold_bucket, 0.0) + post_hold
-                        )
+                        midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+                        midnight_utc = midnight.astimezone(UTC)
+                        prox_since_utc = ps.proximity_since.astimezone(UTC)
+                        pre_hold = max(0.0, (midnight_utc - prox_since_utc).total_seconds())
+                        post_hold = max(0.0, elapsed - pre_hold)
+                        ps.today_proximity_seconds += post_hold
+                        if ps.distance_m is not None and post_hold > 0:
+                            hold_bucket = _calc_bucket(ps.distance_m, self._bucket_thresholds)
+                            ps.today_zone_seconds[hold_bucket] = (
+                                ps.today_zone_seconds.get(hold_bucket, 0.0) + post_hold
+                            )
                     ps.proximity = False
                     ps.proximity_since = None
-                    self.hass.bus.fire(EVENT_LEAVE, {"entity_a": entity_a, "entity_b": entity_b})
+                    self.hass.bus.fire(
+                        EVENT_LEAVE,
+                        {
+                            "entity_a": entity_a,
+                            "entity_b": entity_b,
+                            "distance_m": ps.distance_m,
+                            "entry_threshold_m": self._entry_threshold_m,
+                            "exit_threshold_m": self._exit_threshold_m,
+                            "reliable": False,
+                            "direction": None,
+                            "closing_speed_kmh": None,
+                        },
+                    )
                 # Null the baseline so the first post-hold tick doesn't trigger a
                 # spurious speed-filter rejection against a stale prev_distance_m.
                 ps.prev_calc_time = None
@@ -610,10 +648,12 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             ps.today_reset_date = today
             if prev_calc_time_snapshot is not None and original_reset_date is not None:
                 midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+                midnight_utc = midnight.astimezone(UTC)
                 if was_proximity and ps.proximity_since is not None:
                     # Use proximity_since as start of the proximity slice so the
                     # full session since entry (not just last tick) is credited.
-                    prox_pre_midnight = max(0.0, (midnight - ps.proximity_since).total_seconds())
+                    prox_since_utc = ps.proximity_since.astimezone(UTC)
+                    prox_pre_midnight = max(0.0, (midnight_utc - prox_since_utc).total_seconds())
                     ps.proximity_duration_s += prox_pre_midnight
                     # Advance proximity_since to midnight so the EXIT handler on
                     # this tick does not re-count the pre-midnight interval.
@@ -628,13 +668,15 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         if prev_calc_time_snapshot is not None:
             if date_rolled:
                 midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
-                _elapsed_s = max(0.0, (now - midnight).total_seconds())
+                _elapsed_s = max(
+                    0.0,
+                    (now.astimezone(UTC) - midnight.astimezone(UTC)).total_seconds(),
+                )
             else:
                 _elapsed_s = max(0.0, (now - prev_calc_time_snapshot).total_seconds())
 
-        if _elapsed_s > 0:
-            if ps.proximity or was_proximity:
-                ps.today_proximity_seconds += _elapsed_s
+        if _elapsed_s > 0 and (ps.proximity or was_proximity):
+            ps.today_proximity_seconds += _elapsed_s
             # On EXIT tick, _elapsed_s covers time when pair was inside threshold —
             # use prev_distance_m_snapshot (the proximity-era distance) for the bucket.
             bucket_for_elapsed = _calc_bucket(
@@ -765,9 +807,13 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                     gap_s = max(0.0, (now_load - gap_anchor).total_seconds())
                     ps.proximity_duration_s += gap_s
                     # Split at midnight: only post-midnight portion belongs to today.
+                    # Route through UTC to avoid DST boundary errors.
                     midnight = now_load.replace(hour=0, minute=0, second=0, microsecond=0)
-                    today_anchor = max(gap_anchor, midnight)
-                    post_midnight_s = max(0.0, (now_load - today_anchor).total_seconds())
+                    midnight_utc = midnight.astimezone(UTC)
+                    gap_anchor_utc = gap_anchor.astimezone(UTC)
+                    now_load_utc = now_load.astimezone(UTC)
+                    today_anchor_utc = max(gap_anchor_utc, midnight_utc)
+                    post_midnight_s = max(0.0, (now_load_utc - today_anchor_utc).total_seconds())
                     ps.today_reset_date = today
                     ps.today_proximity_seconds += post_midnight_s
                     # Credit zone bucket for the restart gap using persisted last_bucket.

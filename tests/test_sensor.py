@@ -158,14 +158,14 @@ class TestProximityDurationSensor:
         sensor = self._make_sensor(ps)
         assert sensor.native_value is None
 
-    def test_returns_value_even_when_data_invalid(self):
-        # data_valid=False should not suppress duration (GPS bad but session ongoing)
+    def test_returns_none_when_data_invalid(self):
+        # data_valid=False → available=False → native_value must return None (HA contract)
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.data_valid = False
         ps.proximity_tracking_started = datetime.now().astimezone()
         ps.proximity_duration_s = 300.0
         sensor = self._make_sensor(ps)
-        assert sensor.native_value == 5.0
+        assert sensor.native_value is None
 
     def test_no_live_session_returns_stored_minutes(self):
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
@@ -577,6 +577,7 @@ class TestTodayUnaccountedTimeSensor:
         # prev_calc_time 30 seconds ago → gap ≈ 0.5 min
         now = datetime.now().astimezone()
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.data_valid = True
         ps.prev_calc_time = now - timedelta(seconds=30)
         sensor = _make_unaccounted_sensor(ps)
         value = sensor.native_value
@@ -588,6 +589,7 @@ class TestTodayUnaccountedTimeSensor:
         # Use a fixed gap of 10 min within the same day to avoid midnight truncation.
         now = datetime.now().astimezone()
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.data_valid = True
         ps.prev_calc_time = now - timedelta(minutes=10)
         sensor = _make_unaccounted_sensor(ps)
         value = sensor.native_value
@@ -598,6 +600,7 @@ class TestTodayUnaccountedTimeSensor:
         # prev_calc_time slightly in the future (clock drift) → max(gap, 0) = 0
         now = datetime.now().astimezone()
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.data_valid = True
         ps.prev_calc_time = now + timedelta(seconds=5)
         sensor = _make_unaccounted_sensor(ps)
         assert sensor.native_value == 0.0
@@ -757,6 +760,7 @@ def _make_gps_sensor(which: str, pair_state: PairState):
 class TestGpsAccuracySensor:
     def test_returns_accuracy_a(self):
         ps = PairState(entity_a_id="person.alice", entity_b_id="person.bob")
+        ps.data_valid = True
         ps.accuracy_a = 15.0
         ps.accuracy_b = 30.0
         sensor = _make_gps_sensor("a", ps)
@@ -764,6 +768,7 @@ class TestGpsAccuracySensor:
 
     def test_returns_accuracy_b(self):
         ps = PairState(entity_a_id="person.alice", entity_b_id="person.bob")
+        ps.data_valid = True
         ps.accuracy_a = 15.0
         ps.accuracy_b = 30.0
         sensor = _make_gps_sensor("b", ps)
@@ -771,6 +776,7 @@ class TestGpsAccuracySensor:
 
     def test_returns_none_when_no_accuracy(self):
         ps = PairState(entity_a_id="person.alice", entity_b_id="person.bob")
+        ps.data_valid = True
         ps.accuracy_a = None
         sensor = _make_gps_sensor("a", ps)
         assert sensor.native_value is None
@@ -803,6 +809,7 @@ def _make_last_update_sensor(which: str, pair_state: PairState):
 class TestLastUpdateSensor:
     def test_returns_last_update_a(self):
         ps = PairState(entity_a_id="person.alice", entity_b_id="person.bob")
+        ps.data_valid = True
         now = datetime.now().astimezone()
         ps.last_update_a = now
         sensor = _make_last_update_sensor("a", ps)
@@ -810,6 +817,7 @@ class TestLastUpdateSensor:
 
     def test_returns_last_update_b(self):
         ps = PairState(entity_a_id="person.alice", entity_b_id="person.bob")
+        ps.data_valid = True
         now = datetime.now().astimezone()
         ps.last_update_b = now
         sensor = _make_last_update_sensor("b", ps)
@@ -817,6 +825,7 @@ class TestLastUpdateSensor:
 
     def test_returns_none_when_not_set(self):
         ps = PairState(entity_a_id="person.alice", entity_b_id="person.bob")
+        ps.data_valid = True
         sensor = _make_last_update_sensor("a", ps)
         assert sensor.native_value is None
 
@@ -831,6 +840,7 @@ class TestLastSeenTogetherSensor:
         from custom_components.entity_distance.sensor import LastSeenTogetherSensor
 
         ps = PairState(entity_a_id="person.alice", entity_b_id="person.bob")
+        ps.data_valid = True
         ps.last_seen_together = last_seen
         return _make_sensor(LastSeenTogetherSensor, ps)
 
@@ -881,6 +891,7 @@ class TestProximityTrackingStartedSensor:
         from custom_components.entity_distance.sensor import ProximityTrackingStartedSensor
 
         ps = PairState(entity_a_id="person.alice", entity_b_id="person.bob")
+        ps.data_valid = True
         ps.proximity_tracking_started = tracking_started
         return _make_sensor(ProximityTrackingStartedSensor, ps)
 
@@ -1097,6 +1108,7 @@ class TestGpsAccuracySensorExtra:
         from custom_components.entity_distance.sensor import GpsAccuracySensor
 
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.data_valid = True
         ps.accuracy_a = 12.5
         ps.accuracy_b = 30.0
         sensor = _make_extra_sensor(GpsAccuracySensor, ps, _which="a")
@@ -1106,6 +1118,7 @@ class TestGpsAccuracySensorExtra:
         from custom_components.entity_distance.sensor import GpsAccuracySensor
 
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.data_valid = True
         ps.accuracy_a = 12.5
         ps.accuracy_b = 30.0
         sensor = _make_extra_sensor(GpsAccuracySensor, ps, _which="b")
@@ -1115,6 +1128,7 @@ class TestGpsAccuracySensorExtra:
         from custom_components.entity_distance.sensor import GpsAccuracySensor
 
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.data_valid = True
         ps.accuracy_a = None
         sensor = _make_extra_sensor(GpsAccuracySensor, ps, _which="a")
         assert sensor.native_value is None
@@ -1125,6 +1139,7 @@ class TestLastUpdateSensorExtra:
         from custom_components.entity_distance.sensor import LastUpdateSensor
 
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.data_valid = True
         ts = datetime.now().astimezone()
         ps.last_update_a = ts
         sensor = _make_extra_sensor(LastUpdateSensor, ps, _which="a")
@@ -1134,6 +1149,7 @@ class TestLastUpdateSensorExtra:
         from custom_components.entity_distance.sensor import LastUpdateSensor
 
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.data_valid = True
         ts = datetime.now().astimezone()
         ps.last_update_b = ts
         sensor = _make_extra_sensor(LastUpdateSensor, ps, _which="b")
@@ -1143,6 +1159,7 @@ class TestLastUpdateSensorExtra:
         from custom_components.entity_distance.sensor import LastUpdateSensor
 
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.data_valid = True
         sensor = _make_extra_sensor(LastUpdateSensor, ps, _which="a")
         assert sensor.native_value is None
 
@@ -1176,6 +1193,7 @@ class TestProximityTrackingStartedSensorExtra:
         from custom_components.entity_distance.sensor import ProximityTrackingStartedSensor
 
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.data_valid = True
         sensor = _make_extra_sensor(ProximityTrackingStartedSensor, ps)
         assert sensor.native_value is None
 
@@ -1183,6 +1201,7 @@ class TestProximityTrackingStartedSensorExtra:
         from custom_components.entity_distance.sensor import ProximityTrackingStartedSensor
 
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.data_valid = True
         ts = datetime.now().astimezone()
         ps.proximity_tracking_started = ts
         sensor = _make_extra_sensor(ProximityTrackingStartedSensor, ps)

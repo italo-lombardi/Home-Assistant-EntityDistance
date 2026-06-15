@@ -266,6 +266,8 @@ class ProximityDurationSensor(EntityDistanceSensorBase):
 
     @property
     def native_value(self) -> float | None:
+        if not self.available:
+            return None
         ps = self._pair
         if ps.proximity_tracking_started is None:
             return None
@@ -284,6 +286,8 @@ class LastSeenTogetherSensor(EntityDistanceSensorBase):
 
     @property
     def native_value(self) -> datetime | None:
+        if not self.available:
+            return None
         return self._pair.last_seen_together
 
 
@@ -413,6 +417,8 @@ class GpsAccuracySensor(EntityDistanceSensorBase):
 
     @property
     def native_value(self) -> float | None:
+        if not self.available:
+            return None
         return self._pair.accuracy_a if self._which == "a" else self._pair.accuracy_b
 
 
@@ -428,6 +434,8 @@ class LastUpdateSensor(EntityDistanceSensorBase):
 
     @property
     def native_value(self) -> datetime | None:
+        if not self.available:
+            return None
         return self._pair.last_update_a if self._which == "a" else self._pair.last_update_b
 
 
@@ -476,6 +484,8 @@ class EntityStateSensor(EntityDistanceSensorBase):
 
     @property
     def native_value(self) -> str | None:
+        if not self.coordinator.last_update_success:
+            return None
         state = self.hass.states.get(self._tracked_entity_id)
         if state is None:
             return None
@@ -491,6 +501,8 @@ class ProximityTrackingStartedSensor(EntityDistanceSensorBase):
 
     @property
     def native_value(self) -> datetime | None:
+        if not self.available:
+            return None
         return self._pair.proximity_tracking_started
 
 
@@ -529,6 +541,8 @@ class TodayUnaccountedTimeSensor(EntityDistanceSensorBase):
 
     @property
     def native_value(self) -> float | None:
+        if not self.available:
+            return None
         ps = self._pair
         if ps.prev_calc_time is None:
             return None
@@ -560,5 +574,11 @@ class MinDistanceSensor(CoordinatorEntity[EntityDistanceCoordinator], SensorEnti
         self._attr_device_info = device_info
 
     @property
+    def available(self) -> bool:
+        return self.coordinator.last_update_success
+
+    @property
     def native_value(self) -> float | None:
+        if not self.available:
+            return None
         return self.coordinator.data.min_distance_m

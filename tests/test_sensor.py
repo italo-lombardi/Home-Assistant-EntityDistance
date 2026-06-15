@@ -249,6 +249,7 @@ def _make_count_sensor(which: str, pair_state: PairState) -> UpdateCountSensor:
     k = pair_key(pair_state.entity_a_id, pair_state.entity_b_id)
     coordinator.data = GroupData(pairs={k: pair_state})
     coordinator.bucket_thresholds = _DEFAULT_THRESHOLDS
+    coordinator.updates_window_s = 1800.0
     entry = MagicMock()
     entry.entry_id = "test_entry"
     sensor = UpdateCountSensor.__new__(UpdateCountSensor)
@@ -402,12 +403,9 @@ class TestUpdateCountSensor:
     def test_expired_window_returns_zero_for_a(self):
         from datetime import timedelta
 
-        from custom_components.entity_distance.const import UPDATES_FREQUENCY_WINDOW_S
-
         ps = self._ps(True, count_a=5, count_b=3)
-        ps.update_window_start_a = datetime.now().astimezone() - timedelta(
-            seconds=UPDATES_FREQUENCY_WINDOW_S + 60
-        )
+        # Use the coordinator's window (1800s set in _make_count_sensor)
+        ps.update_window_start_a = datetime.now().astimezone() - timedelta(seconds=1800 + 60)
         sensor = _make_count_sensor("a", ps)
         assert sensor.native_value == 0
 
@@ -426,12 +424,8 @@ class TestUpdateCountSensor:
     def test_expired_window_returns_zero_for_b(self):
         from datetime import timedelta
 
-        from custom_components.entity_distance.const import UPDATES_FREQUENCY_WINDOW_S
-
         ps = self._ps(True, count_a=2, count_b=9)
-        ps.update_window_start_b = datetime.now().astimezone() - timedelta(
-            seconds=UPDATES_FREQUENCY_WINDOW_S + 60
-        )
+        ps.update_window_start_b = datetime.now().astimezone() - timedelta(seconds=1800 + 60)
         sensor = _make_count_sensor("b", ps)
         assert sensor.native_value == 0
 
@@ -1017,6 +1011,7 @@ class TestDirectionSensor:
 
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.direction = DIRECTION_APPROACHING
+        ps.data_valid = True
         sensor = _make_extra_sensor(DirectionSensor, ps)
         assert sensor.native_value == DIRECTION_APPROACHING
 
@@ -1025,6 +1020,16 @@ class TestDirectionSensor:
 
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.direction = None
+        ps.data_valid = True
+        sensor = _make_extra_sensor(DirectionSensor, ps)
+        assert sensor.native_value is None
+
+    def test_returns_none_when_data_invalid(self):
+        from custom_components.entity_distance.sensor import DirectionSensor
+
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.direction = DIRECTION_APPROACHING
+        ps.data_valid = False
         sensor = _make_extra_sensor(DirectionSensor, ps)
         assert sensor.native_value is None
 
@@ -1035,6 +1040,7 @@ class TestClosingSpeedSensorExtra:
 
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.closing_speed_kmh = 12.3456
+        ps.data_valid = True
         sensor = _make_extra_sensor(ClosingSpeedSensor, ps)
         assert sensor.native_value == 12.3
 
@@ -1043,6 +1049,16 @@ class TestClosingSpeedSensorExtra:
 
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.closing_speed_kmh = None
+        ps.data_valid = True
+        sensor = _make_extra_sensor(ClosingSpeedSensor, ps)
+        assert sensor.native_value is None
+
+    def test_returns_none_when_data_invalid(self):
+        from custom_components.entity_distance.sensor import ClosingSpeedSensor
+
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.closing_speed_kmh = 5.0
+        ps.data_valid = False
         sensor = _make_extra_sensor(ClosingSpeedSensor, ps)
         assert sensor.native_value is None
 
@@ -1053,6 +1069,7 @@ class TestEtaSensorExtra:
 
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.eta_minutes = 7.777
+        ps.data_valid = True
         sensor = _make_extra_sensor(EtaSensor, ps)
         assert sensor.native_value == 7.8
 
@@ -1061,6 +1078,16 @@ class TestEtaSensorExtra:
 
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.eta_minutes = None
+        ps.data_valid = True
+        sensor = _make_extra_sensor(EtaSensor, ps)
+        assert sensor.native_value is None
+
+    def test_returns_none_when_data_invalid(self):
+        from custom_components.entity_distance.sensor import EtaSensor
+
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.eta_minutes = 3.0
+        ps.data_valid = False
         sensor = _make_extra_sensor(EtaSensor, ps)
         assert sensor.native_value is None
 

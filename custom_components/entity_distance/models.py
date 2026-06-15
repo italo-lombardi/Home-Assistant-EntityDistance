@@ -43,11 +43,10 @@ class PairState:
 
     today_proximity_seconds: float = 0.0
     today_reset_date: date | None = None
-    today_zone_seconds: dict[str, float] = None  # type: ignore[assignment]
+    today_zone_seconds: dict[str, float] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        if self.today_zone_seconds is None:
-            self.today_zone_seconds = {}
+        pass
 
     accuracy_a: float | None = None
     accuracy_b: float | None = None

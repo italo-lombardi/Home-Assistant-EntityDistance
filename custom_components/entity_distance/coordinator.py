@@ -11,6 +11,7 @@ from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.event import async_track_state_change_event, async_track_time_interval
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.util import dt as dt_util
 from homeassistant.util.location import distance as ha_distance
 
 from .const import (
@@ -57,7 +58,6 @@ from .const import (
     EVENT_LEAVE,
     EVENT_UPDATE,
     STATIONARY_THRESHOLD_M,
-    UPDATES_FREQUENCY_WINDOW_S,
 )
 from .models import GroupData, PairState, pair_key
 
@@ -97,25 +97,16 @@ def _get_coords(state: State) -> tuple[float, float, float | None] | None:
             lat = lon = None
 
     if lat is None or lon is None:
-        relevant_attrs = {
-            k: attrs.get(k)
-            for k in ("latitude", "longitude", "location", "gps_accuracy")
-            if k in attrs
-        }
         _LOGGER.warning(
-            "entity_distance: cannot extract coords from %s (state=%r, attrs=%r)",
+            "entity_distance: cannot extract coords from %s",
             state.entity_id,
-            state.state,
-            relevant_attrs,
         )
         return None
 
     if not (-90 <= lat <= 90) or not (-180 <= lon <= 180):
         _LOGGER.warning(
-            "entity_distance: invalid coords for %s: lat=%s lon=%s",
+            "entity_distance: invalid coords for %s",
             state.entity_id,
-            lat,
-            lon,
         )
         return None
 
@@ -125,7 +116,7 @@ def _get_coords(state: State) -> tuple[float, float, float | None] | None:
         accuracy = None
 
     _LOGGER.debug(
-        "entity_distance: coords resolved for %s — lat=%.6f lon=%.6f acc=%s",
+        "entity_distance: coords resolved for %s — lat=%.2f lon=%.2f acc=%s",
         state.entity_id,
         lat,
         lon,
@@ -206,10 +197,14 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
     def bucket_thresholds(self) -> dict[str, float]:
         return self._bucket_thresholds
 
+    @property
+    def updates_window_s(self) -> float:
+        return self._updates_window_s
+
     async def async_setup(self) -> None:
         await self._async_load_state()
 
-        now = datetime.now().astimezone()
+        now = dt_util.now()
         for ps in self._pair_states.values():
             if ps.proximity_tracking_started is None:
                 ps.proximity_tracking_started = now
@@ -235,7 +230,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             unsub()
         self._unsub_listeners.clear()
         if self._debouncer:
-            self._debouncer.async_cancel()
+            self._debouncer.async_shutdown()
         _LOGGER.debug("entity_distance: unloaded coordinator for %s", self._entry.entry_id)
 
     @callback
@@ -256,7 +251,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             old_state.state if old_state else "none",
             new_state.state if new_state else "none",
         )
-        now = datetime.now().astimezone()
+        now = dt_util.now()
         # Mark last_update for all pairs involving this entity (O(1) via reverse index)
         for k in self._entity_to_pairs.get(entity_id, []):
             ps = self._pair_states[k]
@@ -268,7 +263,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         self.hass.async_create_task(self._debouncer.async_call())
 
     async def async_recalculate(self) -> None:
-        now = datetime.now().astimezone()
+        now = dt_util.now()
         pending = set(self._pending_updates)
         self._pending_updates.clear()
 
@@ -323,10 +318,31 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         )
 
         def _invalidate(reason: str) -> PairState:
+            # If invalidated while in proximity, close the session to avoid crediting
+            # unavailability window as proximity time on next valid observation.
+            was_prox = ps.proximity
+            if ps.proximity and ps.proximity_since:
+                elapsed = max(0.0, (now - ps.proximity_since).total_seconds())
+                ps.proximity_duration_s += elapsed
+                # Ensure today counters are initialised for this date before crediting.
+                if ps.today_reset_date is None or ps.today_reset_date != now.date():
+                    ps.today_proximity_seconds = 0.0
+                    ps.today_zone_seconds = {}
+                    ps.today_reset_date = now.date()
+                ps.today_proximity_seconds += elapsed
+                if ps.distance_m is not None:
+                    inv_bucket = _calc_bucket(ps.distance_m, self._bucket_thresholds)
+                    ps.today_zone_seconds[inv_bucket] = (
+                        ps.today_zone_seconds.get(inv_bucket, 0.0) + elapsed
+                    )
+            ps.proximity = False
+            ps.proximity_since = None
             ps.data_valid = False
             ps.last_error = reason
             ps.prev_calc_time = None
             ps.prev_distance_m = None
+            if was_prox:
+                self.hass.bus.fire(EVENT_LEAVE, {"entity_a": entity_a, "entity_b": entity_b})
             return ps
 
         if state_a is None or state_b is None:
@@ -441,52 +457,34 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                     eta_minutes = min(eta_minutes, 1440.0)
 
         was_proximity = ps.proximity
-        if not ps.proximity and dist_m <= self._entry_threshold_m:
-            ps.proximity = True
-            ps.proximity_since = now
-            if ps.proximity_tracking_started is None:
-                ps.proximity_tracking_started = now
-        elif ps.proximity and dist_m > self._exit_threshold_m:
-            ps.proximity = False
-            ps.last_seen_together = now
-            if ps.proximity_since:
-                ps.proximity_duration_s += (now - ps.proximity_since).total_seconds()
-            ps.proximity_since = None
 
-        today = now.date()
-        if ps.today_reset_date != today:
-            ps.today_proximity_seconds = 0.0
-            ps.today_zone_seconds = {}
-            ps.today_reset_date = today
+        # Capture baseline distance/time before writing new values so C3 flush
+        # and speed filter use the correct previous-tick values.
+        prev_distance_m_snapshot = ps.prev_distance_m
+        prev_calc_time_snapshot = ps.prev_calc_time
 
-        if ps.prev_calc_time is not None:
-            elapsed = max(0.0, (now - ps.prev_calc_time).total_seconds())
-            if ps.proximity:
-                ps.today_proximity_seconds += elapsed
-            current_bucket = _calc_bucket(dist_m, self._bucket_thresholds)
-            ps.today_zone_seconds[current_bucket] = (
-                ps.today_zone_seconds.get(current_bucket, 0.0) + elapsed
-            )
+        # Only advance update counters when not in a resync hold — hold ticks
+        # should not count as location updates for reliability purposes.
+        if not self._resync_holding.get(k, False):
+            if entity_a in pending:
+                ps.update_count_a = self._update_frequency(
+                    ps.update_count_a, ps.update_window_start_a, now
+                )
+                if (
+                    ps.update_window_start_a is None
+                    or (now - ps.update_window_start_a).total_seconds() > self._updates_window_s
+                ):
+                    ps.update_window_start_a = now
 
-        if entity_a in pending:
-            ps.update_count_a = self._update_frequency(
-                ps.update_count_a, ps.update_window_start_a, now
-            )
-            if (
-                ps.update_window_start_a is None
-                or (now - ps.update_window_start_a).total_seconds() > UPDATES_FREQUENCY_WINDOW_S
-            ):
-                ps.update_window_start_a = now
-
-        if entity_b in pending:
-            ps.update_count_b = self._update_frequency(
-                ps.update_count_b, ps.update_window_start_b, now
-            )
-            if (
-                ps.update_window_start_b is None
-                or (now - ps.update_window_start_b).total_seconds() > UPDATES_FREQUENCY_WINDOW_S
-            ):
-                ps.update_window_start_b = now
+            if entity_b in pending:
+                ps.update_count_b = self._update_frequency(
+                    ps.update_count_b, ps.update_window_start_b, now
+                )
+                if (
+                    ps.update_window_start_b is None
+                    or (now - ps.update_window_start_b).total_seconds() > self._updates_window_s
+                ):
+                    ps.update_window_start_b = now
 
         ps.distance_m = dist_m
         ps.prev_distance_m = dist_m
@@ -501,9 +499,14 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
 
         reliable = self._is_reliable(ps)
 
-        # resync silence
+        # Resync silence — check before proximity transitions so hold returns early
+        # without mutating ps.proximity, preventing EVENT_ENTER from being lost.
+        # Skip for zone entities — zones never emit state_changed so staleness is
+        # always huge; treating that as a resync condition causes a permanent loop.
         if (
             self._resync_silence_s > 0
+            and not is_zone_a
+            and not is_zone_b
             and ps.last_update_a is not None
             and ps.last_update_b is not None
         ):
@@ -516,7 +519,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             ):
                 self._resync_holding[k] = True
                 self._resync_hold_until[k] = now + timedelta(seconds=self._resync_hold_s)
-                _LOGGER.warning(
+                _LOGGER.debug(
                     "entity_distance: resync silence detected for pair (%s, %s) — holding for %.0fs",
                     entity_a,
                     entity_b,
@@ -529,10 +532,58 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 _LOGGER.debug(
                     "entity_distance: in resync hold for pair (%s, %s)", entity_a, entity_b
                 )
+                # Close any open proximity session before returning — the hold window
+                # should not be counted as valid proximity time.
+                if ps.proximity and ps.proximity_since:
+                    elapsed = max(0.0, (now - ps.proximity_since).total_seconds())
+                    ps.proximity_duration_s += elapsed
+                    # Split elapsed at midnight so post-midnight seconds go to today.
+                    if ps.today_reset_date is None or ps.today_reset_date != now.date():
+                        ps.today_proximity_seconds = 0.0
+                        ps.today_zone_seconds = {}
+                        ps.today_reset_date = now.date()
+                    midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+                    pre_hold = max(0.0, (midnight - ps.proximity_since).total_seconds())
+                    post_hold = max(0.0, elapsed - pre_hold)
+                    ps.today_proximity_seconds += post_hold
+                    if ps.distance_m is not None and post_hold > 0:
+                        hold_bucket = _calc_bucket(ps.distance_m, self._bucket_thresholds)
+                        ps.today_zone_seconds[hold_bucket] = (
+                            ps.today_zone_seconds.get(hold_bucket, 0.0) + post_hold
+                        )
+                    ps.proximity = False
+                    ps.proximity_since = None
+                    self.hass.bus.fire(EVENT_LEAVE, {"entity_a": entity_a, "entity_b": entity_b})
+                # Null the baseline so the first post-hold tick doesn't trigger a
+                # spurious speed-filter rejection against a stale prev_distance_m.
+                ps.prev_calc_time = None
+                ps.prev_distance_m = None
                 ps.data_valid = False
                 return ps
             self._resync_holding[k] = False
             self._resync_hold_until[k] = None
+            # Reset staleness clocks so the hold doesn't re-arm immediately on
+            # the very next tick — treat hold expiry as a fresh observation.
+            ps.last_update_a = now
+            ps.last_update_b = now
+
+        # Proximity transitions — after hold check so early-return doesn't leave
+        # ps.proximity mutated without a corresponding event being fired.
+        if not ps.proximity and dist_m <= self._entry_threshold_m:
+            ps.proximity = True
+            ps.proximity_since = now
+            if ps.proximity_tracking_started is None:
+                ps.proximity_tracking_started = now
+        elif ps.proximity and dist_m > self._exit_threshold_m:
+            ps.proximity = False
+            if ps.proximity_since:
+                ps.proximity_duration_s += (now - ps.proximity_since).total_seconds()
+            ps.proximity_since = None
+
+        # Stamp last_seen_together on every in-proximity tick and on EXIT so it
+        # always reflects the last confirmed time they were within the exit threshold.
+        if was_proximity:
+            ps.last_seen_together = now
 
         if self._require_reliable and not reliable and not was_proximity and ps.proximity:
             ps.proximity = False
@@ -541,6 +592,59 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 "entity_distance: proximity entry blocked for pair (%s, %s) — not yet reliable",
                 entity_a,
                 entity_b,
+            )
+
+        # Daily reset with cross-midnight flush.
+        # Zero daily counters first, then write the pre-midnight slice, so the
+        # flush data is not overwritten by the reset (bug: previously zeroed after writing).
+        # Use was_proximity and prev_distance_m_snapshot so flags/bucket reflect the
+        # previous tick, not the current one.
+        # Guard flush on original_reset_date (before overwrite) to avoid stale prev_calc_time
+        # from a cross-day restart inflating today's counters.
+        today = now.date()
+        date_rolled = ps.today_reset_date != today
+        original_reset_date = ps.today_reset_date
+        if date_rolled:
+            ps.today_proximity_seconds = 0.0
+            ps.today_zone_seconds = {}
+            ps.today_reset_date = today
+            if prev_calc_time_snapshot is not None and original_reset_date is not None:
+                midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+                if was_proximity and ps.proximity_since is not None:
+                    # Use proximity_since as start of the proximity slice so the
+                    # full session since entry (not just last tick) is credited.
+                    prox_pre_midnight = max(0.0, (midnight - ps.proximity_since).total_seconds())
+                    ps.proximity_duration_s += prox_pre_midnight
+                    # Advance proximity_since to midnight so the EXIT handler on
+                    # this tick does not re-count the pre-midnight interval.
+                    ps.proximity_since = midnight
+                # Pre-midnight zone seconds are yesterday's data — do NOT write to
+                # today's today_zone_seconds (which was just zeroed). The post-midnight
+                # slice is credited correctly by the _elapsed_s block below.
+
+        # Accumulate today totals using the finalised proximity state (after reliability check).
+        # When the date rolled, count only from midnight to now (post-midnight portion).
+        _elapsed_s: float = 0.0
+        if prev_calc_time_snapshot is not None:
+            if date_rolled:
+                midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+                _elapsed_s = max(0.0, (now - midnight).total_seconds())
+            else:
+                _elapsed_s = max(0.0, (now - prev_calc_time_snapshot).total_seconds())
+
+        if _elapsed_s > 0:
+            if ps.proximity or was_proximity:
+                ps.today_proximity_seconds += _elapsed_s
+            # On EXIT tick, _elapsed_s covers time when pair was inside threshold —
+            # use prev_distance_m_snapshot (the proximity-era distance) for the bucket.
+            bucket_for_elapsed = _calc_bucket(
+                prev_distance_m_snapshot
+                if was_proximity and prev_distance_m_snapshot is not None
+                else dist_m,
+                self._bucket_thresholds,
+            )
+            ps.today_zone_seconds[bucket_for_elapsed] = (
+                ps.today_zone_seconds.get(bucket_for_elapsed, 0.0) + _elapsed_s
             )
 
         event_data = {
@@ -569,7 +673,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         if window_start is None:
             return 1
         elapsed = (now - window_start).total_seconds()
-        if elapsed > UPDATES_FREQUENCY_WINDOW_S:
+        if elapsed > self._updates_window_s:
             return 1
         return count + 1
 
@@ -580,7 +684,22 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         )
 
     async def _async_update_data(self) -> GroupData:
-        return GroupData(pairs=dict(self._pair_states))
+        valid_pairs = [
+            ps for ps in self._pair_states.values() if ps.data_valid and ps.distance_m is not None
+        ]
+        min_dist: float | None = min((ps.distance_m for ps in valid_pairs), default=None)
+        any_prox = any(ps.proximity for ps in self._pair_states.values() if ps.data_valid)
+        all_prox = (
+            bool(valid_pairs)
+            and len(valid_pairs) == len(self._pair_states)
+            and all(ps.proximity for ps in valid_pairs)
+        )
+        return GroupData(
+            pairs=dict(self._pair_states),
+            min_distance_m=min_dist,
+            any_in_proximity=any_prox,
+            all_in_proximity=all_prox,
+        )
 
     async def _async_save_state(self) -> None:
         payload: dict = {}
@@ -598,6 +717,10 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 if ps.last_seen_together
                 else None,
                 "proximity_since": ps.proximity_since.isoformat() if ps.proximity_since else None,
+                "prev_calc_time": ps.prev_calc_time.isoformat() if ps.prev_calc_time else None,
+                "last_bucket": _calc_bucket(ps.distance_m, self._bucket_thresholds)
+                if ps.distance_m is not None
+                else None,
             }
         await self._store.async_save(payload)
 
@@ -605,9 +728,10 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         stored = await self._store.async_load()
         if not stored:
             return
-        try:
-            today = datetime.now().astimezone().date()
-            for k, ps in self._pair_states.items():
+        now_load = dt_util.now()
+        today = now_load.date()
+        for k, ps in self._pair_states.items():
+            try:
                 store_key = f"{k[0]}__{k[1]}"
                 blob = stored.get(store_key)
                 if not blob:
@@ -630,8 +754,44 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 if proximity_since_str:
                     ps.proximity_since = datetime.fromisoformat(proximity_since_str)
                     ps.proximity = True
-        except Exception:  # noqa: BLE001
-            _LOGGER.warning(
-                "entity_distance: failed to restore persisted state, starting fresh",
-                exc_info=True,
-            )
+                    # Anchor on prev_calc_time so same-day restarts don't double-count
+                    # time already reflected in the stored proximity_duration_s.
+                    prev_calc_time_str = blob.get("prev_calc_time")
+                    gap_anchor = (
+                        datetime.fromisoformat(prev_calc_time_str)
+                        if prev_calc_time_str
+                        else ps.proximity_since
+                    )
+                    gap_s = max(0.0, (now_load - gap_anchor).total_seconds())
+                    ps.proximity_duration_s += gap_s
+                    # Split at midnight: only post-midnight portion belongs to today.
+                    midnight = now_load.replace(hour=0, minute=0, second=0, microsecond=0)
+                    today_anchor = max(gap_anchor, midnight)
+                    post_midnight_s = max(0.0, (now_load - today_anchor).total_seconds())
+                    ps.today_reset_date = today
+                    ps.today_proximity_seconds += post_midnight_s
+                    # Credit zone bucket for the restart gap using persisted last_bucket.
+                    last_bucket = blob.get("last_bucket")
+                    if last_bucket is not None and post_midnight_s > 0:
+                        ps.today_zone_seconds[last_bucket] = (
+                            ps.today_zone_seconds.get(last_bucket, 0.0) + post_midnight_s
+                        )
+                    # Advance proximity_since to now_load so the next EXIT does not
+                    # double-count the already-credited interval.
+                    ps.proximity_since = now_load
+                    # Set prev_calc_time to now_load so the first tick's date-rolled
+                    # block does not try to flush a stale pre-restart prev_calc_time.
+                    ps.prev_calc_time = now_load
+                else:
+                    prev_calc_time_str = blob.get("prev_calc_time")
+                    if prev_calc_time_str:
+                        ps.prev_calc_time = datetime.fromisoformat(prev_calc_time_str)
+            except Exception:  # noqa: BLE001
+                _LOGGER.warning(
+                    "entity_distance: failed to restore persisted state for pair %s, starting fresh",
+                    k,
+                    exc_info=True,
+                )
+                # Reset to a clean state so corrupt data doesn't leave proximity=True
+                # with a stale proximity_since that inflates counters on next EXIT.
+                self._pair_states[k] = PairState(entity_a_id=k[0], entity_b_id=k[1])

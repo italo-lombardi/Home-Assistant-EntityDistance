@@ -4,7 +4,7 @@
  * People-focused layout: two avatars side-by-side with distance in the middle.
  */
 
-const PEOPLE_CARD_VERSION = "0.2.3";
+const PEOPLE_CARD_VERSION = "0.2.5";
 
 console.info(
   `%c ENTITY-DISTANCE-AVATAR-CARD %c v${PEOPLE_CARD_VERSION} %c — github.com/italo-lombardi`,
@@ -192,6 +192,8 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     // strip domain
     return entityId.replace(/^[^.]+\./, "").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
   }
+
+  const SAFE_SCHEMES = /^(https?:\/\/|\/\/|\/)/;
 
   // ─── card styles ─────────────────────────────────────────────────────────────
 
@@ -535,11 +537,10 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       if (entityId && this.hass.states[entityId]) {
         const state = this.hass.states[entityId];
         const pic = state.attributes?.entity_picture;
-        if (pic) {
-          const src = pic.startsWith("/") ? pic : pic;
+        if (pic && SAFE_SCHEMES.test(pic)) {
           return html`
             <div class="avatar-wrap">
-              <img src="${src}" alt="${fallbackName}" />
+              <img src="${pic}" alt="${fallbackName}" />
             </div>`;
         }
       }
@@ -833,7 +834,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     }
 
     render() {
-      if (!this._config) return html``;
+      if (!this._config || !this.hass) return html``;
       const pairs = _getPairs(this.hass);
 
       return html`

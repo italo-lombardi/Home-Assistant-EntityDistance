@@ -12,10 +12,12 @@ from homeassistant.components.sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory, UnitOfLength, UnitOfSpeed, UnitOfTime
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceEntryType
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import dt as dt_util
 
 from .const import (
     BUCKET_FAR,
@@ -29,7 +31,6 @@ from .const import (
     DIRECTION_STATIONARY,
     DIRECTIONS,
     DOMAIN,
-    UPDATES_FREQUENCY_WINDOW_S,
 )
 from .coordinator import EntityDistanceCoordinator, _calc_bucket
 from .models import PairState, pair_key
@@ -96,6 +97,19 @@ async def async_setup_entry(
     )
 
     all_sensors: list = []
+
+    # Pre-register group device so pair devices can reference it via via_device.
+    try:
+        dev_reg = dr.async_get(hass)
+        dev_reg.async_get_or_create(
+            config_entry_id=entry.entry_id,
+            identifiers={(DOMAIN, entry.entry_id)},
+            name=f"Entity Distance — {group_name}",
+            manufacturer="Entity Distance",
+            entry_type=DeviceEntryType.SERVICE,
+        )
+    except Exception:  # noqa: BLE001
+        pass
 
     for a, b in itertools.combinations(entities_list, 2):
         k = pair_key(a, b)
@@ -178,8 +192,14 @@ class EntityDistanceSensorBase(CoordinatorEntity[EntityDistanceCoordinator], Sen
         self._attr_device_info = device_info
 
     @property
+    def available(self) -> bool:
+        return self.coordinator.last_update_success and self._pair.data_valid
+
+    @property
     def _pair(self) -> PairState:
-        return self.coordinator.data.pairs[self._pair_key]
+        return self.coordinator.data.pairs.get(self._pair_key) or PairState(
+            entity_a_id=self._pair_key[0], entity_b_id=self._pair_key[1]
+        )
 
 
 class DistanceSensor(EntityDistanceSensorBase):
@@ -193,6 +213,8 @@ class DistanceSensor(EntityDistanceSensorBase):
 
     @property
     def native_value(self) -> float | None:
+        if not self._pair.data_valid:
+            return None
         return self._pair.distance_m
 
     @property
@@ -213,7 +235,7 @@ class BucketSensor(EntityDistanceSensorBase):
 
     @property
     def native_value(self) -> str | None:
-        if self._pair.distance_m is None:
+        if self._pair.distance_m is None or not self._pair.data_valid:
             return None
         return _calc_bucket(self._pair.distance_m, self.coordinator.bucket_thresholds)
 
@@ -227,7 +249,7 @@ class BucketLevelSensor(EntityDistanceSensorBase):
 
     @property
     def native_value(self) -> int | None:
-        if self._pair.distance_m is None:
+        if self._pair.distance_m is None or not self._pair.data_valid:
             return None
         bucket = _calc_bucket(self._pair.distance_m, self.coordinator.bucket_thresholds)
         return _BUCKET_LEVEL[bucket]
@@ -249,7 +271,7 @@ class ProximityDurationSensor(EntityDistanceSensorBase):
             return None
         total_s = ps.proximity_duration_s
         if ps.proximity and ps.proximity_since:
-            total_s += (datetime.now().astimezone() - ps.proximity_since).total_seconds()
+            total_s += (dt_util.now() - ps.proximity_since).total_seconds()
         return round(total_s / 60, 1)
 
 
@@ -267,7 +289,7 @@ class LastSeenTogetherSensor(EntityDistanceSensorBase):
 
 class TodayProximityTimeSensor(EntityDistanceSensorBase):
     _attr_device_class = SensorDeviceClass.DURATION
-    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_native_unit_of_measurement = UnitOfTime.MINUTES
     _attr_translation_key = "today_proximity_time"
 
@@ -283,7 +305,7 @@ class TodayProximityTimeSensor(EntityDistanceSensorBase):
 
 class TodayZoneTimeSensor(EntityDistanceSensorBase):
     _attr_device_class = SensorDeviceClass.DURATION
-    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_native_unit_of_measurement = UnitOfTime.MINUTES
 
     def __init__(self, coordinator, entry, device_info, k, bucket: str):
@@ -322,6 +344,8 @@ class DirectionSensor(EntityDistanceSensorBase):
 
     @property
     def native_value(self) -> str | None:
+        if not self._pair.data_valid:
+            return None
         return self._pair.direction
 
 
@@ -334,7 +358,7 @@ class DirectionLevelSensor(EntityDistanceSensorBase):
 
     @property
     def native_value(self) -> int | None:
-        if self._pair.direction is None:
+        if not self._pair.data_valid or self._pair.direction is None:
             return None
         return _DIRECTION_LEVEL.get(self._pair.direction)
 
@@ -350,6 +374,8 @@ class ClosingSpeedSensor(EntityDistanceSensorBase):
 
     @property
     def native_value(self) -> float | None:
+        if not self._pair.data_valid:
+            return None
         return (
             round(self._pair.closing_speed_kmh, 1)
             if self._pair.closing_speed_kmh is not None
@@ -368,6 +394,8 @@ class EtaSensor(EntityDistanceSensorBase):
 
     @property
     def native_value(self) -> float | None:
+        if not self._pair.data_valid:
+            return None
         return round(self._pair.eta_minutes, 1) if self._pair.eta_minutes is not None else None
 
 
@@ -413,7 +441,8 @@ class UpdateCountSensor(EntityDistanceSensorBase):
         super().__init__(coordinator, entry, device_info, k, f"update_count_{which}")
         self._which = which
         name = a_name if which == "a" else b_name
-        self._attr_name = f"Update Count Last 30 min ({name})"
+        window_min = round(coordinator.updates_window_s / 60)
+        self._attr_name = f"Update Count Last {window_min} min ({name})"
 
     @property
     def native_value(self) -> int | None:
@@ -427,8 +456,8 @@ class UpdateCountSensor(EntityDistanceSensorBase):
             count = self._pair.update_count_b
         if window_start is None:
             return count
-        now = datetime.now().astimezone()
-        if (now - window_start).total_seconds() > UPDATES_FREQUENCY_WINDOW_S:
+        now = dt_util.now()
+        if (now - window_start).total_seconds() > self.coordinator.updates_window_s:
             return 0
         return count
 
@@ -479,7 +508,7 @@ class ProximityRateSensor(EntityDistanceSensorBase):
         ps = self._pair
         if not ps.data_valid or ps.proximity_tracking_started is None:
             return None
-        now = datetime.now().astimezone()
+        now = dt_util.now()
         total_s = (now - ps.proximity_tracking_started).total_seconds()
         if total_s <= 0:
             return None
@@ -503,7 +532,7 @@ class TodayUnaccountedTimeSensor(EntityDistanceSensorBase):
         ps = self._pair
         if ps.prev_calc_time is None:
             return None
-        now = datetime.now().astimezone()
+        now = dt_util.now()
         today_midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
         effective_prev = max(ps.prev_calc_time, today_midnight)
         gap_s = (now - effective_prev).total_seconds()

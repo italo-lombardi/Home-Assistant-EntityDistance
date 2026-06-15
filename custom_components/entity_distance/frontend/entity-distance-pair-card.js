@@ -3,7 +3,7 @@
  * Lovelace custom card for the Entity Distance integration.
  */
 
-const CARD_VERSION = "0.2.3";
+const CARD_VERSION = "0.2.5";
 
 console.info(
   `%c ENTITY-DISTANCE-PAIR-CARD %c v${CARD_VERSION} %c — github.com/italo-lombardi`,
@@ -753,7 +753,8 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
               <div class="zone-breakdown-title">🗺 Time by zone today</div>
               <div class="zone-chips">
                 ${["very_near", "near", "mid", "far", "very_far"].map(z => {
-                  const suffix = z === "mid" ? "today_medium_time" : `today_${z}_time`;
+                  const suffixMap = { very_near: "today_very_near_time", near: "today_near_time", mid: "today_medium_time", far: "today_far_time", very_far: "today_very_far_time" };
+                  const suffix = suffixMap[z];
                   const min = _num(this.hass, slug, suffix);
                   if (min === null || min === 0) return nothing;
                   const zLabel = z === "mid" ? "Medium" : z.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
@@ -972,7 +973,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     }
 
     render() {
-      if (!this._config) return html``;
+      if (!this._config || !this.hass) return html``;
       const pairs = _getPairs(this.hass);
 
       return html`

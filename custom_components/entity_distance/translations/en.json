@@ -66,7 +66,7 @@
       "too_few_entities": "Select at least 2 entities.",
       "too_many_entities": "Select at most 5 entities.",
       "duplicate_entities": "Each entity must appear only once.",
-      "exit_below_entry": "The away threshold must be greater than or equal to the nearby threshold.",
+      "exit_below_entry": "The away threshold must be strictly greater than the nearby threshold.",
       "zone_thresholds_not_ascending": "Zone thresholds must increase in order: Very Near < Near < Medium < Far."
     },
     "abort": {
@@ -128,7 +128,7 @@
       }
     },
     "error": {
-      "exit_below_entry": "The away threshold must be greater than or equal to the nearby threshold.",
+      "exit_below_entry": "The away threshold must be strictly greater than the nearby threshold.",
       "zone_thresholds_not_ascending": "Zone thresholds must increase in order: Very Near < Near < Medium < Far."
     }
   },

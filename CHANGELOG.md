@@ -2,6 +2,37 @@
 
 ## [Unreleased]
 
+## [0.2.5] - 2026-06-14
+
+### Fixed
+
+- **Config entry migration missing** — `async_migrate_entry` (v1 single-pair → v2 group format) was accidentally removed in a cleanup commit. Any user upgrading from 0.1.x got a permanently disabled entry. Migration is restored, with added guards: fewer-than-2-entity lists return `False`, and unknown future versions also return `False` instead of silently succeeding.
+- **Proximity duration lost on restart** — when HA restarted while a pair was in proximity, the elapsed time from `proximity_since` to the shutdown was silently discarded. Duration is now credited on restore, and `proximity_since` is advanced to `now` to prevent double-counting. `prev_calc_time` is also set to `now` on restore so the first tick's midnight-flush block does not attempt to flush a stale pre-restart timestamp.
+- **Cross-midnight today-time gap** — the pre-midnight interval was added to `today_proximity_seconds` then immediately overwritten by the daily reset (a no-op). Fixed: pre-midnight proximity time is now credited to `proximity_duration_s` (the lifetime counter that survives resets) using `was_proximity` and `prev_distance_m` for correct bucket/flag, and the post-midnight slice is accumulated separately.
+- **Resync-hold could permanently suppress EVENT_ENTER** — the proximity entry/exit block ran before the resync-hold early-return, leaving `ps.proximity = True` persisted when the hold fired. Next tick `was_proximity` was True so ENTER never fired; LEAVE fired with no paired ENTER, breaking all automations. Proximity transitions now execute after the hold check.
+- **`prev_distance_m`/`prev_calc_time` written before hold check** — hold ticks wrote a bad baseline so the first post-hold tick triggered a spurious speed-filter rejection. These fields are now written after all early-return paths.
+- **`_invalidate()` left `ps.proximity = True` stale** — entity going unavailable while in proximity left proximity state and `proximity_since` set, so the next valid observation would credit the entire unavailability window as proximity time. `_invalidate()` now closes the session (credits elapsed duration) and clears proximity.
+- **`_updates_window_s` configured but never read** — all window comparisons used the module-level constant `UPDATES_FREQUENCY_WINDOW_S`, silently ignoring the user-configured window. Fixed at all call sites in the coordinator.
+- **`datetime.now().astimezone()` used throughout** — on deployments where the OS timezone differs from the HA timezone (common in Docker), daily resets fired at OS midnight instead of HA midnight. All coordinator datetime calls replaced with `dt_util.now()`.
+- **`_async_update_data` returned incomplete GroupData** — HA-internal `async_refresh()` calls produced GroupData with `min_distance_m=None` and `any/all_in_proximity=False` always. Now populates all aggregates correctly.
+- **Coordinator resource leak on setup failure** — if `async_setup()` or `async_recalculate()` raised, state-change listeners remained active on a zombie coordinator. The coordinator is now unloaded on setup exception.
+- **`source.exists()` blocking call on event loop** — called synchronously in `_async_install_card`; moved to `async_add_executor_job`.
+- **Bare `except Exception` on static path registration** — swallowed genuine errors (e.g. `AttributeError`, I/O failures) and set `_CARD_INSTALLED_KEY = True`, meaning the card was never served and the error was never retried. Narrowed to `except RuntimeError`.
+- **Today-time accumulated before reliability check** — `today_proximity_seconds` was incremented on ticks the reliability filter then rolled back. Accumulation now happens after the check.
+- **`AnyInProximity` / `AllInProximity` returned `False` when all pairs had bad GPS** — sensors now return `None` (unavailable) when every pair has `data_valid = False`.
+- **`last_seen_together` stamped at wrong moment** — was set on the EXIT detection tick; now stamped on every in-proximity tick and on EXIT.
+- **`today_zone_seconds` dataclass field used `None` sentinel** — `field(default_factory=dict)` replaces the `__post_init__` workaround.
+- **`_CARD_INSTALLED_KEY` not cleared on last-entry unload** — flag now cleared when no entries remain, preventing stale resources after full reload.
+- **GPS coordinates logged at 6 decimal places in DEBUG** — reduced to 2 d.p. (~1 km resolution) to avoid logging precise household locations in debug output that is commonly attached to bug reports.
+- **Zone breakdown sensors always blank in Pair Card** — card used `today_very_near_time` / `today_medium_time` patterns but backend creates `today_zone_time_very_near` / `today_zone_time_mid`. All zone suffixes corrected; `_watchIds` updated to match.
+- **XSS via `entity_picture` in Group Card** — `entity_picture` URL was interpolated raw into SVG `innerHTML`. Added `_encodeAttr()` helper and applied it to the `href` attribute.
+- **Card self-reported version stuck at 0.2.3** — all three cards now report `0.2.5`, matching the manifest and cache-busting URL.
+- **Error message contradicted validation rule** — `exit_below_entry` error said "greater than or equal to" but validation rejects equal values. Fixed to "strictly greater than".
+- **HACS minimum HA version too low** — `hacs.json` listed `2024.1.0`; `MINOR_VERSION` requires 2024.3+. Updated to `"homeassistant": "2024.3.0"`.
+- **`TOTAL_INCREASING` state class on proximity duration sensor** — `ProximityDurationSensor` was incorrectly set to `TOTAL_INCREASING`, which requires a strictly non-decreasing value. The sensor's `native_value` includes a live term `now - proximity_since` that resets to zero on EXIT, causing HA statistics to mark the series as inconsistent. Corrected to `MEASUREMENT`. Daily-reset sensors (`TodayProximityTimeSensor`, `TodayZoneTimeSensor`) correctly use `MEASUREMENT` and were not changed.
+- **Duplicate window constant** — `UPDATES_FREQUENCY_WINDOW_S` now derives from `DEFAULT_UPDATES_WINDOW_S`.
+- **Dead constant removed** — `BUCKET_THRESHOLDS_DEFAULT` was never used.
+
 ## [0.2.4] - 2026-05-31
 
 ### Fixed

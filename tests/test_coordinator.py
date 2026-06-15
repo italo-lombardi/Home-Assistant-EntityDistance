@@ -418,6 +418,7 @@ class TestUpdateFrequency:
 
         coordinator = EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)
         coordinator._min_updates_reliable = 3
+        coordinator._updates_window_s = 1800.0
         return coordinator
 
     def test_first_call_no_window_returns_1(self):
@@ -1128,14 +1129,14 @@ class TestCoordinatorLifecycle:
         unsub2 = MagicMock()
         coord._unsub_listeners = [unsub1, unsub2]
         coord._debouncer = MagicMock()
-        coord._debouncer.async_cancel = MagicMock()
+        coord._debouncer.async_shutdown = MagicMock()
 
         coord.async_unload()
 
         unsub1.assert_called_once()
         unsub2.assert_called_once()
         assert coord._unsub_listeners == []
-        coord._debouncer.async_cancel.assert_called_once()
+        coord._debouncer.async_shutdown.assert_called_once()
 
     async def test_async_unload_no_debouncer(self, hass):
         coord = self._make_coord(hass)

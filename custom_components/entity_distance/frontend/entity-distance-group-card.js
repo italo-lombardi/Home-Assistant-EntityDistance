@@ -983,7 +983,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     }
 
     render() {
-      if (!this._config) return html``;
+      if (!this._config || !this.hass) return html``;
       const groups = _discoverGroups(this.hass);
       const currentEntities = this._config.entities || [];
       const currentKey = currentEntities.join(",");

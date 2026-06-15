@@ -386,8 +386,8 @@ class TestCrossMidnightFlush:
             result = coord._calc_pair(ps, "person.alice", "person.bob", now, set())
 
         assert result.today_reset_date == date(2024, 6, 2)
-        # post-midnight accumulation: 5 min in "near"
-        assert result.today_zone_seconds.get("near", 0.0) == pytest.approx(300.0, abs=2.0)
+        # post-midnight (5 min) + pre-midnight flush (15 min) both go to "near"
+        assert result.today_zone_seconds.get("near", 0.0) == pytest.approx(1200.0, abs=2.0)
 
     def test_no_flush_when_prev_calc_time_is_none(self):
         """When prev_calc_time is None there is nothing to flush — no error."""
@@ -779,3 +779,105 @@ class TestInvalidateWhileInProximity:
         assert result.proximity_since is None
         # 1 hour (11:00→12:00) credited
         assert result.proximity_duration_s == pytest.approx(3600.0, abs=1.0)
+
+    def test_invalidate_while_in_proximity_credits_today_seconds(self):
+        """_invalidate() also credits today_proximity_seconds when same day."""
+        coord = _make_coordinator()
+        state_b = _make_state("person.bob", 51.5, -0.1, 20)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: None if eid == "person.alice" else state_b
+        )
+
+        ps = _fresh_pair()
+        ps.proximity = True
+        ps.proximity_since = datetime(2024, 6, 1, 11, 0, 0, tzinfo=UTC)
+        ps.today_reset_date = _NOW.date()
+        ps.today_proximity_seconds = 0.0
+
+        result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+
+        assert result.data_valid is False
+        assert result.today_proximity_seconds == pytest.approx(3600.0, abs=1.0)
+
+
+class TestPrevCalcTimePersistence:
+    @pytest.mark.asyncio
+    async def test_prev_calc_time_restored_from_storage(self):
+        """prev_calc_time is persisted and restored so today-gap isn't lost on restart."""
+        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+
+        coord = EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)
+        coord._pair_states = {
+            pair_key("person.alice", "person.bob"): _fresh_pair(),
+        }
+
+        prev_time = datetime(2024, 6, 1, 11, 30, 0, tzinfo=UTC)
+        stored = {
+            "person.alice__person.bob": {
+                "today_reset_date": prev_time.date().isoformat(),
+                "today_proximity_seconds": 0.0,
+                "today_zone_seconds": {},
+                "proximity_duration_s": 0.0,
+                "proximity_tracking_started": None,
+                "last_seen_together": None,
+                "proximity_since": None,
+                "prev_calc_time": prev_time.isoformat(),
+            }
+        }
+
+        store_mock = AsyncMock()
+        store_mock.async_load = AsyncMock(return_value=stored)
+        coord._store = store_mock
+
+        await coord._async_load_state()
+
+        ps = coord._pair_states[pair_key("person.alice", "person.bob")]
+        assert ps.prev_calc_time == prev_time
+
+
+class TestSensorAvailableAndDataValid:
+    def test_distance_sensor_returns_none_when_data_invalid(self):
+        from custom_components.entity_distance.sensor import DistanceSensor
+
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.distance_m = 500.0
+        ps.data_valid = False
+        # Use inline construction matching existing test pattern
+        from unittest.mock import MagicMock
+
+        from custom_components.entity_distance.models import pair_key as pk
+
+        coordinator = MagicMock()
+        k = pk("person.a", "person.b")
+        coordinator.data.pairs = {k: ps}
+        entry = MagicMock()
+        entry.entry_id = "test"
+        s = DistanceSensor.__new__(DistanceSensor)
+        s.coordinator = coordinator
+        s._pair_key = k
+        s._attr_unique_id = "test_dist"
+        s._attr_device_info = {}
+        assert s.native_value is None
+
+    def test_sensor_available_false_when_data_invalid(self):
+        from custom_components.entity_distance.sensor import DistanceSensor
+
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.distance_m = 500.0
+        ps.data_valid = False
+        from unittest.mock import MagicMock
+
+        from custom_components.entity_distance.models import pair_key as pk
+
+        coordinator = MagicMock()
+        coordinator.last_update_success = True
+        k = pk("person.a", "person.b")
+        coordinator.data.pairs = {k: ps}
+        entry = MagicMock()
+        entry.entry_id = "test"
+        s = DistanceSensor.__new__(DistanceSensor)
+        s.coordinator = coordinator
+        s._pair_key = k
+        s._attr_unique_id = "test_dist"
+        s._attr_device_info = {}
+        assert s.available is False

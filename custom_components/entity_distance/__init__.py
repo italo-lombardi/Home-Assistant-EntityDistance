@@ -128,8 +128,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     if unload_ok:
-        coordinator: EntityDistanceCoordinator = hass.data[DOMAIN].pop(entry.entry_id)
-        coordinator.async_unload()
+        coordinator: EntityDistanceCoordinator = hass.data[DOMAIN].pop(entry.entry_id, None)
+        if coordinator:
+            coordinator.async_unload()
         # Clear the card-installed flag when the last entry unloads so resources
         # are re-registered on next setup (handles reload and version upgrades).
         remaining = [k for k in hass.data[DOMAIN] if k != _CARD_INSTALLED_KEY]

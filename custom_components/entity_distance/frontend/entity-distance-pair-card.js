@@ -972,7 +972,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     }
 
     render() {
-      if (!this._config) return html``;
+      if (!this._config || !this.hass) return html``;
       const pairs = _getPairs(this.hass);
 
       return html`

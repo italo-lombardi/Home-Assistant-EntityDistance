@@ -536,10 +536,9 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         const state = this.hass.states[entityId];
         const pic = state.attributes?.entity_picture;
         if (pic) {
-          const src = pic.startsWith("/") ? pic : pic;
           return html`
             <div class="avatar-wrap">
-              <img src="${src}" alt="${fallbackName}" />
+              <img src="${pic}" alt="${fallbackName}" />
             </div>`;
         }
       }
@@ -833,7 +832,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     }
 
     render() {
-      if (!this._config) return html``;
+      if (!this._config || !this.hass) return html``;
       const pairs = _getPairs(this.hass);
 
       return html`

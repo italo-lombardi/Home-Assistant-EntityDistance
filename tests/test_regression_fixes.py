@@ -881,3 +881,117 @@ class TestSensorAvailableAndDataValid:
         s._attr_unique_id = "test_dist"
         s._attr_device_info = {}
         assert s.available is False
+
+
+# ---------------------------------------------------------------------------
+# Pass-3 new coverage: updates_window_s property, _invalidate zone credit,
+# resync-hold proximity flush, async_forward_entry_setups resource leak
+# ---------------------------------------------------------------------------
+
+
+class TestCoordinatorUpdatesWindowProperty:
+    def test_updates_window_s_returns_configured_value(self):
+        """updates_window_s property exposes _updates_window_s."""
+        coord = _make_coordinator()
+        coord._updates_window_s = 3600.0
+        assert coord.updates_window_s == 3600.0
+
+
+class TestInvalidateCreditsZoneBucket:
+    def test_invalidate_credits_today_zone_seconds(self):
+        """_invalidate() credits today_zone_seconds for the elapsed proximity window."""
+        coord = _make_coordinator()
+        state_b = _make_state("person.bob", 51.5, -0.1, 20)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: None if eid == "person.alice" else state_b
+        )
+
+        ps = _fresh_pair()
+        ps.proximity = True
+        ps.proximity_since = datetime(2024, 6, 1, 11, 0, 0, tzinfo=UTC)
+        ps.today_reset_date = _NOW.date()
+        ps.today_proximity_seconds = 0.0
+        ps.today_zone_seconds = {}
+        ps.distance_m = 50.0  # very_near bucket
+
+        result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+
+        assert result.data_valid is False
+        # 1 hour credited to proximity
+        assert result.today_proximity_seconds == pytest.approx(3600.0, abs=1.0)
+        # Same elapsed time credited to the very_near bucket
+        assert result.today_zone_seconds.get("very_near", 0.0) == pytest.approx(3600.0, abs=1.0)
+
+
+class TestResyncHoldFlushesProximity:
+    def test_hold_closes_proximity_session(self):
+        """Resync hold early-return credits proximity_duration_s before nulling."""
+        coord = _make_coordinator()
+        k = pair_key("person.alice", "person.bob")
+        state_a = _make_state("person.alice", 51.5, -0.1, 20)
+        state_b = _make_state("person.bob", 51.501, -0.1, 20)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: state_a if eid == "person.alice" else state_b
+        )
+        coord.hass.bus.fire = MagicMock()
+
+        coord._resync_silence_s = 10.0
+        coord._resync_hold_s = 300.0
+        coord._resync_holding = {k: True}
+        hold_until = _NOW + timedelta(seconds=250)
+        coord._resync_hold_until = {k: hold_until}
+
+        ps = _fresh_pair()
+        ps.proximity = True
+        ps.proximity_since = datetime(2024, 6, 1, 11, 0, 0, tzinfo=UTC)
+        ps.today_reset_date = _NOW.date()
+        ps.today_proximity_seconds = 0.0
+        ps.proximity_duration_s = 0.0
+        ps.data_valid = True
+        ps.last_update_a = _NOW - timedelta(seconds=20)
+        ps.last_update_b = _NOW - timedelta(seconds=20)
+
+        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=100.0):
+            result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+
+        # Hold fires → proximity session closed
+        assert result.proximity is False
+        assert result.proximity_since is None
+        assert result.proximity_duration_s == pytest.approx(3600.0, abs=1.0)
+        assert result.data_valid is False
+
+
+@pytest.mark.asyncio
+async def test_platform_setup_failure_cleans_up_coordinator():
+    """If async_forward_entry_setups raises, coordinator is unloaded and hass.data cleared."""
+    from custom_components.entity_distance import async_setup_entry
+
+    coordinator = MagicMock()
+    coordinator.async_setup = AsyncMock()
+    coordinator.async_recalculate = AsyncMock()
+    coordinator.async_unload = MagicMock()
+
+    hass = MagicMock()
+    hass.data = {}
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.data = {CONF_ENTITIES: ["person.alice", "person.bob"]}
+    entry.options = {}
+
+    async def _forward_raises(entry, platforms):
+        raise RuntimeError("platform boom")
+
+    hass.config_entries.async_forward_entry_setups = _forward_raises
+
+    with (
+        patch(
+            "custom_components.entity_distance.EntityDistanceCoordinator",
+            return_value=coordinator,
+        ),
+        patch("custom_components.entity_distance._async_install_card", new_callable=AsyncMock),
+        pytest.raises(RuntimeError, match="platform boom"),
+    ):
+        await async_setup_entry(hass, entry)
+
+    coordinator.async_unload.assert_called_once()
+    assert "test_entry" not in hass.data.get(DOMAIN, {})

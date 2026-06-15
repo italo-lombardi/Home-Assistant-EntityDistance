@@ -547,8 +547,8 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       return (this._pairs || []).flatMap(p => [
         `sensor.${p.slug}_distance`,
         `sensor.${p.slug}_direction`,
-        `sensor.${p.slug}_proximity_zone`,
-        `binary_sensor.${p.slug}_in_proximity`,
+        `sensor.${p.slug}_bucket`,
+        `binary_sensor.${p.slug}_proximity`,
         p.entityA,
         p.entityB,
       ]);
@@ -638,8 +638,8 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         const a = nodes[ni], b = nodes[nj];
         const distState = this.hass.states[`sensor.${p.slug}_distance`];
         const dirState = this.hass.states[`sensor.${p.slug}_direction`];
-        const zoneState = this.hass.states[`sensor.${p.slug}_proximity_zone`];
-        const proxState = this.hass.states[`binary_sensor.${p.slug}_in_proximity`];
+        const zoneState = this.hass.states[`sensor.${p.slug}_bucket`];
+        const proxState = this.hass.states[`binary_sensor.${p.slug}_proximity`];
         const distM = distState?.state !== "unknown" && distState?.state !== "unavailable" ? parseFloat(distState?.state) : null;
         const zone = zoneState?.state;
         const inProx = proxState?.state === "on";
@@ -659,7 +659,8 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         const showZone = ps.show_zone !== false;
         const distLabel = showDistance && distM !== null ? _formatDistance(distM) : "";
         const arrow = (showDistance || showZone) ? _dirArrow(dirState?.state) : "";
-        const zoneLabel = showZone && zone ? zone.replace(/_/g, " ") : "";
+        const zoneLabelRaw = showZone && zone ? zone.replace(/_/g, " ") : "";
+        const zoneLabel = zoneLabelRaw.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         const lineLabel = [distLabel, arrow, zoneLabel].filter(Boolean).join(" ");
         const lx = mx + ox, ly = my + oy;
         const labelW = Math.max(lineLabel.length * 6.4, 64);
@@ -760,7 +761,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       const livePairs = _getPairsForEntities(this.hass, entities)
         .filter(p => !hiddenSet.has(p.entityA) && !hiddenSet.has(p.entityB));
       const proxCount = livePairs.filter(p => {
-        const s = this.hass.states[`binary_sensor.${p.slug}_in_proximity`];
+        const s = this.hass.states[`binary_sensor.${p.slug}_proximity`];
         return s?.state === "on";
       }).length;
       const totalPairs = livePairs.length;

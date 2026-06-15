@@ -564,9 +564,9 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     _watchIds(slug) {
       const p = `sensor.${slug}`;
       const base = [
-        `binary_sensor.${slug}_in_proximity`,
-        `${p}_distance`, `${p}_direction`, `${p}_direction_level`, `${p}_proximity_zone`,
-        `${p}_approach_speed`, `${p}_estimated_arrival_time`,
+        `binary_sensor.${slug}_proximity`,
+        `${p}_distance`, `${p}_direction`, `${p}_direction_level`, `${p}_bucket`,
+        `${p}_closing_speed`, `${p}_eta`,
         `${p}_proximity_duration`, `${p}_proximity_tracking_started`,
         `${p}_proximity_rate`, `${p}_today_proximity_time`,
         `${p}_today_unaccounted_time`, `${p}_last_seen_together`,
@@ -595,7 +595,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         return html`<ha-card><div class="error-msg">No entity pair configured.</div></ha-card>`;
       }
 
-      const proxState = this.hass.states[`binary_sensor.${slug}_in_proximity`];
+      const proxState = this.hass.states[`binary_sensor.${slug}_proximity`];
       if (!proxState) {
         return html`<ha-card><div class="error-msg">Pair "${slug}" not found. Check integration is loaded.</div></ha-card>`;
       }
@@ -613,9 +613,9 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
 
       const distM = _num(this.hass, slug, "distance");
       const direction = _val(this.hass, slug, "direction");
-      const bucket = _val(this.hass, slug, "proximity_zone");
-      const speedKmh = _num(this.hass, slug, "approach_speed");
-      const etaMin = _num(this.hass, slug, "estimated_arrival_time");
+      const bucket = _val(this.hass, slug, "bucket");
+      const speedKmh = _num(this.hass, slug, "closing_speed");
+      const etaMin = _num(this.hass, slug, "eta");
       const proxDurMin = _num(this.hass, slug, "proximity_duration");
       const proxTrackingStarted = _val(this.hass, slug, "proximity_tracking_started");
       const proxRate = _num(this.hass, slug, "proximity_rate");

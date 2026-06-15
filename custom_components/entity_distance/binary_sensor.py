@@ -98,7 +98,9 @@ class ProximityBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], Binary
 
     @property
     def _pair(self) -> PairState:
-        return self.coordinator.data.pairs[self._pair_key]
+        return self.coordinator.data.pairs.get(self._pair_key) or PairState(
+            entity_a_id=self._pair_key[0], entity_b_id=self._pair_key[1]
+        )
 
     @property
     def is_on(self) -> bool | None:

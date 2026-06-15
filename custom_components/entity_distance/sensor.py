@@ -31,7 +31,6 @@ from .const import (
     DIRECTION_STATIONARY,
     DIRECTIONS,
     DOMAIN,
-    UPDATES_FREQUENCY_WINDOW_S,
 )
 from .coordinator import EntityDistanceCoordinator, _calc_bucket
 from .models import PairState, pair_key
@@ -256,7 +255,7 @@ class BucketLevelSensor(EntityDistanceSensorBase):
 
 class ProximityDurationSensor(EntityDistanceSensorBase):
     _attr_device_class = SensorDeviceClass.DURATION
-    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_native_unit_of_measurement = UnitOfTime.MINUTES
     _attr_translation_key = "proximity_duration"
 
@@ -440,7 +439,8 @@ class UpdateCountSensor(EntityDistanceSensorBase):
         super().__init__(coordinator, entry, device_info, k, f"update_count_{which}")
         self._which = which
         name = a_name if which == "a" else b_name
-        self._attr_name = f"Update Count Last 30 min ({name})"
+        window_min = round(coordinator.updates_window_s / 60)
+        self._attr_name = f"Update Count Last {window_min} min ({name})"
 
     @property
     def native_value(self) -> int | None:
@@ -455,7 +455,7 @@ class UpdateCountSensor(EntityDistanceSensorBase):
         if window_start is None:
             return count
         now = dt_util.now()
-        if (now - window_start).total_seconds() > UPDATES_FREQUENCY_WINDOW_S:
+        if (now - window_start).total_seconds() > self.coordinator.updates_window_s:
             return 0
         return count
 

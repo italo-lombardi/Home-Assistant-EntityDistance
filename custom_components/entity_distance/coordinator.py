@@ -252,13 +252,32 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             new_state.state if new_state else "none",
         )
         now = dt_util.now()
-        # Mark last_update for all pairs involving this entity (O(1) via reverse index)
+        # Mark last_update and bump update counter for all pairs involving this
+        # entity (O(1) via reverse index). Counters track raw observation
+        # arrivals, decoupled from the calc-pair hold/skip logic — so users see
+        # update_count and last_update move together.
         for k in self._entity_to_pairs.get(entity_id, []):
             ps = self._pair_states[k]
             if entity_id == ps.entity_a_id:
                 ps.last_update_a = now
+                ps.update_count_a = self._update_frequency(
+                    ps.update_count_a, ps.update_window_start_a, now
+                )
+                if (
+                    ps.update_window_start_a is None
+                    or (now - ps.update_window_start_a).total_seconds() > self._updates_window_s
+                ):
+                    ps.update_window_start_a = now
             else:
                 ps.last_update_b = now
+                ps.update_count_b = self._update_frequency(
+                    ps.update_count_b, ps.update_window_start_b, now
+                )
+                if (
+                    ps.update_window_start_b is None
+                    or (now - ps.update_window_start_b).total_seconds() > self._updates_window_s
+                ):
+                    ps.update_window_start_b = now
         self._pending_updates.add(entity_id)
         self.hass.async_create_task(self._debouncer.async_call())
 
@@ -482,29 +501,6 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         # and speed filter use the correct previous-tick values.
         prev_distance_m_snapshot = ps.prev_distance_m
         prev_calc_time_snapshot = ps.prev_calc_time
-
-        # Only advance update counters when not in a resync hold — hold ticks
-        # should not count as location updates for reliability purposes.
-        if not self._resync_holding.get(k, False):
-            if entity_a in pending:
-                ps.update_count_a = self._update_frequency(
-                    ps.update_count_a, ps.update_window_start_a, now
-                )
-                if (
-                    ps.update_window_start_a is None
-                    or (now - ps.update_window_start_a).total_seconds() > self._updates_window_s
-                ):
-                    ps.update_window_start_a = now
-
-            if entity_b in pending:
-                ps.update_count_b = self._update_frequency(
-                    ps.update_count_b, ps.update_window_start_b, now
-                )
-                if (
-                    ps.update_window_start_b is None
-                    or (now - ps.update_window_start_b).total_seconds() > self._updates_window_s
-                ):
-                    ps.update_window_start_b = now
 
         ps.distance_m = dist_m
         ps.prev_distance_m = dist_m

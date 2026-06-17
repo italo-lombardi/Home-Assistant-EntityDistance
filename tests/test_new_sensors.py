@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from homeassistant.util import dt as dt_util
 
 from custom_components.entity_distance.models import GroupData, PairState, pair_key
 from custom_components.entity_distance.sensor import (
@@ -167,7 +168,7 @@ class TestPersistence:
 
     @pytest.mark.asyncio
     async def test_load_restores_today_counters_same_day(self):
-        today = date.today().isoformat()
+        today = dt_util.now().date().isoformat()
         k = pair_key("person.alice", "person.bob")
         stored = {
             f"{k[0]}__{k[1]}": {
@@ -187,7 +188,7 @@ class TestPersistence:
 
     @pytest.mark.asyncio
     async def test_load_discards_today_counters_stale_day(self):
-        yesterday = (date.today() - timedelta(days=1)).isoformat()
+        yesterday = (dt_util.now().date() - timedelta(days=1)).isoformat()
         k = pair_key("person.alice", "person.bob")
         stored = {
             f"{k[0]}__{k[1]}": {
@@ -207,7 +208,7 @@ class TestPersistence:
 
     @pytest.mark.asyncio
     async def test_load_restores_last_seen_together(self):
-        today = date.today().isoformat()
+        today = dt_util.now().date().isoformat()
         ts = "2026-05-13T10:00:00+00:00"
         k = pair_key("person.alice", "person.bob")
         stored = {
@@ -239,7 +240,7 @@ class TestPersistence:
         coordinator = self._make_coordinator()
         k = pair_key("person.alice", "person.bob")
         ps = coordinator._pair_states[k]
-        ps.today_reset_date = date.today()
+        ps.today_reset_date = dt_util.now().date()
         ps.today_proximity_seconds = 300.0
         ps.today_zone_seconds = {"very_far": 1200.0}
         ps.proximity_duration_s = 60.0

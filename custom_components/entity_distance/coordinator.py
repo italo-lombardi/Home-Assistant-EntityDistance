@@ -288,10 +288,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         unset; count restarts at 1 in that case (matching `_update_frequency`).
         """
         new_count = self._update_frequency(count, window_start, now)
-        if (
-            window_start is None
-            or (now - window_start).total_seconds() > self._updates_window_s
-        ):
+        if window_start is None or (now - window_start).total_seconds() > self._updates_window_s:
             window_start = now
         return new_count, window_start
 

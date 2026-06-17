@@ -267,30 +267,17 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             if entity_id == ps.entity_a_id:
                 ps.last_update_a = now
                 if is_valid_arrival:
-                    ps.update_count_a, ps.update_window_start_a = self._bump_counter(
+                    ps.update_count_a, ps.update_window_start_a = self._advance_window(
                         ps.update_count_a, ps.update_window_start_a, now
                     )
             else:
                 ps.last_update_b = now
                 if is_valid_arrival:
-                    ps.update_count_b, ps.update_window_start_b = self._bump_counter(
+                    ps.update_count_b, ps.update_window_start_b = self._advance_window(
                         ps.update_count_b, ps.update_window_start_b, now
                     )
         self._pending_updates.add(entity_id)
         self.hass.async_create_task(self._debouncer.async_call())
-
-    def _bump_counter(
-        self, count: int, window_start: datetime | None, now: datetime
-    ) -> tuple[int, datetime]:
-        """Advance update count and window start for a single side of a pair.
-
-        Returns (new_count, new_window_start). Window rolls when expired or
-        unset; count restarts at 1 in that case (matching `_update_frequency`).
-        """
-        new_count = self._update_frequency(count, window_start, now)
-        if window_start is None or (now - window_start).total_seconds() > self._updates_window_s:
-            window_start = now
-        return new_count, window_start
 
     async def async_recalculate(self) -> None:
         now = dt_util.now()
@@ -718,13 +705,21 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
 
         return ps
 
-    def _update_frequency(self, count: int, window_start: datetime | None, now: datetime) -> int:
-        if window_start is None:
-            return 1
-        elapsed = (now - window_start).total_seconds()
-        if elapsed > self._updates_window_s:
-            return 1
-        return count + 1
+    def _advance_window(
+        self, count: int, window_start: datetime | None, now: datetime
+    ) -> tuple[int, datetime]:
+        """Advance the rolling-window update counter for one side of a pair.
+
+        Returns (new_count, new_window_start). When the window is unset or
+        elapsed past `_updates_window_s`, the count restarts at 1 and the
+        window anchors at `now`. The count and window-reset boundaries are
+        deliberately co-located here — splitting them across two helpers (as
+        an earlier refactor did) made it possible to drift the `>` boundary
+        on one side without the other.
+        """
+        if window_start is None or (now - window_start).total_seconds() > self._updates_window_s:
+            return 1, now
+        return count + 1, window_start
 
     def _is_reliable(self, ps: PairState) -> bool:
         return (

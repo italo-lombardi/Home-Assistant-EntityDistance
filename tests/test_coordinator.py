@@ -406,12 +406,12 @@ class TestProximitySincePersistence:
 
 
 # ---------------------------------------------------------------------------
-# _update_frequency and _is_reliable
+# _advance_window and _is_reliable
 # ---------------------------------------------------------------------------
 
 
-class TestUpdateFrequency:
-    """Test EntityDistanceCoordinator._update_frequency helper."""
+class TestAdvanceWindow:
+    """Test EntityDistanceCoordinator._advance_window helper."""
 
     def _make_coordinator(self):
         from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
@@ -421,27 +421,30 @@ class TestUpdateFrequency:
         coordinator._updates_window_s = 1800.0
         return coordinator
 
-    def test_first_call_no_window_returns_1(self):
+    def test_first_call_no_window_returns_1_and_anchors(self):
         coordinator = self._make_coordinator()
         now = datetime.now().astimezone()
-        result = coordinator._update_frequency(0, None, now)
-        assert result == 1
+        count, ws = coordinator._advance_window(0, None, now)
+        assert count == 1
+        assert ws == now
 
-    def test_within_window_increments(self):
+    def test_within_window_increments_and_keeps_anchor(self):
         coordinator = self._make_coordinator()
         now = datetime.now().astimezone()
         window_start = now - timedelta(seconds=60)
-        result = coordinator._update_frequency(5, window_start, now)
-        assert result == 6
+        count, ws = coordinator._advance_window(5, window_start, now)
+        assert count == 6
+        assert ws == window_start
 
-    def test_elapsed_window_resets_to_1(self):
+    def test_elapsed_window_resets_to_1_and_reanchors(self):
         from custom_components.entity_distance.const import UPDATES_FREQUENCY_WINDOW_S
 
         coordinator = self._make_coordinator()
         now = datetime.now().astimezone()
         old_window = now - timedelta(seconds=UPDATES_FREQUENCY_WINDOW_S + 10)
-        result = coordinator._update_frequency(10, old_window, now)
-        assert result == 1
+        count, ws = coordinator._advance_window(10, old_window, now)
+        assert count == 1
+        assert ws == now
 
     def test_at_exactly_window_boundary_resets(self):
         from custom_components.entity_distance.const import UPDATES_FREQUENCY_WINDOW_S
@@ -449,8 +452,9 @@ class TestUpdateFrequency:
         coordinator = self._make_coordinator()
         now = datetime.now().astimezone()
         exactly_at_boundary = now - timedelta(seconds=UPDATES_FREQUENCY_WINDOW_S + 1)
-        result = coordinator._update_frequency(5, exactly_at_boundary, now)
-        assert result == 1
+        count, ws = coordinator._advance_window(5, exactly_at_boundary, now)
+        assert count == 1
+        assert ws == now
 
 
 class TestIsReliable:

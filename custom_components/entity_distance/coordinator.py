@@ -252,13 +252,30 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             new_state.state if new_state else "none",
         )
         now = dt_util.now()
-        # Mark last_update for all pairs involving this entity (O(1) via reverse index)
+        # An unavailable/unknown transition is an arrival event (so last_update
+        # advances), but it carries no usable fix — counting it toward
+        # update_count would let a flapping device trip the reliability gate
+        # without ever producing a valid distance. Filter at the bump site.
+        new_state_str = new_state.state if new_state else None
+        is_valid_arrival = new_state_str not in (None, STATE_UNAVAILABLE, STATE_UNKNOWN)
+        # Mark last_update and bump update counter for all pairs involving this
+        # entity (O(1) via reverse index). Counters track valid raw arrivals,
+        # decoupled from the calc-pair hold/skip logic — so users see
+        # update_count and last_update move together for valid observations.
         for k in self._entity_to_pairs.get(entity_id, []):
             ps = self._pair_states[k]
             if entity_id == ps.entity_a_id:
                 ps.last_update_a = now
+                if is_valid_arrival:
+                    ps.update_count_a, ps.update_window_start_a = self._advance_window(
+                        ps.update_count_a, ps.update_window_start_a, now
+                    )
             else:
                 ps.last_update_b = now
+                if is_valid_arrival:
+                    ps.update_count_b, ps.update_window_start_b = self._advance_window(
+                        ps.update_count_b, ps.update_window_start_b, now
+                    )
         self._pending_updates.add(entity_id)
         self.hass.async_create_task(self._debouncer.async_call())
 
@@ -483,29 +500,6 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         prev_distance_m_snapshot = ps.prev_distance_m
         prev_calc_time_snapshot = ps.prev_calc_time
 
-        # Only advance update counters when not in a resync hold — hold ticks
-        # should not count as location updates for reliability purposes.
-        if not self._resync_holding.get(k, False):
-            if entity_a in pending:
-                ps.update_count_a = self._update_frequency(
-                    ps.update_count_a, ps.update_window_start_a, now
-                )
-                if (
-                    ps.update_window_start_a is None
-                    or (now - ps.update_window_start_a).total_seconds() > self._updates_window_s
-                ):
-                    ps.update_window_start_a = now
-
-            if entity_b in pending:
-                ps.update_count_b = self._update_frequency(
-                    ps.update_count_b, ps.update_window_start_b, now
-                )
-                if (
-                    ps.update_window_start_b is None
-                    or (now - ps.update_window_start_b).total_seconds() > self._updates_window_s
-                ):
-                    ps.update_window_start_b = now
-
         ps.distance_m = dist_m
         ps.prev_distance_m = dist_m
         ps.prev_calc_time = now
@@ -711,13 +705,21 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
 
         return ps
 
-    def _update_frequency(self, count: int, window_start: datetime | None, now: datetime) -> int:
-        if window_start is None:
-            return 1
-        elapsed = (now - window_start).total_seconds()
-        if elapsed > self._updates_window_s:
-            return 1
-        return count + 1
+    def _advance_window(
+        self, count: int, window_start: datetime | None, now: datetime
+    ) -> tuple[int, datetime]:
+        """Advance the rolling-window update counter for one side of a pair.
+
+        Returns (new_count, new_window_start). When the window is unset or
+        elapsed past `_updates_window_s`, the count restarts at 1 and the
+        window anchors at `now`. The count and window-reset boundaries are
+        deliberately co-located here — splitting them across two helpers (as
+        an earlier refactor did) made it possible to drift the `>` boundary
+        on one side without the other.
+        """
+        if window_start is None or (now - window_start).total_seconds() > self._updates_window_s:
+            return 1, now
+        return count + 1, window_start
 
     def _is_reliable(self, ps: PairState) -> bool:
         return (

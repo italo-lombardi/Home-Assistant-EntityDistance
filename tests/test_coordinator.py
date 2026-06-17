@@ -406,12 +406,12 @@ class TestProximitySincePersistence:
 
 
 # ---------------------------------------------------------------------------
-# _update_frequency and _is_reliable
+# _advance_window and _is_reliable
 # ---------------------------------------------------------------------------
 
 
-class TestUpdateFrequency:
-    """Test EntityDistanceCoordinator._update_frequency helper."""
+class TestAdvanceWindow:
+    """Test EntityDistanceCoordinator._advance_window helper."""
 
     def _make_coordinator(self):
         from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
@@ -421,27 +421,30 @@ class TestUpdateFrequency:
         coordinator._updates_window_s = 1800.0
         return coordinator
 
-    def test_first_call_no_window_returns_1(self):
+    def test_first_call_no_window_returns_1_and_anchors(self):
         coordinator = self._make_coordinator()
         now = datetime.now().astimezone()
-        result = coordinator._update_frequency(0, None, now)
-        assert result == 1
+        count, ws = coordinator._advance_window(0, None, now)
+        assert count == 1
+        assert ws == now
 
-    def test_within_window_increments(self):
+    def test_within_window_increments_and_keeps_anchor(self):
         coordinator = self._make_coordinator()
         now = datetime.now().astimezone()
         window_start = now - timedelta(seconds=60)
-        result = coordinator._update_frequency(5, window_start, now)
-        assert result == 6
+        count, ws = coordinator._advance_window(5, window_start, now)
+        assert count == 6
+        assert ws == window_start
 
-    def test_elapsed_window_resets_to_1(self):
+    def test_elapsed_window_resets_to_1_and_reanchors(self):
         from custom_components.entity_distance.const import UPDATES_FREQUENCY_WINDOW_S
 
         coordinator = self._make_coordinator()
         now = datetime.now().astimezone()
         old_window = now - timedelta(seconds=UPDATES_FREQUENCY_WINDOW_S + 10)
-        result = coordinator._update_frequency(10, old_window, now)
-        assert result == 1
+        count, ws = coordinator._advance_window(10, old_window, now)
+        assert count == 1
+        assert ws == now
 
     def test_at_exactly_window_boundary_resets(self):
         from custom_components.entity_distance.const import UPDATES_FREQUENCY_WINDOW_S
@@ -449,8 +452,9 @@ class TestUpdateFrequency:
         coordinator = self._make_coordinator()
         now = datetime.now().astimezone()
         exactly_at_boundary = now - timedelta(seconds=UPDATES_FREQUENCY_WINDOW_S + 1)
-        result = coordinator._update_frequency(5, exactly_at_boundary, now)
-        assert result == 1
+        count, ws = coordinator._advance_window(5, exactly_at_boundary, now)
+        assert count == 1
+        assert ws == now
 
 
 class TestIsReliable:
@@ -796,62 +800,164 @@ class TestCalcPairMidnightReset:
 # ---------------------------------------------------------------------------
 
 
-class TestCalcPairUpdateWindowTracking:
-    """_calc_pair sets update_window_start when entity is in pending set."""
+class TestStateChangedUpdateWindowTracking:
+    """_async_state_changed sets update_window_start when an event arrives.
+
+    (Counter tracking moved out of _calc_pair so update_count and last_update
+    advance together — see CHANGELOG 0.2.6.)
+    """
+
+    def _make_event(self, entity_id):
+        from unittest.mock import MagicMock
+
+        ev = MagicMock()
+        ev.data = {
+            "entity_id": entity_id,
+            "old_state": MagicMock(state="home"),
+            "new_state": MagicMock(state="not_home"),
+        }
+        return ev
 
     def test_entity_a_in_pending_sets_window_start(self):
-        from unittest.mock import patch
-
-        from tests.conftest import make_state
+        from custom_components.entity_distance.models import pair_key
 
         coordinator = _make_calc_pair_coordinator()
-        from custom_components.entity_distance.models import pair_key
+        coordinator._debouncer = MagicMock()
+        coordinator._debouncer.async_call = MagicMock(return_value=None)
+        coordinator._entity_to_pairs = {
+            "person.alice": [pair_key("person.alice", "person.bob")],
+            "person.bob": [pair_key("person.alice", "person.bob")],
+        }
+        coordinator._pending_updates = set()
+        coordinator.hass.async_create_task = MagicMock()
 
         k = pair_key("person.alice", "person.bob")
         ps = coordinator._pair_states[k]
         ps.update_window_start_a = None
+        ps.update_count_a = 0
 
-        state_a = make_state("person.alice", 51.5, -0.1)
-        state_b = make_state("person.bob", 51.6, -0.2)
-        coordinator.hass.states.get.side_effect = lambda eid: (
-            state_a if eid == "person.alice" else state_b
-        )
+        coordinator._async_state_changed(self._make_event("person.alice"))
 
-        with patch(
-            "custom_components.entity_distance.coordinator.ha_distance", return_value=5000.0
-        ):
-            result = coordinator._calc_pair(
-                ps, "person.alice", "person.bob", datetime.now().astimezone(), {"person.alice"}
-            )
-
-        assert result.update_window_start_a is not None
+        assert ps.update_window_start_a is not None
+        assert ps.update_count_a == 1
+        assert ps.last_update_a is not None
 
     def test_entity_b_in_pending_sets_window_start(self):
-        from unittest.mock import patch
-
-        from tests.conftest import make_state
+        from custom_components.entity_distance.models import pair_key
 
         coordinator = _make_calc_pair_coordinator()
-        from custom_components.entity_distance.models import pair_key
+        coordinator._debouncer = MagicMock()
+        coordinator._debouncer.async_call = MagicMock(return_value=None)
+        coordinator._entity_to_pairs = {
+            "person.alice": [pair_key("person.alice", "person.bob")],
+            "person.bob": [pair_key("person.alice", "person.bob")],
+        }
+        coordinator._pending_updates = set()
+        coordinator.hass.async_create_task = MagicMock()
 
         k = pair_key("person.alice", "person.bob")
         ps = coordinator._pair_states[k]
         ps.update_window_start_b = None
+        ps.update_count_b = 0
 
-        state_a = make_state("person.alice", 51.5, -0.1)
-        state_b = make_state("person.bob", 51.6, -0.2)
-        coordinator.hass.states.get.side_effect = lambda eid: (
-            state_a if eid == "person.alice" else state_b
-        )
+        coordinator._async_state_changed(self._make_event("person.bob"))
 
-        with patch(
-            "custom_components.entity_distance.coordinator.ha_distance", return_value=5000.0
-        ):
-            result = coordinator._calc_pair(
-                ps, "person.alice", "person.bob", datetime.now().astimezone(), {"person.bob"}
-            )
+        assert ps.update_window_start_b is not None
+        assert ps.update_count_b == 1
+        assert ps.last_update_b is not None
 
-        assert result.update_window_start_b is not None
+    def test_counter_increments_during_resync_hold(self):
+        """Update count tracks raw arrivals, even when _calc_pair would skip
+        (resync hold). Decoupling matches what `last_update_a/b` already does
+        and prevents the "14m ago / 0 updates" mismatch users see in the UI."""
+        from custom_components.entity_distance.models import pair_key
+
+        coordinator = _make_calc_pair_coordinator()
+        coordinator._debouncer = MagicMock()
+        coordinator._debouncer.async_call = MagicMock(return_value=None)
+        coordinator._entity_to_pairs = {
+            "person.alice": [pair_key("person.alice", "person.bob")],
+            "person.bob": [pair_key("person.alice", "person.bob")],
+        }
+        coordinator._pending_updates = set()
+        coordinator.hass.async_create_task = MagicMock()
+
+        k = pair_key("person.alice", "person.bob")
+        coordinator._resync_holding[k] = True
+
+        ps = coordinator._pair_states[k]
+        ps.update_count_a = 0
+
+        coordinator._async_state_changed(self._make_event("person.alice"))
+
+        assert ps.update_count_a == 1, "counter must advance even during hold"
+
+    def test_counter_does_not_increment_when_unavailable(self):
+        """An unavailable/unknown transition is an arrival event but carries
+        no usable fix — counting it would let a flapping device trip the
+        reliability gate without ever producing a valid distance.
+        last_update still advances (it tracks event arrival, not validity)."""
+        from unittest.mock import MagicMock
+
+        from custom_components.entity_distance.models import pair_key
+
+        coordinator = _make_calc_pair_coordinator()
+        coordinator._debouncer = MagicMock()
+        coordinator._debouncer.async_call = MagicMock(return_value=None)
+        coordinator._entity_to_pairs = {
+            "person.alice": [pair_key("person.alice", "person.bob")],
+            "person.bob": [pair_key("person.alice", "person.bob")],
+        }
+        coordinator._pending_updates = set()
+        coordinator.hass.async_create_task = MagicMock()
+
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+        ps.update_count_a = 0
+
+        for state in ("unavailable", "unknown"):
+            ev = MagicMock()
+            ev.data = {
+                "entity_id": "person.alice",
+                "old_state": MagicMock(state="home"),
+                "new_state": MagicMock(state=state),
+            }
+            coordinator._async_state_changed(ev)
+
+        assert ps.update_count_a == 0, "counter must not advance on unavailable/unknown"
+        assert ps.last_update_a is not None, "last_update still advances on any arrival"
+
+    def test_counter_skips_when_new_state_missing(self):
+        """new_state=None (entity removed) — treat as non-arrival for count.
+        last_update still advances; we received an event."""
+        from unittest.mock import MagicMock
+
+        from custom_components.entity_distance.models import pair_key
+
+        coordinator = _make_calc_pair_coordinator()
+        coordinator._debouncer = MagicMock()
+        coordinator._debouncer.async_call = MagicMock(return_value=None)
+        coordinator._entity_to_pairs = {
+            "person.alice": [pair_key("person.alice", "person.bob")],
+            "person.bob": [pair_key("person.alice", "person.bob")],
+        }
+        coordinator._pending_updates = set()
+        coordinator.hass.async_create_task = MagicMock()
+
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+        ps.update_count_a = 0
+
+        ev = MagicMock()
+        ev.data = {
+            "entity_id": "person.alice",
+            "old_state": MagicMock(state="home"),
+            "new_state": None,
+        }
+        coordinator._async_state_changed(ev)
+
+        assert ps.update_count_a == 0
+        assert ps.last_update_a is not None
 
 
 # ---------------------------------------------------------------------------

@@ -4,7 +4,7 @@
  * People-focused layout: two avatars side-by-side with distance in the middle.
  */
 
-const PEOPLE_CARD_VERSION = "0.2.5";
+const PEOPLE_CARD_VERSION = "0.2.6";
 
 console.info(
   `%c ENTITY-DISTANCE-AVATAR-CARD %c v${PEOPLE_CARD_VERSION} %c — github.com/italo-lombardi`,
@@ -99,8 +99,12 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     if (min === 0) return "0 min";
     if (min < 1) return "< 1 min";
     if (min >= 60) {
-      const h = Math.floor(min / 60);
-      const m = Math.round(min % 60);
+      // Convert minutes to total seconds (1 d.p. of precision from sensor),
+      // then split into h/m without re-rounding so the displayed h+m matches
+      // the source value (e.g. 29822.78 min -> 497h 2m, never 497h 3m).
+      const totalSec = Math.round(min * 60);
+      const h = Math.floor(totalSec / 3600);
+      const m = Math.floor((totalSec % 3600) / 60);
       return m > 0 ? `${h}h ${m}m` : `${h}h`;
     }
     return `${Math.round(min)} min`;
@@ -112,12 +116,16 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     if (isNaN(d.getTime())) return "—";
     const now = new Date();
     const diffMs = now - d;
-    const diffMin = Math.floor(diffMs / 60000);
-    if (diffMin < 1) return "just now";
+    // Round (not floor) so a value 1h 55m ago shows "2h ago" -- matches HA's
+    // built-in relative_time formatter, avoiding the "card 1h vs sensor 2h"
+    // mismatch when the user views both side-by-side.
+    const diffSec = Math.max(0, Math.round(diffMs / 1000));
+    if (diffSec < 60) return "just now";
+    const diffMin = Math.round(diffSec / 60);
     if (diffMin < 60) return `${diffMin}m ago`;
-    const diffH = Math.floor(diffMin / 60);
+    const diffH = Math.round(diffSec / 3600);
     if (diffH < 24) return `${diffH}h ago`;
-    const diffD = Math.floor(diffH / 24);
+    const diffD = Math.round(diffSec / 86400);
     return `${diffD}d ago`;
   }
 

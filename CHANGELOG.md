@@ -6,9 +6,13 @@
 
 ### Fixed
 
-- **Update count diverged from `Last Update` in resync hold** — `update_count_a/b` was incremented inside `_calc_pair`, which is gated by the resync-hold early-return. `last_update_a/b`, however, is stamped in `_async_state_changed` on every state event. During a hold (or any tick that bails before the counter block), users saw `Last Update: 14m ago` while `Update Count Last 30 min: 0`. Counter increment moved to `_async_state_changed` so both fields advance together. Hold ticks no longer suppress the diagnostic counter (which was misleading anyway — observations were arriving, the integration just declined to use them for distance).
-- **Pair card showed `Xh (Y+1)m` instead of `Xh Ym` for proximity duration** — `_formatMinutes` did `Math.floor(min/60)` then `Math.round(min % 60)`, so a sensor value of 29822.78 min rendered `497h 3m` while the sensor source was 497h 2m. Reformatted via `Math.round(min*60)` into total seconds, then `Math.floor` into h/m so the displayed split is internally consistent.
-- **Pair card relative time floor-rounded, sensor side rounds** — `_formatTs` used `Math.floor(diffMs / 60000)` and floor-of-hours, so a 1h 55m old timestamp showed "1h ago" while HA's built-in formatter (used elsewhere) rounds to "2h ago". Switched to `Math.round` for minutes/hours/days so the card matches sensor displays side-by-side.
+- **Update count diverged from `Last Update` in resync hold** — `update_count_a/b` was incremented inside `_calc_pair`, gated by the resync-hold early-return. `last_update_a/b`, however, is stamped in `_async_state_changed` on every state event. During a hold (or any tick that bails before the counter block), users saw `Last Update: 14m ago` while `Update Count Last 30 min: 0`. Counter increment moved to `_async_state_changed` so both fields advance together. Hold ticks no longer suppress the diagnostic counter (which was misleading anyway — observations were arriving, the integration just declined to use them for distance). Counter still skips `unavailable`/`unknown` arrivals so flapping devices cannot trip the reliability gate without producing a valid fix.
+- **Pair card and avatar card showed `Xh (Y+1)m` instead of `Xh Ym` for proximity duration** — `_formatMinutes` did `Math.floor(min/60)` then `Math.round(min % 60)`, so a sensor value of 29822.78 min rendered `497h 3m` while the sensor source was 497h 2m. Reformatted via `Math.round(min*60)` into total seconds, then `Math.floor` into h/m so the displayed split is internally consistent. Applied to both `entity-distance-pair-card.js` and `entity-distance-avatar-card.js`.
+- **Pair card and avatar card relative time floor-rounded, sensor side rounds** — `_formatTs` used `Math.floor(diffMs / 60000)` and floor-of-hours, so a 1h 55m old timestamp showed "1h ago" while HA's built-in formatter (used elsewhere) rounds to "2h ago". Switched to `Math.round` for minutes/hours/days so the card matches sensor displays side-by-side. Applied to both pair and avatar cards.
+
+### Internal
+
+- Counter bump in `_async_state_changed` extracted to `_bump_counter(count, window_start, now)` helper to remove duplicated window-rollover logic across the per-side branches.
 
 ## [0.2.5] - 2026-06-15
 

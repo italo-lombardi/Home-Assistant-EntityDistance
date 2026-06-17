@@ -796,7 +796,7 @@ class TestCalcPairMidnightReset:
 # ---------------------------------------------------------------------------
 
 
-class TestCalcPairUpdateWindowTracking:
+class TestStateChangedUpdateWindowTracking:
     """_async_state_changed sets update_window_start when an event arrives.
 
     (Counter tracking moved out of _calc_pair so update_count and last_update
@@ -887,6 +887,73 @@ class TestCalcPairUpdateWindowTracking:
         coordinator._async_state_changed(self._make_event("person.alice"))
 
         assert ps.update_count_a == 1, "counter must advance even during hold"
+
+    def test_counter_does_not_increment_when_unavailable(self):
+        """An unavailable/unknown transition is an arrival event but carries
+        no usable fix — counting it would let a flapping device trip the
+        reliability gate without ever producing a valid distance.
+        last_update still advances (it tracks event arrival, not validity)."""
+        from unittest.mock import MagicMock
+
+        from custom_components.entity_distance.models import pair_key
+
+        coordinator = _make_calc_pair_coordinator()
+        coordinator._debouncer = MagicMock()
+        coordinator._debouncer.async_call = MagicMock(return_value=None)
+        coordinator._entity_to_pairs = {
+            "person.alice": [pair_key("person.alice", "person.bob")],
+            "person.bob": [pair_key("person.alice", "person.bob")],
+        }
+        coordinator._pending_updates = set()
+        coordinator.hass.async_create_task = MagicMock()
+
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+        ps.update_count_a = 0
+
+        for state in ("unavailable", "unknown"):
+            ev = MagicMock()
+            ev.data = {
+                "entity_id": "person.alice",
+                "old_state": MagicMock(state="home"),
+                "new_state": MagicMock(state=state),
+            }
+            coordinator._async_state_changed(ev)
+
+        assert ps.update_count_a == 0, "counter must not advance on unavailable/unknown"
+        assert ps.last_update_a is not None, "last_update still advances on any arrival"
+
+    def test_counter_skips_when_new_state_missing(self):
+        """new_state=None (entity removed) — treat as non-arrival for count.
+        last_update still advances; we received an event."""
+        from unittest.mock import MagicMock
+
+        from custom_components.entity_distance.models import pair_key
+
+        coordinator = _make_calc_pair_coordinator()
+        coordinator._debouncer = MagicMock()
+        coordinator._debouncer.async_call = MagicMock(return_value=None)
+        coordinator._entity_to_pairs = {
+            "person.alice": [pair_key("person.alice", "person.bob")],
+            "person.bob": [pair_key("person.alice", "person.bob")],
+        }
+        coordinator._pending_updates = set()
+        coordinator.hass.async_create_task = MagicMock()
+
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+        ps.update_count_a = 0
+
+        ev = MagicMock()
+        ev.data = {
+            "entity_id": "person.alice",
+            "old_state": MagicMock(state="home"),
+            "new_state": None,
+        }
+        coordinator._async_state_changed(ev)
+
+        assert ps.update_count_a == 0
+        assert ps.last_update_a is not None
 
 
 # ---------------------------------------------------------------------------

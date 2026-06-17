@@ -252,34 +252,48 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             new_state.state if new_state else "none",
         )
         now = dt_util.now()
+        # An unavailable/unknown transition is an arrival event (so last_update
+        # advances), but it carries no usable fix — counting it toward
+        # update_count would let a flapping device trip the reliability gate
+        # without ever producing a valid distance. Filter at the bump site.
+        new_state_str = new_state.state if new_state else None
+        is_valid_arrival = new_state_str not in (None, STATE_UNAVAILABLE, STATE_UNKNOWN)
         # Mark last_update and bump update counter for all pairs involving this
-        # entity (O(1) via reverse index). Counters track raw observation
-        # arrivals, decoupled from the calc-pair hold/skip logic — so users see
-        # update_count and last_update move together.
+        # entity (O(1) via reverse index). Counters track valid raw arrivals,
+        # decoupled from the calc-pair hold/skip logic — so users see
+        # update_count and last_update move together for valid observations.
         for k in self._entity_to_pairs.get(entity_id, []):
             ps = self._pair_states[k]
             if entity_id == ps.entity_a_id:
                 ps.last_update_a = now
-                ps.update_count_a = self._update_frequency(
-                    ps.update_count_a, ps.update_window_start_a, now
-                )
-                if (
-                    ps.update_window_start_a is None
-                    or (now - ps.update_window_start_a).total_seconds() > self._updates_window_s
-                ):
-                    ps.update_window_start_a = now
+                if is_valid_arrival:
+                    ps.update_count_a, ps.update_window_start_a = self._bump_counter(
+                        ps.update_count_a, ps.update_window_start_a, now
+                    )
             else:
                 ps.last_update_b = now
-                ps.update_count_b = self._update_frequency(
-                    ps.update_count_b, ps.update_window_start_b, now
-                )
-                if (
-                    ps.update_window_start_b is None
-                    or (now - ps.update_window_start_b).total_seconds() > self._updates_window_s
-                ):
-                    ps.update_window_start_b = now
+                if is_valid_arrival:
+                    ps.update_count_b, ps.update_window_start_b = self._bump_counter(
+                        ps.update_count_b, ps.update_window_start_b, now
+                    )
         self._pending_updates.add(entity_id)
         self.hass.async_create_task(self._debouncer.async_call())
+
+    def _bump_counter(
+        self, count: int, window_start: datetime | None, now: datetime
+    ) -> tuple[int, datetime]:
+        """Advance update count and window start for a single side of a pair.
+
+        Returns (new_count, new_window_start). Window rolls when expired or
+        unset; count restarts at 1 in that case (matching `_update_frequency`).
+        """
+        new_count = self._update_frequency(count, window_start, now)
+        if (
+            window_start is None
+            or (now - window_start).total_seconds() > self._updates_window_s
+        ):
+            window_start = now
+        return new_count, window_start
 
     async def async_recalculate(self) -> None:
         now = dt_util.now()

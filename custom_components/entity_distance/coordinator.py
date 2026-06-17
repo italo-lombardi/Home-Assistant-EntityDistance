@@ -669,8 +669,9 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             else:
                 _elapsed_s = max(0.0, (now - prev_calc_time_snapshot).total_seconds())
 
-        if _elapsed_s > 0 and (ps.proximity or was_proximity):
-            ps.today_proximity_seconds += _elapsed_s
+        if _elapsed_s > 0:
+            # Bucket time accumulates regardless of proximity — sensors report
+            # time-at-distance for each zone, not time-in-proximity-at-distance.
             # On EXIT tick, _elapsed_s covers time when pair was inside threshold —
             # use prev_distance_m_snapshot (the proximity-era distance) for the bucket.
             bucket_for_elapsed = _calc_bucket(
@@ -682,6 +683,8 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             ps.today_zone_seconds[bucket_for_elapsed] = (
                 ps.today_zone_seconds.get(bucket_for_elapsed, 0.0) + _elapsed_s
             )
+            if ps.proximity or was_proximity:
+                ps.today_proximity_seconds += _elapsed_s
 
         event_data = {
             "entity_a": entity_a,

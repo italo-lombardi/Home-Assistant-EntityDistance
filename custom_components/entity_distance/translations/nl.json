@@ -240,6 +240,21 @@
       },
       "same_zone": {
         "name": "Zelfde zone"
+      },
+      "in_very_near": {
+        "name": "Zeer dichtbij"
+      },
+      "in_near": {
+        "name": "Dichtbij"
+      },
+      "in_mid": {
+        "name": "Gemiddeld"
+      },
+      "in_far": {
+        "name": "Ver"
+      },
+      "in_very_far": {
+        "name": "Zeer ver"
       }
     },
     "button": {

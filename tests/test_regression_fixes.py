@@ -1404,13 +1404,15 @@ class TestHoldSameDayNoDoubleCount:
 
 
 # ---------------------------------------------------------------------------
-# Pass-6 H1: today_zone_seconds must not accumulate outside proximity
+# Pass-6 H1: today_zone_seconds tracks bucket time regardless of proximity
 # ---------------------------------------------------------------------------
 
 
 class TestZoneSecondsOnlyDuringProximity:
-    def test_non_proximity_tick_does_not_inflate_zone_seconds(self):
-        """H1: today_zone_seconds must not grow on ticks where pair is not in proximity."""
+    def test_non_proximity_tick_credits_zone_seconds(self):
+        """H1 (revised): today_zone_seconds tracks time-at-distance independent of proximity.
+        Bucket time accrues on every valid tick so per-zone Today sensors report
+        wall time spent in each distance band, not proximity-gated time."""
         coord = _make_coordinator()
         state_a = _make_state("person.alice", 51.5, -0.1, 20)
         state_b = _make_state("person.bob", 51.520, -0.1, 20)  # 2km away — not in proximity
@@ -1424,6 +1426,7 @@ class TestZoneSecondsOnlyDuringProximity:
         ps.prev_calc_time = datetime(2024, 6, 1, 11, 55, 0, tzinfo=UTC)
         ps.today_reset_date = _NOW.date()
         ps.today_zone_seconds = {}
+        ps.today_proximity_seconds = 0.0
 
         with patch(
             "custom_components.entity_distance.coordinator.ha_distance", return_value=2200.0
@@ -1431,8 +1434,10 @@ class TestZoneSecondsOnlyDuringProximity:
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
         assert result.proximity is False
-        # No proximity → zone seconds must stay zero
-        assert sum(result.today_zone_seconds.values()) == 0.0
+        # 2200 m → 'far' bucket; 5-min tick → 300 s credited to far.
+        assert result.today_zone_seconds.get("far", 0.0) == pytest.approx(300.0, abs=2.0)
+        # Proximity total stays gated — must not grow on non-proximity ticks.
+        assert result.today_proximity_seconds == 0.0
 
 
 # ---------------------------------------------------------------------------

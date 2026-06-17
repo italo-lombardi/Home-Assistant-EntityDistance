@@ -240,6 +240,21 @@
       },
       "same_zone": {
         "name": "Samme zone"
+      },
+      "in_very_near": {
+        "name": "Meget nær"
+      },
+      "in_near": {
+        "name": "Nær"
+      },
+      "in_mid": {
+        "name": "Middel"
+      },
+      "in_far": {
+        "name": "Langt"
+      },
+      "in_very_far": {
+        "name": "Meget langt"
       }
     },
     "button": {

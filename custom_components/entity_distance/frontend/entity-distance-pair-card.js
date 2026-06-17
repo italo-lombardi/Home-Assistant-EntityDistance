@@ -3,7 +3,7 @@
  * Lovelace custom card for the Entity Distance integration.
  */
 
-const CARD_VERSION = "0.2.6";
+const CARD_VERSION = "0.2.7";
 
 console.info(
   `%c ENTITY-DISTANCE-PAIR-CARD %c v${CARD_VERSION} %c — github.com/italo-lombardi`,

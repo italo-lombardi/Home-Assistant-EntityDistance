@@ -4,7 +4,7 @@
  * Force-directed graph: one circle per entity, lines between every pair.
  */
 
-const GROUP_CARD_VERSION = "0.2.6";
+const GROUP_CARD_VERSION = "0.2.7";
 
 console.info(
   `%c ENTITY-DISTANCE-GROUP-CARD %c v${GROUP_CARD_VERSION} %c — github.com/italo-lombardi`,

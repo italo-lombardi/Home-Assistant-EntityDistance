@@ -10,9 +10,21 @@ import pytest
 from custom_components.entity_distance.binary_sensor import (
     AllInProximityBinarySensor,
     AnyInProximityBinarySensor,
+    BucketBinarySensor,
     ProximityBinarySensor,
     SameZoneBinarySensor,
     async_setup_entry,
+)
+from custom_components.entity_distance.const import (
+    BUCKET_FAR,
+    BUCKET_MID,
+    BUCKET_NEAR,
+    BUCKET_VERY_FAR,
+    BUCKET_VERY_NEAR,
+    DEFAULT_ZONE_FAR_M,
+    DEFAULT_ZONE_MID_M,
+    DEFAULT_ZONE_NEAR_M,
+    DEFAULT_ZONE_VERY_NEAR_M,
 )
 from custom_components.entity_distance.models import GroupData, PairState, pair_key
 
@@ -153,6 +165,103 @@ class TestSameZoneBinarySensor:
         sensor = _make_same_zone_sensor(k, "home", "home")
         assert "person.alice" in sensor._attr_unique_id or "person.bob" in sensor._attr_unique_id
         assert "same_zone" in sensor._attr_unique_id
+
+    def test_true_when_person_in_zone_object_id(self):
+        # zone.* state is a count (e.g. "3"), not a name. Compare object_id instead.
+        k = pair_key("person.alice", "zone.home")
+        sensor = _make_same_zone_sensor(k, "home", "3")
+        assert sensor.is_on is True
+
+    def test_false_when_person_not_in_zone(self):
+        k = pair_key("person.alice", "zone.home")
+        sensor = _make_same_zone_sensor(k, "work", "3")
+        assert sensor.is_on is False
+
+
+def _make_bucket_sensor(
+    pair_key_val: tuple[str, str],
+    bucket: str,
+    distance_m: float | None,
+    data_valid: bool = True,
+) -> BucketBinarySensor:
+    coordinator = MagicMock()
+    ps = PairState(entity_a_id=pair_key_val[0], entity_b_id=pair_key_val[1])
+    ps.data_valid = data_valid
+    ps.distance_m = distance_m
+    coordinator.data = GroupData(pairs={pair_key_val: ps})
+    coordinator.bucket_thresholds = {
+        BUCKET_VERY_NEAR: DEFAULT_ZONE_VERY_NEAR_M,
+        BUCKET_NEAR: DEFAULT_ZONE_NEAR_M,
+        BUCKET_MID: DEFAULT_ZONE_MID_M,
+        BUCKET_FAR: DEFAULT_ZONE_FAR_M,
+    }
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    sensor = BucketBinarySensor.__new__(BucketBinarySensor)
+    sensor.coordinator = coordinator
+    sensor._entry = entry
+    sensor._pair_key = pair_key_val
+    sensor._bucket = bucket
+    sensor._attr_unique_id = f"test_{pair_key_val[0]}__{pair_key_val[1]}_in_{bucket}"
+    sensor._attr_device_info = {}
+    return sensor
+
+
+class TestBucketBinarySensor:
+    def test_very_near_on_when_under_100m(self):
+        k = pair_key("person.alice", "person.bob")
+        s = _make_bucket_sensor(k, BUCKET_VERY_NEAR, 50.0)
+        assert s.is_on is True
+
+    def test_very_near_off_when_far(self):
+        k = pair_key("person.alice", "person.bob")
+        s = _make_bucket_sensor(k, BUCKET_VERY_NEAR, 5000.0)
+        assert s.is_on is False
+
+    def test_near_on_in_band(self):
+        k = pair_key("person.alice", "person.bob")
+        s = _make_bucket_sensor(k, BUCKET_NEAR, 300.0)
+        assert s.is_on is True
+
+    def test_mid_on_in_band(self):
+        k = pair_key("person.alice", "person.bob")
+        s = _make_bucket_sensor(k, BUCKET_MID, 1500.0)
+        assert s.is_on is True
+
+    def test_far_on_in_band(self):
+        k = pair_key("person.alice", "person.bob")
+        s = _make_bucket_sensor(k, BUCKET_FAR, 5000.0)
+        assert s.is_on is True
+
+    def test_very_far_on_above_far(self):
+        k = pair_key("person.alice", "person.bob")
+        s = _make_bucket_sensor(k, BUCKET_VERY_FAR, 50000.0)
+        assert s.is_on is True
+
+    def test_returns_none_when_data_invalid(self):
+        k = pair_key("person.alice", "person.bob")
+        s = _make_bucket_sensor(k, BUCKET_VERY_NEAR, 50.0, data_valid=False)
+        assert s.is_on is None
+
+    def test_returns_none_when_distance_missing(self):
+        k = pair_key("person.alice", "person.bob")
+        s = _make_bucket_sensor(k, BUCKET_VERY_NEAR, None)
+        assert s.is_on is None
+
+    def test_exactly_one_bucket_on_at_a_time(self):
+        k = pair_key("person.alice", "person.bob")
+        on_count = sum(
+            1
+            for b in (
+                BUCKET_VERY_NEAR,
+                BUCKET_NEAR,
+                BUCKET_MID,
+                BUCKET_FAR,
+                BUCKET_VERY_FAR,
+            )
+            if _make_bucket_sensor(k, b, 1500.0).is_on
+        )
+        assert on_count == 1
 
 
 class TestAsyncSetupEntry:

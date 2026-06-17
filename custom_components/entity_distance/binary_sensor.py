@@ -14,8 +14,8 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
-from .coordinator import EntityDistanceCoordinator
+from .const import BUCKETS, DOMAIN
+from .coordinator import EntityDistanceCoordinator, _calc_bucket
 from .models import PairState, pair_key
 
 _LOGGER = logging.getLogger(__name__)
@@ -60,6 +60,8 @@ async def async_setup_entry(
         sensors.append(ProximityBinarySensor(coordinator, entry, pair_dev, k, a_name, b_name))
         if not is_zone_pair:
             sensors.append(SameZoneBinarySensor(coordinator, entry, pair_dev, k))
+        for bucket in BUCKETS:
+            sensors.append(BucketBinarySensor(coordinator, entry, pair_dev, k, bucket))
 
     # Group-level: any_in_proximity (only useful for 3+ entities)
     if len(entities_list) > 2:
@@ -133,12 +135,60 @@ class SameZoneBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], BinaryS
         state_b = self.hass.states.get(self._pair_key[1])
         if state_a is None or state_b is None:
             return None
-        zone_a = state_a.state
-        zone_b = state_b.state
+        # For zone.* entries the entity state is a count (e.g. "3"), not the
+        # zone name. Use the entity's object_id so a person whose state is
+        # "home" matches zone.home.
+        zone_a = (
+            self._pair_key[0].split(".", 1)[1]
+            if self._pair_key[0].startswith("zone.")
+            else state_a.state
+        )
+        zone_b = (
+            self._pair_key[1].split(".", 1)[1]
+            if self._pair_key[1].startswith("zone.")
+            else state_b.state
+        )
         _unknown = {"unknown", "unavailable", "not_home"}
         if zone_a in _unknown or zone_b in _unknown:
             return None
         return zone_a == zone_b
+
+
+class BucketBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], BinarySensorEntity):
+    """On while the pair's current distance falls in a specific bucket."""
+
+    _attr_has_entity_name = True
+
+    def __init__(
+        self,
+        coordinator: EntityDistanceCoordinator,
+        entry: ConfigEntry,
+        device_info: DeviceInfo,
+        pair_key_val: tuple[str, str],
+        bucket: str,
+    ) -> None:
+        super().__init__(coordinator)
+        self._entry = entry
+        self._pair_key = pair_key_val
+        self._bucket = bucket
+        self._attr_translation_key = f"in_{bucket}"
+        key_str = f"{pair_key_val[0]}__{pair_key_val[1]}"
+        self._attr_unique_id = f"{entry.entry_id}_{key_str}_in_{bucket}"
+        self._attr_device_info = device_info
+
+    @property
+    def _pair(self) -> PairState:
+        return self.coordinator.data.pairs.get(self._pair_key) or PairState(
+            entity_a_id=self._pair_key[0], entity_b_id=self._pair_key[1]
+        )
+
+    @property
+    def is_on(self) -> bool | None:
+        ps = self._pair
+        if not ps.data_valid or ps.distance_m is None:
+            return None
+        current = _calc_bucket(ps.distance_m, self.coordinator.bucket_thresholds)
+        return current == self._bucket
 
 
 class AnyInProximityBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], BinarySensorEntity):

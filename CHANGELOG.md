@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [0.2.7] - 2026-06-18
+
+### Added
+
+- **Per-bucket binary sensors** — five new binary sensors per pair: `binary_sensor.<pair>_in_very_near`, `_in_near`, `_in_mid`, `_in_far`, `_in_very_far`. Exactly one is `on` at any time, reflecting the current distance bucket. Designed for direct use in automations and as the input to user-built `history_stats` helpers when accurate per-zone time tracking is needed.
+
+### Fixed
+
+- **`Same Zone` always Off when one side is a `zone.*` entity** — `SameZoneBinarySensor.is_on` compared raw entity states, but a `zone.*` entity's state is the count of trackers in that zone (e.g. `"3"`), not the zone name. A pair like `person.dercy` (state `"home"`) and `zone.home` (state `"3"`) therefore reported `Off` even when the person was clearly home. Now compares the zone's `object_id` against the other side's state, so person-in-zone matches resolve correctly.
+- **`Today *Time` sensors only counted while in proximity** — `today_zone_seconds` was gated by `(ps.proximity or was_proximity)`, which is impossible above the exit threshold (default 500 m). Mid / Far / Very Far time sensors therefore stayed at 0 forever with default thresholds. Bucket time is now accumulated on every valid tick regardless of proximity, so each `today_*_time` sensor reports actual wall-time spent in that distance band today. `today_proximity_time` keeps its proximity gate (semantically distinct).
+
 ## [0.2.6] - 2026-06-17
 
 ### Fixed

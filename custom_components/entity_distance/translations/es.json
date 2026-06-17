@@ -240,6 +240,21 @@
       },
       "same_zone": {
         "name": "Misma zona"
+      },
+      "in_very_near": {
+        "name": "Muy cerca"
+      },
+      "in_near": {
+        "name": "Cerca"
+      },
+      "in_mid": {
+        "name": "Medio"
+      },
+      "in_far": {
+        "name": "Lejos"
+      },
+      "in_very_far": {
+        "name": "Muy lejos"
       }
     },
     "button": {

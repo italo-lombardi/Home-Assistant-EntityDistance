@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 import itertools
 import logging
 
@@ -544,13 +544,11 @@ class TodayUnaccountedTimeSensor(EntityDistanceSensorBase):
         if not self.available:
             return None
         ps = self._pair
-        if ps.prev_calc_time is None:
-            return None
         now = dt_util.now()
-        today_midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        effective_prev = max(ps.prev_calc_time, today_midnight)
-        gap_s = (now - effective_prev).total_seconds()
-        return round(max(gap_s, 0) / 60, 1)
+        midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        elapsed_s = max(0.0, (now.astimezone(UTC) - midnight.astimezone(UTC)).total_seconds())
+        accounted_s = sum(ps.today_zone_seconds.values())
+        return round(max(0.0, elapsed_s - accounted_s) / 60, 1)
 
 
 class MinDistanceSensor(CoordinatorEntity[EntityDistanceCoordinator], SensorEntity):

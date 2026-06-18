@@ -637,6 +637,24 @@ class TestTodayUnaccountedTimeSensor:
         assert sensor.available is True
         assert sensor.native_value is not None
 
+    def test_attributes_expose_tracking_started(self):
+        from datetime import UTC, datetime
+
+        ts = datetime.now(UTC)
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.data_valid = True
+        ps.proximity_tracking_started = ts
+        sensor = _make_unaccounted_sensor(ps)
+        attrs = sensor.extra_state_attributes
+        assert attrs["tracking_started"] == ts.isoformat()
+
+    def test_attributes_empty_when_tracking_not_started(self):
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.data_valid = True
+        ps.proximity_tracking_started = None
+        sensor = _make_unaccounted_sensor(ps)
+        assert sensor.extra_state_attributes == {}
+
 
 # ---------------------------------------------------------------------------
 # BucketSensor tests

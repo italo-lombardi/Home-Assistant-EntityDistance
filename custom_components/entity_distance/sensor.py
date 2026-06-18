@@ -557,6 +557,17 @@ class TodayUnaccountedTimeSensor(EntityDistanceSensorBase):
         accounted_s = sum(ps.today_zone_seconds.values())
         return round(max(0.0, elapsed_s - accounted_s) / 60, 1)
 
+    @property
+    def extra_state_attributes(self) -> dict:
+        # Surface tracking-start so a large initial value on a fresh install is
+        # visibly explained: time before tracking began is unaccounted by
+        # definition (the metric counts from midnight, not from setup).
+        ps = self._pair
+        attrs: dict = {}
+        if ps.proximity_tracking_started is not None:
+            attrs["tracking_started"] = ps.proximity_tracking_started.isoformat()
+        return attrs
+
 
 class MinDistanceSensor(CoordinatorEntity[EntityDistanceCoordinator], SensorEntity):
     """Minimum distance across all pairs in the group. Only shown for groups with 3+ entities."""

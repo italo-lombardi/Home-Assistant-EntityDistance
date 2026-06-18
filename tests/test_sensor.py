@@ -608,7 +608,9 @@ class TestTodayUnaccountedTimeSensor:
         sensor = _make_unaccounted_sensor(ps)
         value = sensor.native_value
         assert value is not None
-        assert value == pytest.approx(elapsed_min - 10.0, abs=1.0)
+        # max(0,...) clamp handles the early-morning window where elapsed < 10 min.
+        expected = max(0.0, elapsed_min - 10.0)
+        assert value == pytest.approx(expected, abs=1.0)
 
     def test_never_negative_when_overshoot(self):
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")

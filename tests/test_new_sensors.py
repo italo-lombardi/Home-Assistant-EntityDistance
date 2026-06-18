@@ -116,14 +116,14 @@ class TestTodayUnaccountedTimeSensor:
         assert val == pytest.approx(elapsed_min, abs=1.0)
 
     def test_returns_partial_when_partially_accounted(self):
-        # 600 s accounted leaves elapsed - 600 s unaccounted.
+        # 600 s accounted leaves elapsed - 600 s unaccounted (clamped to 0).
         now = dt_util.now()
         midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
         elapsed_min = (now - midnight).total_seconds() / 60
         sensor = self._make({"near": 600.0, "far": 300.0})
         val = sensor.native_value
         assert val is not None
-        expected = elapsed_min - 15.0
+        expected = max(0.0, elapsed_min - 15.0)
         assert val == pytest.approx(expected, abs=1.0)
 
     def test_never_negative_when_accounted_overshoots(self):

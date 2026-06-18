@@ -226,6 +226,9 @@
       },
       "min_distance": {
         "name": "Minimalna odległość"
+      },
+      "settings": {
+        "name": "Ustawienia"
       }
     },
     "binary_sensor": {
@@ -240,6 +243,21 @@
       },
       "same_zone": {
         "name": "Ta sama strefa"
+      },
+      "in_very_near": {
+        "name": "Bardzo blisko"
+      },
+      "in_near": {
+        "name": "Blisko"
+      },
+      "in_mid": {
+        "name": "Średnio"
+      },
+      "in_far": {
+        "name": "Daleko"
+      },
+      "in_very_far": {
+        "name": "Bardzo daleko"
       }
     },
     "button": {

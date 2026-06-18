@@ -226,6 +226,9 @@
       },
       "min_distance": {
         "name": "Minimiavstånd"
+      },
+      "settings": {
+        "name": "Inställningar"
       }
     },
     "binary_sensor": {
@@ -240,6 +243,21 @@
       },
       "same_zone": {
         "name": "Samma zon"
+      },
+      "in_very_near": {
+        "name": "Mycket nära"
+      },
+      "in_near": {
+        "name": "Nära"
+      },
+      "in_mid": {
+        "name": "Medel"
+      },
+      "in_far": {
+        "name": "Långt"
+      },
+      "in_very_far": {
+        "name": "Mycket långt"
       }
     },
     "button": {

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 import itertools
 import logging
 
@@ -32,7 +32,7 @@ from .const import (
     DIRECTIONS,
     DOMAIN,
 )
-from .coordinator import EntityDistanceCoordinator, _calc_bucket
+from .coordinator import EntityDistanceCoordinator, calc_bucket
 from .models import PairState, pair_key
 
 _LOGGER = logging.getLogger(__name__)
@@ -123,6 +123,7 @@ async def async_setup_entry(
                     DistanceSensor(coordinator, entry, pair_dev, k),
                     BucketSensor(coordinator, entry, pair_dev, k),
                     BucketLevelSensor(coordinator, entry, pair_dev, k),
+                    SettingsSensor(coordinator, entry, pair_dev, k),
                 ]
             )
         else:
@@ -154,12 +155,14 @@ async def async_setup_entry(
                     LastUpdateSensor(coordinator, entry, pair_dev, k, a_name, b_name, "b"),
                     UpdateCountSensor(coordinator, entry, pair_dev, k, a_name, b_name, "a"),
                     UpdateCountSensor(coordinator, entry, pair_dev, k, a_name, b_name, "b"),
+                    SettingsSensor(coordinator, entry, pair_dev, k),
                 ]
             )
 
     # Group-level sensors (on the parent group device)
+    group_dev = _group_device_info(entry, group_name)
+    all_sensors.append(SettingsSensor(coordinator, entry, group_dev))
     if len(entities_list) > 2:
-        group_dev = _group_device_info(entry, group_name)
         all_sensors.extend(
             [
                 MinDistanceSensor(coordinator, entry, group_dev),
@@ -237,7 +240,7 @@ class BucketSensor(EntityDistanceSensorBase):
     def native_value(self) -> str | None:
         if self._pair.distance_m is None or not self._pair.data_valid:
             return None
-        return _calc_bucket(self._pair.distance_m, self.coordinator.bucket_thresholds)
+        return calc_bucket(self._pair.distance_m, self.coordinator.bucket_thresholds)
 
 
 class BucketLevelSensor(EntityDistanceSensorBase):
@@ -251,7 +254,7 @@ class BucketLevelSensor(EntityDistanceSensorBase):
     def native_value(self) -> int | None:
         if self._pair.distance_m is None or not self._pair.data_valid:
             return None
-        bucket = _calc_bucket(self._pair.distance_m, self.coordinator.bucket_thresholds)
+        bucket = calc_bucket(self._pair.distance_m, self.coordinator.bucket_thresholds)
         return _BUCKET_LEVEL[bucket]
 
 
@@ -540,17 +543,32 @@ class TodayUnaccountedTimeSensor(EntityDistanceSensorBase):
         super().__init__(coordinator, entry, device_info, k, "today_unaccounted_time")
 
     @property
+    def available(self) -> bool:
+        # Reports the unaccounted slice of today regardless of pair validity —
+        # the metric's purpose includes invalid windows (GPS gone, holds, restarts).
+        return self.coordinator.last_update_success
+
+    @property
     def native_value(self) -> float | None:
         if not self.available:
             return None
         ps = self._pair
-        if ps.prev_calc_time is None:
-            return None
         now = dt_util.now()
-        today_midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        effective_prev = max(ps.prev_calc_time, today_midnight)
-        gap_s = (now - effective_prev).total_seconds()
-        return round(max(gap_s, 0) / 60, 1)
+        midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        elapsed_s = max(0.0, (now.astimezone(UTC) - midnight.astimezone(UTC)).total_seconds())
+        accounted_s = sum(ps.today_zone_seconds.values())
+        return round(max(0.0, elapsed_s - accounted_s) / 60, 1)
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        # Surface tracking-start so a large initial value on a fresh install is
+        # visibly explained: time before tracking began is unaccounted by
+        # definition (the metric counts from midnight, not from setup).
+        ps = self._pair
+        attrs: dict = {}
+        if ps.proximity_tracking_started is not None:
+            attrs["tracking_started"] = ps.proximity_tracking_started.isoformat()
+        return attrs
 
 
 class MinDistanceSensor(CoordinatorEntity[EntityDistanceCoordinator], SensorEntity):
@@ -582,3 +600,51 @@ class MinDistanceSensor(CoordinatorEntity[EntityDistanceCoordinator], SensorEnti
         if not self.available:
             return None
         return self.coordinator.data.min_distance_m
+
+
+class SettingsSensor(CoordinatorEntity[EntityDistanceCoordinator], SensorEntity):
+    """Diagnostic sensor exposing all proximity / filter settings.
+
+    State is a concise summary: ``"<entry>/<exit>m · <debounce>s · zones
+    <vn>/<n>/<m>/<f>m"``. Full settings dict surfaced via
+    ``extra_state_attributes``. Registered on the group device once and on
+    every pair device so the per-pair Lovelace card can reference a
+    pair-slug-derived entity_id.
+    """
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "settings"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(
+        self,
+        coordinator: EntityDistanceCoordinator,
+        entry: ConfigEntry,
+        device_info: DeviceInfo,
+        pair_key_val: tuple[str, str] | None = None,
+    ) -> None:
+        super().__init__(coordinator)
+        self._entry = entry
+        if pair_key_val is None:
+            self._attr_unique_id = f"{entry.entry_id}_settings"
+        else:
+            self._attr_unique_id = f"{entry.entry_id}_{_pair_key_str(pair_key_val)}_settings"
+        self._attr_device_info = device_info
+
+    @property
+    def available(self) -> bool:
+        return self.coordinator.last_update_success
+
+    @property
+    def native_value(self) -> str:
+        s = self.coordinator.settings_snapshot
+        return (
+            f"{int(s['entry_threshold_m'])}/{int(s['exit_threshold_m'])}m "
+            f"· {int(s['debounce_s'])}s "
+            f"· zones {int(s['zone_very_near_m'])}/{int(s['zone_near_m'])}"
+            f"/{int(s['zone_mid_m'])}/{int(s['zone_far_m'])}m"
+        )
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        return self.coordinator.settings_snapshot

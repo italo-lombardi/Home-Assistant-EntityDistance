@@ -19,9 +19,9 @@ from custom_components.entity_distance.const import (
     DEFAULT_ZONE_VERY_NEAR_M,
 )
 from custom_components.entity_distance.coordinator import (
-    _calc_bucket,
     _get_coords,
     _is_zone,
+    calc_bucket,
 )
 from custom_components.entity_distance.models import PairState
 from tests.conftest import make_state, make_zone_state
@@ -73,69 +73,69 @@ class TestGetCoords:
 
 class TestCalcBucket:
     def test_very_near(self):
-        assert _calc_bucket(30, _DEFAULT_THRESHOLDS) == BUCKET_VERY_NEAR
+        assert calc_bucket(30, _DEFAULT_THRESHOLDS) == BUCKET_VERY_NEAR
 
     def test_near(self):
-        assert _calc_bucket(300, _DEFAULT_THRESHOLDS) == BUCKET_NEAR
+        assert calc_bucket(300, _DEFAULT_THRESHOLDS) == BUCKET_NEAR
 
     def test_mid(self):
-        assert _calc_bucket(1000, _DEFAULT_THRESHOLDS) == BUCKET_MID
+        assert calc_bucket(1000, _DEFAULT_THRESHOLDS) == BUCKET_MID
 
     def test_far(self):
-        assert _calc_bucket(5000, _DEFAULT_THRESHOLDS) == BUCKET_FAR
+        assert calc_bucket(5000, _DEFAULT_THRESHOLDS) == BUCKET_FAR
 
     def test_very_far(self):
-        assert _calc_bucket(15000, _DEFAULT_THRESHOLDS) == BUCKET_VERY_FAR
+        assert calc_bucket(15000, _DEFAULT_THRESHOLDS) == BUCKET_VERY_FAR
 
     def test_exact_boundary_very_near(self):
-        assert _calc_bucket(100, _DEFAULT_THRESHOLDS) == BUCKET_VERY_NEAR
+        assert calc_bucket(100, _DEFAULT_THRESHOLDS) == BUCKET_VERY_NEAR
 
     def test_just_over_boundary(self):
-        assert _calc_bucket(101, _DEFAULT_THRESHOLDS) == BUCKET_NEAR
+        assert calc_bucket(101, _DEFAULT_THRESHOLDS) == BUCKET_NEAR
 
     def test_custom_thresholds(self):
         custom = {BUCKET_VERY_NEAR: 50, BUCKET_NEAR: 200, BUCKET_MID: 1000, BUCKET_FAR: 5000}
-        assert _calc_bucket(30, custom) == BUCKET_VERY_NEAR
-        assert _calc_bucket(100, custom) == BUCKET_NEAR
-        assert _calc_bucket(500, custom) == BUCKET_MID
-        assert _calc_bucket(3000, custom) == BUCKET_FAR
-        assert _calc_bucket(6000, custom) == BUCKET_VERY_FAR
+        assert calc_bucket(30, custom) == BUCKET_VERY_NEAR
+        assert calc_bucket(100, custom) == BUCKET_NEAR
+        assert calc_bucket(500, custom) == BUCKET_MID
+        assert calc_bucket(3000, custom) == BUCKET_FAR
+        assert calc_bucket(6000, custom) == BUCKET_VERY_FAR
 
 
 class TestCalcBucketCustomThresholds:
-    """Test _calc_bucket with non-default threshold values at boundary edges."""
+    """Test calc_bucket with non-default threshold values at boundary edges."""
 
     _CUSTOM = {BUCKET_VERY_NEAR: 50, BUCKET_NEAR: 150, BUCKET_MID: 500, BUCKET_FAR: 2000}
 
     def test_at_very_near_upper_boundary(self):
-        assert _calc_bucket(50, self._CUSTOM) == BUCKET_VERY_NEAR
+        assert calc_bucket(50, self._CUSTOM) == BUCKET_VERY_NEAR
 
     def test_one_above_very_near_boundary(self):
-        assert _calc_bucket(51, self._CUSTOM) == BUCKET_NEAR
+        assert calc_bucket(51, self._CUSTOM) == BUCKET_NEAR
 
     def test_at_near_upper_boundary(self):
-        assert _calc_bucket(150, self._CUSTOM) == BUCKET_NEAR
+        assert calc_bucket(150, self._CUSTOM) == BUCKET_NEAR
 
     def test_one_above_near_boundary(self):
-        assert _calc_bucket(151, self._CUSTOM) == BUCKET_MID
+        assert calc_bucket(151, self._CUSTOM) == BUCKET_MID
 
     def test_at_mid_upper_boundary(self):
-        assert _calc_bucket(500, self._CUSTOM) == BUCKET_MID
+        assert calc_bucket(500, self._CUSTOM) == BUCKET_MID
 
     def test_one_above_mid_boundary(self):
-        assert _calc_bucket(501, self._CUSTOM) == BUCKET_FAR
+        assert calc_bucket(501, self._CUSTOM) == BUCKET_FAR
 
     def test_at_far_upper_boundary(self):
-        assert _calc_bucket(2000, self._CUSTOM) == BUCKET_FAR
+        assert calc_bucket(2000, self._CUSTOM) == BUCKET_FAR
 
     def test_one_above_far_boundary_is_very_far(self):
-        assert _calc_bucket(2001, self._CUSTOM) == BUCKET_VERY_FAR
+        assert calc_bucket(2001, self._CUSTOM) == BUCKET_VERY_FAR
 
     def test_zero_distance_is_very_near(self):
-        assert _calc_bucket(0, self._CUSTOM) == BUCKET_VERY_NEAR
+        assert calc_bucket(0, self._CUSTOM) == BUCKET_VERY_NEAR
 
     def test_large_distance_is_very_far(self):
-        assert _calc_bucket(1_000_000, self._CUSTOM) == BUCKET_VERY_FAR
+        assert calc_bucket(1_000_000, self._CUSTOM) == BUCKET_VERY_FAR
 
 
 class TestIsZone:
@@ -243,7 +243,7 @@ class TestGetCoordsEdgeCases:
 
 
 # ---------------------------------------------------------------------------
-# _calc_bucket with zero thresholds edge case
+# calc_bucket with zero thresholds edge case
 # ---------------------------------------------------------------------------
 
 
@@ -251,7 +251,7 @@ class TestCalcBucketEdgeCases:
     def test_negative_distance_treated_as_very_near(self):
         # Negative distances should not crash and land in VERY_NEAR
         assert (
-            _calc_bucket(
+            calc_bucket(
                 -1,
                 {
                     BUCKET_VERY_NEAR: DEFAULT_ZONE_VERY_NEAR_M,
@@ -1081,6 +1081,23 @@ class TestCoordinatorProperties:
 
         coord = self._make()
         assert BUCKET_VERY_NEAR in coord.bucket_thresholds
+
+    def test_settings_snapshot(self):
+        coord = self._make()
+        coord._entry_threshold_m = 200.0
+        coord._exit_threshold_m = 500.0
+        coord._debounce_s = 10
+        coord._max_accuracy_m = 150
+        coord._max_speed_kmh = 1000
+        coord._resync_silence_s = 600
+        coord._resync_hold_s = 60
+        coord._min_updates_reliable = 3
+        coord._updates_window_s = 1800
+        coord._require_reliable = False
+        snap = coord.settings_snapshot
+        assert snap["entry_threshold_m"] == 200.0
+        assert snap["zone_very_near_m"] == 100
+        assert len(snap) == 14
 
 
 # ---------------------------------------------------------------------------

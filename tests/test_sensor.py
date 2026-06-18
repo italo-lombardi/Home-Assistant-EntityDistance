@@ -565,45 +565,95 @@ def _make_unaccounted_sensor(pair_state):
 
 
 class TestTodayUnaccountedTimeSensor:
-    """Test TodayUnaccountedTimeSensor gap calculation."""
+    """Test TodayUnaccountedTimeSensor: today's elapsed seconds minus accounted bucket time."""
 
-    def test_returns_none_when_prev_calc_time_is_none(self):
-        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
-        ps.prev_calc_time = None
-        sensor = _make_unaccounted_sensor(ps)
-        assert sensor.native_value is None
+    def test_returns_full_elapsed_when_zone_seconds_empty(self):
+        from homeassistant.util import dt as dt_util
 
-    def test_recent_calc_returns_small_gap(self):
-        # prev_calc_time 30 seconds ago → gap ≈ 0.5 min
-        now = datetime.now().astimezone()
+        now = dt_util.now()
+        midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        elapsed_min = (now - midnight).total_seconds() / 60
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.data_valid = True
-        ps.prev_calc_time = now - timedelta(seconds=30)
+        ps.today_zone_seconds = {}
         sensor = _make_unaccounted_sensor(ps)
         value = sensor.native_value
         assert value is not None
-        assert 0.0 <= value <= 1.0
+        assert value == pytest.approx(elapsed_min, abs=1.0)
 
-    def test_long_gap_returns_expected_minutes(self):
-        # prev_calc_time 60 minutes ago, but clamped to today's midnight.
-        # Use a fixed gap of 10 min within the same day to avoid midnight truncation.
-        now = datetime.now().astimezone()
+    def test_zero_when_all_elapsed_accounted(self):
+        from homeassistant.util import dt as dt_util
+
+        now = dt_util.now()
+        midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        elapsed_s = (now - midnight).total_seconds()
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.data_valid = True
-        ps.prev_calc_time = now - timedelta(minutes=10)
+        ps.today_zone_seconds = {"very_near": elapsed_s}
         sensor = _make_unaccounted_sensor(ps)
         value = sensor.native_value
         assert value is not None
-        assert 9.0 <= value <= 11.0
+        assert 0.0 <= value < 1.0
 
-    def test_gap_never_negative(self):
-        # prev_calc_time slightly in the future (clock drift) → max(gap, 0) = 0
-        now = datetime.now().astimezone()
+    def test_partial_account(self):
+        from homeassistant.util import dt as dt_util
+
+        now = dt_util.now()
+        midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        elapsed_min = (now - midnight).total_seconds() / 60
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.data_valid = True
-        ps.prev_calc_time = now + timedelta(seconds=5)
+        # 600 s = 10 min accounted across two buckets.
+        ps.today_zone_seconds = {"near": 300.0, "mid": 300.0}
+        sensor = _make_unaccounted_sensor(ps)
+        value = sensor.native_value
+        assert value is not None
+        # max(0,...) clamp handles the early-morning window where elapsed < 10 min.
+        expected = max(0.0, elapsed_min - 10.0)
+        assert value == pytest.approx(expected, abs=1.0)
+
+    def test_never_negative_when_overshoot(self):
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.data_valid = True
+        ps.today_zone_seconds = {"very_near": 999_999.0}
         sensor = _make_unaccounted_sensor(ps)
         assert sensor.native_value == 0.0
+
+    def test_returns_none_when_unavailable(self):
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.data_valid = False
+        sensor = _make_unaccounted_sensor(ps)
+        sensor.coordinator.last_update_success = False
+        assert sensor.native_value is None
+
+    def test_available_when_pair_invalid_but_coordinator_ok(self):
+        # Sensor reports unaccounted time including invalid windows — must not
+        # gate on data_valid.
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.data_valid = False
+        ps.today_zone_seconds = {}
+        sensor = _make_unaccounted_sensor(ps)
+        sensor.coordinator.last_update_success = True
+        assert sensor.available is True
+        assert sensor.native_value is not None
+
+    def test_attributes_expose_tracking_started(self):
+        from datetime import UTC, datetime
+
+        ts = datetime.now(UTC)
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.data_valid = True
+        ps.proximity_tracking_started = ts
+        sensor = _make_unaccounted_sensor(ps)
+        attrs = sensor.extra_state_attributes
+        assert attrs["tracking_started"] == ts.isoformat()
+
+    def test_attributes_empty_when_tracking_not_started(self):
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.data_valid = True
+        ps.proximity_tracking_started = None
+        sensor = _make_unaccounted_sensor(ps)
+        assert sensor.extra_state_attributes == {}
 
 
 # ---------------------------------------------------------------------------
@@ -1210,6 +1260,64 @@ class TestProximityTrackingStartedSensorExtra:
         assert sensor.native_value == ts
 
 
+# ---------------------------------------------------------------------------
+# SettingsSensor tests
+# ---------------------------------------------------------------------------
+
+
+class TestSettingsSensor:
+    def _make(self):
+        from custom_components.entity_distance.sensor import SettingsSensor
+
+        coordinator = MagicMock()
+        coordinator.last_update_success = True
+        coordinator.settings_snapshot = {
+            "entry_threshold_m": 200.0,
+            "exit_threshold_m": 500.0,
+            "debounce_s": 10,
+            "max_accuracy_m": 150,
+            "max_speed_kmh": 1000,
+            "resync_silence_s": 600,
+            "resync_hold_s": 60,
+            "min_updates_reliable": 3,
+            "updates_window_s": 1800,
+            "require_reliable": False,
+            "zone_very_near_m": 100,
+            "zone_near_m": 500,
+            "zone_mid_m": 2000,
+            "zone_far_m": 10000,
+        }
+        entry = MagicMock()
+        entry.entry_id = "test"
+        sensor = SettingsSensor.__new__(SettingsSensor)
+        sensor.coordinator = coordinator
+        sensor._entry = entry
+        sensor._attr_unique_id = "test_settings"
+        sensor._attr_device_info = {}
+        return sensor
+
+    def test_state_summary(self):
+        sensor = self._make()
+        # Format: "entry/exit m · debounce s · zones vn/n/m/f m"
+        assert sensor.native_value == "200/500m · 10s · zones 100/500/2000/10000m"
+
+    def test_attributes_carry_all_settings(self):
+        sensor = self._make()
+        attrs = sensor.extra_state_attributes
+        assert attrs["entry_threshold_m"] == 200.0
+        assert attrs["exit_threshold_m"] == 500.0
+        assert attrs["zone_very_near_m"] == 100
+        assert attrs["zone_far_m"] == 10000
+        assert attrs["require_reliable"] is False
+        # All 14 keys present.
+        assert len(attrs) == 14
+
+    def test_unavailable_when_coordinator_failed(self):
+        sensor = self._make()
+        sensor.coordinator.last_update_success = False
+        assert sensor.available is False
+
+
 class TestAsyncSetupEntrySensor:
     """Test sensor.py async_setup_entry zone-pair branching."""
 
@@ -1235,7 +1343,16 @@ class TestAsyncSetupEntrySensor:
         await async_setup_entry(hass, entry, mock_add)
 
         types = [type(e).__name__ for e in added]
-        assert set(types) == {"DistanceSensor", "BucketSensor", "BucketLevelSensor"}
+        # Zone-zone pair: 4 per-pair sensors (Distance/Bucket/BucketLevel/Settings)
+        # plus 1 group-level Settings → 5 total, 2 of them SettingsSensor.
+        assert set(types) == {
+            "DistanceSensor",
+            "BucketSensor",
+            "BucketLevelSensor",
+            "SettingsSensor",
+        }
+        assert len(added) == 5
+        assert sum(1 for t in types if t == "SettingsSensor") == 2
 
     @pytest.mark.asyncio
     async def test_person_pair_gets_full_sensor_set(self):

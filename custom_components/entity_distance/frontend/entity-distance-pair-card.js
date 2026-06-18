@@ -3,7 +3,7 @@
  * Lovelace custom card for the Entity Distance integration.
  */
 
-const CARD_VERSION = "0.2.6";
+const CARD_VERSION = "0.2.7";
 
 console.info(
   `%c ENTITY-DISTANCE-PAIR-CARD %c v${CARD_VERSION} %c — github.com/italo-lombardi`,
@@ -528,6 +528,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         show_entity_states: true,
         show_proximity_rate: false,
         show_unaccounted_time: false,
+        show_settings: false,
         compact: false,
       };
     }
@@ -551,6 +552,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         show_entity_states: true,
         show_proximity_rate: false,
         show_unaccounted_time: false,
+        show_settings: false,
         compact: false,
         ...config,
       };
@@ -581,6 +583,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         `${p}_today_very_near_time`, `${p}_today_near_time`,
         `${p}_today_medium_time`, `${p}_today_far_time`,
         `${p}_today_very_far_time`,
+        `${p}_settings`,
       ];
       const dynamic = Object.keys(this.hass?.states || {}).filter(id =>
         id.startsWith(`${p}_gps_accuracy_`) ||
@@ -630,6 +633,8 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       const todayMin = _num(this.hass, slug, "today_proximity_time");
       const unaccountedMin = _num(this.hass, slug, "today_unaccounted_time");
       const lastSeen = _val(this.hass, slug, "last_seen_together");
+      const settings = _val(this.hass, slug, "settings");
+      const settingsAttrs = this.hass?.states?.[`sensor.${slug}_settings`]?.attributes || {};
 
       const bucketLabel = bucket ? bucket.replace(/_/g, " ") : null;
       const zoneColor = bucket ? _zoneColor(bucket) : null;
@@ -749,6 +754,15 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
                     <span class="stat-box-label">⚠ No data today</span>
                     <span class="stat-box-value" style="color:#d97706">${_formatMinutes(unaccountedMin)}</span>
                     <span class="stat-box-sub">gap since last calculation</span>
+                  </div>` : nothing}
+                ${c.show_settings && settings ? html`
+                  <div class="stat-box full-width" style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.25)">
+                    <span class="stat-box-label">⚙ Settings</span>
+                    <span class="stat-box-value" style="color:#4338ca;font-size:13px;font-family:ui-monospace,monospace;line-height:1.5;white-space:normal;word-break:break-word">
+                      <div>${settingsAttrs.entry_threshold_m ?? "?"}/${settingsAttrs.exit_threshold_m ?? "?"}m · ${settingsAttrs.debounce_s ?? "?"}s</div>
+                      <div style="opacity:0.85">zones ${settingsAttrs.zone_very_near_m ?? "?"}/${settingsAttrs.zone_near_m ?? "?"}/${settingsAttrs.zone_mid_m ?? "?"}/${settingsAttrs.zone_far_m ?? "?"}m</div>
+                    </span>
+                    <span class="stat-box-sub">entry/exit · debounce · zones</span>
                   </div>` : nothing}
               </div>`;
           })()}
@@ -888,7 +902,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
 
     _hasTimeStats() {
       const c = this._config;
-      return c.show_proximity_duration || c.show_proximity_rate || c.show_today_time || c.show_last_seen || c.show_unaccounted_time;
+      return c.show_proximity_duration || c.show_proximity_rate || c.show_today_time || c.show_last_seen || c.show_unaccounted_time || c.show_settings;
     }
 
     _hasDiagnostics() {
@@ -1028,6 +1042,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
           ${this._checkRow("show_last_seen", "Show last seen together")}
           ${this._checkRow("show_today_zone_times", "Show today's time per zone (Very Near, Near, …)")}
           ${this._checkRow("show_unaccounted_time", "Show data gap warning (time since last calculation)")}
+          ${this._checkRow("show_settings", "Show proximity settings summary (entry/exit · debounce · zones)")}
 
           <div class="section-title">People</div>
           ${this._checkRow("show_entity_states", "Show entity states (Home / Away / zone)")}

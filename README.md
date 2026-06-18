@@ -192,7 +192,7 @@ Each configured group creates one HA device (the group) with per-pair sub-device
 | Update Count (Name B) | Location updates in the last 30 minutes for entity B | — |
 | State (Name A) | Current state of entity A (e.g. home, away, zone name) | — |
 | State (Name B) | Current state of entity B (e.g. home, away, zone name) | — |
-| Today Unaccounted Time | Minutes since last successful calculation, capped at midnight | `duration` |
+| Today Unaccounted Time | Today's elapsed minutes minus sum of bucket times — captures HA-down windows, invalid GPS, and pre-setup time on install day | `duration` |
 
 > GPS Accuracy, Last Update, and Update Count are diagnostic sensors — collapsed by default in the HA UI.
 
@@ -312,10 +312,10 @@ Direct mirror of `hass.states[entity_id].state`. Returns whatever HA reports —
 ### Today Unaccounted Time
 
 ```
-gap_minutes = min(now, today_midnight) − prev_calc_time / 60
+unaccounted_minutes = (now − today_midnight) − sum(today_zone_seconds) / 60
 ```
 
-Measures how many minutes of today have no distance data — typically caused by HA restart or both entities going silent. Resets naturally when a new calculation runs. `None` until the first calculation fires.
+Measures how many minutes of today are not credited to any zone bucket. Typically caused by HA being down, the pair being invalidated (GPS unavailable, accuracy filter, resync hold), or — on day 1 — by setup happening after midnight (tracking starts mid-day, so the pre-setup hours are legitimately unaccounted by definition). The `tracking_started` attribute exposes when the pair was first set up so a large initial value has obvious context. Clamps to `0` if accounted time exceeds elapsed (cannot go negative).
 
 ### Live Updates
 
@@ -536,11 +536,11 @@ If auto-registration fails (e.g. YAML-only Lovelace mode), add manually:
 
 ```yaml
 resources:
-  - url: /entity_distance/entity-distance-pair-card.js?0.2.6
+  - url: /entity_distance/entity-distance-pair-card.js?0.2.7
     type: module
-  - url: /entity_distance/entity-distance-avatar-card.js?0.2.6
+  - url: /entity_distance/entity-distance-avatar-card.js?0.2.7
     type: module
-  - url: /entity_distance/entity-distance-group-card.js?0.2.6
+  - url: /entity_distance/entity-distance-group-card.js?0.2.7
     type: module
 ```
 

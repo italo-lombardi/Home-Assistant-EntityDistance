@@ -2,6 +2,29 @@
 
 ## [Unreleased]
 
+## [0.2.7] - 2026-06-18
+
+### Added
+
+- 5 per-pair bucket `binary_sensor.<pair>_in_<bucket>` (exactly-one-on); use as automation triggers or `history_stats` inputs.
+- `Settings` diagnostic sensor (group + per-pair). State = summary `entry/exit · debounce · zones`; 14 settings as attrs.
+- `entity-distance-pair-card` + `entity-distance-avatar-card`: `show_settings` option (default off), two-line wrap-friendly stat-box.
+- `today_unaccounted_time` exposes `tracking_started` attribute (context for large initial values on install day).
+
+### Fixed
+
+- `Same Zone` always Off for person↔zone pairs. `zone.*` state is a count, not the zone name. Now compares `zone.home` → literal `"home"` (HA's `STATE_HOME`) and any other zone → `State.name` (matches `device_tracker.entity` exactly), so renamed/non-home zones also resolve.
+- `Today Mid/Far/Very Far Time` sensors stuck at 0m. Accumulator was gated by `proximity`, impossible above 500 m. Bucket time now accrues on every valid tick; `today_proximity_time` stays gated.
+- `Today Unaccounted Time` formula. Old: minutes since last `prev_calc_time` (returned `None` on invalidation, the case it should be reporting). New: `(now − midnight) − sum(today_zone_seconds)`. Clamped to 0.
+- Persistence-load tests timezone-flaky (`date.today()` vs `dt_util.now().date()`).
+
+### Internal
+
+- Rename `_calc_bucket` → `calc_bucket` (now used cross-module).
+- `TodayUnaccountedTimeSensor.available` no longer gates on `data_valid`.
+- `strings.json` keys + 10 locale translations for new entities.
+- 461 passing, 100% coverage.
+
 ## [0.2.6] - 2026-06-17
 
 ### Fixed

@@ -10,9 +10,21 @@ import pytest
 from custom_components.entity_distance.binary_sensor import (
     AllInProximityBinarySensor,
     AnyInProximityBinarySensor,
+    BucketBinarySensor,
     ProximityBinarySensor,
     SameZoneBinarySensor,
     async_setup_entry,
+)
+from custom_components.entity_distance.const import (
+    BUCKET_FAR,
+    BUCKET_MID,
+    BUCKET_NEAR,
+    BUCKET_VERY_FAR,
+    BUCKET_VERY_NEAR,
+    DEFAULT_ZONE_FAR_M,
+    DEFAULT_ZONE_MID_M,
+    DEFAULT_ZONE_NEAR_M,
+    DEFAULT_ZONE_VERY_NEAR_M,
 )
 from custom_components.entity_distance.models import GroupData, PairState, pair_key
 
@@ -77,6 +89,8 @@ def _make_same_zone_sensor(
     pair_key_val: tuple[str, str],
     state_a: str | None,
     state_b: str | None,
+    name_a: str | None = None,
+    name_b: str | None = None,
 ) -> SameZoneBinarySensor:
     coordinator = MagicMock()
     entry = MagicMock()
@@ -88,11 +102,19 @@ def _make_same_zone_sensor(
 
     def _get_state(entity_id):
         mapping = {pair_key_val[0]: state_a, pair_key_val[1]: state_b}
+        names = {pair_key_val[0]: name_a, pair_key_val[1]: name_b}
         val = mapping.get(entity_id)
         if val is None:
             return None
         s = MagicMock()
         s.state = val
+        # MagicMock's `.name` is reserved by Mock — must set via configure_mock.
+        nm = names.get(entity_id)
+        if nm is not None:
+            s.configure_mock(name=nm)
+        else:
+            # Fallback: object_id (HA's State.name default).
+            s.configure_mock(name=entity_id.split(".", 1)[1])
         return s
 
     sensor.hass = MagicMock()
@@ -153,6 +175,137 @@ class TestSameZoneBinarySensor:
         sensor = _make_same_zone_sensor(k, "home", "home")
         assert "person.alice" in sensor._attr_unique_id or "person.bob" in sensor._attr_unique_id
         assert "same_zone" in sensor._attr_unique_id
+
+    def test_true_when_person_in_zone_object_id(self):
+        # zone.* state is a count (e.g. "3"), not a name. Compare object_id instead.
+        k = pair_key("person.alice", "zone.home")
+        sensor = _make_same_zone_sensor(k, "home", "3")
+        assert sensor.is_on is True
+
+    def test_false_when_person_not_in_zone(self):
+        k = pair_key("person.alice", "zone.home")
+        sensor = _make_same_zone_sensor(k, "work", "3")
+        assert sensor.is_on is False
+
+    def test_none_when_person_state_not_home_with_zone(self):
+        # not_home is in the "_unknown" filter set — pair zone-vs-not_home → None.
+        k = pair_key("person.alice", "zone.home")
+        sensor = _make_same_zone_sensor(k, "not_home", "3")
+        assert sensor.is_on is None
+
+    def test_renamed_zone_matches_via_friendly_name(self):
+        # zone.work renamed to "My Office" → device_tracker sets person.state = "My Office".
+        # Comparison must use State.name (friendly_name), not object_id.
+        k = pair_key("person.alice", "zone.work")
+        sensor = _make_same_zone_sensor(k, "My Office", "3", name_a="alice", name_b="My Office")
+        assert sensor.is_on is True
+
+    def test_renamed_zone_mismatched_state_returns_false(self):
+        k = pair_key("person.alice", "zone.work")
+        sensor = _make_same_zone_sensor(k, "Home", "3", name_a="alice", name_b="My Office")
+        assert sensor.is_on is False
+
+    def test_zone_home_uses_literal_home_not_friendly_name(self):
+        # zone.home is special-cased in HA: state is always literal STATE_HOME ("home"),
+        # regardless of any friendly_name override. Match that exact behavior.
+        k = pair_key("person.alice", "zone.home")
+        sensor = _make_same_zone_sensor(k, "home", "3", name_a="alice", name_b="My House")
+        assert sensor.is_on is True
+
+
+def _make_bucket_sensor(
+    pair_key_val: tuple[str, str],
+    bucket: str,
+    distance_m: float | None,
+    data_valid: bool = True,
+) -> BucketBinarySensor:
+    coordinator = MagicMock()
+    ps = PairState(entity_a_id=pair_key_val[0], entity_b_id=pair_key_val[1])
+    ps.data_valid = data_valid
+    ps.distance_m = distance_m
+    coordinator.data = GroupData(pairs={pair_key_val: ps})
+    coordinator.bucket_thresholds = {
+        BUCKET_VERY_NEAR: DEFAULT_ZONE_VERY_NEAR_M,
+        BUCKET_NEAR: DEFAULT_ZONE_NEAR_M,
+        BUCKET_MID: DEFAULT_ZONE_MID_M,
+        BUCKET_FAR: DEFAULT_ZONE_FAR_M,
+    }
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    sensor = BucketBinarySensor.__new__(BucketBinarySensor)
+    sensor.coordinator = coordinator
+    sensor._entry = entry
+    sensor._pair_key = pair_key_val
+    sensor._bucket = bucket
+    sensor._attr_unique_id = f"test_{pair_key_val[0]}__{pair_key_val[1]}_in_{bucket}"
+    sensor._attr_device_info = {}
+    return sensor
+
+
+class TestBucketBinarySensor:
+    def test_very_near_on_when_under_100m(self):
+        k = pair_key("person.alice", "person.bob")
+        s = _make_bucket_sensor(k, BUCKET_VERY_NEAR, 50.0)
+        assert s.is_on is True
+
+    def test_very_near_off_when_far(self):
+        k = pair_key("person.alice", "person.bob")
+        s = _make_bucket_sensor(k, BUCKET_VERY_NEAR, 5000.0)
+        assert s.is_on is False
+
+    def test_near_on_in_band(self):
+        k = pair_key("person.alice", "person.bob")
+        s = _make_bucket_sensor(k, BUCKET_NEAR, 300.0)
+        assert s.is_on is True
+
+    def test_mid_on_in_band(self):
+        k = pair_key("person.alice", "person.bob")
+        s = _make_bucket_sensor(k, BUCKET_MID, 1500.0)
+        assert s.is_on is True
+
+    def test_far_on_in_band(self):
+        k = pair_key("person.alice", "person.bob")
+        s = _make_bucket_sensor(k, BUCKET_FAR, 5000.0)
+        assert s.is_on is True
+
+    def test_very_far_on_above_far(self):
+        k = pair_key("person.alice", "person.bob")
+        s = _make_bucket_sensor(k, BUCKET_VERY_FAR, 50000.0)
+        assert s.is_on is True
+
+    def test_returns_none_when_data_invalid(self):
+        k = pair_key("person.alice", "person.bob")
+        s = _make_bucket_sensor(k, BUCKET_VERY_NEAR, 50.0, data_valid=False)
+        assert s.is_on is None
+
+    def test_returns_none_when_distance_missing(self):
+        k = pair_key("person.alice", "person.bob")
+        s = _make_bucket_sensor(k, BUCKET_VERY_NEAR, None)
+        assert s.is_on is None
+
+    def test_exactly_one_bucket_on_at_a_time(self):
+        k = pair_key("person.alice", "person.bob")
+        on_count = sum(
+            1
+            for b in (
+                BUCKET_VERY_NEAR,
+                BUCKET_NEAR,
+                BUCKET_MID,
+                BUCKET_FAR,
+                BUCKET_VERY_FAR,
+            )
+            if _make_bucket_sensor(k, b, 1500.0).is_on
+        )
+        assert on_count == 1
+
+    def test_exact_threshold_lands_in_lower_bucket(self):
+        # _calc_bucket uses `<= threshold`; exactly 100.0 m should be very_near.
+        k = pair_key("person.alice", "person.bob")
+        assert _make_bucket_sensor(k, BUCKET_VERY_NEAR, 100.0).is_on is True
+        assert _make_bucket_sensor(k, BUCKET_NEAR, 100.0).is_on is False
+        # 500.0 m exactly → near (not mid).
+        assert _make_bucket_sensor(k, BUCKET_NEAR, 500.0).is_on is True
+        assert _make_bucket_sensor(k, BUCKET_MID, 500.0).is_on is False
 
 
 class TestAsyncSetupEntry:

@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock
 
+from homeassistant.util import dt as dt_util
 import pytest
 
 from custom_components.entity_distance.models import GroupData, PairState, pair_key
@@ -86,50 +87,51 @@ class TestEntityStateSensor:
 
 
 class TestTodayUnaccountedTimeSensor:
-    def _make(self, prev_calc_time: datetime | None) -> TodayUnaccountedTimeSensor:
+    def _make(
+        self, today_zone_seconds: dict[str, float] | None = None
+    ) -> TodayUnaccountedTimeSensor:
         ps = PairState(entity_a_id="person.alice", entity_b_id="person.bob")
         ps.data_valid = True
-        ps.prev_calc_time = prev_calc_time
+        ps.today_zone_seconds = today_zone_seconds or {}
         return _make_sensor(TodayUnaccountedTimeSensor, ps)
 
-    def test_returns_none_when_no_prev_calc(self):
-        sensor = self._make(None)
-        assert sensor.native_value is None
-
-    def test_recent_update_returns_small_gap(self):
-        now = datetime.now().astimezone()
-        sensor = self._make(now - timedelta(seconds=90))
+    def test_returns_zero_when_all_time_accounted(self):
+        # Account for all of today's elapsed seconds.
+        now = dt_util.now()
+        midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        elapsed = (now - midnight).total_seconds()
+        sensor = self._make({"very_near": elapsed})
         val = sensor.native_value
         assert val is not None
-        # ~1.5 min, allow 0–3 min range
-        assert 1.0 <= val <= 3.0
+        # Floating-point + rounding tolerance.
+        assert 0.0 <= val < 1.0
 
-    def test_zero_gap_when_just_updated(self):
-        now = datetime.now().astimezone()
-        sensor = self._make(now)
+    def test_returns_full_elapsed_when_nothing_accounted(self):
+        now = dt_util.now()
+        midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        elapsed_min = (now - midnight).total_seconds() / 60
+        sensor = self._make({})
+        val = sensor.native_value
+        assert val is not None
+        assert val == pytest.approx(elapsed_min, abs=1.0)
+
+    def test_returns_partial_when_partially_accounted(self):
+        # 600 s accounted leaves elapsed - 600 s unaccounted (clamped to 0).
+        now = dt_util.now()
+        midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        elapsed_min = (now - midnight).total_seconds() / 60
+        sensor = self._make({"near": 600.0, "far": 300.0})
+        val = sensor.native_value
+        assert val is not None
+        expected = max(0.0, elapsed_min - 15.0)
+        assert val == pytest.approx(expected, abs=1.0)
+
+    def test_never_negative_when_accounted_overshoots(self):
+        # Accounted time exceeds elapsed (should clamp to 0, not go negative).
+        sensor = self._make({"very_near": 999_999.0})
         val = sensor.native_value
         assert val is not None
         assert val >= 0.0
-
-    def test_gap_capped_at_midnight_for_yesterday_calc(self):
-        now = datetime.now().astimezone()
-        yesterday = now - timedelta(days=1)
-        sensor = self._make(yesterday)
-        val = sensor.native_value
-        assert val is not None
-        assert val < 1440.0
-        assert val >= 0.0
-
-    def test_two_hours_ago_within_today(self):
-        now = datetime.now().astimezone()
-        today_midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        two_hours_ago = now - timedelta(hours=2)
-        if two_hours_ago < today_midnight:
-            return
-        sensor = self._make(two_hours_ago)
-        val = sensor.native_value
-        assert val is not None
-        assert 119.0 <= val <= 122.0
 
 
 # ---------------------------------------------------------------------------
@@ -167,7 +169,7 @@ class TestPersistence:
 
     @pytest.mark.asyncio
     async def test_load_restores_today_counters_same_day(self):
-        today = date.today().isoformat()
+        today = dt_util.now().date().isoformat()
         k = pair_key("person.alice", "person.bob")
         stored = {
             f"{k[0]}__{k[1]}": {
@@ -187,7 +189,7 @@ class TestPersistence:
 
     @pytest.mark.asyncio
     async def test_load_discards_today_counters_stale_day(self):
-        yesterday = (date.today() - timedelta(days=1)).isoformat()
+        yesterday = (dt_util.now().date() - timedelta(days=1)).isoformat()
         k = pair_key("person.alice", "person.bob")
         stored = {
             f"{k[0]}__{k[1]}": {
@@ -207,7 +209,7 @@ class TestPersistence:
 
     @pytest.mark.asyncio
     async def test_load_restores_last_seen_together(self):
-        today = date.today().isoformat()
+        today = dt_util.now().date().isoformat()
         ts = "2026-05-13T10:00:00+00:00"
         k = pair_key("person.alice", "person.bob")
         stored = {
@@ -239,7 +241,7 @@ class TestPersistence:
         coordinator = self._make_coordinator()
         k = pair_key("person.alice", "person.bob")
         ps = coordinator._pair_states[k]
-        ps.today_reset_date = date.today()
+        ps.today_reset_date = dt_util.now().date()
         ps.today_proximity_seconds = 300.0
         ps.today_zone_seconds = {"very_far": 1200.0}
         ps.proximity_duration_s = 60.0

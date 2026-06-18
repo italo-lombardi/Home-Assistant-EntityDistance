@@ -123,6 +123,7 @@ async def async_setup_entry(
                     DistanceSensor(coordinator, entry, pair_dev, k),
                     BucketSensor(coordinator, entry, pair_dev, k),
                     BucketLevelSensor(coordinator, entry, pair_dev, k),
+                    SettingsSensor(coordinator, entry, pair_dev, k),
                 ]
             )
         else:
@@ -154,6 +155,7 @@ async def async_setup_entry(
                     LastUpdateSensor(coordinator, entry, pair_dev, k, a_name, b_name, "b"),
                     UpdateCountSensor(coordinator, entry, pair_dev, k, a_name, b_name, "a"),
                     UpdateCountSensor(coordinator, entry, pair_dev, k, a_name, b_name, "b"),
+                    SettingsSensor(coordinator, entry, pair_dev, k),
                 ]
             )
 
@@ -601,12 +603,13 @@ class MinDistanceSensor(CoordinatorEntity[EntityDistanceCoordinator], SensorEnti
 
 
 class SettingsSensor(CoordinatorEntity[EntityDistanceCoordinator], SensorEntity):
-    """Diagnostic sensor exposing all proximity / filter settings as attributes.
+    """Diagnostic sensor exposing all proximity / filter settings.
 
-    State is the constant string "configured"; thresholds, debounce, reliability
-    flags, and zone boundaries are surfaced via ``extra_state_attributes`` so the
-    full configuration is visible on the device card without dumping every
-    setting as its own entity.
+    State is a concise summary: ``"<entry>/<exit>m · <debounce>s · zones
+    <vn>/<n>/<m>/<f>m"``. Full settings dict surfaced via
+    ``extra_state_attributes``. Registered on the group device once and on
+    every pair device so the per-pair Lovelace card can reference a
+    pair-slug-derived entity_id.
     """
 
     _attr_has_entity_name = True
@@ -618,10 +621,16 @@ class SettingsSensor(CoordinatorEntity[EntityDistanceCoordinator], SensorEntity)
         coordinator: EntityDistanceCoordinator,
         entry: ConfigEntry,
         device_info: DeviceInfo,
+        pair_key_val: tuple[str, str] | None = None,
     ) -> None:
         super().__init__(coordinator)
         self._entry = entry
-        self._attr_unique_id = f"{entry.entry_id}_settings"
+        if pair_key_val is None:
+            self._attr_unique_id = f"{entry.entry_id}_settings"
+        else:
+            self._attr_unique_id = (
+                f"{entry.entry_id}_{_pair_key_str(pair_key_val)}_settings"
+            )
         self._attr_device_info = device_info
 
     @property

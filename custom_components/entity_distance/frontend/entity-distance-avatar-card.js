@@ -472,6 +472,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         show_last_seen: false,
         show_proximity_rate: false,
         show_unaccounted_time: false,
+        show_settings: false,
         show_entity_states: true,
         compact: false,
       };
@@ -493,6 +494,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         show_last_seen: false,
         show_proximity_rate: false,
         show_unaccounted_time: false,
+        show_settings: false,
         show_entity_states: true,
         compact: false,
         ...config,
@@ -521,6 +523,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         `${p}_proximity_duration`, `${p}_proximity_tracking_started`,
         `${p}_proximity_rate`, `${p}_today_proximity_time`,
         `${p}_today_unaccounted_time`, `${p}_last_seen_together`,
+        `${p}_settings`,
       ];
       const distState = this.hass?.states[`${p}_distance`];
       const entityA = this._config?.entity_a || distState?.attributes?.entity_a;
@@ -597,6 +600,8 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       const todayMin = _num(this.hass, slug, "today_proximity_time");
       const unaccountedMin = _num(this.hass, slug, "today_unaccounted_time");
       const lastSeen = _val(this.hass, slug, "last_seen_together");
+      const settings = _val(this.hass, slug, "settings");
+      const settingsAttrs = this.hass?.states?.[`sensor.${slug}_settings`]?.attributes || {};
 
       const bucketLabel = bucket ? bucket.replace(/_/g, " ") : null;
       const zoneColor = bucket ? _zoneColor(bucket) : null;
@@ -623,7 +628,8 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       const showEta = c.show_eta && direction === "approaching" && etaMin !== null;
       const showLast = c.show_last_seen;
       const showUnaccounted = c.show_unaccounted_time && unaccountedMin !== null && unaccountedMin > 0;
-      const hasStats = showDur || showRate || showToday || showSpeed || showEta || showLast || showUnaccounted;
+      const showSettings = c.show_settings && settings;
+      const hasStats = showDur || showRate || showToday || showSpeed || showEta || showLast || showUnaccounted || showSettings;
 
       return html`
         <ha-card class="${compactClass}">
@@ -728,6 +734,16 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
                   <span class="stat-box-label">⚠ No data today</span>
                   <span class="stat-box-value" style="color:#d97706">${_formatMinutes(unaccountedMin)}</span>
                   <span class="stat-box-sub">gap since last calculation</span>
+                </div>` : nothing}
+              ${showSettings ? html`
+                <div class="stat-box full-width"
+                  style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.25)">
+                  <span class="stat-box-label">⚙ Settings</span>
+                  <span class="stat-box-value" style="color:#4338ca;font-size:13px;font-family:ui-monospace,monospace;line-height:1.5;white-space:normal;word-break:break-word">
+                    <div>${settingsAttrs.entry_threshold_m ?? "?"}/${settingsAttrs.exit_threshold_m ?? "?"}m · ${settingsAttrs.debounce_s ?? "?"}s</div>
+                    <div style="opacity:0.85">zones ${settingsAttrs.zone_very_near_m ?? "?"}/${settingsAttrs.zone_near_m ?? "?"}/${settingsAttrs.zone_mid_m ?? "?"}/${settingsAttrs.zone_far_m ?? "?"}m</div>
+                  </span>
+                  <span class="stat-box-sub">entry/exit · debounce · zones</span>
                 </div>` : nothing}
             </div>
           ` : nothing}
@@ -900,6 +916,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
           ${this._checkRow("show_proximity_rate", "Show proximity rate % (duration ÷ time since tracking started)")}
           ${this._checkRow("show_last_seen", "Show last seen together")}
           ${this._checkRow("show_unaccounted_time", "Show data gap warning (time since last calculation)")}
+          ${this._checkRow("show_settings", "Show proximity settings summary (entry/exit · debounce · zones)")}
 
           <div class="section-title">Layout</div>
           ${this._checkRow("compact", "Compact mode")}

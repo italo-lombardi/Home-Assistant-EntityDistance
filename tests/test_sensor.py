@@ -1343,13 +1343,16 @@ class TestAsyncSetupEntrySensor:
         await async_setup_entry(hass, entry, mock_add)
 
         types = [type(e).__name__ for e in added]
-        # Zone-zone pair: per-pair sensors (3) + group-level SettingsSensor (1).
+        # Zone-zone pair: 4 per-pair sensors (Distance/Bucket/BucketLevel/Settings)
+        # plus 1 group-level Settings → 5 total, 2 of them SettingsSensor.
         assert set(types) == {
             "DistanceSensor",
             "BucketSensor",
             "BucketLevelSensor",
             "SettingsSensor",
         }
+        assert len(added) == 5
+        assert sum(1 for t in types if t == "SettingsSensor") == 2
 
     @pytest.mark.asyncio
     async def test_person_pair_gets_full_sensor_set(self):

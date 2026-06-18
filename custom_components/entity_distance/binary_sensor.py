@@ -15,7 +15,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import BUCKETS, DOMAIN
-from .coordinator import EntityDistanceCoordinator, _calc_bucket
+from .coordinator import EntityDistanceCoordinator, calc_bucket
 from .models import PairState, pair_key
 
 _LOGGER = logging.getLogger(__name__)
@@ -187,7 +187,7 @@ class BucketBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], BinarySen
         ps = self._pair
         if not ps.data_valid or ps.distance_m is None:
             return None
-        current = _calc_bucket(ps.distance_m, self.coordinator.bucket_thresholds)
+        current = calc_bucket(ps.distance_m, self.coordinator.bucket_thresholds)
         return current == self._bucket
 
 

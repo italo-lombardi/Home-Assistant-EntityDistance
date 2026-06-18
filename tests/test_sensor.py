@@ -624,6 +624,17 @@ class TestTodayUnaccountedTimeSensor:
         sensor.coordinator.last_update_success = False
         assert sensor.native_value is None
 
+    def test_available_when_pair_invalid_but_coordinator_ok(self):
+        # Sensor reports unaccounted time including invalid windows — must not
+        # gate on data_valid.
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.data_valid = False
+        ps.today_zone_seconds = {}
+        sensor = _make_unaccounted_sensor(ps)
+        sensor.coordinator.last_update_success = True
+        assert sensor.available is True
+        assert sensor.native_value is not None
+
 
 # ---------------------------------------------------------------------------
 # BucketSensor tests
@@ -1229,6 +1240,63 @@ class TestProximityTrackingStartedSensorExtra:
         assert sensor.native_value == ts
 
 
+# ---------------------------------------------------------------------------
+# SettingsSensor tests
+# ---------------------------------------------------------------------------
+
+
+class TestSettingsSensor:
+    def _make(self):
+        from custom_components.entity_distance.sensor import SettingsSensor
+
+        coordinator = MagicMock()
+        coordinator.last_update_success = True
+        coordinator.settings_snapshot = {
+            "entry_threshold_m": 200.0,
+            "exit_threshold_m": 500.0,
+            "debounce_s": 10,
+            "max_accuracy_m": 150,
+            "max_speed_kmh": 1000,
+            "resync_silence_s": 600,
+            "resync_hold_s": 60,
+            "min_updates_reliable": 3,
+            "updates_window_s": 1800,
+            "require_reliable": False,
+            "zone_very_near_m": 100,
+            "zone_near_m": 500,
+            "zone_mid_m": 2000,
+            "zone_far_m": 10000,
+        }
+        entry = MagicMock()
+        entry.entry_id = "test"
+        sensor = SettingsSensor.__new__(SettingsSensor)
+        sensor.coordinator = coordinator
+        sensor._entry = entry
+        sensor._attr_unique_id = "test_settings"
+        sensor._attr_device_info = {}
+        return sensor
+
+    def test_state_is_configured(self):
+        sensor = self._make()
+        assert sensor.native_value == "configured"
+
+    def test_attributes_carry_all_settings(self):
+        sensor = self._make()
+        attrs = sensor.extra_state_attributes
+        assert attrs["entry_threshold_m"] == 200.0
+        assert attrs["exit_threshold_m"] == 500.0
+        assert attrs["zone_very_near_m"] == 100
+        assert attrs["zone_far_m"] == 10000
+        assert attrs["require_reliable"] is False
+        # All 14 keys present.
+        assert len(attrs) == 14
+
+    def test_unavailable_when_coordinator_failed(self):
+        sensor = self._make()
+        sensor.coordinator.last_update_success = False
+        assert sensor.available is False
+
+
 class TestAsyncSetupEntrySensor:
     """Test sensor.py async_setup_entry zone-pair branching."""
 
@@ -1254,7 +1322,13 @@ class TestAsyncSetupEntrySensor:
         await async_setup_entry(hass, entry, mock_add)
 
         types = [type(e).__name__ for e in added]
-        assert set(types) == {"DistanceSensor", "BucketSensor", "BucketLevelSensor"}
+        # Zone-zone pair: per-pair sensors (3) + group-level SettingsSensor (1).
+        assert set(types) == {
+            "DistanceSensor",
+            "BucketSensor",
+            "BucketLevelSensor",
+            "SettingsSensor",
+        }
 
     @pytest.mark.asyncio
     async def test_person_pair_gets_full_sensor_set(self):

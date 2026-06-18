@@ -125,7 +125,7 @@ def _get_coords(state: State) -> tuple[float, float, float | None] | None:
     return lat, lon, accuracy
 
 
-def _calc_bucket(distance_m: float, thresholds: dict[str, float]) -> str:
+def calc_bucket(distance_m: float, thresholds: dict[str, float]) -> str:
     for bucket, threshold in thresholds.items():
         if distance_m <= threshold:
             return bucket
@@ -200,6 +200,27 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
     @property
     def updates_window_s(self) -> float:
         return self._updates_window_s
+
+    @property
+    def settings_snapshot(self) -> dict[str, float | int | bool]:
+        """All proximity / filter settings the coordinator was constructed with.
+        Exposed so a diagnostic sensor can present them on the device card."""
+        return {
+            "entry_threshold_m": self._entry_threshold_m,
+            "exit_threshold_m": self._exit_threshold_m,
+            "debounce_s": self._debounce_s,
+            "max_accuracy_m": self._max_accuracy_m,
+            "max_speed_kmh": self._max_speed_kmh,
+            "resync_silence_s": self._resync_silence_s,
+            "resync_hold_s": self._resync_hold_s,
+            "min_updates_reliable": self._min_updates_reliable,
+            "updates_window_s": self._updates_window_s,
+            "require_reliable": self._require_reliable,
+            "zone_very_near_m": self._bucket_thresholds[BUCKET_VERY_NEAR],
+            "zone_near_m": self._bucket_thresholds[BUCKET_NEAR],
+            "zone_mid_m": self._bucket_thresholds[BUCKET_MID],
+            "zone_far_m": self._bucket_thresholds[BUCKET_FAR],
+        }
 
     async def async_setup(self) -> None:
         await self._async_load_state()
@@ -355,7 +376,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                     post_inv = max(0.0, elapsed - pre_inv)
                     ps.today_proximity_seconds += post_inv
                     if ps.distance_m is not None and post_inv > 0:
-                        inv_bucket = _calc_bucket(ps.distance_m, self._bucket_thresholds)
+                        inv_bucket = calc_bucket(ps.distance_m, self._bucket_thresholds)
                         ps.today_zone_seconds[inv_bucket] = (
                             ps.today_zone_seconds.get(inv_bucket, 0.0) + post_inv
                         )
@@ -567,7 +588,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                         post_hold = max(0.0, elapsed - pre_hold)
                         ps.today_proximity_seconds += post_hold
                         if ps.distance_m is not None and post_hold > 0:
-                            hold_bucket = _calc_bucket(ps.distance_m, self._bucket_thresholds)
+                            hold_bucket = calc_bucket(ps.distance_m, self._bucket_thresholds)
                             ps.today_zone_seconds[hold_bucket] = (
                                 ps.today_zone_seconds.get(hold_bucket, 0.0) + post_hold
                             )
@@ -674,7 +695,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             # time-at-distance for each zone, not time-in-proximity-at-distance.
             # On EXIT tick, _elapsed_s covers time when pair was inside threshold —
             # use prev_distance_m_snapshot (the proximity-era distance) for the bucket.
-            bucket_for_elapsed = _calc_bucket(
+            bucket_for_elapsed = calc_bucket(
                 prev_distance_m_snapshot
                 if was_proximity and prev_distance_m_snapshot is not None
                 else dist_m,
@@ -765,7 +786,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 else None,
                 "proximity_since": ps.proximity_since.isoformat() if ps.proximity_since else None,
                 "prev_calc_time": ps.prev_calc_time.isoformat() if ps.prev_calc_time else None,
-                "last_bucket": _calc_bucket(ps.distance_m, self._bucket_thresholds)
+                "last_bucket": calc_bucket(ps.distance_m, self._bucket_thresholds)
                 if ps.distance_m is not None
                 else None,
             }

@@ -226,6 +226,9 @@
       },
       "min_distance": {
         "name": "Minimumsavstand"
+      },
+      "settings": {
+        "name": "Innstillinger"
       }
     },
     "binary_sensor": {

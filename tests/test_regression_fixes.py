@@ -1198,7 +1198,11 @@ class TestSensorAvailableFalseReturnsNone:
         assert s.native_value is None
 
     def test_today_unaccounted_returns_none(self):
+        # TodayUnaccountedTimeSensor intentionally does NOT gate on data_valid —
+        # its purpose is reporting time during invalid windows. Returns None
+        # only when coordinator itself failed.
         from datetime import UTC, datetime
+        from unittest.mock import MagicMock
 
         from custom_components.entity_distance.sensor import TodayUnaccountedTimeSensor
 
@@ -1206,6 +1210,11 @@ class TestSensorAvailableFalseReturnsNone:
             TodayUnaccountedTimeSensor, {"prev_calc_time": datetime.now(UTC)}
         )
         s._sensor_key = "today_unaccounted_time"
+        # data_valid=False but coordinator OK → still reports.
+        assert s.native_value is not None
+        # Coordinator failure → None.
+        s.coordinator = MagicMock()
+        s.coordinator.last_update_success = False
         assert s.native_value is None
 
     def test_entity_state_returns_none_when_coordinator_failed(self):

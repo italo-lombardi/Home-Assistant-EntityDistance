@@ -177,6 +177,12 @@ class TestSameZoneBinarySensor:
         sensor = _make_same_zone_sensor(k, "work", "3")
         assert sensor.is_on is False
 
+    def test_none_when_person_state_not_home_with_zone(self):
+        # not_home is in the "_unknown" filter set — pair zone-vs-not_home → None.
+        k = pair_key("person.alice", "zone.home")
+        sensor = _make_same_zone_sensor(k, "not_home", "3")
+        assert sensor.is_on is None
+
 
 def _make_bucket_sensor(
     pair_key_val: tuple[str, str],
@@ -262,6 +268,15 @@ class TestBucketBinarySensor:
             if _make_bucket_sensor(k, b, 1500.0).is_on
         )
         assert on_count == 1
+
+    def test_exact_threshold_lands_in_lower_bucket(self):
+        # _calc_bucket uses `<= threshold`; exactly 100.0 m should be very_near.
+        k = pair_key("person.alice", "person.bob")
+        assert _make_bucket_sensor(k, BUCKET_VERY_NEAR, 100.0).is_on is True
+        assert _make_bucket_sensor(k, BUCKET_NEAR, 100.0).is_on is False
+        # 500.0 m exactly → near (not mid).
+        assert _make_bucket_sensor(k, BUCKET_NEAR, 500.0).is_on is True
+        assert _make_bucket_sensor(k, BUCKET_MID, 500.0).is_on is False
 
 
 class TestAsyncSetupEntry:

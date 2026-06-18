@@ -32,7 +32,7 @@ from .const import (
     DIRECTIONS,
     DOMAIN,
 )
-from .coordinator import EntityDistanceCoordinator, _calc_bucket
+from .coordinator import EntityDistanceCoordinator, calc_bucket
 from .models import PairState, pair_key
 
 _LOGGER = logging.getLogger(__name__)
@@ -158,8 +158,9 @@ async def async_setup_entry(
             )
 
     # Group-level sensors (on the parent group device)
+    group_dev = _group_device_info(entry, group_name)
+    all_sensors.append(SettingsSensor(coordinator, entry, group_dev))
     if len(entities_list) > 2:
-        group_dev = _group_device_info(entry, group_name)
         all_sensors.extend(
             [
                 MinDistanceSensor(coordinator, entry, group_dev),
@@ -237,7 +238,7 @@ class BucketSensor(EntityDistanceSensorBase):
     def native_value(self) -> str | None:
         if self._pair.distance_m is None or not self._pair.data_valid:
             return None
-        return _calc_bucket(self._pair.distance_m, self.coordinator.bucket_thresholds)
+        return calc_bucket(self._pair.distance_m, self.coordinator.bucket_thresholds)
 
 
 class BucketLevelSensor(EntityDistanceSensorBase):
@@ -251,7 +252,7 @@ class BucketLevelSensor(EntityDistanceSensorBase):
     def native_value(self) -> int | None:
         if self._pair.distance_m is None or not self._pair.data_valid:
             return None
-        bucket = _calc_bucket(self._pair.distance_m, self.coordinator.bucket_thresholds)
+        bucket = calc_bucket(self._pair.distance_m, self.coordinator.bucket_thresholds)
         return _BUCKET_LEVEL[bucket]
 
 
@@ -540,6 +541,12 @@ class TodayUnaccountedTimeSensor(EntityDistanceSensorBase):
         super().__init__(coordinator, entry, device_info, k, "today_unaccounted_time")
 
     @property
+    def available(self) -> bool:
+        # Reports the unaccounted slice of today regardless of pair validity —
+        # the metric's purpose includes invalid windows (GPS gone, holds, restarts).
+        return self.coordinator.last_update_success
+
+    @property
     def native_value(self) -> float | None:
         if not self.available:
             return None
@@ -580,3 +587,40 @@ class MinDistanceSensor(CoordinatorEntity[EntityDistanceCoordinator], SensorEnti
         if not self.available:
             return None
         return self.coordinator.data.min_distance_m
+
+
+class SettingsSensor(CoordinatorEntity[EntityDistanceCoordinator], SensorEntity):
+    """Diagnostic sensor exposing all proximity / filter settings as attributes.
+
+    State is the constant string "configured"; thresholds, debounce, reliability
+    flags, and zone boundaries are surfaced via ``extra_state_attributes`` so the
+    full configuration is visible on the device card without dumping every
+    setting as its own entity.
+    """
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "settings"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(
+        self,
+        coordinator: EntityDistanceCoordinator,
+        entry: ConfigEntry,
+        device_info: DeviceInfo,
+    ) -> None:
+        super().__init__(coordinator)
+        self._entry = entry
+        self._attr_unique_id = f"{entry.entry_id}_settings"
+        self._attr_device_info = device_info
+
+    @property
+    def available(self) -> bool:
+        return self.coordinator.last_update_success
+
+    @property
+    def native_value(self) -> str:
+        return "configured"
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        return self.coordinator.settings_snapshot

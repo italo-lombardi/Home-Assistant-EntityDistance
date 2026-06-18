@@ -3,7 +3,7 @@
  * Lovelace custom card for the Entity Distance integration.
  */
 
-const CARD_VERSION = "0.2.7";
+const CARD_VERSION = "0.2.8";
 
 console.info(
   `%c ENTITY-DISTANCE-PAIR-CARD %c v${CARD_VERSION} %c — github.com/italo-lombardi`,
@@ -634,6 +634,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       const unaccountedMin = _num(this.hass, slug, "today_unaccounted_time");
       const lastSeen = _val(this.hass, slug, "last_seen_together");
       const settings = _val(this.hass, slug, "settings");
+      const settingsAttrs = this.hass?.states?.[`sensor.${slug}_settings`]?.attributes || {};
 
       const bucketLabel = bucket ? bucket.replace(/_/g, " ") : null;
       const zoneColor = bucket ? _zoneColor(bucket) : null;
@@ -757,7 +758,10 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
                 ${c.show_settings && settings ? html`
                   <div class="stat-box full-width" style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.25)">
                     <span class="stat-box-label">⚙ Settings</span>
-                    <span class="stat-box-value" style="color:#4338ca;font-size:14px;font-family:ui-monospace,monospace">${settings}</span>
+                    <span class="stat-box-value" style="color:#4338ca;font-size:13px;font-family:ui-monospace,monospace;line-height:1.5;white-space:normal;word-break:break-word">
+                      <div>${settingsAttrs.entry_threshold_m ?? "?"}/${settingsAttrs.exit_threshold_m ?? "?"}m · ${settingsAttrs.debounce_s ?? "?"}s</div>
+                      <div style="opacity:0.85">zones ${settingsAttrs.zone_very_near_m ?? "?"}/${settingsAttrs.zone_near_m ?? "?"}/${settingsAttrs.zone_mid_m ?? "?"}/${settingsAttrs.zone_far_m ?? "?"}m</div>
+                    </span>
                     <span class="stat-box-sub">entry/exit · debounce · zones</span>
                   </div>` : nothing}
               </div>`;

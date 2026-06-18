@@ -89,6 +89,8 @@ def _make_same_zone_sensor(
     pair_key_val: tuple[str, str],
     state_a: str | None,
     state_b: str | None,
+    name_a: str | None = None,
+    name_b: str | None = None,
 ) -> SameZoneBinarySensor:
     coordinator = MagicMock()
     entry = MagicMock()
@@ -100,11 +102,19 @@ def _make_same_zone_sensor(
 
     def _get_state(entity_id):
         mapping = {pair_key_val[0]: state_a, pair_key_val[1]: state_b}
+        names = {pair_key_val[0]: name_a, pair_key_val[1]: name_b}
         val = mapping.get(entity_id)
         if val is None:
             return None
         s = MagicMock()
         s.state = val
+        # MagicMock's `.name` is reserved by Mock — must set via configure_mock.
+        nm = names.get(entity_id)
+        if nm is not None:
+            s.configure_mock(name=nm)
+        else:
+            # Fallback: object_id (HA's State.name default).
+            s.configure_mock(name=entity_id.split(".", 1)[1])
         return s
 
     sensor.hass = MagicMock()
@@ -182,6 +192,25 @@ class TestSameZoneBinarySensor:
         k = pair_key("person.alice", "zone.home")
         sensor = _make_same_zone_sensor(k, "not_home", "3")
         assert sensor.is_on is None
+
+    def test_renamed_zone_matches_via_friendly_name(self):
+        # zone.work renamed to "My Office" → device_tracker sets person.state = "My Office".
+        # Comparison must use State.name (friendly_name), not object_id.
+        k = pair_key("person.alice", "zone.work")
+        sensor = _make_same_zone_sensor(k, "My Office", "3", name_a="alice", name_b="My Office")
+        assert sensor.is_on is True
+
+    def test_renamed_zone_mismatched_state_returns_false(self):
+        k = pair_key("person.alice", "zone.work")
+        sensor = _make_same_zone_sensor(k, "Home", "3", name_a="alice", name_b="My Office")
+        assert sensor.is_on is False
+
+    def test_zone_home_uses_literal_home_not_friendly_name(self):
+        # zone.home is special-cased in HA: state is always literal STATE_HOME ("home"),
+        # regardless of any friendly_name override. Match that exact behavior.
+        k = pair_key("person.alice", "zone.home")
+        sensor = _make_same_zone_sensor(k, "home", "3", name_a="alice", name_b="My House")
+        assert sensor.is_on is True
 
 
 def _make_bucket_sensor(

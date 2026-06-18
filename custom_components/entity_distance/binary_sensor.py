@@ -20,6 +20,24 @@ from .models import PairState, pair_key
 
 _LOGGER = logging.getLogger(__name__)
 
+_HOME_ZONE_ENTITY_ID = "zone.home"
+
+
+def _zone_match_value(entity_id: str, state) -> str:
+    """Value to compare against the other side's tracker state for same-zone matching.
+
+    Mirrors the logic in HA's device_tracker.entity:
+      - zone.home → literal "home" (STATE_HOME)
+      - any other zone → State.name (friendly_name, falls back to object_id)
+      - non-zone entity → its raw state
+    """
+    if not entity_id.startswith("zone."):
+        return state.state
+    if entity_id == _HOME_ZONE_ENTITY_ID:
+        return "home"
+    # State.name returns the configured friendly_name, or object_id if unset.
+    return state.name
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -135,19 +153,14 @@ class SameZoneBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], BinaryS
         state_b = self.hass.states.get(self._pair_key[1])
         if state_a is None or state_b is None:
             return None
-        # For zone.* entries the entity state is a count (e.g. "3"), not the
-        # zone name. Use the entity's object_id so a person whose state is
-        # "home" matches zone.home.
-        zone_a = (
-            self._pair_key[0].split(".", 1)[1]
-            if self._pair_key[0].startswith("zone.")
-            else state_a.state
-        )
-        zone_b = (
-            self._pair_key[1].split(".", 1)[1]
-            if self._pair_key[1].startswith("zone.")
-            else state_b.state
-        )
+        # A `zone.*` entity's state is a tracker count (e.g. "3"), not the
+        # zone name. HA's device_tracker / person sets state to either the
+        # literal "home" (for zone.home, see device_tracker/entity.py) or the
+        # zone State.name — which is the configured friendly_name (or falls
+        # back to object_id). Match that lookup so renamed/non-home zones
+        # also resolve correctly.
+        zone_a = _zone_match_value(self._pair_key[0], state_a)
+        zone_b = _zone_match_value(self._pair_key[1], state_b)
         _unknown = {"unknown", "unavailable", "not_home"}
         if zone_a in _unknown or zone_b in _unknown:
             return None

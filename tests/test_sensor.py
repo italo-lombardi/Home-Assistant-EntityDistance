@@ -1278,9 +1278,10 @@ class TestSettingsSensor:
         sensor._attr_device_info = {}
         return sensor
 
-    def test_state_is_configured(self):
+    def test_state_summary(self):
         sensor = self._make()
-        assert sensor.native_value == "configured"
+        # Format: "entry/exit m · debounce s · zones vn/n/m/f m"
+        assert sensor.native_value == "200/500m · 10s · zones 100/500/2000/10000m"
 
     def test_attributes_carry_all_settings(self):
         sensor = self._make()

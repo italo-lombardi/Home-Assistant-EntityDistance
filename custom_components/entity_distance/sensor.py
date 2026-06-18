@@ -619,7 +619,13 @@ class SettingsSensor(CoordinatorEntity[EntityDistanceCoordinator], SensorEntity)
 
     @property
     def native_value(self) -> str:
-        return "configured"
+        s = self.coordinator.settings_snapshot
+        return (
+            f"{int(s['entry_threshold_m'])}/{int(s['exit_threshold_m'])}m "
+            f"· {int(s['debounce_s'])}s "
+            f"· zones {int(s['zone_very_near_m'])}/{int(s['zone_near_m'])}"
+            f"/{int(s['zone_mid_m'])}/{int(s['zone_far_m'])}m"
+        )
 
     @property
     def extra_state_attributes(self) -> dict:

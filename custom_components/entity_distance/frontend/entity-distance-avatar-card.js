@@ -4,7 +4,7 @@
  * People-focused layout: two avatars side-by-side with distance in the middle.
  */
 
-const PEOPLE_CARD_VERSION = "0.2.8";
+const PEOPLE_CARD_VERSION = "0.2.7";
 
 console.info(
   `%c ENTITY-DISTANCE-AVATAR-CARD %c v${PEOPLE_CARD_VERSION} %c — github.com/italo-lombardi`,

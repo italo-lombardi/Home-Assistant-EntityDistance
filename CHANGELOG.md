@@ -2,13 +2,6 @@
 
 ## [Unreleased]
 
-## [0.2.8] - 2026-06-18
-
-### Added
-
-- **Per-pair `Settings` sensor on the pair device** — group-level `Settings` sensor was added in 0.2.7; this release also registers it on each pair device so the Lovelace pair-card can reference a pair-slug-derived entity_id.
-- **`show_settings` option on `entity-distance-pair-card`** (default off). Renders a stat-box with the proximity / debounce / zone summary on two wrap-friendly lines so it fits narrow cards. Checkbox in the visual editor.
-
 ## [0.2.7] - 2026-06-18
 
 ### Added

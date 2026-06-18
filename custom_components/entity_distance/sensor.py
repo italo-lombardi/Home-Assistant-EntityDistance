@@ -628,9 +628,7 @@ class SettingsSensor(CoordinatorEntity[EntityDistanceCoordinator], SensorEntity)
         if pair_key_val is None:
             self._attr_unique_id = f"{entry.entry_id}_settings"
         else:
-            self._attr_unique_id = (
-                f"{entry.entry_id}_{_pair_key_str(pair_key_val)}_settings"
-            )
+            self._attr_unique_id = f"{entry.entry_id}_{_pair_key_str(pair_key_val)}_settings"
         self._attr_device_info = device_info
 
     @property

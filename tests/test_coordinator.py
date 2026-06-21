@@ -1102,14 +1102,6 @@ class TestCoordinatorProperties:
 
 
 # ---------------------------------------------------------------------------
-# F-29.5-7: default install must not pollute the recorder events table.
-# Bus events are opt-in via CONF_EMIT_BUS_EVENTS (default False). When enabled,
-# only threshold-crossings (enter / leave / enter_unreliable) fire — never
-# per-tick entity_distance_update events.
-# ---------------------------------------------------------------------------
-
-
-# ---------------------------------------------------------------------------
 # F-29.5-7: integration must never fire bus events. All entity_distance_* events
 # were removed in v0.3.0 — automations drive off sensor / binary_sensor state.
 # ---------------------------------------------------------------------------

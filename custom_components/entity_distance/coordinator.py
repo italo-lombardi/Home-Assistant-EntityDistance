@@ -21,7 +21,6 @@ from .const import (
     BUCKET_VERY_FAR,
     BUCKET_VERY_NEAR,
     CONF_DEBOUNCE_S,
-    CONF_EMIT_BUS_EVENTS,
     CONF_ENTITIES,
     CONF_ENTRY_THRESHOLD_M,
     CONF_EXIT_THRESHOLD_M,
@@ -37,7 +36,6 @@ from .const import (
     CONF_ZONE_NEAR_M,
     CONF_ZONE_VERY_NEAR_M,
     DEFAULT_DEBOUNCE_S,
-    DEFAULT_EMIT_BUS_EVENTS,
     DEFAULT_ENTRY_THRESHOLD_M,
     DEFAULT_EXIT_THRESHOLD_M,
     DEFAULT_MAX_ACCURACY_M,
@@ -55,9 +53,6 @@ from .const import (
     DIRECTION_DIVERGING,
     DIRECTION_STATIONARY,
     DOMAIN,
-    EVENT_ENTER,
-    EVENT_ENTER_UNRELIABLE,
-    EVENT_LEAVE,
     STATIONARY_THRESHOLD_M,
 )
 from .models import GroupData, PairState, pair_key
@@ -163,7 +158,6 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         )
         self._updates_window_s: float = data.get(CONF_UPDATES_WINDOW_S, DEFAULT_UPDATES_WINDOW_S)
         self._require_reliable: bool = data.get(CONF_REQUIRE_RELIABLE, DEFAULT_REQUIRE_RELIABLE)
-        self._emit_bus_events: bool = data.get(CONF_EMIT_BUS_EVENTS, DEFAULT_EMIT_BUS_EVENTS)
         self._bucket_thresholds: dict[str, float] = {
             BUCKET_VERY_NEAR: data.get(CONF_ZONE_VERY_NEAR_M, DEFAULT_ZONE_VERY_NEAR_M),
             BUCKET_NEAR: data.get(CONF_ZONE_NEAR_M, DEFAULT_ZONE_NEAR_M),
@@ -218,7 +212,6 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             "min_updates_reliable": self._min_updates_reliable,
             "updates_window_s": self._updates_window_s,
             "require_reliable": self._require_reliable,
-            "emit_bus_events": self._emit_bus_events,
             "zone_very_near_m": self._bucket_thresholds[BUCKET_VERY_NEAR],
             "zone_near_m": self._bucket_thresholds[BUCKET_NEAR],
             "zone_mid_m": self._bucket_thresholds[BUCKET_MID],
@@ -361,7 +354,6 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         def _invalidate(reason: str) -> PairState:
             # If invalidated while in proximity, close the session to avoid crediting
             # unavailability window as proximity time on next valid observation.
-            was_prox = ps.proximity
             if ps.proximity and ps.proximity_since:
                 elapsed = max(0.0, (now - ps.proximity_since).total_seconds())
                 ps.proximity_duration_s += elapsed
@@ -390,20 +382,6 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             ps.last_error = reason
             ps.prev_calc_time = None
             ps.prev_distance_m = None
-            if was_prox and self._emit_bus_events:
-                self.hass.bus.fire(
-                    EVENT_LEAVE,
-                    {
-                        "entity_a": entity_a,
-                        "entity_b": entity_b,
-                        "distance_m": ps.distance_m,
-                        "entry_threshold_m": self._entry_threshold_m,
-                        "exit_threshold_m": self._exit_threshold_m,
-                        "reliable": False,
-                        "direction": None,
-                        "closing_speed_kmh": None,
-                    },
-                )
             return ps
 
         if state_a is None or state_b is None:
@@ -535,10 +513,11 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         ps.data_valid = True
         ps.last_error = None
 
-        reliable = self._is_reliable(ps)
+        reliable = self.is_reliable(ps)
 
         # Resync silence — check before proximity transitions so hold returns early
-        # without mutating ps.proximity, preventing EVENT_ENTER from being lost.
+        # without mutating ps.proximity, keeping the entry transition deferred to a
+        # post-hold tick (so binary_sensor.in_proximity does not flap on/off).
         # Skip for zone entities — zones never emit state_changed so staleness is
         # always huge; treating that as a resync condition causes a permanent loop.
         if (
@@ -597,20 +576,6 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                             )
                     ps.proximity = False
                     ps.proximity_since = None
-                    if self._emit_bus_events:
-                        self.hass.bus.fire(
-                            EVENT_LEAVE,
-                            {
-                                "entity_a": entity_a,
-                                "entity_b": entity_b,
-                                "distance_m": ps.distance_m,
-                                "entry_threshold_m": self._entry_threshold_m,
-                                "exit_threshold_m": self._exit_threshold_m,
-                                "reliable": False,
-                                "direction": None,
-                                "closing_speed_kmh": None,
-                            },
-                        )
                 # Null the baseline so the first post-hold tick doesn't trigger a
                 # spurious speed-filter rejection against a stale prev_distance_m.
                 ps.prev_calc_time = None
@@ -625,7 +590,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             ps.last_update_b = now
 
         # Proximity transitions — after hold check so early-return doesn't leave
-        # ps.proximity mutated without a corresponding event being fired.
+        # ps.proximity mutated while the sensor state has not yet been written.
         if not ps.proximity and dist_m <= self._entry_threshold_m:
             ps.proximity = True
             ps.proximity_since = now
@@ -711,29 +676,6 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             if ps.proximity or was_proximity:
                 ps.today_proximity_seconds += _elapsed_s
 
-        event_data = {
-            "entity_a": entity_a,
-            "entity_b": entity_b,
-            "distance_m": dist_m,
-            "entry_threshold_m": self._entry_threshold_m,
-            "exit_threshold_m": self._exit_threshold_m,
-            "reliable": reliable,
-            "direction": direction,
-            "closing_speed_kmh": closing_speed_kmh,
-        }
-
-        if not was_proximity and ps.proximity:
-            event = EVENT_ENTER if reliable else EVENT_ENTER_UNRELIABLE
-            if self._emit_bus_events:
-                self.hass.bus.fire(event, event_data)
-                _LOGGER.debug(
-                    "entity_distance: fired %s for pair (%s, %s)", event, entity_a, entity_b
-                )
-        elif was_proximity and not ps.proximity:
-            if self._emit_bus_events:
-                self.hass.bus.fire(EVENT_LEAVE, event_data)
-        # Per-tick EVENT_UPDATE removed in v0.3.0 — threshold-crossing events only.
-
         return ps
 
     def _advance_window(
@@ -752,7 +694,8 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             return 1, now
         return count + 1, window_start
 
-    def _is_reliable(self, ps: PairState) -> bool:
+    def is_reliable(self, ps: PairState) -> bool:
+        """True when both sides have ≥ min_updates_reliable fixes in the rolling window."""
         return (
             ps.update_count_a >= self._min_updates_reliable
             and ps.update_count_b >= self._min_updates_reliable

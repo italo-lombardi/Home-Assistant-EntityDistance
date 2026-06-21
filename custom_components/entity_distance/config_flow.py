@@ -14,7 +14,6 @@ import voluptuous as vol
 
 from .const import (
     CONF_DEBOUNCE_S,
-    CONF_EMIT_BUS_EVENTS,
     CONF_ENTITIES,
     CONF_ENTRY_THRESHOLD_M,
     CONF_EXIT_THRESHOLD_M,
@@ -27,7 +26,6 @@ from .const import (
     CONF_ZONE_NEAR_M,
     CONF_ZONE_VERY_NEAR_M,
     DEFAULT_DEBOUNCE_S,
-    DEFAULT_EMIT_BUS_EVENTS,
     DEFAULT_ENTRY_THRESHOLD_M,
     DEFAULT_EXIT_THRESHOLD_M,
     DEFAULT_MAX_ACCURACY_M,
@@ -58,7 +56,6 @@ _ZONE_OPTIONS_KEYS = {
     CONF_ZONE_NEAR_M,
     CONF_ZONE_MID_M,
     CONF_ZONE_FAR_M,
-    CONF_EMIT_BUS_EVENTS,
 }
 
 
@@ -263,9 +260,6 @@ class EntityDistanceConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     ): NumberSelector(
                         NumberSelectorConfig(min=1, max=20, mode=NumberSelectorMode.BOX)
                     ),
-                    vol.Required(
-                        CONF_EMIT_BUS_EVENTS, default=DEFAULT_EMIT_BUS_EVENTS
-                    ): BooleanSelector(),
                 }
             ),
         )
@@ -454,10 +448,6 @@ class EntityDistanceOptionsFlow(config_entries.OptionsFlow):
                     ): NumberSelector(
                         NumberSelectorConfig(min=1, max=20, mode=NumberSelectorMode.BOX)
                     ),
-                    vol.Required(
-                        CONF_EMIT_BUS_EVENTS,
-                        default=self._data.get(CONF_EMIT_BUS_EVENTS, DEFAULT_EMIT_BUS_EVENTS),
-                    ): BooleanSelector(),
                 }
             ),
         )

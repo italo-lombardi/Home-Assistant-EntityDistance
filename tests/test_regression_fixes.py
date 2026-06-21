@@ -39,7 +39,6 @@ def _make_coordinator(
     min_updates_reliable: int = 3,
     max_speed_kmh: float = 1000.0,
     max_accuracy_m: float = 200.0,
-    emit_bus_events: bool = True,
 ):
     from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
 
@@ -59,7 +58,6 @@ def _make_coordinator(
     coord._resync_hold_until = {}
     coord._min_updates_reliable = min_updates_reliable
     coord._require_reliable = require_reliable
-    coord._emit_bus_events = emit_bus_events
     return coord
 
 
@@ -1449,100 +1447,6 @@ class TestZoneSecondsOnlyDuringProximity:
         assert result.today_zone_seconds.get("far", 0.0) == pytest.approx(300.0, abs=2.0)
         # Proximity total stays gated — must not grow on non-proximity ticks.
         assert result.today_proximity_seconds == 0.0
-
-
-# ---------------------------------------------------------------------------
-# Pass-6 H2: EVENT_LEAVE full payload at _invalidate and hold flush
-# ---------------------------------------------------------------------------
-
-
-class TestEventLeaveFullPayload:
-    def test_invalidate_fires_full_event_leave_payload(self):
-        """H2: _invalidate() fires EVENT_LEAVE with all 8 fields."""
-        coord = _make_coordinator()
-        state_b = _make_state("person.bob", 51.5, -0.1, 20)
-        coord.hass.states.get = MagicMock(
-            side_effect=lambda eid: None if eid == "person.alice" else state_b
-        )
-        fired_events = []
-        coord.hass.bus.fire = MagicMock(
-            side_effect=lambda evt, data: fired_events.append((evt, data))
-        )
-
-        ps = _fresh_pair()
-        ps.proximity = True
-        ps.proximity_since = datetime(2024, 6, 1, 11, 0, 0, tzinfo=UTC)
-        ps.today_reset_date = _NOW.date()
-        ps.distance_m = 80.0
-
-        coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
-
-        assert len(fired_events) == 1
-        event_name, payload = fired_events[0]
-        from custom_components.entity_distance.const import EVENT_LEAVE
-
-        assert event_name == EVENT_LEAVE
-        for field in (
-            "entity_a",
-            "entity_b",
-            "distance_m",
-            "entry_threshold_m",
-            "exit_threshold_m",
-            "reliable",
-            "direction",
-            "closing_speed_kmh",
-        ):
-            assert field in payload, f"Missing field: {field}"
-        assert payload["reliable"] is False
-
-    def test_hold_flush_fires_full_event_leave_payload(self):
-        """H2: hold flush fires EVENT_LEAVE with all 8 fields."""
-        from custom_components.entity_distance.models import pair_key
-
-        coord = _make_coordinator()
-        k = pair_key("person.alice", "person.bob")
-        coord._resync_silence_s = 10.0
-        coord._resync_hold_s = 300.0
-        coord._resync_holding = {k: True}
-        coord._resync_hold_until = {k: _NOW + timedelta(seconds=200)}
-
-        state_a = _make_state("person.alice", 51.5, -0.1, 20)
-        state_b = _make_state("person.bob", 51.501, -0.1, 20)
-        coord.hass.states.get = MagicMock(
-            side_effect=lambda eid: state_a if eid == "person.alice" else state_b
-        )
-        fired_events = []
-        coord.hass.bus.fire = MagicMock(
-            side_effect=lambda evt, data: fired_events.append((evt, data))
-        )
-
-        ps = _fresh_pair()
-        ps.proximity = True
-        ps.proximity_since = datetime(2024, 6, 1, 11, 0, 0, tzinfo=UTC)
-        ps.today_reset_date = _NOW.date()
-        ps.distance_m = 80.0
-        ps.proximity_duration_s = 0.0
-
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=80.0):
-            coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
-
-        from custom_components.entity_distance.const import EVENT_LEAVE
-
-        leave_events = [(e, d) for e, d in fired_events if e == EVENT_LEAVE]
-        assert len(leave_events) == 1
-        payload = leave_events[0][1]
-        for field in (
-            "entity_a",
-            "entity_b",
-            "distance_m",
-            "entry_threshold_m",
-            "exit_threshold_m",
-            "reliable",
-            "direction",
-            "closing_speed_kmh",
-        ):
-            assert field in payload, f"Missing field: {field}"
-        assert payload["reliable"] is False
 
 
 # ---------------------------------------------------------------------------

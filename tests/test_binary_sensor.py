@@ -12,6 +12,7 @@ from custom_components.entity_distance.binary_sensor import (
     AnyInProximityBinarySensor,
     BucketBinarySensor,
     ProximityBinarySensor,
+    ReliableBinarySensor,
     SameZoneBinarySensor,
     async_setup_entry,
 )
@@ -332,6 +333,7 @@ class TestAsyncSetupEntry:
         types = [type(e).__name__ for e in added]
         assert "ProximityBinarySensor" in types
         assert "SameZoneBinarySensor" in types
+        assert "ReliableBinarySensor" in types
 
     @pytest.mark.asyncio
     async def test_skips_same_zone_for_zone_pair(self):
@@ -553,3 +555,77 @@ class TestAllInProximityBinarySensor:
         gd = _make_group_data(["person.alice", "person.bob"])
         sensor = _make_all_sensor(gd)
         assert sensor.is_on is False
+
+
+# ---------------------------------------------------------------------------
+# ReliableBinarySensor — exposes coordinator.is_reliable() as a binary sensor
+# so automations can gate on data confidence via a state-change trigger.
+# ---------------------------------------------------------------------------
+
+
+def _make_reliable_sensor(
+    pair_key_val: tuple[str, str],
+    ps: PairState,
+    is_reliable_return: bool,
+) -> ReliableBinarySensor:
+    coordinator = MagicMock()
+    coordinator.data = MagicMock()
+    coordinator.data.pairs = {pair_key_val: ps}
+    coordinator.is_reliable = MagicMock(return_value=is_reliable_return)
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    sensor = ReliableBinarySensor.__new__(ReliableBinarySensor)
+    sensor.coordinator = coordinator
+    sensor._entry = entry
+    sensor._pair_key = pair_key_val
+    sensor._attr_unique_id = f"test_{pair_key_val[0]}__{pair_key_val[1]}_reliable"
+    sensor._attr_device_info = {}
+    return sensor
+
+
+class TestReliableBinarySensor:
+    def test_on_when_both_sides_above_threshold(self):
+        k = pair_key("person.alice", "person.bob")
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.data_valid = True
+        ps.update_count_a = 5
+        ps.update_count_b = 5
+        sensor = _make_reliable_sensor(k, ps, is_reliable_return=True)
+        assert sensor.is_on is True
+
+    def test_off_when_either_side_below_threshold(self):
+        k = pair_key("person.alice", "person.bob")
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.data_valid = True
+        ps.update_count_a = 1
+        ps.update_count_b = 5
+        sensor = _make_reliable_sensor(k, ps, is_reliable_return=False)
+        assert sensor.is_on is False
+
+    def test_none_when_data_invalid(self):
+        k = pair_key("person.alice", "person.bob")
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.data_valid = False
+        sensor = _make_reliable_sensor(k, ps, is_reliable_return=True)
+        # is_on must be None when data_valid is False — coordinator.is_reliable
+        # not consulted.
+        assert sensor.is_on is None
+        sensor.coordinator.is_reliable.assert_not_called()
+
+    def test_falls_back_to_empty_pair_when_missing(self):
+        # _pair property returns a fresh PairState when the pair key is absent
+        # from coordinator.data.pairs. data_valid defaults to False → is_on=None.
+        k = pair_key("person.alice", "person.bob")
+        coordinator = MagicMock()
+        coordinator.data = MagicMock()
+        coordinator.data.pairs = {}
+        coordinator.is_reliable = MagicMock(return_value=True)
+        entry = MagicMock()
+        entry.entry_id = "test_entry"
+        sensor = ReliableBinarySensor.__new__(ReliableBinarySensor)
+        sensor.coordinator = coordinator
+        sensor._entry = entry
+        sensor._pair_key = k
+        sensor._attr_unique_id = "test_reliable_missing"
+        sensor._attr_device_info = {}
+        assert sensor.is_on is None

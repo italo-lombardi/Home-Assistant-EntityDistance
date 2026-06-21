@@ -36,15 +36,13 @@
           "max_accuracy_m": "Maks. dokładność GPS (m, 0 = wyłączone)",
           "max_speed_kmh": "Maks. implikowana prędkość (km/h, 0 = wyłączone)",
           "require_reliable": "Wymagaj wiarygodnych danych dla zdarzeń bliskości",
-          "min_updates_reliable": "Min. aktualizacje dla wiarygodnych danych",
-          "emit_bus_events": "Emituj zdarzenia magistrali proximity (zaawansowane)"
+          "min_updates_reliable": "Min. aktualizacje dla wiarygodnych danych"
         },
         "data_description": {
           "max_accuracy_m": "Odrzucaj aktualizacje lokalizacji z dokładnością GPS gorszą niż ta wartość. Ustaw na 0, aby wyłączyć.",
           "max_speed_kmh": "Odrzucaj aktualizacje, gdzie implikowana prędkość ruchu przekracza tę wartość. Ustaw na 0, aby wyłączyć.",
           "require_reliable": "Wyzwalaj zdarzenie proximity_enter tylko gdy dane są uznawane za wiarygodne.",
-          "min_updates_reliable": "Minimalna liczba aktualizacji lokalizacji w oknie przed uznaniem danych za wiarygodne.",
-          "emit_bus_events": "Domyślnie wyłączone. Po włączeniu emituje entity_distance_enter / entity_distance_leave / entity_distance_enter_unreliable tylko przy przekraczaniu progów (brak zdarzeń per tick). Pozostaw wyłączone, chyba że masz automatyzacje wyzwalane tymi typami zdarzeń — wyzwalacze zmiany stanu sensora są preferowane i nie zaśmiecają recordera."
+          "min_updates_reliable": "Minimalna liczba aktualizacji lokalizacji w oknie przed uznaniem danych za wiarygodne."
         }
       },
       "zone_thresholds": {
@@ -102,16 +100,14 @@
           "max_accuracy_m": "Maks. dokładność GPS (m, 0 = wyłączone)",
           "max_speed_kmh": "Maks. implikowana prędkość (km/h, 0 = wyłączone)",
           "require_reliable": "Wymagaj wiarygodnych danych dla zdarzeń bliskości",
-          "min_updates_reliable": "Min. aktualizacje dla wiarygodnych danych",
-          "emit_bus_events": "Emituj zdarzenia magistrali proximity (zaawansowane)"
+          "min_updates_reliable": "Min. aktualizacje dla wiarygodnych danych"
         },
         "description": "Te filtry pomagają ignorować złe dane GPS.",
         "data_description": {
           "max_accuracy_m": "Ignoruj aktualizacje lokalizacji, gdzie błąd GPS jest większy niż to.",
           "max_speed_kmh": "Ignoruj aktualizacje sugerujące ruch szybszy niż to.",
           "require_reliable": "Gdy włączone, zdarzenie zbliżenia wyzwala się tylko po spójnych aktualizacjach.",
-          "min_updates_reliable": "Ile kolejnych aktualizacji jest wymaganych, zanim lokalizacja zostanie uznana za niezawodną.",
-          "emit_bus_events": "Domyślnie wyłączone. Po włączeniu emituje entity_distance_enter / entity_distance_leave / entity_distance_enter_unreliable tylko przy przekraczaniu progów (brak zdarzeń per tick). Pozostaw wyłączone, chyba że masz automatyzacje wyzwalane tymi typami zdarzeń — wyzwalacze zmiany stanu sensora są preferowane i nie zaśmiecają recordera."
+          "min_updates_reliable": "Ile kolejnych aktualizacji jest wymaganych, zanim lokalizacja zostanie uznana za niezawodną."
         }
       },
       "zone_thresholds": {
@@ -262,6 +258,9 @@
       },
       "in_very_far": {
         "name": "Bardzo daleko"
+      },
+      "reliable": {
+        "name": "Wiarygodne"
       }
     },
     "button": {

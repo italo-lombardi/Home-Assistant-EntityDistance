@@ -36,15 +36,13 @@
           "max_accuracy_m": "Precisión GPS máx. (m, 0 = desactivado)",
           "max_speed_kmh": "Velocidad implícita máx. (km/h, 0 = desactivado)",
           "require_reliable": "Requerir datos fiables para eventos de proximidad",
-          "min_updates_reliable": "Actualizaciones mínimas para datos fiables",
-          "emit_bus_events": "Emitir eventos de bus de proximidad (avanzado)"
+          "min_updates_reliable": "Actualizaciones mínimas para datos fiables"
         },
         "data_description": {
           "max_accuracy_m": "Rechazar actualizaciones de ubicación con precisión GPS peor que este valor. Establezca 0 para desactivar.",
           "max_speed_kmh": "Rechazar actualizaciones donde la velocidad de movimiento implícita supere este valor. Establezca 0 para desactivar.",
           "require_reliable": "Solo disparar evento proximity_enter cuando los datos se consideren fiables.",
-          "min_updates_reliable": "Número mínimo de actualizaciones de ubicación en la ventana antes de que los datos se consideren fiables.",
-          "emit_bus_events": "Desactivado por defecto. Cuando está activado, dispara entity_distance_enter / entity_distance_leave / entity_distance_enter_unreliable solo en cruces de umbral (sin eventos por tick). Déjalo apagado salvo que tengas automatizaciones disparadas por estos tipos de evento — los disparadores de cambio de estado de sensor son preferibles y no contaminan el recorder."
+          "min_updates_reliable": "Número mínimo de actualizaciones de ubicación en la ventana antes de que los datos se consideren fiables."
         }
       },
       "zone_thresholds": {
@@ -102,16 +100,14 @@
           "max_accuracy_m": "Precisión GPS máx. (m, 0 = desactivado)",
           "max_speed_kmh": "Velocidad implícita máx. (km/h, 0 = desactivado)",
           "require_reliable": "Requerir datos fiables para eventos de proximidad",
-          "min_updates_reliable": "Actualizaciones mínimas para datos fiables",
-          "emit_bus_events": "Emitir eventos de bus de proximidad (avanzado)"
+          "min_updates_reliable": "Actualizaciones mínimas para datos fiables"
         },
         "description": "Estos filtros ayudan a ignorar datos GPS deficientes.",
         "data_description": {
           "max_accuracy_m": "Ignorar actualizaciones de ubicación donde el error GPS supera este valor.",
           "max_speed_kmh": "Ignorar actualizaciones que impliquen movimiento más rápido que esto.",
           "require_reliable": "Cuando está activo, un evento de proximidad solo se activa tras actualizaciones consistentes.",
-          "min_updates_reliable": "Cuántas actualizaciones consecutivas se necesitan antes de considerar la ubicación fiable.",
-          "emit_bus_events": "Desactivado por defecto. Cuando está activado, dispara entity_distance_enter / entity_distance_leave / entity_distance_enter_unreliable solo en cruces de umbral (sin eventos por tick). Déjalo apagado salvo que tengas automatizaciones disparadas por estos tipos de evento — los disparadores de cambio de estado de sensor son preferibles y no contaminan el recorder."
+          "min_updates_reliable": "Cuántas actualizaciones consecutivas se necesitan antes de considerar la ubicación fiable."
         }
       },
       "zone_thresholds": {
@@ -262,6 +258,9 @@
       },
       "in_very_far": {
         "name": "Muy lejos"
+      },
+      "reliable": {
+        "name": "Fiable"
       }
     },
     "button": {

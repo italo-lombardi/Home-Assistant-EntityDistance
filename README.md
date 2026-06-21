@@ -325,43 +325,34 @@ All sensors refresh on a 1-minute timer tick even when entities don't move. This
 
 ## Events
 
-> **Disabled by default.** Bus events are off out-of-the-box (see _Recorder hygiene_ below). Turn them on by enabling **Emit proximity bus events** in **Settings → Devices & services → Entity Distance → Configure → Advanced**. State-change triggers on the integration's sensors are recommended over event triggers — they don't pollute the recorder events table.
+> **No bus events.** As of v0.3.0 the integration emits **zero** events on the HA event bus. Every signal an automation needs is exposed as a sensor or binary_sensor — drive automations off `platform: state` triggers, which are HA-native, work in the visual editor, and do not pollute the recorder `events` table.
 
-When the option is on, three threshold-crossing events are fired on the HA event bus. The legacy per-tick `entity_distance_update` event was removed in v0.3.0.
+### Trigger replacements
 
-| Event | Fired when |
-|-------|------------|
-| `entity_distance_enter` | Entities enter proximity (reliable data) |
-| `entity_distance_enter_unreliable` | Entities enter proximity (unreliable data) |
-| `entity_distance_leave` | Entities leave proximity |
+| Pre-v0.3.0 event | Use this instead |
+|---|---|
+| `entity_distance_enter` | `binary_sensor.<pair>_in_proximity` going `off → on` |
+| `entity_distance_leave` | `binary_sensor.<pair>_in_proximity` going `on → off` |
+| `entity_distance_enter_unreliable` | `binary_sensor.<pair>_in_proximity` `off → on` while `binary_sensor.<pair>_reliable` is `off` (e.g. as a `condition:`) |
+| `entity_distance_update` | `sensor.<pair>_distance` state change (or any per-pair sensor) |
 
-### Event payload
+The `reliable` flag that used to ride in the event payload is now a dedicated `binary_sensor.<pair>_reliable` — on when both sides have submitted at least `min_updates_reliable` GPS fixes in the rolling window.
 
-```yaml
-entity_a: person.alice
-entity_b: person.bob
-distance_m: 320.5
-entry_threshold_m: 200
-exit_threshold_m: 500
-reliable: true
-direction: approaching
-closing_speed_kmh: 12.3
-```
-
-### Recorder hygiene
-
-Even with events enabled, the integration emits at most one event per pair per threshold crossing — orders of magnitude fewer than the per-tick stream in earlier versions. To keep the events table clean regardless, exclude the event types from the recorder:
+### Migrating an existing `entity_distance_*` automation
 
 ```yaml
-recorder:
-  exclude:
-    event_types:
-      - entity_distance_enter
-      - entity_distance_enter_unreliable
-      - entity_distance_leave
-```
+# Old (v0.2.x) — no longer works
+trigger:
+  - platform: event
+    event_type: entity_distance_enter
 
-> **Migrating from v0.2.x:** automations using `event_type: entity_distance_update` triggers will not fire — that event was removed. Replace them with state-change triggers on `binary_sensor.<pair>_in_proximity` (or one of the bucket binary sensors), or, if you still need event-based triggers, enable the new advanced option and switch to `entity_distance_enter` / `entity_distance_leave`.
+# New (v0.3.0) — sensor state-change trigger
+trigger:
+  - platform: state
+    entity_id: binary_sensor.alice_bob_in_proximity
+    from: "off"
+    to: "on"
+```
 
 ---
 

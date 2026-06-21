@@ -406,7 +406,7 @@ class TestProximitySincePersistence:
 
 
 # ---------------------------------------------------------------------------
-# _advance_window and _is_reliable
+# _advance_window and is_reliable
 # ---------------------------------------------------------------------------
 
 
@@ -458,7 +458,7 @@ class TestAdvanceWindow:
 
 
 class TestIsReliable:
-    """Test EntityDistanceCoordinator._is_reliable helper."""
+    """Test EntityDistanceCoordinator.is_reliable helper."""
 
     def _make_coordinator(self, min_updates: int = 3):
         from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
@@ -472,49 +472,49 @@ class TestIsReliable:
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.update_count_a = 3
         ps.update_count_b = 3
-        assert coordinator._is_reliable(ps) is True
+        assert coordinator.is_reliable(ps) is True
 
     def test_reliable_when_counts_exceed_threshold(self):
         coordinator = self._make_coordinator(3)
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.update_count_a = 10
         ps.update_count_b = 5
-        assert coordinator._is_reliable(ps) is True
+        assert coordinator.is_reliable(ps) is True
 
     def test_not_reliable_when_a_below_threshold(self):
         coordinator = self._make_coordinator(3)
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.update_count_a = 2
         ps.update_count_b = 5
-        assert coordinator._is_reliable(ps) is False
+        assert coordinator.is_reliable(ps) is False
 
     def test_not_reliable_when_b_below_threshold(self):
         coordinator = self._make_coordinator(3)
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.update_count_a = 5
         ps.update_count_b = 1
-        assert coordinator._is_reliable(ps) is False
+        assert coordinator.is_reliable(ps) is False
 
     def test_not_reliable_when_both_zero(self):
         coordinator = self._make_coordinator(3)
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.update_count_a = 0
         ps.update_count_b = 0
-        assert coordinator._is_reliable(ps) is False
+        assert coordinator.is_reliable(ps) is False
 
     def test_reliable_with_min_1(self):
         coordinator = self._make_coordinator(1)
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.update_count_a = 1
         ps.update_count_b = 1
-        assert coordinator._is_reliable(ps) is True
+        assert coordinator.is_reliable(ps) is True
 
     def test_not_reliable_with_min_1_when_zero(self):
         coordinator = self._make_coordinator(1)
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.update_count_a = 0
         ps.update_count_b = 1
-        assert coordinator._is_reliable(ps) is False
+        assert coordinator.is_reliable(ps) is False
 
 
 # ---------------------------------------------------------------------------
@@ -563,7 +563,6 @@ def _make_calc_pair_coordinator(
     require_reliable=False,
     min_updates_reliable=1,
     updates_window_s=1800.0,
-    emit_bus_events=True,
 ):
     from custom_components.entity_distance.const import (
         BUCKET_FAR,
@@ -592,7 +591,6 @@ def _make_calc_pair_coordinator(
     coordinator._require_reliable = require_reliable
     coordinator._min_updates_reliable = min_updates_reliable
     coordinator._updates_window_s = updates_window_s
-    coordinator._emit_bus_events = emit_bus_events
     coordinator._bucket_thresholds = {
         BUCKET_VERY_NEAR: DEFAULT_ZONE_VERY_NEAR_M,
         BUCKET_NEAR: DEFAULT_ZONE_NEAR_M,
@@ -1096,12 +1094,11 @@ class TestCoordinatorProperties:
         coord._min_updates_reliable = 3
         coord._updates_window_s = 1800
         coord._require_reliable = False
-        coord._emit_bus_events = False
         snap = coord.settings_snapshot
         assert snap["entry_threshold_m"] == 200.0
         assert snap["zone_very_near_m"] == 100
-        assert snap["emit_bus_events"] is False
-        assert len(snap) == 15
+        assert "emit_bus_events" not in snap
+        assert len(snap) == 14
 
 
 # ---------------------------------------------------------------------------
@@ -1112,17 +1109,20 @@ class TestCoordinatorProperties:
 # ---------------------------------------------------------------------------
 
 
-class TestEmitBusEventsGate:
-    def test_default_no_events_on_threshold_crossing(self):
+# ---------------------------------------------------------------------------
+# F-29.5-7: integration must never fire bus events. All entity_distance_* events
+# were removed in v0.3.0 — automations drive off sensor / binary_sensor state.
+# ---------------------------------------------------------------------------
+
+
+class TestNoBusEvents:
+    def test_no_events_on_threshold_crossing(self):
         from datetime import UTC, datetime
         from unittest.mock import patch as _patch
 
         from custom_components.entity_distance.models import PairState, pair_key
 
-        coordinator = _make_calc_pair_coordinator(
-            min_updates_reliable=1,
-            emit_bus_events=False,
-        )
+        coordinator = _make_calc_pair_coordinator(min_updates_reliable=1)
         a, b = "person.alice", "person.bob"
         k = pair_key(a, b)
         ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
@@ -1137,26 +1137,26 @@ class TestEmitBusEventsGate:
         now = datetime(2024, 6, 1, 12, 0, 0, tzinfo=UTC)
         with _patch(
             "custom_components.entity_distance.coordinator.ha_distance",
-            return_value=200.0,  # below entry_threshold_m → would fire EVENT_ENTER if opted in
+            return_value=200.0,  # would have fired EVENT_ENTER in v0.2.x
         ):
             coordinator._calc_pair(ps, a, b, now, set())
 
         assert coordinator.hass.bus.fire.call_count == 0
+        # ps.proximity still transitioned — sensor state-change driven, not events.
+        assert ps.proximity is True
 
-    def test_optin_fires_threshold_crossing_only(self):
+    def test_no_events_on_threshold_exit(self):
         from datetime import UTC, datetime
         from unittest.mock import patch as _patch
 
-        from custom_components.entity_distance.const import EVENT_ENTER
         from custom_components.entity_distance.models import PairState, pair_key
 
-        coordinator = _make_calc_pair_coordinator(
-            min_updates_reliable=1,
-            emit_bus_events=True,
-        )
+        coordinator = _make_calc_pair_coordinator(min_updates_reliable=1)
         a, b = "person.alice", "person.bob"
         k = pair_key(a, b)
         ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.proximity = True
+        ps.proximity_since = datetime(2024, 6, 1, 11, 0, 0, tzinfo=UTC)
         ps.update_count_a = 5
         ps.update_count_b = 5
         state_a = make_state(a, 51.5, -0.1, 20)
@@ -1168,25 +1168,22 @@ class TestEmitBusEventsGate:
         now = datetime(2024, 6, 1, 12, 0, 0, tzinfo=UTC)
         with _patch(
             "custom_components.entity_distance.coordinator.ha_distance",
-            return_value=200.0,
+            return_value=1200.0,  # > exit_threshold_m → was-proximity exit
         ):
             coordinator._calc_pair(ps, a, b, now, set())
 
-        fired = [c.args[0] for c in coordinator.hass.bus.fire.call_args_list]
-        assert fired == [EVENT_ENTER]
+        assert coordinator.hass.bus.fire.call_count == 0
+        assert ps.proximity is False
 
-    def test_optin_no_per_tick_update_event(self):
-        # Even with opt-in, no entity_distance_update fires when proximity
-        # state is unchanged (tick fires nothing).
+    def test_no_events_on_steady_tick(self):
+        # Even pre-removal, a tick with no proximity change fired EVENT_UPDATE.
+        # Post-removal, also zero events.
         from datetime import UTC, datetime
         from unittest.mock import patch as _patch
 
         from custom_components.entity_distance.models import PairState, pair_key
 
-        coordinator = _make_calc_pair_coordinator(
-            min_updates_reliable=1,
-            emit_bus_events=True,
-        )
+        coordinator = _make_calc_pair_coordinator(min_updates_reliable=1)
         a, b = "person.alice", "person.bob"
         k = pair_key(a, b)
         ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
@@ -1202,13 +1199,11 @@ class TestEmitBusEventsGate:
         now = datetime(2024, 6, 1, 12, 0, 0, tzinfo=UTC)
         with _patch(
             "custom_components.entity_distance.coordinator.ha_distance",
-            return_value=1200.0,  # outside entry_threshold_m, no transition
+            return_value=1200.0,  # outside entry threshold, no transition
         ):
             coordinator._calc_pair(ps, a, b, now, set())
 
-        fired = [c.args[0] for c in coordinator.hass.bus.fire.call_args_list]
-        assert "entity_distance_update" not in fired
-        assert fired == []
+        assert coordinator.hass.bus.fire.call_count == 0
 
 
 # ---------------------------------------------------------------------------

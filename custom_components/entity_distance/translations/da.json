@@ -258,6 +258,9 @@
       },
       "in_very_far": {
         "name": "Meget langt"
+      },
+      "reliable": {
+        "name": "Pålidelig"
       }
     },
     "button": {

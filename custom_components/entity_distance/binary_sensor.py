@@ -76,6 +76,7 @@ async def async_setup_entry(
         )
         is_zone_pair = k[0].startswith("zone.") and k[1].startswith("zone.")
         sensors.append(ProximityBinarySensor(coordinator, entry, pair_dev, k, a_name, b_name))
+        sensors.append(ReliableBinarySensor(coordinator, entry, pair_dev, k))
         if not is_zone_pair:
             sensors.append(SameZoneBinarySensor(coordinator, entry, pair_dev, k))
         for bucket in BUCKETS:
@@ -250,3 +251,40 @@ class AllInProximityBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], B
         if not any(ps.data_valid for ps in pairs.values()):
             return None
         return self.coordinator.data.all_in_proximity
+
+
+class ReliableBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], BinarySensorEntity):
+    """On while both sides of the pair have ≥ min_updates_reliable fresh GPS fixes
+    in the rolling window. Surfaces the same signal that used to ride along as the
+    `reliable: bool` field in the (now-removed) bus-event payload, so automations
+    can gate on data confidence via a state-change trigger."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "reliable"
+
+    def __init__(
+        self,
+        coordinator: EntityDistanceCoordinator,
+        entry: ConfigEntry,
+        device_info: DeviceInfo,
+        pair_key_val: tuple[str, str],
+    ) -> None:
+        super().__init__(coordinator)
+        self._entry = entry
+        self._pair_key = pair_key_val
+        key_str = f"{pair_key_val[0]}__{pair_key_val[1]}"
+        self._attr_unique_id = f"{entry.entry_id}_{key_str}_reliable"
+        self._attr_device_info = device_info
+
+    @property
+    def _pair(self) -> PairState:
+        return self.coordinator.data.pairs.get(self._pair_key) or PairState(
+            entity_a_id=self._pair_key[0], entity_b_id=self._pair_key[1]
+        )
+
+    @property
+    def is_on(self) -> bool | None:
+        ps = self._pair
+        if not ps.data_valid:
+            return None
+        return self.coordinator.is_reliable(ps)

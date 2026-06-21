@@ -258,6 +258,9 @@
       },
       "in_very_far": {
         "name": "Very Far"
+      },
+      "reliable": {
+        "name": "Reliable"
       }
     },
     "button": {

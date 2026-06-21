@@ -325,26 +325,33 @@ All sensors refresh on a 1-minute timer tick even when entities don't move. This
 
 ## Events
 
-Four events are fired on the HA event bus:
+> **No bus events.** As of v0.3.0 the integration emits **zero** events on the HA event bus. Every signal an automation needs is exposed as a sensor or binary_sensor — drive automations off `platform: state` triggers, which are HA-native, work in the visual editor, and do not pollute the recorder `events` table.
 
-| Event | Fired when |
-|-------|------------|
-| `entity_distance_enter` | Entities enter proximity (reliable data) |
-| `entity_distance_enter_unreliable` | Entities enter proximity (unreliable data) |
-| `entity_distance_leave` | Entities leave proximity |
-| `entity_distance_update` | Location updated while proximity state unchanged |
+### Trigger replacements
 
-### Event payload
+| Pre-v0.3.0 event | Use this instead |
+|---|---|
+| `entity_distance_enter` | `binary_sensor.<pair>_in_proximity` going `off → on` |
+| `entity_distance_leave` | `binary_sensor.<pair>_in_proximity` going `on → off` |
+| `entity_distance_enter_unreliable` | `binary_sensor.<pair>_in_proximity` `off → on` while `binary_sensor.<pair>_reliable` is `off` (e.g. as a `condition:`) |
+| `entity_distance_update` | `sensor.<pair>_distance` state change (or any per-pair sensor) |
+
+The `reliable` flag that used to ride in the event payload is now a dedicated `binary_sensor.<pair>_reliable` — on when both sides have submitted at least `min_updates_reliable` GPS fixes in the rolling window.
+
+### Migrating an existing `entity_distance_*` automation
 
 ```yaml
-entity_a: person.alice
-entity_b: person.bob
-distance_m: 320.5
-entry_threshold_m: 200
-exit_threshold_m: 500
-reliable: true
-direction: approaching
-closing_speed_kmh: 12.3
+# Old (v0.2.x) — no longer works
+trigger:
+  - platform: event
+    event_type: entity_distance_enter
+
+# New (v0.3.0) — sensor state-change trigger
+trigger:
+  - platform: state
+    entity_id: binary_sensor.alice_bob_in_proximity
+    from: "off"
+    to: "on"
 ```
 
 ---
@@ -536,11 +543,11 @@ If auto-registration fails (e.g. YAML-only Lovelace mode), add manually:
 
 ```yaml
 resources:
-  - url: /entity_distance/entity-distance-pair-card.js?0.2.7
+  - url: /entity_distance/entity-distance-pair-card.js?0.3.0
     type: module
-  - url: /entity_distance/entity-distance-avatar-card.js?0.2.7
+  - url: /entity_distance/entity-distance-avatar-card.js?0.3.0
     type: module
-  - url: /entity_distance/entity-distance-group-card.js?0.2.7
+  - url: /entity_distance/entity-distance-group-card.js?0.3.0
     type: module
 ```
 

@@ -479,7 +479,14 @@ class TestCalcPairDirection:
 # ---------------------------------------------------------------------------
 
 
-class TestCalcPairEvents:
+# ---------------------------------------------------------------------------
+# TestCalcPairNoEvents — v0.3.0 removed all entity_distance_* bus events.
+# Verify coordinator never calls hass.bus.fire while still mutating ps.proximity
+# correctly so sensor / binary_sensor consumers see the right state.
+# ---------------------------------------------------------------------------
+
+
+class TestCalcPairNoEvents:
     def _setup(self, require_reliable: bool = False, min_updates: int = 1):
         coord = _make_coordinator(
             entry_threshold_m=500.0,
@@ -494,7 +501,7 @@ class TestCalcPairEvents:
         )
         return coord
 
-    def test_enter_fires_event_enter(self):
+    def test_enter_transition_no_event_but_proximity_set(self):
         coord = self._setup(min_updates=1)
         ps = _fresh_pair()
         ps.proximity = False
@@ -502,12 +509,12 @@ class TestCalcPairEvents:
         ps.update_count_b = 5
 
         with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=200.0):
-            coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+            result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
-        fired_events = [call.args[0] for call in coord.hass.bus.fire.call_args_list]
-        assert "entity_distance_enter" in fired_events
+        assert coord.hass.bus.fire.call_count == 0
+        assert result.proximity is True
 
-    def test_leave_fires_event_leave(self):
+    def test_leave_transition_no_event_but_proximity_cleared(self):
         coord = self._setup()
         ps = _fresh_pair()
         ps.proximity = True
@@ -515,32 +522,29 @@ class TestCalcPairEvents:
         ps.update_count_a = 5
         ps.update_count_b = 5
 
-        # 800m > exit_threshold_m of 700m → exit
         with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=800.0):
-            coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+            result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
-        fired_events = [call.args[0] for call in coord.hass.bus.fire.call_args_list]
-        assert "entity_distance_leave" in fired_events
+        assert coord.hass.bus.fire.call_count == 0
+        assert result.proximity is False
 
-    def test_update_fires_event_update(self):
+    def test_steady_tick_fires_no_events(self):
         coord = self._setup()
         ps = _fresh_pair()
         ps.proximity = False
         ps.update_count_a = 5
         ps.update_count_b = 5
 
-        # 1200m → still outside, no proximity change → fires update
         with patch(
             "custom_components.entity_distance.coordinator.ha_distance", return_value=1200.0
         ):
             coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
-        fired_events = [call.args[0] for call in coord.hass.bus.fire.call_args_list]
-        assert "entity_distance_update" in fired_events
+        assert coord.hass.bus.fire.call_count == 0
 
-    def test_enter_unreliable_fires_enter_unreliable(self):
-        # require_reliable=False but update counts are too low → not reliable
-        # fires entity_distance_enter_unreliable when entering proximity with low counts
+    def test_enter_unreliable_transition_no_event(self):
+        # Pre-v0.3.0 this fired entity_distance_enter_unreliable. Now zero events
+        # and ps.proximity still flips on (require_reliable=False default).
         coord = self._setup(min_updates=10)
         ps = _fresh_pair()
         ps.proximity = False
@@ -548,7 +552,8 @@ class TestCalcPairEvents:
         ps.update_count_b = 1
 
         with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=200.0):
-            coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+            result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
-        fired_events = [call.args[0] for call in coord.hass.bus.fire.call_args_list]
-        assert "entity_distance_enter_unreliable" in fired_events
+        assert coord.hass.bus.fire.call_count == 0
+        assert result.proximity is True
+        assert coord.is_reliable(result) is False

@@ -2,6 +2,62 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-06-21
+
+### Breaking
+
+- **All bus events removed.** In v0.2.x the integration fired four event types
+  on the HA event bus: `entity_distance_update` (every ~1 minute per pair),
+  `entity_distance_enter`, `entity_distance_leave`, and
+  `entity_distance_enter_unreliable` (on threshold crossings). A typical
+  install generated hundreds of thousands of bus-only events per pair over a
+  recorder retention window — events with no history-panel value that bloated
+  the recorder `events` table. v0.3.0 deletes all four events and the
+  `emit_bus_events` toggle: the coordinator no longer calls
+  `hass.bus.fire(...)` at any site. Automations must drive off sensor /
+  binary_sensor state-change triggers instead.
+- **Migration for users with existing automations:**
+  - `event_type: entity_distance_enter` → state trigger on
+    `binary_sensor.<pair>_in_proximity` going `off → on`.
+  - `event_type: entity_distance_leave` → state trigger on
+    `binary_sensor.<pair>_in_proximity` going `on → off`.
+  - `event_type: entity_distance_enter_unreliable` → state trigger on
+    `binary_sensor.<pair>_in_proximity` going `off → on` with a condition on
+    `binary_sensor.<pair>_reliable` being `off`.
+  - `event_type: entity_distance_update` → no direct replacement; switch to a
+    state trigger on `sensor.<pair>_distance` (or any per-pair sensor) if you
+    need a per-tick signal.
+
+  See README → Events for migration examples.
+
+### Added
+
+- `binary_sensor.<pair>_reliable` — on when both sides of the pair have at
+  least `min_updates_reliable` GPS fixes in the rolling window. Replaces the
+  `reliable: bool` field that used to ride in the bus-event payload, so
+  automations can gate on data confidence via a state trigger.
+- Public `EntityDistanceCoordinator.is_reliable(ps)` method (renamed from
+  `_is_reliable`) so the new binary sensor and external integrations can
+  query the same reliability check the coordinator uses internally.
+
+### Removed
+
+- `entity_distance_update`, `entity_distance_enter`, `entity_distance_leave`,
+  `entity_distance_enter_unreliable` events and the `EVENT_*` const symbols.
+- `emit_bus_events` config option (no longer needed — bus events are gone, not
+  opt-in).
+- Recorder-hygiene `exclude.event_types` snippet from README — moot once
+  nothing fires.
+
+### Internal
+
+- `_invalidate()` lost `was_prox` local; `_calc_pair` lost the entire
+  `event_data` dict and threshold-transition fire block.
+- 466 tests passing, 100% coverage. `TestCalcPairNoEvents` (group_tracking)
+  + `TestNoBusEvents` (coordinator) lock the contract that
+  `hass.bus.fire.call_count == 0` across all transitions; new
+  `TestReliableBinarySensor` covers the replacement binary sensor.
+
 ## [0.2.7] - 2026-06-18
 
 ### Added

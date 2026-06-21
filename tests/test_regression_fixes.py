@@ -39,6 +39,7 @@ def _make_coordinator(
     min_updates_reliable: int = 3,
     max_speed_kmh: float = 1000.0,
     max_accuracy_m: float = 200.0,
+    emit_bus_events: bool = True,
 ):
     from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
 
@@ -58,6 +59,7 @@ def _make_coordinator(
     coord._resync_hold_until = {}
     coord._min_updates_reliable = min_updates_reliable
     coord._require_reliable = require_reliable
+    coord._emit_bus_events = emit_bus_events
     return coord
 
 

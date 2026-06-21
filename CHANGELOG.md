@@ -2,6 +2,45 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-06-21
+
+### Breaking
+
+- **Bus events are now opt-in (default off).** The integration previously fired
+  `entity_distance_update` on every coordinator tick (~1 minute) plus
+  `entity_distance_enter` / `entity_distance_leave` /
+  `entity_distance_enter_unreliable` on threshold crossings. On a typical
+  install this generated hundreds of thousands of bus-only events per pair
+  over a recorder retention window — events with no history-panel value that
+  bloated the recorder `events` table.
+- **`entity_distance_update` is removed.** Even with the new opt-in flag
+  enabled, the per-tick generic event no longer fires. Only the three
+  threshold-crossing events do.
+- **Migration for users with existing automations:** automations using
+  `event_type: entity_distance_update` triggers will not fire after upgrading.
+  Replace them with state-change triggers on
+  `binary_sensor.<pair>_in_proximity` (preferred — does not pollute the
+  recorder), or, if you still need event-based triggers for enter/leave,
+  enable **Settings → Devices & services → Entity Distance → Configure →
+  Advanced → Emit proximity bus events** and switch to
+  `entity_distance_enter` / `entity_distance_leave`. See README → Events for
+  a `recorder.exclude.event_types` snippet.
+
+### Added
+
+- `emit_bus_events` config option (default `False`) on the Advanced step of
+  both initial setup and Options. When on, fires
+  `entity_distance_enter` / `entity_distance_enter_unreliable` /
+  `entity_distance_leave` on threshold crossings only — never per tick.
+- `Settings` sensor exposes `emit_bus_events` so the device card surfaces
+  whether bus events are enabled.
+
+### Internal
+
+- `EVENT_UPDATE` import dropped from `coordinator.py`.
+- 470+ tests passing, 100% coverage. New `TestEmitBusEventsGate` covers
+  default-off, opt-in threshold-only, and opt-in no-per-tick behaviors.
+
 ## [0.2.7] - 2026-06-18
 
 ### Added

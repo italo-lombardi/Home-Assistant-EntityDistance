@@ -563,6 +563,7 @@ def _make_calc_pair_coordinator(
     require_reliable=False,
     min_updates_reliable=1,
     updates_window_s=1800.0,
+    emit_bus_events=True,
 ):
     from custom_components.entity_distance.const import (
         BUCKET_FAR,
@@ -591,6 +592,7 @@ def _make_calc_pair_coordinator(
     coordinator._require_reliable = require_reliable
     coordinator._min_updates_reliable = min_updates_reliable
     coordinator._updates_window_s = updates_window_s
+    coordinator._emit_bus_events = emit_bus_events
     coordinator._bucket_thresholds = {
         BUCKET_VERY_NEAR: DEFAULT_ZONE_VERY_NEAR_M,
         BUCKET_NEAR: DEFAULT_ZONE_NEAR_M,
@@ -1094,10 +1096,119 @@ class TestCoordinatorProperties:
         coord._min_updates_reliable = 3
         coord._updates_window_s = 1800
         coord._require_reliable = False
+        coord._emit_bus_events = False
         snap = coord.settings_snapshot
         assert snap["entry_threshold_m"] == 200.0
         assert snap["zone_very_near_m"] == 100
-        assert len(snap) == 14
+        assert snap["emit_bus_events"] is False
+        assert len(snap) == 15
+
+
+# ---------------------------------------------------------------------------
+# F-29.5-7: default install must not pollute the recorder events table.
+# Bus events are opt-in via CONF_EMIT_BUS_EVENTS (default False). When enabled,
+# only threshold-crossings (enter / leave / enter_unreliable) fire — never
+# per-tick entity_distance_update events.
+# ---------------------------------------------------------------------------
+
+
+class TestEmitBusEventsGate:
+    def test_default_no_events_on_threshold_crossing(self):
+        from datetime import UTC, datetime
+        from unittest.mock import patch as _patch
+
+        from custom_components.entity_distance.models import PairState, pair_key
+
+        coordinator = _make_calc_pair_coordinator(
+            min_updates_reliable=1,
+            emit_bus_events=False,
+        )
+        a, b = "person.alice", "person.bob"
+        k = pair_key(a, b)
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.update_count_a = 5
+        ps.update_count_b = 5
+        state_a = make_state(a, 51.5, -0.1, 20)
+        state_b = make_state(b, 51.501, -0.1, 20)
+        coordinator.hass.states.get = MagicMock(
+            side_effect=lambda eid: state_a if eid == a else state_b
+        )
+
+        now = datetime(2024, 6, 1, 12, 0, 0, tzinfo=UTC)
+        with _patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=200.0,  # below entry_threshold_m → would fire EVENT_ENTER if opted in
+        ):
+            coordinator._calc_pair(ps, a, b, now, set())
+
+        assert coordinator.hass.bus.fire.call_count == 0
+
+    def test_optin_fires_threshold_crossing_only(self):
+        from datetime import UTC, datetime
+        from unittest.mock import patch as _patch
+
+        from custom_components.entity_distance.const import EVENT_ENTER
+        from custom_components.entity_distance.models import PairState, pair_key
+
+        coordinator = _make_calc_pair_coordinator(
+            min_updates_reliable=1,
+            emit_bus_events=True,
+        )
+        a, b = "person.alice", "person.bob"
+        k = pair_key(a, b)
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.update_count_a = 5
+        ps.update_count_b = 5
+        state_a = make_state(a, 51.5, -0.1, 20)
+        state_b = make_state(b, 51.501, -0.1, 20)
+        coordinator.hass.states.get = MagicMock(
+            side_effect=lambda eid: state_a if eid == a else state_b
+        )
+
+        now = datetime(2024, 6, 1, 12, 0, 0, tzinfo=UTC)
+        with _patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=200.0,
+        ):
+            coordinator._calc_pair(ps, a, b, now, set())
+
+        fired = [c.args[0] for c in coordinator.hass.bus.fire.call_args_list]
+        assert fired == [EVENT_ENTER]
+
+    def test_optin_no_per_tick_update_event(self):
+        # Even with opt-in, no entity_distance_update fires when proximity
+        # state is unchanged (tick fires nothing).
+        from datetime import UTC, datetime
+        from unittest.mock import patch as _patch
+
+        from custom_components.entity_distance.models import PairState, pair_key
+
+        coordinator = _make_calc_pair_coordinator(
+            min_updates_reliable=1,
+            emit_bus_events=True,
+        )
+        a, b = "person.alice", "person.bob"
+        k = pair_key(a, b)
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.proximity = False
+        ps.update_count_a = 5
+        ps.update_count_b = 5
+        state_a = make_state(a, 51.5, -0.1, 20)
+        state_b = make_state(b, 51.501, -0.1, 20)
+        coordinator.hass.states.get = MagicMock(
+            side_effect=lambda eid: state_a if eid == a else state_b
+        )
+
+        now = datetime(2024, 6, 1, 12, 0, 0, tzinfo=UTC)
+        with _patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=1200.0,  # outside entry_threshold_m, no transition
+        ):
+            coordinator._calc_pair(ps, a, b, now, set())
+
+        fired = [c.args[0] for c in coordinator.hass.bus.fire.call_args_list]
+        assert "entity_distance_update" not in fired
+        assert fired == []
 
 
 # ---------------------------------------------------------------------------

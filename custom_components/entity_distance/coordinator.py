@@ -21,6 +21,7 @@ from .const import (
     BUCKET_VERY_FAR,
     BUCKET_VERY_NEAR,
     CONF_DEBOUNCE_S,
+    CONF_EMIT_BUS_EVENTS,
     CONF_ENTITIES,
     CONF_ENTRY_THRESHOLD_M,
     CONF_EXIT_THRESHOLD_M,
@@ -36,6 +37,7 @@ from .const import (
     CONF_ZONE_NEAR_M,
     CONF_ZONE_VERY_NEAR_M,
     DEFAULT_DEBOUNCE_S,
+    DEFAULT_EMIT_BUS_EVENTS,
     DEFAULT_ENTRY_THRESHOLD_M,
     DEFAULT_EXIT_THRESHOLD_M,
     DEFAULT_MAX_ACCURACY_M,
@@ -56,7 +58,6 @@ from .const import (
     EVENT_ENTER,
     EVENT_ENTER_UNRELIABLE,
     EVENT_LEAVE,
-    EVENT_UPDATE,
     STATIONARY_THRESHOLD_M,
 )
 from .models import GroupData, PairState, pair_key
@@ -162,6 +163,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         )
         self._updates_window_s: float = data.get(CONF_UPDATES_WINDOW_S, DEFAULT_UPDATES_WINDOW_S)
         self._require_reliable: bool = data.get(CONF_REQUIRE_RELIABLE, DEFAULT_REQUIRE_RELIABLE)
+        self._emit_bus_events: bool = data.get(CONF_EMIT_BUS_EVENTS, DEFAULT_EMIT_BUS_EVENTS)
         self._bucket_thresholds: dict[str, float] = {
             BUCKET_VERY_NEAR: data.get(CONF_ZONE_VERY_NEAR_M, DEFAULT_ZONE_VERY_NEAR_M),
             BUCKET_NEAR: data.get(CONF_ZONE_NEAR_M, DEFAULT_ZONE_NEAR_M),
@@ -216,6 +218,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             "min_updates_reliable": self._min_updates_reliable,
             "updates_window_s": self._updates_window_s,
             "require_reliable": self._require_reliable,
+            "emit_bus_events": self._emit_bus_events,
             "zone_very_near_m": self._bucket_thresholds[BUCKET_VERY_NEAR],
             "zone_near_m": self._bucket_thresholds[BUCKET_NEAR],
             "zone_mid_m": self._bucket_thresholds[BUCKET_MID],
@@ -387,7 +390,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             ps.last_error = reason
             ps.prev_calc_time = None
             ps.prev_distance_m = None
-            if was_prox:
+            if was_prox and self._emit_bus_events:
                 self.hass.bus.fire(
                     EVENT_LEAVE,
                     {
@@ -594,19 +597,20 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                             )
                     ps.proximity = False
                     ps.proximity_since = None
-                    self.hass.bus.fire(
-                        EVENT_LEAVE,
-                        {
-                            "entity_a": entity_a,
-                            "entity_b": entity_b,
-                            "distance_m": ps.distance_m,
-                            "entry_threshold_m": self._entry_threshold_m,
-                            "exit_threshold_m": self._exit_threshold_m,
-                            "reliable": False,
-                            "direction": None,
-                            "closing_speed_kmh": None,
-                        },
-                    )
+                    if self._emit_bus_events:
+                        self.hass.bus.fire(
+                            EVENT_LEAVE,
+                            {
+                                "entity_a": entity_a,
+                                "entity_b": entity_b,
+                                "distance_m": ps.distance_m,
+                                "entry_threshold_m": self._entry_threshold_m,
+                                "exit_threshold_m": self._exit_threshold_m,
+                                "reliable": False,
+                                "direction": None,
+                                "closing_speed_kmh": None,
+                            },
+                        )
                 # Null the baseline so the first post-hold tick doesn't trigger a
                 # spurious speed-filter rejection against a stale prev_distance_m.
                 ps.prev_calc_time = None
@@ -720,12 +724,15 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
 
         if not was_proximity and ps.proximity:
             event = EVENT_ENTER if reliable else EVENT_ENTER_UNRELIABLE
-            self.hass.bus.fire(event, event_data)
-            _LOGGER.debug("entity_distance: fired %s for pair (%s, %s)", event, entity_a, entity_b)
+            if self._emit_bus_events:
+                self.hass.bus.fire(event, event_data)
+                _LOGGER.debug(
+                    "entity_distance: fired %s for pair (%s, %s)", event, entity_a, entity_b
+                )
         elif was_proximity and not ps.proximity:
-            self.hass.bus.fire(EVENT_LEAVE, event_data)
-        else:
-            self.hass.bus.fire(EVENT_UPDATE, event_data)
+            if self._emit_bus_events:
+                self.hass.bus.fire(EVENT_LEAVE, event_data)
+        # Per-tick EVENT_UPDATE removed in v0.3.0 — threshold-crossing events only.
 
         return ps
 

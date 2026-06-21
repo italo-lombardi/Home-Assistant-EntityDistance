@@ -143,6 +143,7 @@ def _make_coordinator(
     exit_threshold_m: float = 700.0,
     require_reliable: bool = False,
     min_updates_reliable: int = 3,
+    emit_bus_events: bool = True,
 ):
     """Create a minimal EntityDistanceCoordinator without calling __init__."""
     from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
@@ -163,6 +164,7 @@ def _make_coordinator(
     coord._resync_hold_until = {}
     coord._min_updates_reliable = min_updates_reliable
     coord._require_reliable = require_reliable
+    coord._emit_bus_events = emit_bus_events
     return coord
 
 
@@ -522,21 +524,41 @@ class TestCalcPairEvents:
         fired_events = [call.args[0] for call in coord.hass.bus.fire.call_args_list]
         assert "entity_distance_leave" in fired_events
 
-    def test_update_fires_event_update(self):
+    def test_update_does_not_fire_event_update(self):
+        # Per-tick entity_distance_update events were removed in v0.3.0 —
+        # only threshold crossings (enter/leave) emit events when opted in.
         coord = self._setup()
         ps = _fresh_pair()
         ps.proximity = False
         ps.update_count_a = 5
         ps.update_count_b = 5
 
-        # 1200m → still outside, no proximity change → fires update
+        # 1200m → still outside, no proximity change → fires nothing.
         with patch(
             "custom_components.entity_distance.coordinator.ha_distance", return_value=1200.0
         ):
             coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
         fired_events = [call.args[0] for call in coord.hass.bus.fire.call_args_list]
-        assert "entity_distance_update" in fired_events
+        assert "entity_distance_update" not in fired_events
+        assert fired_events == []
+
+    def test_default_install_no_bus_events_on_tick(self):
+        # F-29.5-7: default install (emit_bus_events=False) must fire zero
+        # bus events on coordinator ticks, including threshold crossings.
+        coord = self._setup(min_updates=1)
+        coord._emit_bus_events = False
+        ps = _fresh_pair()
+        ps.proximity = False
+        ps.update_count_a = 5
+        ps.update_count_b = 5
+
+        # Threshold-crossing tick (would otherwise fire entity_distance_enter).
+        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=200.0):
+            coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+
+        fired_events = [call.args[0] for call in coord.hass.bus.fire.call_args_list]
+        assert fired_events == []
 
     def test_enter_unreliable_fires_enter_unreliable(self):
         # require_reliable=False but update counts are too low → not reliable

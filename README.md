@@ -325,14 +325,15 @@ All sensors refresh on a 1-minute timer tick even when entities don't move. This
 
 ## Events
 
-Four events are fired on the HA event bus:
+> **Disabled by default.** Bus events are off out-of-the-box (see _Recorder hygiene_ below). Turn them on by enabling **Emit proximity bus events** in **Settings → Devices & services → Entity Distance → Configure → Advanced**. State-change triggers on the integration's sensors are recommended over event triggers — they don't pollute the recorder events table.
+
+When the option is on, three threshold-crossing events are fired on the HA event bus. The legacy per-tick `entity_distance_update` event was removed in v0.3.0.
 
 | Event | Fired when |
 |-------|------------|
 | `entity_distance_enter` | Entities enter proximity (reliable data) |
 | `entity_distance_enter_unreliable` | Entities enter proximity (unreliable data) |
 | `entity_distance_leave` | Entities leave proximity |
-| `entity_distance_update` | Location updated while proximity state unchanged |
 
 ### Event payload
 
@@ -346,6 +347,21 @@ reliable: true
 direction: approaching
 closing_speed_kmh: 12.3
 ```
+
+### Recorder hygiene
+
+Even with events enabled, the integration emits at most one event per pair per threshold crossing — orders of magnitude fewer than the per-tick stream in earlier versions. To keep the events table clean regardless, exclude the event types from the recorder:
+
+```yaml
+recorder:
+  exclude:
+    event_types:
+      - entity_distance_enter
+      - entity_distance_enter_unreliable
+      - entity_distance_leave
+```
+
+> **Migrating from v0.2.x:** automations using `event_type: entity_distance_update` triggers will not fire — that event was removed. Replace them with state-change triggers on `binary_sensor.<pair>_in_proximity` (or one of the bucket binary sensors), or, if you still need event-based triggers, enable the new advanced option and switch to `entity_distance_enter` / `entity_distance_leave`.
 
 ---
 
@@ -536,11 +552,11 @@ If auto-registration fails (e.g. YAML-only Lovelace mode), add manually:
 
 ```yaml
 resources:
-  - url: /entity_distance/entity-distance-pair-card.js?0.2.7
+  - url: /entity_distance/entity-distance-pair-card.js?0.3.0
     type: module
-  - url: /entity_distance/entity-distance-avatar-card.js?0.2.7
+  - url: /entity_distance/entity-distance-avatar-card.js?0.3.0
     type: module
-  - url: /entity_distance/entity-distance-group-card.js?0.2.7
+  - url: /entity_distance/entity-distance-group-card.js?0.3.0
     type: module
 ```
 

@@ -36,13 +36,15 @@
           "max_accuracy_m": "Maks. GPS-nøyaktighet (m, 0 = deaktivert)",
           "max_speed_kmh": "Maks. implisitt hastighet (km/h, 0 = deaktivert)",
           "require_reliable": "Krev pålitelige data for nærhetshendelser",
-          "min_updates_reliable": "Min. oppdateringer for pålitelige data"
+          "min_updates_reliable": "Min. oppdateringer for pålitelige data",
+          "emit_bus_events": "Send proximity-bushendelser (avansert)"
         },
         "data_description": {
           "max_accuracy_m": "Avvis posisjonsoppdateringer med GPS-nøyaktighet dårligere enn denne verdien. Sett til 0 for å deaktivere.",
           "max_speed_kmh": "Avvis oppdateringer der implisitt bevegelseshastighet overskrider denne verdien. Sett til 0 for å deaktivere.",
           "require_reliable": "Avskyte proximity_enter-hendelse bare når data anses pålitelige.",
-          "min_updates_reliable": "Minimum antall posisjonsoppdateringer i vinduet før data anses pålitelige."
+          "min_updates_reliable": "Minimum antall posisjonsoppdateringer i vinduet før data anses pålitelige.",
+          "emit_bus_events": "Av som standard. Når på, sendes entity_distance_enter / entity_distance_leave / entity_distance_enter_unreliable kun ved terskelkryssinger (ingen hendelser per tick). La være av med mindre du har automatiseringer som utløses av disse hendelsestypene — tilstandsendringstriggere på sensorer er foretrukne og forurenser ikke recorderen."
         }
       },
       "zone_thresholds": {
@@ -100,14 +102,16 @@
           "max_accuracy_m": "Maks. GPS-nøyaktighet (m, 0 = deaktivert)",
           "max_speed_kmh": "Maks. implisitt hastighet (km/h, 0 = deaktivert)",
           "require_reliable": "Krev pålitelige data for nærhetshendelser",
-          "min_updates_reliable": "Min. oppdateringer for pålitelige data"
+          "min_updates_reliable": "Min. oppdateringer for pålitelige data",
+          "emit_bus_events": "Send proximity-bushendelser (avansert)"
         },
         "description": "Disse filtrene hjelper med å ignorere dårlige GPS-data.",
         "data_description": {
           "max_accuracy_m": "Ignorer posisjonsoppdateringer der GPS-feilen er større enn dette.",
           "max_speed_kmh": "Ignorer oppdateringer som innebærer bevegelse raskere enn dette.",
           "require_reliable": "Når aktivert utløses en nærhendelse bare etter konsekvente oppdateringer.",
-          "min_updates_reliable": "Hvor mange konsekvente oppdateringer som kreves før posisjonen anses som pålitelig."
+          "min_updates_reliable": "Hvor mange konsekvente oppdateringer som kreves før posisjonen anses som pålitelig.",
+          "emit_bus_events": "Av som standard. Når på, sendes entity_distance_enter / entity_distance_leave / entity_distance_enter_unreliable kun ved terskelkryssinger (ingen hendelser per tick). La være av med mindre du har automatiseringer som utløses av disse hendelsestypene — tilstandsendringstriggere på sensorer er foretrukne og forurenser ikke recorderen."
         }
       },
       "zone_thresholds": {

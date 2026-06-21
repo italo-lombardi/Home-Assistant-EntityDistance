@@ -36,13 +36,15 @@
           "max_accuracy_m": "Max. GPS-Genauigkeit (m, 0 = deaktiviert)",
           "max_speed_kmh": "Max. implizite Geschwindigkeit (km/h, 0 = deaktiviert)",
           "require_reliable": "Zuverlässige Daten für Näherungsereignisse erforderlich",
-          "min_updates_reliable": "Min. Aktualisierungen für zuverlässige Daten"
+          "min_updates_reliable": "Min. Aktualisierungen für zuverlässige Daten",
+          "emit_bus_events": "Proximity-Bus-Ereignisse senden (erweitert)"
         },
         "data_description": {
           "max_accuracy_m": "Standortaktualisierungen mit schlechterer GPS-Genauigkeit als diesem Wert ablehnen. Auf 0 setzen zum Deaktivieren.",
           "max_speed_kmh": "Aktualisierungen ablehnen, bei denen die implizierte Bewegungsgeschwindigkeit diesen Wert überschreitet. Auf 0 setzen zum Deaktivieren.",
           "require_reliable": "Proximity_enter-Ereignis nur auslösen, wenn Daten als zuverlässig gelten.",
-          "min_updates_reliable": "Mindestanzahl von Standortaktualisierungen im Fenster, bevor Daten als zuverlässig gelten."
+          "min_updates_reliable": "Mindestanzahl von Standortaktualisierungen im Fenster, bevor Daten als zuverlässig gelten.",
+          "emit_bus_events": "Standardmäßig aus. Wenn aktiviert, werden entity_distance_enter / entity_distance_leave / entity_distance_enter_unreliable nur bei Schwellenwert-Übergängen ausgelöst (keine Pro-Tick-Ereignisse). Aus lassen, sofern keine Automatisierungen auf diese Ereignistypen reagieren — Sensor-Statuswechsel-Trigger sind vorzuziehen und verschmutzen den Recorder nicht."
         }
       },
       "zone_thresholds": {
@@ -100,14 +102,16 @@
           "max_accuracy_m": "Max. GPS-Genauigkeit (m, 0 = deaktiviert)",
           "max_speed_kmh": "Max. implizite Geschwindigkeit (km/h, 0 = deaktiviert)",
           "require_reliable": "Zuverlässige Daten für Näherungsereignisse erforderlich",
-          "min_updates_reliable": "Min. Aktualisierungen für zuverlässige Daten"
+          "min_updates_reliable": "Min. Aktualisierungen für zuverlässige Daten",
+          "emit_bus_events": "Proximity-Bus-Ereignisse senden (erweitert)"
         },
         "description": "Diese Filter helfen, schlechte GPS-Daten zu ignorieren.",
         "data_description": {
           "max_accuracy_m": "Standortaktualisierungen ablehnen, bei denen der GPS-Fehler größer als dieser Wert ist.",
           "max_speed_kmh": "Aktualisierungen ablehnen, die eine Bewegung schneller als dies implizieren.",
           "require_reliable": "Wenn aktiviert, wird ein Näherungsereignis nur nach konsistenten Aktualisierungen ausgelöst.",
-          "min_updates_reliable": "Wie viele konsistente Aktualisierungen erforderlich sind, bevor der Standort als zuverlässig gilt."
+          "min_updates_reliable": "Wie viele konsistente Aktualisierungen erforderlich sind, bevor der Standort als zuverlässig gilt.",
+          "emit_bus_events": "Standardmäßig aus. Wenn aktiviert, werden entity_distance_enter / entity_distance_leave / entity_distance_enter_unreliable nur bei Schwellenwert-Übergängen ausgelöst (keine Pro-Tick-Ereignisse). Aus lassen, sofern keine Automatisierungen auf diese Ereignistypen reagieren — Sensor-Statuswechsel-Trigger sind vorzuziehen und verschmutzen den Recorder nicht."
         }
       },
       "zone_thresholds": {

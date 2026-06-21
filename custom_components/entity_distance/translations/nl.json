@@ -36,13 +36,15 @@
           "max_accuracy_m": "Max. GPS-nauwkeurigheid (m, 0 = uitgeschakeld)",
           "max_speed_kmh": "Max. impliciete snelheid (km/h, 0 = uitgeschakeld)",
           "require_reliable": "Betrouwbare gegevens vereisen voor nabijheidsgebeurtenissen",
-          "min_updates_reliable": "Min. updates voor betrouwbare gegevens"
+          "min_updates_reliable": "Min. updates voor betrouwbare gegevens",
+          "emit_bus_events": "Proximity-busgebeurtenissen verzenden (geavanceerd)"
         },
         "data_description": {
           "max_accuracy_m": "Locatie-updates weigeren met GPS-nauwkeurigheid slechter dan deze waarde. Stel in op 0 om uit te schakelen.",
           "max_speed_kmh": "Updates weigeren waarbij de impliciete bewegingssnelheid deze waarde overschrijdt. Stel in op 0 om uit te schakelen.",
           "require_reliable": "Alleen proximity_enter-gebeurtenis activeren wanneer gegevens als betrouwbaar worden beschouwd.",
-          "min_updates_reliable": "Minimum aantal locatie-updates in het venster voordat gegevens als betrouwbaar worden beschouwd."
+          "min_updates_reliable": "Minimum aantal locatie-updates in het venster voordat gegevens als betrouwbaar worden beschouwd.",
+          "emit_bus_events": "Standaard uit. Indien aan, vuurt entity_distance_enter / entity_distance_leave / entity_distance_enter_unreliable alleen bij drempelovergangen (geen gebeurtenissen per tick). Laat uit tenzij je automatiseringen hebt die op deze gebeurtenistypen reageren — sensor-statuswijzigingstriggers verdienen de voorkeur en vervuilen de recorder niet."
         }
       },
       "zone_thresholds": {
@@ -100,14 +102,16 @@
           "max_accuracy_m": "Max. GPS-nauwkeurigheid (m, 0 = uitgeschakeld)",
           "max_speed_kmh": "Max. impliciete snelheid (km/h, 0 = uitgeschakeld)",
           "require_reliable": "Betrouwbare gegevens vereisen voor nabijheidsgebeurtenissen",
-          "min_updates_reliable": "Min. updates voor betrouwbare gegevens"
+          "min_updates_reliable": "Min. updates voor betrouwbare gegevens",
+          "emit_bus_events": "Proximity-busgebeurtenissen verzenden (geavanceerd)"
         },
         "description": "Deze filters helpen slechte GPS-gegevens te negeren.",
         "data_description": {
           "max_accuracy_m": "Negeer locatieupdates waarbij de GPS-fout groter is dan dit.",
           "max_speed_kmh": "Negeer updates die beweging sneller dan dit impliceren.",
           "require_reliable": "Wanneer ingeschakeld wordt een nabijheidsgebeurtenis alleen geactiveerd na consistente updates.",
-          "min_updates_reliable": "Hoeveel opeenvolgende updates nodig zijn voordat de locatie als betrouwbaar wordt beschouwd."
+          "min_updates_reliable": "Hoeveel opeenvolgende updates nodig zijn voordat de locatie als betrouwbaar wordt beschouwd.",
+          "emit_bus_events": "Standaard uit. Indien aan, vuurt entity_distance_enter / entity_distance_leave / entity_distance_enter_unreliable alleen bij drempelovergangen (geen gebeurtenissen per tick). Laat uit tenzij je automatiseringen hebt die op deze gebeurtenistypen reageren — sensor-statuswijzigingstriggers verdienen de voorkeur en vervuilen de recorder niet."
         }
       },
       "zone_thresholds": {

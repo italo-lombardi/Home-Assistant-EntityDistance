@@ -36,13 +36,15 @@
           "max_accuracy_m": "Précision GPS max. (m, 0 = désactivé)",
           "max_speed_kmh": "Vitesse implicite max. (km/h, 0 = désactivé)",
           "require_reliable": "Exiger des données fiables pour les événements de proximité",
-          "min_updates_reliable": "Mises à jour min. pour données fiables"
+          "min_updates_reliable": "Mises à jour min. pour données fiables",
+          "emit_bus_events": "Émettre les événements de bus de proximité (avancé)"
         },
         "data_description": {
           "max_accuracy_m": "Rejeter les mises à jour de localisation avec une précision GPS inférieure à cette valeur. Mettre à 0 pour désactiver.",
           "max_speed_kmh": "Rejeter les mises à jour où la vitesse de déplacement implicite dépasse cette valeur. Mettre à 0 pour désactiver.",
           "require_reliable": "Déclencher l'événement proximity_enter uniquement lorsque les données sont fiables.",
-          "min_updates_reliable": "Nombre minimum de mises à jour de localisation dans la fenêtre avant que les données soient considérées fiables."
+          "min_updates_reliable": "Nombre minimum de mises à jour de localisation dans la fenêtre avant que les données soient considérées fiables.",
+          "emit_bus_events": "Désactivé par défaut. Lorsqu'il est activé, déclenche entity_distance_enter / entity_distance_leave / entity_distance_enter_unreliable uniquement aux franchissements de seuil (aucun événement par tick). Laisser désactivé sauf si vous avez des automatisations déclenchées par ces types d'événements — les déclencheurs de changement d'état de capteur sont préférables et ne polluent pas le recorder."
         }
       },
       "zone_thresholds": {
@@ -100,14 +102,16 @@
           "max_accuracy_m": "Précision GPS max. (m, 0 = désactivé)",
           "max_speed_kmh": "Vitesse implicite max. (km/h, 0 = désactivé)",
           "require_reliable": "Exiger des données fiables pour les événements de proximité",
-          "min_updates_reliable": "Mises à jour min. pour données fiables"
+          "min_updates_reliable": "Mises à jour min. pour données fiables",
+          "emit_bus_events": "Émettre les événements de bus de proximité (avancé)"
         },
         "description": "Ces filtres aident à ignorer les données GPS incorrectes.",
         "data_description": {
           "max_accuracy_m": "Ignorer les mises à jour de localisation où l'erreur GPS dépasse cette valeur.",
           "max_speed_kmh": "Ignorer les mises à jour impliquant un mouvement plus rapide que cela.",
           "require_reliable": "Quand activé, un événement de proximité ne se déclenche qu'après des mises à jour cohérentes.",
-          "min_updates_reliable": "Combien de mises à jour consécutives sont nécessaires avant de considérer la localisation fiable."
+          "min_updates_reliable": "Combien de mises à jour consécutives sont nécessaires avant de considérer la localisation fiable.",
+          "emit_bus_events": "Désactivé par défaut. Lorsqu'il est activé, déclenche entity_distance_enter / entity_distance_leave / entity_distance_enter_unreliable uniquement aux franchissements de seuil (aucun événement par tick). Laisser désactivé sauf si vous avez des automatisations déclenchées par ces types d'événements — les déclencheurs de changement d'état de capteur sont préférables et ne polluent pas le recorder."
         }
       },
       "zone_thresholds": {

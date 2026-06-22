@@ -1009,6 +1009,33 @@ class TestTodayZoneTimeSensorAttributes:
         assert "range_from_m" in attrs
         assert "range_to_m" in attrs
 
+    def test_unknown_bucket_omits_range_from(self):
+        # Bucket not present in coordinator.bucket_thresholds — idx falls to -1,
+        # so range_from_m is omitted but range_to_m stays as None-safe absence.
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.data_valid = True
+        ps.today_zone_seconds = {}
+        sensor = _make_zone_sensor("nonexistent_bucket", ps)
+        attrs = sensor.extra_state_attributes
+        assert "range_from_m" not in attrs
+        assert "range_to_m" not in attrs
+
+    def test_bucket_with_none_upper_omits_range_to(self):
+        # Bucket present but threshold value is None (open-ended tail) — range_to_m
+        # must be omitted, range_from_m still set.
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.data_valid = True
+        ps.today_zone_seconds = {}
+        sensor = _make_zone_sensor(BUCKET_NEAR, ps)
+        sensor.coordinator = MagicMock()
+        sensor.coordinator.bucket_thresholds = {
+            BUCKET_VERY_NEAR: 100.0,
+            BUCKET_NEAR: None,  # open-ended
+        }
+        attrs = sensor.extra_state_attributes
+        assert "range_from_m" in attrs
+        assert "range_to_m" not in attrs
+
 
 # ---------------------------------------------------------------------------
 # ProximityDurationSensor — additional edge cases

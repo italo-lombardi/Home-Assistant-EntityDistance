@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-06-22
+
+### Fixed
+
+- **`binary_sensor.<pair>_same_zone` no longer goes `unknown`.** Previously,
+  when either side of the pair transitioned through `not_home`, `unknown`, or
+  `unavailable` (e.g. a person crossing a zone boundary briefly registers as
+  `not_home` before entering the next zone), `is_on` returned `None` and HA
+  rendered the binary_sensor as `unknown`. This broke `from:` lists on state
+  triggers ("Returning Home" automations skipped the transition). "Same zone"
+  is a definite yes/no — when neither side is in a confirmed named zone, the
+  pair is not in the same zone. `is_on` now returns `False` in those cases.
+  The sensor's state machine is strictly `on` ↔ `off`.
+
 ## [0.3.0] - 2026-06-21
 
 ### Breaking

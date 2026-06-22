@@ -141,35 +141,35 @@ class TestSameZoneBinarySensor:
         sensor = _make_same_zone_sensor(k, "home", "work")
         assert sensor.is_on is False
 
-    def test_none_when_either_not_home(self):
+    def test_false_when_either_not_home(self):
         k = pair_key("person.alice", "person.bob")
         sensor = _make_same_zone_sensor(k, "home", "not_home")
-        assert sensor.is_on is None
+        assert sensor.is_on is False
 
-    def test_none_when_both_not_home(self):
+    def test_false_when_both_not_home(self):
         k = pair_key("person.alice", "person.bob")
         sensor = _make_same_zone_sensor(k, "not_home", "not_home")
-        assert sensor.is_on is None
+        assert sensor.is_on is False
 
-    def test_none_when_either_unknown(self):
+    def test_false_when_either_unknown(self):
         k = pair_key("person.alice", "person.bob")
         sensor = _make_same_zone_sensor(k, "home", "unknown")
-        assert sensor.is_on is None
+        assert sensor.is_on is False
 
-    def test_none_when_either_unavailable(self):
+    def test_false_when_either_unavailable(self):
         k = pair_key("person.alice", "person.bob")
         sensor = _make_same_zone_sensor(k, "unavailable", "home")
-        assert sensor.is_on is None
+        assert sensor.is_on is False
 
-    def test_none_when_state_a_missing(self):
+    def test_false_when_state_a_missing(self):
         k = pair_key("person.alice", "person.bob")
         sensor = _make_same_zone_sensor(k, None, "home")
-        assert sensor.is_on is None
+        assert sensor.is_on is False
 
-    def test_none_when_state_b_missing(self):
+    def test_false_when_state_b_missing(self):
         k = pair_key("person.alice", "person.bob")
         sensor = _make_same_zone_sensor(k, "home", None)
-        assert sensor.is_on is None
+        assert sensor.is_on is False
 
     def test_unique_id_contains_pair_ids(self):
         k = pair_key("person.alice", "person.bob")
@@ -188,11 +188,11 @@ class TestSameZoneBinarySensor:
         sensor = _make_same_zone_sensor(k, "work", "3")
         assert sensor.is_on is False
 
-    def test_none_when_person_state_not_home_with_zone(self):
-        # not_home is in the "_unknown" filter set — pair zone-vs-not_home → None.
+    def test_false_when_person_state_not_home_with_zone(self):
+        # not_home is in the "_no_zone" filter set — pair zone-vs-not_home → False.
         k = pair_key("person.alice", "zone.home")
         sensor = _make_same_zone_sensor(k, "not_home", "3")
-        assert sensor.is_on is None
+        assert sensor.is_on is False
 
     def test_renamed_zone_matches_via_friendly_name(self):
         # zone.work renamed to "My Office" → device_tracker sets person.state = "My Office".

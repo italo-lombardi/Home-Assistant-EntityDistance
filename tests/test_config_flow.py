@@ -68,6 +68,12 @@ def flow_manager(hass):
         yield hass.config_entries.flow
 
 
+def test_default_debounce_is_zero():
+    # New installs react to GPS updates instantly. Anything > 0 here would
+    # silently add latency for every user who never opens the options flow.
+    assert DEFAULT_DEBOUNCE_S == 0
+
+
 class TestConfigFlowUserStep:
     async def test_too_few_entities_returns_error(self, flow_manager):
         result = await flow_manager.async_init(

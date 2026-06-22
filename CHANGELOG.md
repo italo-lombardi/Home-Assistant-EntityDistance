@@ -16,6 +16,20 @@
   pair is not in the same zone. `is_on` now returns `False` in those cases.
   The sensor's state machine is strictly `on` ↔ `off`.
 
+### Changed
+
+- **Default `debounce_s` lowered from 10 → 0.** New installs now react to
+  GPS updates instantly. The 10 s window had been smoothing perfectly good
+  updates that didn't need smoothing on modern phones. Existing installs
+  keep their configured value. Raise to 5–15 s only if you observe jittery
+  on/off switching from a noisy tracker.
+- **UI label renamed** from "Location update delay (s)" to
+  "Wait before reacting (s)" — the old label suggested the integration
+  controlled how often phones reported location; it does not. The new
+  label and help text describe what the setting actually does (waits
+  before recalculating after an update arrives). All 11 translations
+  updated.
+
 ## [0.3.0] - 2026-06-21
 
 ### Breaking

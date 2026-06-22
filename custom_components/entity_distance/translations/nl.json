@@ -17,14 +17,14 @@
         "data": {
           "entry_threshold_m": "Ingangsdrempel (m)",
           "exit_threshold_m": "Uitgangsdrempel (m)",
-          "debounce_s": "Debounce (s)",
+          "debounce_s": "Wachten voor reactie (s)",
           "show_advanced": "Geavanceerde filters configureren",
           "show_zone_thresholds": "Nabijheidszone-drempelwaarden configureren"
         },
         "data_description": {
           "entry_threshold_m": "Afstand waarbij entiteiten als nabij worden beschouwd.",
           "exit_threshold_m": "Afstand waarbij entiteiten niet meer als nabij worden beschouwd. Moet >= ingangsdrempel zijn.",
-          "debounce_s": "Seconden te wachten voor het verwerken van een locatie-update. Vermindert ruis van snelle GPS-wijzigingen.",
+          "debounce_s": "Wanneer een locatie-update binnenkomt, hoe lang te wachten voor herberekening. Nuttig wanneer telefoons meerdere ruisachtige GPS-metingen op een rij sturen — de integratie wacht tot ze stabiliseren. 0 = onmiddellijk reageren (standaard). Verhoog naar 5–15 s bij flikkerend aan/uit.",
           "show_advanced": "Inschakelen om GPS-nauwkeurigheid, snelheid en betrouwbaarheidsfilters te configureren.",
           "show_zone_thresholds": "Inschakelen om de afstandsgrenzen voor zones in te stellen."
         }
@@ -81,7 +81,7 @@
         "data": {
           "entry_threshold_m": "Ingangsdrempel (m)",
           "exit_threshold_m": "Uitgangsdrempel (m)",
-          "debounce_s": "Debounce (s)",
+          "debounce_s": "Wachten voor reactie (s)",
           "show_advanced": "Geavanceerde filters configureren",
           "show_zone_thresholds": "Nabijheidszone-drempelwaarden configureren"
         },
@@ -89,7 +89,7 @@
         "data_description": {
           "entry_threshold_m": "Hoe dicht (in meters) de entiteiten moeten zijn om een nabijheidsgebeurtenis te activeren.",
           "exit_threshold_m": "Hoe ver de entiteiten zich moeten verwijderen voordat ze niet meer als nabij worden beschouwd.",
-          "debounce_s": "Seconden wachten voordat een nieuwe locatieupdate wordt verwerkt.",
+          "debounce_s": "Wanneer een locatie-update binnenkomt, hoe lang te wachten voor herberekening. 0 = onmiddellijk reageren (standaard).",
           "show_advanced": "Inschakelen om GPS-, snelheids- en betrouwbaarheidsfilters te configureren.",
           "show_zone_thresholds": "Inschakelen om zonegrenzen in te stellen."
         }

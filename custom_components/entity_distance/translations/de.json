@@ -17,14 +17,14 @@
         "data": {
           "entry_threshold_m": "Eintrittsschwelle (m)",
           "exit_threshold_m": "Austrittsschwelle (m)",
-          "debounce_s": "Entprellung (s)",
+          "debounce_s": "Wartezeit vor Reaktion (s)",
           "show_advanced": "Erweiterte Filter konfigurieren",
           "show_zone_thresholds": "Näherungszonenschwellenwerte konfigurieren"
         },
         "data_description": {
           "entry_threshold_m": "Abstand, bei dem Entitäten als in der Nähe betrachtet werden.",
           "exit_threshold_m": "Abstand, bei dem Entitäten als nicht mehr in der Nähe betrachtet werden. Muss >= Eintrittsschwelle sein.",
-          "debounce_s": "Sekunden, die vor der Verarbeitung einer Standortaktualisierung gewartet werden. Reduziert Rauschen durch schnelle GPS-Änderungen.",
+          "debounce_s": "Wenn ein Standortupdate eintrifft, wie lange gewartet wird, bevor neu berechnet wird. Nützlich wenn Telefone mehrere verrauschte GPS-Werte in Folge senden — die Integration wartet, bis sie sich beruhigen. 0 = sofort reagieren (Standard). Auf 5–15 s erhöhen bei jitterndem Schalten.",
           "show_advanced": "Aktivieren, um GPS-Genauigkeit, Geschwindigkeit und Zuverlässigkeitsfilter zu konfigurieren.",
           "show_zone_thresholds": "Aktivieren, um die Abstandsgrenzen für die Zonen festzulegen."
         }
@@ -81,7 +81,7 @@
         "data": {
           "entry_threshold_m": "Eintrittsschwelle (m)",
           "exit_threshold_m": "Austrittsschwelle (m)",
-          "debounce_s": "Entprellung (s)",
+          "debounce_s": "Wartezeit vor Reaktion (s)",
           "show_advanced": "Erweiterte Filter konfigurieren",
           "show_zone_thresholds": "Näherungszonenschwellenwerte konfigurieren"
         },
@@ -89,7 +89,7 @@
         "data_description": {
           "entry_threshold_m": "Wie nah (in Metern) die Entitäten sein müssen, um ein 'in der Nähe'-Ereignis auszulösen.",
           "exit_threshold_m": "Wie weit die Entitäten auseinander sein müssen, bevor sie nicht mehr als in der Nähe gelten.",
-          "debounce_s": "Sekunden, die gewartet werden, bevor eine neue Standortaktualisierung verarbeitet wird.",
+          "debounce_s": "Wenn ein Standortupdate eintrifft, wie lange gewartet wird, bevor neu berechnet wird. 0 = sofort reagieren (Standard).",
           "show_advanced": "Aktivieren, um GPS-Genauigkeit, Geschwindigkeit und Zuverlässigkeitsfilter zu konfigurieren.",
           "show_zone_thresholds": "Aktivieren, um Zonengrenzen festzulegen."
         }

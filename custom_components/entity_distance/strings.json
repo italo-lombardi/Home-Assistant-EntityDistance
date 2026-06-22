@@ -17,14 +17,14 @@
         "data": {
           "entry_threshold_m": "Nearby threshold (m)",
           "exit_threshold_m": "Away threshold (m)",
-          "debounce_s": "Location update delay (s)",
+          "debounce_s": "Wait before reacting (s)",
           "show_zone_thresholds": "Configure proximity zone thresholds",
           "show_advanced": "Configure advanced filters"
         },
         "data_description": {
           "entry_threshold_m": "How close (in meters) the entities must be to trigger a 'nearby' event. Example: 200 m is roughly 2 city blocks.",
           "exit_threshold_m": "How far apart the entities must move before they're no longer considered nearby. Set this higher than the nearby threshold to avoid rapid on/off switching. Example: if the nearby threshold is 200 m and this is set to 500 m, the entities must move to 500 m apart before the 'nearby' state clears.",
-          "debounce_s": "How many seconds to wait before acting on a new location update. This smooths out GPS jitter — phones often send several noisy updates in a row. 10 seconds works well for most phones.",
+          "debounce_s": "After a location update arrives, how long to wait before recalculating. Useful when phones send several noisy GPS fixes in a row — the integration waits for them to settle. 0 = react instantly (default). Raise to 5–15 s if you see jittery on/off switching.",
           "show_zone_thresholds": "Turn on to set the distance boundaries for Very Near, Near, Medium, and Far zones on the next screen. Leave off to use sensible defaults.",
           "show_advanced": "Turn on to configure GPS accuracy, speed, and reliability filters on the next screen. Leave off to use sensible defaults."
         }
@@ -82,14 +82,14 @@
         "data": {
           "entry_threshold_m": "Nearby threshold (m)",
           "exit_threshold_m": "Away threshold (m)",
-          "debounce_s": "Location update delay (s)",
+          "debounce_s": "Wait before reacting (s)",
           "show_zone_thresholds": "Configure proximity zone thresholds",
           "show_advanced": "Configure advanced filters"
         },
         "data_description": {
           "entry_threshold_m": "How close (in meters) the entities must be to trigger a 'nearby' event. Example: 200 m is roughly 2 city blocks.",
           "exit_threshold_m": "How far apart the entities must move before they're no longer considered nearby. Set this higher than the nearby threshold to avoid rapid on/off switching. Example: if the nearby threshold is 200 m and this is set to 500 m, the entities must move to 500 m apart before the 'nearby' state clears.",
-          "debounce_s": "How many seconds to wait before acting on a new location update. This smooths out GPS jitter — phones often send several noisy updates in a row. 10 seconds works well for most phones.",
+          "debounce_s": "After a location update arrives, how long to wait before recalculating. Useful when phones send several noisy GPS fixes in a row — the integration waits for them to settle. 0 = react instantly (default). Raise to 5–15 s if you see jittery on/off switching.",
           "show_zone_thresholds": "Turn on to set the distance boundaries for Very Near, Near, Medium, and Far zones on the next screen. Leave off to use sensible defaults.",
           "show_advanced": "Turn on to configure GPS accuracy, speed, and reliability filters on the next screen. Leave off to use sensible defaults."
         }

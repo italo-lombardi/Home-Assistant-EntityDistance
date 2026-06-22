@@ -17,14 +17,14 @@
         "data": {
           "entry_threshold_m": "Ingångsgräns (m)",
           "exit_threshold_m": "Utgångsgräns (m)",
-          "debounce_s": "Debounce (s)",
+          "debounce_s": "Vänta innan reaktion (s)",
           "show_advanced": "Konfigurera avancerade filter",
           "show_zone_thresholds": "Konfigurera närhetszontrösklarna"
         },
         "data_description": {
           "entry_threshold_m": "Avstånd vid vilket enheter anses vara i närheten.",
           "exit_threshold_m": "Avstånd vid vilket enheter inte längre anses vara i närheten. Måste vara >= ingångsgräns.",
-          "debounce_s": "Sekunder att vänta innan en platsuppdatering behandlas. Minskar brus från snabba GPS-ändringar.",
+          "debounce_s": "När en platsuppdatering kommer, hur länge att vänta innan omräkning. Användbart när telefoner skickar flera brusiga GPS-värden i rad — integrationen väntar tills de stabiliseras. 0 = reagera omedelbart (standard). Höj till 5–15 s vid flimrande på/av.",
           "show_advanced": "Aktivera för att konfigurera GPS-noggrannhet, hastighet och tillförlitlighetsfilter.",
           "show_zone_thresholds": "Aktivera för att ange avståndsgränserna för zonerna."
         }
@@ -81,7 +81,7 @@
         "data": {
           "entry_threshold_m": "Ingångsgräns (m)",
           "exit_threshold_m": "Utgångsgräns (m)",
-          "debounce_s": "Debounce (s)",
+          "debounce_s": "Vänta innan reaktion (s)",
           "show_advanced": "Konfigurera avancerade filter",
           "show_zone_thresholds": "Konfigurera närhetszontrösklarna"
         },
@@ -89,7 +89,7 @@
         "data_description": {
           "entry_threshold_m": "Hur nära (i meter) entiteterna måste vara för att utlösa en nähets-händelse.",
           "exit_threshold_m": "Hur långt ifrån varandra entiteterna måste flytta innan de inte längre anses vara nära.",
-          "debounce_s": "Sekunder att vänta innan en ny platsuppdatering behandlas.",
+          "debounce_s": "När en platsuppdatering kommer, hur länge att vänta innan omräkning. 0 = reagera omedelbart (standard).",
           "show_advanced": "Aktivera för att konfigurera GPS-, hastighets- och tillförlitlighetsfilter.",
           "show_zone_thresholds": "Aktivera för att ange zongränser."
         }

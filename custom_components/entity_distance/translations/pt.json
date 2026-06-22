@@ -17,14 +17,14 @@
         "data": {
           "entry_threshold_m": "Limiar de entrada (m)",
           "exit_threshold_m": "Limiar de saída (m)",
-          "debounce_s": "Debounce (s)",
+          "debounce_s": "Aguardar antes de reagir (s)",
           "show_advanced": "Configurar filtros avançados",
           "show_zone_thresholds": "Configurar limiares de zona de proximidade"
         },
         "data_description": {
           "entry_threshold_m": "Distância na qual as entidades são consideradas em proximidade.",
           "exit_threshold_m": "Distância na qual as entidades não são mais consideradas em proximidade. Deve ser >= limiar de entrada.",
-          "debounce_s": "Segundos de espera antes de processar uma atualização de localização. Reduz ruído de mudanças rápidas de GPS.",
+          "debounce_s": "Quando uma atualização de localização chega, quanto esperar antes de recalcular. Útil quando os telefones enviam várias leituras GPS ruidosas seguidas — a integração espera até estabilizarem. 0 = reagir instantaneamente (padrão). Aumente para 5–15 s em caso de on/off intermitente.",
           "show_advanced": "Ativar para configurar precisão GPS, velocidade e filtros de confiabilidade.",
           "show_zone_thresholds": "Ativar para definir os limites de distância das zonas."
         }
@@ -81,7 +81,7 @@
         "data": {
           "entry_threshold_m": "Limiar de entrada (m)",
           "exit_threshold_m": "Limiar de saída (m)",
-          "debounce_s": "Debounce (s)",
+          "debounce_s": "Aguardar antes de reagir (s)",
           "show_advanced": "Configurar filtros avançados",
           "show_zone_thresholds": "Configurar limiares de zona de proximidade"
         },
@@ -89,7 +89,7 @@
         "data_description": {
           "entry_threshold_m": "Quão perto (em metros) as entidades devem estar para acionar um evento de proximidade.",
           "exit_threshold_m": "Quão longe as entidades devem se afastar antes de não serem mais consideradas próximas.",
-          "debounce_s": "Segundos a aguardar antes de processar uma nova atualização de localização.",
+          "debounce_s": "Quando uma atualização de localização chega, quanto esperar antes de recalcular. 0 = reagir instantaneamente (padrão).",
           "show_advanced": "Ativar para configurar filtros de GPS, velocidade e confiabilidade.",
           "show_zone_thresholds": "Ativar para definir limites de zona."
         }

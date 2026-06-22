@@ -406,7 +406,8 @@ class TestRegisterLovelaceResource:
     @pytest.mark.asyncio
     async def test_neither_create_item_nor_data_append_is_noop(self):
         # Defensive: resources object has neither async_create_item nor a
-        # mutable data list. Function must return cleanly without raising.
+        # mutable data list. Function must return cleanly without raising
+        # AND without attempting either insertion path.
         from custom_components.entity_distance import _async_register_lovelace_resource
 
         hass = MagicMock()
@@ -417,15 +418,22 @@ class TestRegisterLovelaceResource:
 
         await _async_register_lovelace_resource(hass, "entity-distance-pair-card.js", "/x", "0.2.4")
 
+        # Neither path should have been touched. spec=[...] guarantees these
+        # attrs don't exist; assert that nothing pretended to add them.
+        assert not hasattr(resources, "async_create_item")
+        assert not hasattr(resources, "data")
+
     @pytest.mark.asyncio
     async def test_dedup_skips_non_storage_collection(self):
         # Duplicates exist but resources is not a ResourceStorageCollection —
-        # the delete branch is skipped per iteration, loop still completes.
+        # the delete branch is skipped per iteration, loop still completes
+        # without attempting deletion.
         from custom_components.entity_distance import _async_register_lovelace_resource
 
         hass = MagicMock()
-        resources = MagicMock(spec=["loaded", "async_items"])
+        resources = MagicMock(spec=["loaded", "async_items", "async_delete_item"])
         resources.loaded = True
+        resources.async_delete_item = AsyncMock()
         url_base = "/entity-distance-pair-card.js"
         resources.async_items = MagicMock(
             return_value=[
@@ -438,6 +446,9 @@ class TestRegisterLovelaceResource:
         await _async_register_lovelace_resource(
             hass, "entity-distance-pair-card.js", f"{url_base}?automatically-added&0.2.4", "0.2.4"
         )
+
+        # Non-StorageCollection → delete must be skipped despite duplicates present.
+        resources.async_delete_item.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_removes_duplicates_keeps_first(self):

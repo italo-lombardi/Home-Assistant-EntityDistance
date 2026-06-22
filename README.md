@@ -20,7 +20,7 @@ Track the distance between any two or more entities — people, devices, or zone
 - **Group sensors** — for 3+ entities: Min Distance, Any In Proximity, All In Proximity
 - **26 sensors per pair** — distance, proximity zone, proximity zone level, proximity duration, proximity rate, proximity tracking started, last seen together, today proximity time, direction, direction level, closing speed, ETA, today zone times, GPS accuracy, last update, update count, entity state, today unaccounted time (per entity where applicable)
 - **Proximity binary sensor** — ON/OFF with configurable entry/exit hysteresis to prevent flickering
-- **Same Zone binary sensor** — ON when both entities share the same named zone; unavailable when either is `not_home`
+- **Same Zone binary sensor** — ON when both entities share the same named zone, OFF otherwise (never `unknown`)
 - **Direction of travel** — approaching, diverging, or stationary
 - **ETA** — estimated minutes until together, only when approaching
 - **Closing speed** — convergence rate in km/h
@@ -87,14 +87,14 @@ For a 2-entity selection you get 1 pair. For 3 entities you get 3 pairs. For 4 e
 |-------|---------|-------------|
 | Nearby threshold (m) | 200 | Entities must be closer than this to trigger a proximity event |
 | Away threshold (m) | 500 | Entities must move further than this before proximity ends (hysteresis) |
-| Location update delay (s) | 10 | Seconds to wait before processing a location update — smooths GPS jitter |
+| Wait before reacting (s) | 0 | After a location update arrives, how long to wait before recalculating. 0 = instant. Raise to 5–15 s if you see jittery on/off switching |
 | Configure proximity zone thresholds | Off | Turn on to customize Very Near / Near / Mid / Far zone distances |
 | Configure advanced filters | Off | Turn on to configure GPS accuracy, speed, and reliability filters |
 
 <!-- SCREENSHOT NEEDED: config_flow_step2_proximity_settings.png
      What to capture:
      - Step 2 of the config flow: proximity/threshold settings form
-     - Show all fields: Nearby threshold, Away threshold, Location update delay,
+     - Show all fields: Nearby threshold, Away threshold, Wait before reacting,
        "Configure proximity zone thresholds" toggle, "Configure advanced filters" toggle
      - Leave all values at their defaults
      - Recommended: 1200×800 px, light theme
@@ -201,7 +201,7 @@ Each configured group creates one HA device (the group) with per-pair sub-device
 | Entity | Description | Device Class |
 |--------|-------------|--------------|
 | In Proximity | ON when within nearby distance, OFF when beyond away distance | `presence` |
-| Same Zone | ON when both entities are in the same named zone (e.g. both `home`); unavailable when either is `not_home` / `unknown` / `unavailable` | — |
+| Same Zone | ON when both entities are in the same named zone (e.g. both `home`), OFF otherwise. Never `unknown` — when either side is `not_home` / `unknown` / `unavailable`, the pair is not in the same zone so the sensor is OFF | — |
 
 > `Same Zone` is not created for zone-zone pairs (always trivially true).
 

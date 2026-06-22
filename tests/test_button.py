@@ -134,6 +134,18 @@ class TestResolveDeviceId:
         result = btn._resolve_device_id(registry, "person.alice")
         assert result is None
 
+    def test_non_person_entity_with_no_device_id_returns_none(self):
+        # device_tracker.* (or any non-person) with no device_id on entry skips
+        # the person.* source-resolution fallback and returns None directly.
+        btn = _make_button(["device_tracker.phone"])
+        registry = MagicMock()
+        entry = MagicMock()
+        entry.device_id = None
+        registry.async_get.return_value = entry
+
+        result = btn._resolve_device_id(registry, "device_tracker.phone")
+        assert result is None
+
 
 class TestResolveNotifyService:
     def test_returns_service_when_mobile_app_available(self):

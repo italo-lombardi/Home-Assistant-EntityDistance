@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -796,6 +796,159 @@ class TestCalcPairMidnightReset:
 
 
 # ---------------------------------------------------------------------------
+# _calc_pair — speed-filter and closing-speed timing edges
+# ---------------------------------------------------------------------------
+
+
+class TestCalcPairTimingEdges:
+    """Cover sub-5s speed filter skip and zero-delta closing-speed skip."""
+
+    def test_speed_filter_skipped_when_delta_under_5s(self):
+        # delta_s < 5.0 → speed filter must not run, pair stays valid even
+        # with a wild prev_distance jump.
+        from custom_components.entity_distance.models import pair_key
+        from tests.conftest import make_state
+
+        coordinator = _make_calc_pair_coordinator(max_speed_kmh=100.0)
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+
+        now = datetime.now().astimezone()
+        ps.prev_distance_m = 0.0
+        ps.prev_calc_time = now - timedelta(seconds=2)  # < 5s window
+
+        state_a = make_state("person.alice", 51.5, -0.1)
+        state_b = make_state("person.bob", 51.6, -0.2)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance", return_value=10_000.0
+        ):
+            result = coordinator._calc_pair(ps, "person.alice", "person.bob", now, set())
+        assert result.data_valid is True
+
+    def test_closing_speed_skipped_when_delta_zero(self):
+        # delta_s == 0 → closing-speed branch must be skipped (no DIV/0),
+        # pair still valid.
+        from custom_components.entity_distance.models import pair_key
+        from tests.conftest import make_state
+
+        coordinator = _make_calc_pair_coordinator(max_speed_kmh=0.0)
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+
+        now = datetime.now().astimezone()
+        ps.prev_distance_m = 100.0
+        ps.prev_calc_time = now  # same instant → delta_s == 0
+
+        state_a = make_state("person.alice", 51.5, -0.1)
+        state_b = make_state("person.bob", 51.6, -0.2)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+
+        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=120.0):
+            result = coordinator._calc_pair(ps, "person.alice", "person.bob", now, set())
+        assert result.data_valid is True
+
+    def test_proximity_entry_with_existing_tracking_started(self):
+        # First-time proximity entry but ps.proximity_tracking_started was
+        # already restored from disk — must NOT be overwritten.
+        from custom_components.entity_distance.models import pair_key
+        from tests.conftest import make_state
+
+        coordinator = _make_calc_pair_coordinator(entry_threshold_m=10_000.0)
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+        existing = datetime(2020, 1, 1).astimezone()
+        ps.proximity_tracking_started = existing
+        ps.proximity = False
+
+        now = datetime.now().astimezone()
+        state_a = make_state("person.alice", 51.5, -0.1)
+        state_b = make_state("person.bob", 51.6, -0.2)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+
+        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=500.0):
+            result = coordinator._calc_pair(ps, "person.alice", "person.bob", now, set())
+
+        assert result.proximity is True
+        assert result.proximity_tracking_started == existing
+
+    def test_proximity_exit_with_proximity_since_none(self):
+        # Defensive: ps.proximity is True but proximity_since is None (stale
+        # restored state). Exit must not crash and duration stays unchanged.
+        from custom_components.entity_distance.models import pair_key
+        from tests.conftest import make_state
+
+        coordinator = _make_calc_pair_coordinator(entry_threshold_m=100.0, exit_threshold_m=200.0)
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+        ps.proximity = True
+        ps.proximity_since = None
+        ps.proximity_duration_s = 42.0
+
+        now = datetime.now().astimezone()
+        state_a = make_state("person.alice", 51.5, -0.1)
+        state_b = make_state("person.bob", 51.6, -0.2)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance", return_value=1000.0
+        ):
+            result = coordinator._calc_pair(ps, "person.alice", "person.bob", now, set())
+
+        assert result.proximity is False
+        assert result.proximity_duration_s == 42.0
+
+    def test_resync_hold_post_hold_zero_skips_bucket(self):
+        # Resync hold closes the open session and rolls today counters when
+        # the date changes. If `now` is exactly at midnight while proximity
+        # started just before, post_hold == 0 — bucket increment must be
+        # skipped (no credit for zero elapsed time).
+        from datetime import datetime
+
+        from custom_components.entity_distance.models import pair_key
+        from tests.conftest import make_state
+
+        coordinator = _make_calc_pair_coordinator(resync_silence_s=0.0, resync_hold_s=3600.0)
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+
+        # Anchor to a fixed UTC midnight to make post_hold == 0 deterministic.
+        midnight_utc = datetime(2024, 1, 2, tzinfo=UTC)
+        ps.proximity = True
+        ps.proximity_since = midnight_utc - timedelta(seconds=300)
+        ps.distance_m = 50.0
+        ps.today_reset_date = (midnight_utc - timedelta(days=1)).date()  # date rolled
+        ps.today_proximity_seconds = 999.0  # gets reset
+        ps.today_zone_seconds = {"near": 999.0}
+
+        coordinator._resync_holding[k] = True
+        coordinator._resync_hold_until[k] = midnight_utc + timedelta(seconds=3600)
+
+        state_a = make_state("person.alice", 51.5, -0.1)
+        state_b = make_state("person.bob", 51.6, -0.2)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+
+        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=50.0):
+            result = coordinator._calc_pair(ps, "person.alice", "person.bob", midnight_utc, set())
+
+        # Date rolled: counters reset, but post_hold == 0 → no bucket credit
+        # because no real time elapsed past midnight.
+        assert result.today_proximity_seconds == 0.0
+        assert result.today_zone_seconds == {}
+
+
+# ---------------------------------------------------------------------------
 # _calc_pair — update window tracking (lines 467-474, 477-484)
 # ---------------------------------------------------------------------------
 
@@ -1378,6 +1531,39 @@ class TestCoordinatorLifecycle:
 
         mock_create.assert_called_once()
 
+    async def test_async_tick_no_debouncer_is_noop(self, hass):
+        # Before async_setup runs (or after async_unload), _debouncer is None.
+        # Tick must early-return without raising.
+        from unittest.mock import patch
+
+        coord = self._make_coord(hass)
+        coord._debouncer = None
+        with patch.object(hass, "async_create_task") as mock_create:
+            coord._async_tick(None)
+        mock_create.assert_not_called()
+
+    async def test_async_setup_preserves_existing_proximity_tracking_started(self, hass):
+        # When restored _pair_states already carry a proximity_tracking_started
+        # timestamp, async_setup must NOT overwrite it. Covers the False branch
+        # of the per-pair init guard.
+        from datetime import datetime
+        from unittest.mock import AsyncMock, patch
+
+        coord = self._make_coord(hass)
+        existing = datetime(2020, 1, 1, tzinfo=UTC)
+        for ps in coord._pair_states.values():
+            ps.proximity_tracking_started = existing
+
+        with (
+            patch.object(coord, "_async_load_state", new=AsyncMock()),
+            patch.object(coord, "_async_save_state", new=AsyncMock()),
+        ):
+            await coord.async_setup()
+
+        for ps in coord._pair_states.values():
+            assert ps.proximity_tracking_started == existing
+        coord.async_unload()
+
     async def test_async_state_changed_no_debouncer(self, hass):
         coord = self._make_coord(hass)
         coord._debouncer = None
@@ -1423,6 +1609,36 @@ class TestCoordinatorLifecycle:
 
         coord._async_state_changed(event)
         assert "person.bob" in coord._pending_updates
+
+    async def test_async_state_changed_invalid_arrival_skips_counter_for_b(self, hass):
+        # Entity B transitions to unavailable: last_update_b advances but
+        # update_count_b stays put (flapping device must not pass reliability).
+        from unittest.mock import MagicMock
+
+        from homeassistant.const import STATE_UNAVAILABLE
+
+        coord = self._make_coord(hass)
+        coord._debouncer = MagicMock()
+        coord._debouncer.async_call = MagicMock(return_value=None)
+        coord._pending_updates = set()
+        coord.hass.async_create_task = MagicMock()
+
+        # Snapshot counts before
+        before = {k: ps.update_count_b for k, ps in coord._pair_states.items()}
+
+        new_state = MagicMock()
+        new_state.state = STATE_UNAVAILABLE
+        event = MagicMock()
+        event.data = {
+            "entity_id": "person.bob",
+            "old_state": MagicMock(),
+            "new_state": new_state,
+        }
+
+        coord._async_state_changed(event)
+        for k, ps in coord._pair_states.items():
+            assert ps.update_count_b == before[k]
+            assert ps.last_update_b is not None
 
 
 # ---------------------------------------------------------------------------

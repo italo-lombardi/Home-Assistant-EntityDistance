@@ -149,11 +149,14 @@ class SameZoneBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], BinaryS
         self._attr_device_info = device_info
 
     @property
-    def is_on(self) -> bool | None:
+    def is_on(self) -> bool:
+        # Never returns None — "same zone" is a definite yes/no. Missing
+        # state, unknown/unavailable, or not_home all mean "no confirmed
+        # named zone match" → False.
         state_a = self.hass.states.get(self._pair_key[0])
         state_b = self.hass.states.get(self._pair_key[1])
         if state_a is None or state_b is None:
-            return None
+            return False
         # A `zone.*` entity's state is a tracker count (e.g. "3"), not the
         # zone name. HA's device_tracker / person sets state to either the
         # literal "home" (for zone.home, see device_tracker/entity.py) or the
@@ -162,9 +165,9 @@ class SameZoneBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], BinaryS
         # also resolve correctly.
         zone_a = _zone_match_value(self._pair_key[0], state_a)
         zone_b = _zone_match_value(self._pair_key[1], state_b)
-        _unknown = {"unknown", "unavailable", "not_home"}
-        if zone_a in _unknown or zone_b in _unknown:
-            return None
+        _no_zone = {"unknown", "unavailable", "not_home"}
+        if zone_a in _no_zone or zone_b in _no_zone:
+            return False
         return zone_a == zone_b
 
 

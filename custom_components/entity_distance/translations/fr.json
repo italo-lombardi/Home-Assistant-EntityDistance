@@ -17,14 +17,14 @@
         "data": {
           "entry_threshold_m": "Seuil d'entrée (m)",
           "exit_threshold_m": "Seuil de sortie (m)",
-          "debounce_s": "Anti-rebond (s)",
+          "debounce_s": "Attendre avant de réagir (s)",
           "show_advanced": "Configurer les filtres avancés",
           "show_zone_thresholds": "Configurer les seuils de zone de proximité"
         },
         "data_description": {
           "entry_threshold_m": "Distance à laquelle les entités sont considérées en proximité.",
           "exit_threshold_m": "Distance à laquelle les entités ne sont plus considérées en proximité. Doit être >= seuil d'entrée.",
-          "debounce_s": "Secondes d'attente avant de traiter une mise à jour de localisation. Réduit le bruit des changements GPS rapides.",
+          "debounce_s": "Lorsqu'une mise à jour de localisation arrive, combien de temps attendre avant de recalculer. Utile quand les téléphones envoient plusieurs relevés GPS bruyants à la suite — l'intégration attend qu'ils se stabilisent. 0 = réagir instantanément (par défaut). Augmenter à 5–15 s en cas de basculements on/off intempestifs.",
           "show_advanced": "Activer pour configurer la précision GPS, la vitesse et les filtres de fiabilité.",
           "show_zone_thresholds": "Activer pour définir les limites de distance des zones."
         }
@@ -81,7 +81,7 @@
         "data": {
           "entry_threshold_m": "Seuil d'entrée (m)",
           "exit_threshold_m": "Seuil de sortie (m)",
-          "debounce_s": "Anti-rebond (s)",
+          "debounce_s": "Attendre avant de réagir (s)",
           "show_advanced": "Configurer les filtres avancés",
           "show_zone_thresholds": "Configurer les seuils de zone de proximité"
         },
@@ -89,7 +89,7 @@
         "data_description": {
           "entry_threshold_m": "Quelle distance (en mètres) les entités doivent-elles avoir pour déclencher un événement de proximité.",
           "exit_threshold_m": "Jusqu'à quelle distance les entités doivent-elles s'éloigner avant de ne plus être considérées proches.",
-          "debounce_s": "Secondes à attendre avant de traiter une nouvelle mise à jour de localisation.",
+          "debounce_s": "Lorsqu'une mise à jour de localisation arrive, combien de temps attendre avant de recalculer. 0 = réagir instantanément (par défaut).",
           "show_advanced": "Activer pour configurer les filtres GPS, vitesse et fiabilité.",
           "show_zone_thresholds": "Activer pour définir les limites de zone."
         }

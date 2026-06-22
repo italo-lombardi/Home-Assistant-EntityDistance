@@ -17,14 +17,14 @@
         "data": {
           "entry_threshold_m": "Próg wejścia (m)",
           "exit_threshold_m": "Próg wyjścia (m)",
-          "debounce_s": "Debounce (s)",
+          "debounce_s": "Czekaj przed reakcją (s)",
           "show_advanced": "Konfiguruj zaawansowane filtry",
           "show_zone_thresholds": "Konfiguruj progi stref zbliżenia"
         },
         "data_description": {
           "entry_threshold_m": "Odległość, przy której encje są uznawane za bliskie.",
           "exit_threshold_m": "Odległość, przy której encje nie są już uznawane za bliskie. Musi być >= próg wejścia.",
-          "debounce_s": "Sekundy oczekiwania przed przetworzeniem aktualizacji lokalizacji. Zmniejsza szum z szybkich zmian GPS.",
+          "debounce_s": "Gdy nadejdzie aktualizacja lokalizacji, ile czekać przed ponownym obliczeniem. Przydatne gdy telefony wysyłają kilka zaszumionych odczytów GPS pod rząd — integracja czeka aż się ustabilizują. 0 = reaguj natychmiast (domyślnie). Zwiększ do 5–15 s przy migotaniu wł/wył.",
           "show_advanced": "Włącz, aby skonfigurować dokładność GPS, prędkość i filtry niezawodności.",
           "show_zone_thresholds": "Włącz, aby ustawić limity odległości stref."
         }
@@ -81,7 +81,7 @@
         "data": {
           "entry_threshold_m": "Próg wejścia (m)",
           "exit_threshold_m": "Próg wyjścia (m)",
-          "debounce_s": "Debounce (s)",
+          "debounce_s": "Czekaj przed reakcją (s)",
           "show_advanced": "Konfiguruj zaawansowane filtry",
           "show_zone_thresholds": "Konfiguruj progi stref zbliżenia"
         },
@@ -89,7 +89,7 @@
         "data_description": {
           "entry_threshold_m": "Jak blisko (w metrach) encje muszą być, aby wyzwolić zdarzenie zbliżenia.",
           "exit_threshold_m": "Jak daleko od siebie muszą się oddalić encje, zanim nie będą już uważane za bliskie.",
-          "debounce_s": "Sekundy do odczekania przed przetworzeniem nowej aktualizacji lokalizacji.",
+          "debounce_s": "Gdy nadejdzie aktualizacja lokalizacji, ile czekać przed ponownym obliczeniem. 0 = reaguj natychmiast (domyślnie).",
           "show_advanced": "Włącz, aby skonfigurować filtry GPS, prędkości i niezawodności.",
           "show_zone_thresholds": "Włącz, aby ustawić limity stref."
         }

@@ -17,14 +17,14 @@
         "data": {
           "entry_threshold_m": "Inngangsterskel (m)",
           "exit_threshold_m": "Utgangsterskel (m)",
-          "debounce_s": "Debounce (s)",
+          "debounce_s": "Vent før reaksjon (s)",
           "show_advanced": "Konfigurer avanserte filtre",
           "show_zone_thresholds": "Konfigurer nærhetssoneterskler"
         },
         "data_description": {
           "entry_threshold_m": "Avstand der enheter anses som nærliggende.",
           "exit_threshold_m": "Avstand der enheter ikke lenger anses som nærliggende. Må være >= inngangsterskel.",
-          "debounce_s": "Sekunder å vente før en posisjonsoppdatering behandles. Reduserer støy fra raske GPS-endringer.",
+          "debounce_s": "Når en posisjonsoppdatering kommer, hvor lenge det ventes før beregning. Nyttig når telefoner sender flere støyende GPS-målinger på rad — integrasjonen venter til de stabiliseres. 0 = reager umiddelbart (standard). Øk til 5–15 s ved jitter.",
           "show_advanced": "Slå på for å konfigurere GPS-nøyaktighet, hastighet og pålitelighetsfiltre.",
           "show_zone_thresholds": "Slå på for å angi avstandsgrensene for sonene."
         }
@@ -81,7 +81,7 @@
         "data": {
           "entry_threshold_m": "Inngangsterskel (m)",
           "exit_threshold_m": "Utgangsterskel (m)",
-          "debounce_s": "Debounce (s)",
+          "debounce_s": "Vent før reaksjon (s)",
           "show_advanced": "Konfigurer avanserte filtre",
           "show_zone_thresholds": "Konfigurer nærhetssoneterskler"
         },
@@ -89,7 +89,7 @@
         "data_description": {
           "entry_threshold_m": "Hvor nær (i meter) enhetene må være for å utløse en 'i nærheten'-hendelse.",
           "exit_threshold_m": "Hvor langt fra hverandre enhetene må flytte før de ikke lenger anses som i nærheten.",
-          "debounce_s": "Sekunder å vente før en ny posisjonsoppdatering behandles.",
+          "debounce_s": "Når en posisjonsoppdatering kommer, hvor lenge det ventes før beregning. 0 = reager umiddelbart (standard).",
           "show_advanced": "Slå på for å konfigurere GPS-, hastighets- og pålitelighetsfiltre.",
           "show_zone_thresholds": "Slå på for å angi sonegrenser."
         }

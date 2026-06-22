@@ -2,6 +2,34 @@
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-06-22
+
+### Fixed
+
+- **`binary_sensor.<pair>_same_zone` no longer goes `unknown`.** Previously,
+  when either side of the pair transitioned through `not_home`, `unknown`, or
+  `unavailable` (e.g. a person crossing a zone boundary briefly registers as
+  `not_home` before entering the next zone), `is_on` returned `None` and HA
+  rendered the binary_sensor as `unknown`. This broke `from:` lists on state
+  triggers ("Returning Home" automations skipped the transition). "Same zone"
+  is a definite yes/no — when neither side is in a confirmed named zone, the
+  pair is not in the same zone. `is_on` now returns `False` in those cases.
+  The sensor's state machine is strictly `on` ↔ `off`.
+
+### Changed
+
+- **Default `debounce_s` lowered from 10 → 0.** New installs now react to
+  GPS updates instantly. The 10 s window had been smoothing perfectly good
+  updates that didn't need smoothing on modern phones. Existing installs
+  keep their configured value. Raise to 5–15 s only if you observe jittery
+  on/off switching from a noisy tracker.
+- **UI label renamed** from "Location update delay (s)" to
+  "Wait before reacting (s)" — the old label suggested the integration
+  controlled how often phones reported location; it does not. The new
+  label and help text describe what the setting actually does (waits
+  before recalculating after an update arrives). All 11 translations
+  updated.
+
 ## [0.3.0] - 2026-06-21
 
 ### Breaking

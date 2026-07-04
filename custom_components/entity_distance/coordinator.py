@@ -214,6 +214,9 @@ def calc_bucket(distance_m: float, thresholds: dict[str, float]) -> str:
 
 
 class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
+    # ponytail: push-only coordinator — update_interval=None, no async_refresh() callers.
+    # _async_update_data is intentionally omitted; base class raises NotImplementedError
+    # if called, which would surface any accidental pull-based usage immediately.
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         super().__init__(
             hass,

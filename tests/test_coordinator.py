@@ -542,28 +542,44 @@ class TestIsReliable:
 
 
 class TestEntitiesResolution:
-    """Test coordinator._entities initialization from config entry data."""
+    """Coordinator wires _entities from config entry data correctly."""
 
-    def test_returns_list_from_data(self):
-        from custom_components.entity_distance.const import CONF_ENTITIES
+    async def test_entities_from_data(self, hass):
+        from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-        data = {"entities": ["person.alice", "person.bob"]}
-        result = list(data.get(CONF_ENTITIES, []))
-        assert result == ["person.alice", "person.bob"]
+        from custom_components.entity_distance.const import DOMAIN
+        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
 
-    def test_returns_empty_when_key_missing(self):
-        from custom_components.entity_distance.const import CONF_ENTITIES
+        entry = MockConfigEntry(
+            domain=DOMAIN, data={"entities": ["person.alice", "person.bob"]}, options={}
+        )
+        entry.add_to_hass(hass)
+        coord = EntityDistanceCoordinator(hass, entry)
+        assert coord.entities == ["person.alice", "person.bob"]
 
-        result = list({}.get(CONF_ENTITIES, []))
-        assert result == []
+    async def test_entities_empty_when_key_missing(self, hass):
+        from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-    def test_returns_list_copy(self):
-        from custom_components.entity_distance.const import CONF_ENTITIES
+        from custom_components.entity_distance.const import DOMAIN
+        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
 
-        data = {"entities": ["person.alice"]}
-        result = list(data.get(CONF_ENTITIES, []))
-        result.append("person.bob")
-        assert data["entities"] == ["person.alice"]
+        entry = MockConfigEntry(domain=DOMAIN, data={}, options={})
+        entry.add_to_hass(hass)
+        coord = EntityDistanceCoordinator(hass, entry)
+        assert coord.entities == []
+
+    async def test_entities_is_copy_not_original(self, hass):
+        from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+        from custom_components.entity_distance.const import DOMAIN
+        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+
+        original = ["person.alice"]
+        entry = MockConfigEntry(domain=DOMAIN, data={"entities": original}, options={})
+        entry.add_to_hass(hass)
+        coord = EntityDistanceCoordinator(hass, entry)
+        coord.entities.append("person.bob")
+        assert original == ["person.alice"]
 
 
 # ---------------------------------------------------------------------------

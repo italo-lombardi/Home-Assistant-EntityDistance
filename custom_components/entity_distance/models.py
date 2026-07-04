@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date, datetime
+from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:  # pragma: no cover
+    from homeassistant.core import HomeAssistant
 _DOMAIN_PRIORITY: dict[str, int] = {
     "person": 0,
     "device_tracker": 1,
@@ -69,8 +72,7 @@ class GroupData:
     all_in_proximity: bool = False
 
 
-def friendly_name(hass, entity_id: str) -> str:
-    """Return a display name for *entity_id*, falling back to a title-cased slug."""
+def friendly_name(hass: HomeAssistant, entity_id: str) -> str:
     state = hass.states.get(entity_id)
     if state and state.name:
         return state.name

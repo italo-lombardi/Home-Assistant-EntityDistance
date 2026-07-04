@@ -64,6 +64,89 @@ def _is_zone(state: State) -> bool:
     return state.entity_id.startswith("zone.")
 
 
+def _find_zone_by_name(hass: HomeAssistant, name: str) -> State | None:
+    """Return the zone State whose entity_id or name matches *name*.
+
+    HA stores zone.home with state "home" (special-cased).  Other zones are
+    matched by object_id first (zone.<name>, then zone.<name_underscored>),
+    then by State.name so renamed zones ("My Work" → zone.my_work) resolve
+    correctly even without an explicit friendly_name attribute.
+    """
+    # Fast path 1: direct object_id match ("home" → zone.home).
+    direct = hass.states.get(f"zone.{name}")
+    if direct is not None:
+        return direct
+
+    # Fast path 2: slugified name ("My Work" → zone.my_work).
+    direct2 = hass.states.get(f"zone.{name.lower().replace(' ', '_')}")
+    if direct2 is not None:
+        return direct2
+
+    # Slow path: scan all zones comparing State.name (which reflects the
+    # configured friendly_name or the humanised object_id when none is set).
+    name_lower = name.lower()
+    for zone_state in hass.states.async_all("zone"):
+        if zone_state.name.lower() == name_lower:
+            return zone_state
+    return None
+
+
+def _resolve_coords(
+    state: State, hass: HomeAssistant
+) -> tuple[tuple[float, float, float | None], bool] | tuple[None, bool]:
+    """Return ((lat, lon, accuracy), from_zone_fallback) for *state*.
+
+    HA 2026.7 removed lat/lon attributes from person/device_tracker entities
+    whose location comes from a presence scanner (WiFi/BT).  Those entities
+    carry only a zone-name state (e.g. "home", "work").  When _get_coords()
+    finds no coordinates, look up the matching zone entity and use its
+    centre + radius as a coarse fix so the pair stays valid.
+
+    Returns a 2-tuple so callers know whether the accuracy value came from a
+    zone radius (and should skip the accuracy filter) rather than a GPS fix.
+    """
+    coords = _get_coords(state)
+    if coords is not None:
+        return coords, False
+
+    # Zone entities never need this fallback — they always carry lat/lon.
+    if _is_zone(state):
+        return None, False
+
+    zone_state = state.state
+    if zone_state in ("not_home", STATE_UNAVAILABLE, STATE_UNKNOWN):
+        return None, False
+
+    fallback = _find_zone_by_name(hass, zone_state)
+    if fallback is None:
+        _LOGGER.debug(
+            "entity_distance: zone fallback for %s — no zone found for state '%s'",
+            state.entity_id,
+            zone_state,
+        )
+        return None, False
+
+    coords = _get_coords(fallback)
+    if coords is None:
+        return None, False
+
+    lat, lon, _ = coords
+    try:
+        radius = float(fallback.attributes["radius"])
+    except (KeyError, TypeError, ValueError):
+        radius = None
+
+    _LOGGER.debug(
+        "entity_distance: zone fallback for %s — using %s (lat=%.4f lon=%.4f radius=%s)",
+        state.entity_id,
+        fallback.entity_id,
+        lat,
+        lon,
+        f"{radius:.0f}m" if radius is not None else "none",
+    )
+    return (lat, lon, radius), True
+
+
 def _get_coords(state: State) -> tuple[float, float, float | None] | None:
     attrs = state.attributes
 
@@ -93,9 +176,10 @@ def _get_coords(state: State) -> tuple[float, float, float | None] | None:
             lat = lon = None
 
     if lat is None or lon is None:
-        _LOGGER.warning(
-            "entity_distance: cannot extract coords from %s",
+        _LOGGER.debug(
+            "entity_distance: cannot extract coords from %s (state=%s)",
             state.entity_id,
+            state.state,
         )
         return None
 
@@ -394,8 +478,8 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         ):
             return _invalidate("entity_unavailable")
 
-        coords_a = _get_coords(state_a)
-        coords_b = _get_coords(state_b)
+        coords_a, zone_fallback_a = _resolve_coords(state_a, self.hass)
+        coords_b, zone_fallback_b = _resolve_coords(state_b, self.hass)
 
         if coords_a is None or coords_b is None:
             return _invalidate("coord_extraction_failed")
@@ -403,8 +487,11 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         lat_a, lon_a, acc_a = coords_a
         lat_b, lon_b, acc_b = coords_b
 
-        is_zone_a = _is_zone(state_a)
-        is_zone_b = _is_zone(state_b)
+        # Treat zone-fallback coords like zone entities: skip accuracy filter.
+        # Zone radius is the best accuracy estimate we have — filtering it out
+        # would leave the pair permanently unknown when a person is home.
+        is_zone_a = _is_zone(state_a) or zone_fallback_a
+        is_zone_b = _is_zone(state_b) or zone_fallback_b
 
         if (
             not is_zone_a
@@ -412,7 +499,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             and self._max_accuracy_m > 0
             and acc_a > self._max_accuracy_m
         ):
-            _LOGGER.warning(
+            _LOGGER.debug(
                 "entity_distance: accuracy filter rejected %s (acc=%.1fm > max=%.1fm)",
                 entity_a,
                 acc_a,
@@ -426,7 +513,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             and self._max_accuracy_m > 0
             and acc_b > self._max_accuracy_m
         ):
-            _LOGGER.warning(
+            _LOGGER.debug(
                 "entity_distance: accuracy filter rejected %s (acc=%.1fm > max=%.1fm)",
                 entity_b,
                 acc_b,
@@ -459,16 +546,28 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             and ps.prev_distance_m is not None
             and ps.prev_calc_time is not None
             and self._max_speed_kmh > 0
+            and abs(dist_m - ps.prev_distance_m)
+            > (ps.accuracy_a or 0.0) + (ps.accuracy_b or 0.0) + (acc_a or 0.0) + (acc_b or 0.0)
         ):
             delta_s = max(0.0, (now - ps.prev_calc_time).total_seconds())
             if delta_s >= 5.0:
-                implied_speed_kmh = abs(dist_m - ps.prev_distance_m) / delta_s * 3.6
+                noise_budget_m = (
+                    (ps.accuracy_a or 0.0)
+                    + (ps.accuracy_b or 0.0)
+                    + (acc_a or 0.0)
+                    + (acc_b or 0.0)
+                )
+                adjusted_delta_m = max(0.0, abs(dist_m - ps.prev_distance_m) - noise_budget_m)
+                implied_speed_kmh = adjusted_delta_m / delta_s * 3.6
                 if implied_speed_kmh > self._max_speed_kmh:
-                    _LOGGER.warning(
-                        "entity_distance: speed filter rejected pair (%s, %s) — %.1f km/h > max %.1f km/h",
+                    _LOGGER.debug(
+                        "entity_distance: speed filter rejected pair (%s, %s) — "
+                        "%.1f km/h (raw %.1f km/h, noise_budget %.0fm) > max %.1f km/h",
                         entity_a,
                         entity_b,
                         implied_speed_kmh,
+                        abs(dist_m - ps.prev_distance_m) / delta_s * 3.6,
+                        noise_budget_m,
                         self._max_speed_kmh,
                     )
                     return _invalidate("speed_filter")
@@ -477,7 +576,12 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         closing_speed_kmh: float | None = None
         eta_minutes: float | None = None
 
-        if ps.prev_distance_m is not None and ps.prev_calc_time is not None:
+        if (
+            not is_zone_a
+            and not is_zone_b
+            and ps.prev_distance_m is not None
+            and ps.prev_calc_time is not None
+        ):
             delta_m = dist_m - ps.prev_distance_m
             delta_s = max(0.0, (now - ps.prev_calc_time).total_seconds())
 
@@ -508,8 +612,14 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         ps.direction = direction
         ps.closing_speed_kmh = closing_speed_kmh
         ps.eta_minutes = eta_minutes
-        ps.accuracy_a = acc_a
-        ps.accuracy_b = acc_b
+        # Don't store zone radius as GPS accuracy — it bleeds into noise_budget_m
+        # on the first GPS tick after zone-fallback recovery and inflates the budget.
+        ps.accuracy_a = None if zone_fallback_a else acc_a
+        ps.accuracy_b = None if zone_fallback_b else acc_b
+        # Zone-center baseline is unusable for speed/direction on next GPS tick —
+        # null it so the first post-fallback tick doesn't compare GPS against zone centroid.
+        if zone_fallback_a or zone_fallback_b:
+            ps.prev_distance_m = None
         ps.data_valid = True
         ps.last_error = None
 
@@ -518,30 +628,33 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         # Resync silence — check before proximity transitions so hold returns early
         # without mutating ps.proximity, keeping the entry transition deferred to a
         # post-hold tick (so binary_sensor.in_proximity does not flap on/off).
-        # Skip for zone entities — zones never emit state_changed so staleness is
-        # always huge; treating that as a resync condition causes a permanent loop.
-        if (
-            self._resync_silence_s > 0
-            and not is_zone_a
-            and not is_zone_b
-            and ps.last_update_a is not None
-            and ps.last_update_b is not None
-        ):
-            staleness_a = (now - ps.last_update_a).total_seconds()
-            staleness_b = (now - ps.last_update_b).total_seconds()
-            if (
-                staleness_a >= self._resync_silence_s
-                and staleness_b >= self._resync_silence_s
-                and not self._resync_holding.get(k, False)
-            ):
-                self._resync_holding[k] = True
-                self._resync_hold_until[k] = now + timedelta(seconds=self._resync_hold_s)
-                _LOGGER.debug(
-                    "entity_distance: resync silence detected for pair (%s, %s) — holding for %.0fs",
-                    entity_a,
-                    entity_b,
-                    self._resync_hold_s,
+        # Skip for true zone entities — zones never emit state_changed so staleness
+        # is always huge; treating that as a resync condition causes a permanent loop.
+        # Zone-fallback persons DO emit state_changed (scanner keepalives) so they
+        # participate in staleness checking; use _is_zone() not the composite flag.
+        if self._resync_silence_s > 0:
+            _check_a = not _is_zone(state_a) and ps.last_update_a is not None
+            _check_b = not _is_zone(state_b) and ps.last_update_b is not None
+            # Only fire when there is at least one trackable (non-zone) side
+            # AND every trackable side is stale. A zone entity never updates,
+            # so not having last_update does not count as staleness.
+            if _check_a or _check_b:
+                a_stale = (
+                    _check_a and (now - ps.last_update_a).total_seconds() >= self._resync_silence_s
                 )
+                b_stale = (
+                    _check_b and (now - ps.last_update_b).total_seconds() >= self._resync_silence_s
+                )
+                all_trackable_stale = (not _check_a or a_stale) and (not _check_b or b_stale)
+                if all_trackable_stale and not self._resync_holding.get(k, False):
+                    self._resync_holding[k] = True
+                    self._resync_hold_until[k] = now + timedelta(seconds=self._resync_hold_s)
+                    _LOGGER.debug(
+                        "entity_distance: resync silence detected for pair (%s, %s) — holding for %.0fs",
+                        entity_a,
+                        entity_b,
+                        self._resync_hold_s,
+                    )
 
         if self._resync_holding.get(k, False):
             hold_until = self._resync_hold_until.get(k)
@@ -607,7 +720,13 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         if was_proximity:
             ps.last_seen_together = now
 
-        if self._require_reliable and not reliable and not was_proximity and ps.proximity:
+        if (
+            self._require_reliable
+            and not reliable
+            and not (zone_fallback_a or zone_fallback_b)
+            and not was_proximity
+            and ps.proximity
+        ):
             ps.proximity = False
             ps.proximity_since = None
             _LOGGER.debug(

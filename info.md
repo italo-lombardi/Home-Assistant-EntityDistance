@@ -12,11 +12,11 @@ Track the distance between any two or more entities — people, devices, or zone
 - Proximity binary sensor with configurable entry/exit hysteresis thresholds
 - Direction of travel — approaching, diverging, or stationary (GPS jitter filtered)
 - ETA sensor — estimated minutes until together (only when approaching)
-- Closing speed sensor — convergence rate in km/h (labelled "Diverging speed" when separating)
+- Closing speed sensor — convergence rate in km/h
 - Today proximity time — total minutes together today, resets at midnight
 - GPS accuracy and implied speed filters — reject unreliable location updates
+- **HA 2026.7 compatible** — sensors stay valid when a person is home via WiFi/BT scanner (zone coordinate fallback)
 - Reliability tracking — min update count in rolling window before proximity events fire
-- 4 HA events — `entity_distance_enter`, `entity_distance_leave`, `entity_distance_update`, `entity_distance_enter_unreliable`
 - Diagnostic sensors — GPS accuracy, last update, update count per entity
 - Refresh button — triggers mobile app location update for all entities in the group
 - Event-driven updates, no polling

@@ -9,6 +9,9 @@
 [![Add to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=italo-lombardi&repository=Home-Assistant-EntityDistance&category=integration)
 [![Add to Home Assistant](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=entity_distance)
 
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=flat&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/italolombardi)
+[![PayPal](https://img.shields.io/badge/PayPal-00457C?style=flat&logo=paypal&logoColor=white)](https://paypal.me/ItaloLombardi)
+
 Track the distance between any two or more entities — people, devices, or zones — with sensors for direction, closing speed, ETA, and proximity detection. Track a whole family with a single setup.
 
 ---
@@ -27,10 +30,10 @@ Track the distance between any two or more entities — people, devices, or zone
 - **Today proximity time** — total minutes together today, resets at midnight
 - **Today zone times** — minutes spent in each proximity zone today (Very Near, Near, Medium, Far, Very Far)
 - **Direction Level sensor** — numeric direction: -1 approaching, 0 stationary, 1 diverging
-- **GPS accuracy filter** — reject updates with poor GPS fix quality
-- **Speed filter** — reject physically implausible location jumps (e.g. GPS teleports)
+- **GPS accuracy filter** — reject updates with poor GPS fix quality (default 300 m, tolerates normal mobile GPS noise)
+- **Speed filter** — reject physically implausible location jumps; accuracy-adjusted to ignore GPS bounce in same vehicle
+- **HA 2026.7 compatible** — sensors stay valid when a person is home via WiFi/BT presence scanner (zone coordinate fallback)
 - **Reliability tracking** — require consistent updates before proximity events fire
-- **4 HA events** — fire automations without polling
 - **Diagnostic sensors** — GPS accuracy, last update, update count (last 30 min) per tracked entity
 - **Refresh button** — force immediate mobile app location update
 - **Multiple pairs** — each pair gets its own HA device; add as many as needed

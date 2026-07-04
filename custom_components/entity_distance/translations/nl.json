@@ -39,7 +39,7 @@
           "min_updates_reliable": "Min. updates voor betrouwbare gegevens"
         },
         "data_description": {
-          "max_accuracy_m": "Locatie-updates weigeren met GPS-nauwkeurigheid slechter dan deze waarde. Stel in op 0 om uit te schakelen.",
+          "max_accuracy_m": "Locatie-updates negeren waarbij de GPS-fout groter is dan deze waarde. Telefoons in beweging melden doorgaans een nauwkeurigheid van 100–250 m, dus 300 m is een veilige standaard. Een telefoon met '350 m nauwkeurigheid' wordt overgeslagen. Stel in op 0 om uit te schakelen.",
           "max_speed_kmh": "Updates weigeren waarbij de impliciete bewegingssnelheid deze waarde overschrijdt. Stel in op 0 om uit te schakelen.",
           "require_reliable": "Alleen proximity_enter-gebeurtenis activeren wanneer gegevens als betrouwbaar worden beschouwd.",
           "min_updates_reliable": "Minimum aantal locatie-updates in het venster voordat gegevens als betrouwbaar worden beschouwd."
@@ -104,7 +104,7 @@
         },
         "description": "Deze filters helpen slechte GPS-gegevens te negeren.",
         "data_description": {
-          "max_accuracy_m": "Negeer locatieupdates waarbij de GPS-fout groter is dan dit.",
+          "max_accuracy_m": "Locatie-updates negeren waarbij de GPS-fout groter is dan deze waarde. Telefoons in beweging melden doorgaans een nauwkeurigheid van 100–250 m, dus 300 m is een veilige standaard. Een telefoon met '350 m nauwkeurigheid' wordt overgeslagen. Stel in op 0 om uit te schakelen.",
           "max_speed_kmh": "Negeer updates die beweging sneller dan dit impliceren.",
           "require_reliable": "Wanneer ingeschakeld wordt een nabijheidsgebeurtenis alleen geactiveerd na consistente updates.",
           "min_updates_reliable": "Hoeveel opeenvolgende updates nodig zijn voordat de locatie als betrouwbaar wordt beschouwd."

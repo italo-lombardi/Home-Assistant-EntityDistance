@@ -1,5 +1,62 @@
 # Changelog
 
+## [0.3.2] - 2026-07-04
+
+### Fixed
+
+- **HA 2026.7 compatibility — zone coordinate fallback.** HA 2026.7 removed
+  `latitude`/`longitude` attributes from `person.*` and `device_tracker.*`
+  entities whose location comes from a presence scanner (WiFi/BT). These
+  entities now carry only a zone-name state (`"home"`, `"work"`, etc.). The
+  integration now falls back to the matching zone entity's centre coordinates
+  and radius when no GPS coords are found, keeping all sensors valid while a
+  person is home. Zone matching resolves by entity object_id, slugified name,
+  and `State.name` so renamed zones work without explicit `friendly_name`.
+  Existing GPS-tracked entities are completely unaffected.
+
+- **GPS noise false positives — accuracy-adjusted speed filter.** Two phones
+  in the same car could trigger a spurious 1300+ km/h speed filter rejection:
+  one phone's GPS bounced back to its true position after a noisy fix, and the
+  bounce had a short delta_t implying an impossible speed. The filter now
+  subtracts the combined GPS noise budget (previous and current accuracy for
+  both entities, four terms) from the raw distance delta before computing
+  implied speed. A position change indistinguishable from GPS noise no longer
+  causes invalidation. The outer guard also switches from absolute distance to
+  change magnitude, closing a bypass where a teleport landing inside the
+  accuracy bubble could skip speed checking entirely.
+
+- **Default `max_accuracy_m` raised from 150 → 300 m.** Phones in motion
+  routinely report 100–250 m GPS accuracy. The old default caused sensors to
+  flash `unknown` whenever a device's GPS error exceeded 150 m (96+
+  occurrences/day observed in real-world use). 300 m rejects genuinely bad
+  fixes while tolerating normal mobile GPS noise. Existing config entries are
+  unaffected — the value is stored per-entry; update yours manually via
+  Settings → Integrations → Entity Distance → Configure.
+
+- **Filter log levels demoted WARNING → DEBUG.** The accuracy and speed
+  filters working as designed is not an error. 96 WARNINGs/day trained users
+  to ignore their HA log, burying real problems. Both filters now log at
+  DEBUG. WARNING is preserved for entity-not-found, invalid coordinates, and
+  storage corruption.
+
+### Internal
+
+- `_resolve_coords()` replaces `_get_coords()` at call sites. New
+  `_find_zone_by_name()` helper resolves a zone by object_id, slugified name,
+  or `State.name`.
+- `zone_fallback` flag propagates from coord resolution through `is_zone_a/b`,
+  correctly skipping accuracy filter, speed filter, direction computation,
+  resync silence, and `require_reliable` gate for zone-fallback entities.
+- `ps.prev_distance_m` nulled on zone-fallback ticks (zone-centre baseline
+  unusable for speed/direction on first post-fallback GPS tick).
+- `ps.accuracy_a/b` set to `None` on zone-fallback ticks (prevents stale zone
+  radius inflating `noise_budget_m` on GPS recovery).
+- Resync silence refactored to use `_is_zone()` directly (not the composite
+  flag) and evaluate per-side staleness — a stale GPS tracker paired with a
+  home-via-scanner person now correctly triggers a resync hold.
+- 33 new tests covering all new code paths; 515 tests, 100% line + branch
+  coverage.
+
 ## [Unreleased]
 
 ## [0.3.1] - 2026-06-22

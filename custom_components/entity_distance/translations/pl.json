@@ -39,7 +39,7 @@
           "min_updates_reliable": "Min. aktualizacje dla wiarygodnych danych"
         },
         "data_description": {
-          "max_accuracy_m": "Odrzucaj aktualizacje lokalizacji z dokładnością GPS gorszą niż ta wartość. Ustaw na 0, aby wyłączyć.",
+          "max_accuracy_m": "Odrzucaj aktualizacje lokalizacji, gdy błąd GPS jest większy niż ta wartość. Telefony w ruchu zazwyczaj raportują dokładność 100–250 m, więc 300 m to bezpieczna wartość domyślna. Telefon pokazujący „dokładność 350 m\" zostanie pominięty. Ustaw na 0, aby wyłączyć.",
           "max_speed_kmh": "Odrzucaj aktualizacje, gdzie implikowana prędkość ruchu przekracza tę wartość. Ustaw na 0, aby wyłączyć.",
           "require_reliable": "Wyzwalaj zdarzenie proximity_enter tylko gdy dane są uznawane za wiarygodne.",
           "min_updates_reliable": "Minimalna liczba aktualizacji lokalizacji w oknie przed uznaniem danych za wiarygodne."
@@ -104,7 +104,7 @@
         },
         "description": "Te filtry pomagają ignorować złe dane GPS.",
         "data_description": {
-          "max_accuracy_m": "Ignoruj aktualizacje lokalizacji, gdzie błąd GPS jest większy niż to.",
+          "max_accuracy_m": "Odrzucaj aktualizacje lokalizacji, gdy błąd GPS jest większy niż ta wartość. Telefony w ruchu zazwyczaj raportują dokładność 100–250 m, więc 300 m to bezpieczna wartość domyślna. Telefon pokazujący „dokładność 350 m\" zostanie pominięty. Ustaw na 0, aby wyłączyć.",
           "max_speed_kmh": "Ignoruj aktualizacje sugerujące ruch szybszy niż to.",
           "require_reliable": "Gdy włączone, zdarzenie zbliżenia wyzwala się tylko po spójnych aktualizacjach.",
           "min_updates_reliable": "Ile kolejnych aktualizacji jest wymaganych, zanim lokalizacja zostanie uznana za niezawodną."

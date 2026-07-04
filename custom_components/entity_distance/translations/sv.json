@@ -39,7 +39,7 @@
           "min_updates_reliable": "Min. uppdateringar för tillförlitliga data"
         },
         "data_description": {
-          "max_accuracy_m": "Avvisa platsuppdateringar med GPS-noggrannhet sämre än detta värde. Ange 0 för att inaktivera.",
+          "max_accuracy_m": "Ignorera platsuppdateringar där GPS-felet är större än detta. Telefoner i rörelse rapporterar vanligtvis 100–250 m noggrannhet, så 300 m är ett säkert standardvärde. En telefon som visar \"350 m noggrannhet\" skulle hoppas över. Ange 0 för att inaktivera.",
           "max_speed_kmh": "Avvisa uppdateringar där implicit rörelsehastighet överskrider detta värde. Ange 0 för att inaktivera.",
           "require_reliable": "Utlösa proximity_enter-event bara när data anses tillförlitliga.",
           "min_updates_reliable": "Minsta antal platsuppdateringar i fönstret innan data anses tillförlitliga."
@@ -104,7 +104,7 @@
         },
         "description": "Dessa filter hjälper till att ignorera dåliga GPS-data.",
         "data_description": {
-          "max_accuracy_m": "Ignorera platsuppdateringar där GPS-felet är större än detta.",
+          "max_accuracy_m": "Ignorera platsuppdateringar där GPS-felet är större än detta. Telefoner i rörelse rapporterar vanligtvis 100–250 m noggrannhet, så 300 m är ett säkert standardvärde. En telefon som visar \"350 m noggrannhet\" skulle hoppas över. Ange 0 för att inaktivera.",
           "max_speed_kmh": "Ignorera uppdateringar som antyder rörelse snabbare än detta.",
           "require_reliable": "När aktiverat utlöses en nähets-händelse bara efter konsekventa uppdateringar.",
           "min_updates_reliable": "Hur många konsekventa uppdateringar som krävs innan platsen anses tillförlitlig."

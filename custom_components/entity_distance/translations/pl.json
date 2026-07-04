@@ -11,54 +11,42 @@
           "entities": "Wybierz od 2 do 5 encji do śledzenia. Każda para otrzyma własny zestaw czujników odległości i bliskości."
         }
       },
-      "thresholds": {
-        "title": "Ustawienia bliskości",
-        "description": "Skonfiguruj progi bliskości i debounce.",
+      "distances": {
+        "title": "Ustawienia odległości",
+        "description": "Ustaw granice stref i wybierz, która strefa wyzwala alert zbliżenia.",
         "data": {
-          "entry_threshold_m": "Próg wejścia (m)",
-          "exit_threshold_m": "Próg wyjścia (m)",
-          "debounce_s": "Czekaj przed reakcją (s)",
-          "show_advanced": "Konfiguruj zaawansowane filtry",
-          "show_zone_thresholds": "Konfiguruj progi stref zbliżenia"
+          "zone_very_near_m": "Granica strefy Bardzo blisko (m)",
+          "zone_near_m": "Granica strefy Blisko (m)",
+          "zone_mid_m": "Granica strefy Średnio (m)",
+          "zone_far_m": "Granica strefy Daleko (m)",
+          "proximity_zone": "Strefa alertu zbliżenia",
+          "show_advanced": "Konfiguruj zaawansowane filtry"
         },
         "data_description": {
-          "entry_threshold_m": "Odległość, przy której encje są uznawane za bliskie.",
-          "exit_threshold_m": "Odległość, przy której encje nie są już uznawane za bliskie. Musi być >= próg wejścia.",
-          "debounce_s": "Gdy nadejdzie aktualizacja lokalizacji, ile czekać przed ponownym obliczeniem. Przydatne gdy telefony wysyłają kilka zaszumionych odczytów GPS pod rząd — integracja czeka aż się ustabilizują. 0 = reaguj natychmiast (domyślnie). Zwiększ do 5–15 s przy migotaniu wł/wył.",
-          "show_advanced": "Włącz, aby skonfigurować dokładność GPS, prędkość i filtry niezawodności.",
-          "show_zone_thresholds": "Włącz, aby ustawić limity odległości stref."
+          "zone_very_near_m": "Encje są 'Bardzo blisko' w tej odległości lub bliżej. Domyślnie: 200 m.",
+          "zone_near_m": "Encje są 'Blisko' w tej odległości lub bliżej. Musi być większe niż Bardzo blisko. Domyślnie: 1000 m.",
+          "zone_mid_m": "Encje są w odległości 'Średniej'. Musi być większe niż Blisko. Domyślnie: 5000 m.",
+          "zone_far_m": "Encje są 'Daleko' w tej odległości lub bliżej. Musi być większe niż Średnio. Domyślnie: 20000 m.\nPoza tym jest 'Bardzo daleko'.",
+          "proximity_zone": "Czujnik 'W pobliżu' WŁĄCZA się, gdy encje są w tej strefie lub bliżej (np. wybranie 'Blisko' wyzwala się też, gdy encje są 'Bardzo blisko'). WYŁĄCZA się, gdy przejdą do następnej strefy.",
+          "show_advanced": "Włącz, aby skonfigurować dokładność GPS, prędkość i filtry niezawodności na następnym ekranie."
         }
       },
       "advanced": {
         "title": "Zaawansowane filtry",
         "description": "Opcjonalne filtry do odrzucania zawodnych aktualizacji lokalizacji.",
         "data": {
+          "debounce_s": "Czekaj przed reakcją (s)",
           "max_accuracy_m": "Maks. dokładność GPS (m, 0 = wyłączone)",
           "max_speed_kmh": "Maks. implikowana prędkość (km/h, 0 = wyłączone)",
           "require_reliable": "Wymagaj wiarygodnych danych dla zdarzeń bliskości",
           "min_updates_reliable": "Min. aktualizacje dla wiarygodnych danych"
         },
         "data_description": {
-          "max_accuracy_m": "Odrzucaj aktualizacje lokalizacji, gdy błąd GPS jest większy niż ta wartość. Telefony w ruchu zazwyczaj raportują dokładność 100–250 m, więc 300 m to bezpieczna wartość domyślna. Telefon pokazujący „dokładność 350 m\" zostanie pominięty. Ustaw na 0, aby wyłączyć.",
-          "max_speed_kmh": "Odrzucaj aktualizacje, gdzie implikowana prędkość ruchu przekracza tę wartość. Ustaw na 0, aby wyłączyć.",
+          "debounce_s": "Gdy nadejdzie aktualizacja lokalizacji, ile czekać przed ponownym obliczeniem. Przydatne gdy telefony wysyłają kilka zaszumionych odczytów GPS pod rząd — integracja czeka aż się ustabilizują. 0 = reaguj natychmiast (domyślnie). Zwiększ do 5–15 s przy migotaniu wł/wył.",
+          "max_accuracy_m": "Odrzucaj aktualizacje lokalizacji, gdy błąd GPS jest większy niż ta wartość. Telefony w ruchu zazwyczaj raportują dokładność 100–250 m, więc 300 m to bezpieczna wartość domyślna. Telefon pokazujący \"dokładność 350 m\" zostanie pominięty. Ustaw na 0, aby wyłączyć.",
+          "max_speed_kmh": "Ochrona przed teleportacją. Odrzuca odczyt GPS jeśli implikowana prędkość ruchu — po odjęciu łącznej dokładności GPS obu urządzeń — przekracza tę wartość. Domyślnie: 1000 km/h — blokuje niemożliwe teleportacje, dopuszczając samoloty. Ustaw na 0, aby wyłączyć.",
           "require_reliable": "Wyzwalaj zdarzenie proximity_enter tylko gdy dane są uznawane za wiarygodne.",
           "min_updates_reliable": "Minimalna liczba aktualizacji lokalizacji w oknie przed uznaniem danych za wiarygodne."
-        }
-      },
-      "zone_thresholds": {
-        "title": "Progi stref zbliżenia",
-        "description": "Ustaw limity odległości dla każdej strefy zbliżenia. Każdy próg musi być większy od poprzedniego.",
-        "data": {
-          "zone_very_near_m": "Próg Bardzo blisko (m)",
-          "zone_near_m": "Próg Blisko (m)",
-          "zone_mid_m": "Próg Średnio (m)",
-          "zone_far_m": "Próg Daleko (m)"
-        },
-        "data_description": {
-          "zone_very_near_m": "Encje są uważane za 'Bardzo blisko' w tej odległości lub bliżej. Domyślnie: 100 m.",
-          "zone_near_m": "Encje są uważane za 'Blisko' w tej odległości lub bliżej. Musi być większe niż Bardzo blisko. Domyślnie: 500 m.",
-          "zone_mid_m": "Encje są w odległości 'Średniej'. Musi być większe niż Blisko. Domyślnie: 2000 m.",
-          "zone_far_m": "Encje są uważane za 'Daleko'. Poza tym jest 'Bardzo daleko'. Domyślnie: 10000 m."
         }
       }
     },
@@ -66,7 +54,6 @@
       "too_few_entities": "Wybierz co najmniej 2 encje.",
       "too_many_entities": "Wybierz co najwyżej 5 encji.",
       "duplicate_entities": "Każda encja może pojawić się tylko raz.",
-      "exit_below_entry": "Próg wyjścia musi być większy lub równy progowi wejścia.",
       "zone_thresholds_not_ascending": "Progi stref muszą rosnąć w kolejności: Bardzo blisko < Blisko < Średnio < Daleko."
     },
     "abort": {
@@ -76,27 +63,30 @@
   },
   "options": {
     "step": {
-      "thresholds": {
-        "title": "Ustawienia bliskości",
+      "distances": {
+        "title": "Ustawienia odległości",
+        "description": "Ustaw granice stref i wybierz, która strefa wyzwala alert zbliżenia.",
         "data": {
-          "entry_threshold_m": "Próg wejścia (m)",
-          "exit_threshold_m": "Próg wyjścia (m)",
-          "debounce_s": "Czekaj przed reakcją (s)",
-          "show_advanced": "Konfiguruj zaawansowane filtry",
-          "show_zone_thresholds": "Konfiguruj progi stref zbliżenia"
+          "zone_very_near_m": "Granica strefy Bardzo blisko (m)",
+          "zone_near_m": "Granica strefy Blisko (m)",
+          "zone_mid_m": "Granica strefy Średnio (m)",
+          "zone_far_m": "Granica strefy Daleko (m)",
+          "proximity_zone": "Strefa alertu zbliżenia",
+          "show_advanced": "Konfiguruj zaawansowane filtry"
         },
-        "description": "Skonfiguruj progi zbliżenia.",
         "data_description": {
-          "entry_threshold_m": "Jak blisko (w metrach) encje muszą być, aby wyzwolić zdarzenie zbliżenia.",
-          "exit_threshold_m": "Jak daleko od siebie muszą się oddalić encje, zanim nie będą już uważane za bliskie.",
-          "debounce_s": "Gdy nadejdzie aktualizacja lokalizacji, ile czekać przed ponownym obliczeniem. 0 = reaguj natychmiast (domyślnie).",
-          "show_advanced": "Włącz, aby skonfigurować filtry GPS, prędkości i niezawodności.",
-          "show_zone_thresholds": "Włącz, aby ustawić limity stref."
+          "zone_very_near_m": "Encje są 'Bardzo blisko' w tej odległości lub bliżej. Domyślnie: 200 m.",
+          "zone_near_m": "Encje są 'Blisko' w tej odległości lub bliżej. Musi być większe niż Bardzo blisko. Domyślnie: 1000 m.",
+          "zone_mid_m": "Encje są w odległości 'Średniej'. Musi być większe niż Blisko. Domyślnie: 5000 m.",
+          "zone_far_m": "Encje są 'Daleko' w tej odległości lub bliżej. Musi być większe niż Średnio. Domyślnie: 20000 m.\nPoza tym jest 'Bardzo daleko'.",
+          "proximity_zone": "Czujnik 'W pobliżu' WŁĄCZA się, gdy encje są w tej strefie lub bliżej (np. wybranie 'Blisko' wyzwala się też, gdy encje są 'Bardzo blisko'). WYŁĄCZA się, gdy przejdą do następnej strefy.",
+          "show_advanced": "Włącz, aby skonfigurować dokładność GPS, prędkość i filtry niezawodności na następnym ekranie."
         }
       },
       "advanced": {
         "title": "Zaawansowane filtry",
         "data": {
+          "debounce_s": "Czekaj przed reakcją (s)",
           "max_accuracy_m": "Maks. dokładność GPS (m, 0 = wyłączone)",
           "max_speed_kmh": "Maks. implikowana prędkość (km/h, 0 = wyłączone)",
           "require_reliable": "Wymagaj wiarygodnych danych dla zdarzeń bliskości",
@@ -104,31 +94,15 @@
         },
         "description": "Te filtry pomagają ignorować złe dane GPS.",
         "data_description": {
-          "max_accuracy_m": "Odrzucaj aktualizacje lokalizacji, gdy błąd GPS jest większy niż ta wartość. Telefony w ruchu zazwyczaj raportują dokładność 100–250 m, więc 300 m to bezpieczna wartość domyślna. Telefon pokazujący „dokładność 350 m\" zostanie pominięty. Ustaw na 0, aby wyłączyć.",
-          "max_speed_kmh": "Ignoruj aktualizacje sugerujące ruch szybszy niż to.",
+          "debounce_s": "Gdy nadejdzie aktualizacja lokalizacji, ile czekać przed ponownym obliczeniem. Przydatne gdy telefony wysyłają kilka zaszumionych odczytów GPS pod rząd — integracja czeka aż się ustabilizują. 0 = reaguj natychmiast (domyślnie). Zwiększ do 5–15 s przy migotaniu wł/wył.",
+          "max_accuracy_m": "Odrzucaj aktualizacje lokalizacji, gdy błąd GPS jest większy niż ta wartość. Telefony w ruchu zazwyczaj raportują dokładność 100–250 m, więc 300 m to bezpieczna wartość domyślna. Telefon pokazujący \"dokładność 350 m\" zostanie pominięty. Ustaw na 0, aby wyłączyć.",
+          "max_speed_kmh": "Ochrona przed teleportacją. Odrzuca odczyt GPS jeśli implikowana prędkość ruchu — po odjęciu łącznej dokładności GPS obu urządzeń — przekracza tę wartość. Domyślnie: 1000 km/h — blokuje niemożliwe teleportacje, dopuszczając samoloty. Ustaw na 0, aby wyłączyć.",
           "require_reliable": "Gdy włączone, zdarzenie zbliżenia wyzwala się tylko po spójnych aktualizacjach.",
           "min_updates_reliable": "Ile kolejnych aktualizacji jest wymaganych, zanim lokalizacja zostanie uznana za niezawodną."
-        }
-      },
-      "zone_thresholds": {
-        "title": "Progi stref zbliżenia",
-        "description": "Ustaw limity odległości dla każdej strefy zbliżenia.",
-        "data": {
-          "zone_very_near_m": "Próg Bardzo blisko (m)",
-          "zone_near_m": "Próg Blisko (m)",
-          "zone_mid_m": "Próg Średnio (m)",
-          "zone_far_m": "Próg Daleko (m)"
-        },
-        "data_description": {
-          "zone_very_near_m": "Domyślnie: 100 m.",
-          "zone_near_m": "Domyślnie: 500 m.",
-          "zone_mid_m": "Domyślnie: 2000 m.",
-          "zone_far_m": "Domyślnie: 10000 m."
         }
       }
     },
     "error": {
-      "exit_below_entry": "Próg wyjścia musi być większy lub równy progowi wejścia.",
       "zone_thresholds_not_ascending": "Progi stref muszą rosnąć w kolejności: Bardzo blisko < Blisko < Średnio < Daleko."
     }
   },
@@ -266,6 +240,16 @@
     "button": {
       "refresh": {
         "name": "Odśwież lokalizację"
+      }
+    }
+  },
+  "selector": {
+    "proximity_zone": {
+      "options": {
+        "very_near": "Bardzo blisko",
+        "near": "Blisko",
+        "mid": "Średnio",
+        "far": "Daleko"
       }
     }
   }

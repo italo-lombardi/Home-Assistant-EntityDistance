@@ -1,8 +1,67 @@
 # Changelog
 
-## [0.3.2] - 2026-07-04
+## [Unreleased]
+
+## [0.4.0] - 2026-07-04
+
+> **⚠ BREAKING CHANGE — proximity alert distances will change on upgrade**
+>
+> Version 0.4.0 replaces the separate "entry threshold" and "exit threshold"
+> settings with a single **proximity zone selector**. The 'In Proximity' sensor
+> now fires when entities enter the selected zone and clears when they move to
+> the next zone out — providing the same hysteresis, but defined by the same
+> zone boundaries you use for time statistics.
+>
+> **What changes automatically on upgrade:**
+> - Your old `entry_threshold_m` is mapped to the **nearest zone boundary**.
+>   For example: entry = 150 m, zones at 200 / 1000 / 5000 / 20000 m → maps to
+>   **Very Near (200 m)**. The 'In Proximity' sensor will fire at 200 m instead
+>   of 150 m after upgrade.
+> - Your old `exit_threshold_m` is dropped. The new exit distance is
+>   automatically the **next zone out** from the selected zone. If proximity
+>   zone = Very Near (200 m), the sensor clears at Near (1000 m).
+> - **Zone boundaries and all accumulated time statistics are preserved.**
+>
+> **If your automations depend on the exact 'In Proximity' trigger distance,**
+> review your zone settings after upgrade via Settings → Integrations →
+> Entity Distance → Configure. Adjust zone boundaries to match your intended
+> trigger distance.
+
+### Added
+
+- **Unified distance model.** Zone boundaries now define the full distance
+  vocabulary. A single "Proximity alert zone" dropdown replaces the separate
+  entry/exit threshold fields. Selecting "Very Near" means: alert ON at Very
+  Near boundary, alert OFF at Near boundary. This eliminates the redundancy
+  where two overlapping distance concepts (alert thresholds and zone boundaries)
+  had no enforced relationship and could be set to contradictory values.
+- **Config flow restructured.** Distance Settings screen shows zone boundaries
+  first (Very Near → Near → Medium → Far), then the alert zone dropdown. The
+  "Wait before reacting" (debounce) setting moved to the Advanced Filters
+  screen, where it belongs conceptually alongside GPS accuracy and speed filters.
+- **Selector labels translated.** The proximity zone dropdown now shows
+  translated zone names ("Very Near", "Near", "Medium", "Far") instead of raw
+  keys.
+- **v2 → v3 config entry migration.** Existing installs are migrated
+  automatically on first load. No manual action required.
+
+### Changed
+
+- **Default zone boundaries updated** to more natural values for city and
+  suburban use: Very Near 200 m (was 100 m), Near 1000 m (was 500 m),
+  Medium 5000 m (was 2000 m), Far 20000 m (was 10000 m). Only affects new
+  installs; existing configs keep their stored values.
 
 ### Fixed
+
+- **Sensors no longer go `unavailable` during resync hold.** The resync silence
+  mechanism (which pauses proximity transitions for 60 s when GPS has been
+  silent for 10+ minutes) previously set `data_valid = False`, making all 35+
+  sensors flash `unavailable` for the hold duration. Hold now correctly suppresses
+  only proximity entry/exit transitions; sensors keep their last computed values.
+  Cumulative sensors (proximity duration, today times, proximity rate, last seen
+  together, update counts, tracking started) now report their values regardless
+  of GPS staleness — they hold historical facts that do not expire.
 
 - **HA 2026.7 compatibility — zone coordinate fallback.** HA 2026.7 removed
   `latitude`/`longitude` attributes from `person.*` and `device_tracker.*`
@@ -56,8 +115,6 @@
   home-via-scanner person now correctly triggers a resync hold.
 - 33 new tests covering all new code paths; 515 tests, 100% line + branch
   coverage.
-
-## [Unreleased]
 
 ## [0.3.1] - 2026-06-22
 

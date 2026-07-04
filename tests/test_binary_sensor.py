@@ -30,7 +30,9 @@ from custom_components.entity_distance.const import (
 from custom_components.entity_distance.models import GroupData, PairState, pair_key
 
 
-def _make_group_data(entities: list[str], proximity_map: dict | None = None) -> GroupData:
+def _make_group_data(
+    entities: list[str], proximity_map: dict | None = None
+) -> GroupData:
     pairs = {}
     for a, b in itertools.combinations(entities, 2):
         k = pair_key(a, b)
@@ -40,7 +42,9 @@ def _make_group_data(entities: list[str], proximity_map: dict | None = None) -> 
             ps.proximity = proximity_map.get(k, False)
         pairs[k] = ps
     any_prox = any(ps.proximity for ps in pairs.values() if ps.data_valid)
-    all_prox = bool(pairs) and all(ps.proximity for ps in pairs.values() if ps.data_valid)
+    all_prox = bool(pairs) and all(
+        ps.proximity for ps in pairs.values() if ps.data_valid
+    )
     return GroupData(pairs=pairs, any_in_proximity=any_prox, all_in_proximity=all_prox)
 
 
@@ -174,7 +178,10 @@ class TestSameZoneBinarySensor:
     def test_unique_id_contains_pair_ids(self):
         k = pair_key("person.alice", "person.bob")
         sensor = _make_same_zone_sensor(k, "home", "home")
-        assert "person.alice" in sensor._attr_unique_id or "person.bob" in sensor._attr_unique_id
+        assert (
+            "person.alice" in sensor._attr_unique_id
+            or "person.bob" in sensor._attr_unique_id
+        )
         assert "same_zone" in sensor._attr_unique_id
 
     def test_true_when_person_in_zone_object_id(self):
@@ -198,19 +205,25 @@ class TestSameZoneBinarySensor:
         # zone.work renamed to "My Office" → device_tracker sets person.state = "My Office".
         # Comparison must use State.name (friendly_name), not object_id.
         k = pair_key("person.alice", "zone.work")
-        sensor = _make_same_zone_sensor(k, "My Office", "3", name_a="alice", name_b="My Office")
+        sensor = _make_same_zone_sensor(
+            k, "My Office", "3", name_a="alice", name_b="My Office"
+        )
         assert sensor.is_on is True
 
     def test_renamed_zone_mismatched_state_returns_false(self):
         k = pair_key("person.alice", "zone.work")
-        sensor = _make_same_zone_sensor(k, "Home", "3", name_a="alice", name_b="My Office")
+        sensor = _make_same_zone_sensor(
+            k, "Home", "3", name_a="alice", name_b="My Office"
+        )
         assert sensor.is_on is False
 
     def test_zone_home_uses_literal_home_not_friendly_name(self):
         # zone.home is special-cased in HA: state is always literal STATE_HOME ("home"),
         # regardless of any friendly_name override. Match that exact behavior.
         k = pair_key("person.alice", "zone.home")
-        sensor = _make_same_zone_sensor(k, "home", "3", name_a="alice", name_b="My House")
+        sensor = _make_same_zone_sensor(
+            k, "home", "3", name_a="alice", name_b="My House"
+        )
         assert sensor.is_on is True
 
 
@@ -256,17 +269,17 @@ class TestBucketBinarySensor:
 
     def test_near_on_in_band(self):
         k = pair_key("person.alice", "person.bob")
-        s = _make_bucket_sensor(k, BUCKET_NEAR, 300.0)
+        s = _make_bucket_sensor(k, BUCKET_NEAR, 500.0)
         assert s.is_on is True
 
     def test_mid_on_in_band(self):
         k = pair_key("person.alice", "person.bob")
-        s = _make_bucket_sensor(k, BUCKET_MID, 1500.0)
+        s = _make_bucket_sensor(k, BUCKET_MID, 3000.0)
         assert s.is_on is True
 
     def test_far_on_in_band(self):
         k = pair_key("person.alice", "person.bob")
-        s = _make_bucket_sensor(k, BUCKET_FAR, 5000.0)
+        s = _make_bucket_sensor(k, BUCKET_FAR, 15000.0)
         assert s.is_on is True
 
     def test_very_far_on_above_far(self):
@@ -300,13 +313,13 @@ class TestBucketBinarySensor:
         assert on_count == 1
 
     def test_exact_threshold_lands_in_lower_bucket(self):
-        # _calc_bucket uses `<= threshold`; exactly 100.0 m should be very_near.
+        # _calc_bucket uses `<= threshold`; exactly 200.0 m should be very_near.
         k = pair_key("person.alice", "person.bob")
-        assert _make_bucket_sensor(k, BUCKET_VERY_NEAR, 100.0).is_on is True
-        assert _make_bucket_sensor(k, BUCKET_NEAR, 100.0).is_on is False
-        # 500.0 m exactly → near (not mid).
-        assert _make_bucket_sensor(k, BUCKET_NEAR, 500.0).is_on is True
-        assert _make_bucket_sensor(k, BUCKET_MID, 500.0).is_on is False
+        assert _make_bucket_sensor(k, BUCKET_VERY_NEAR, 200.0).is_on is True
+        assert _make_bucket_sensor(k, BUCKET_NEAR, 200.0).is_on is False
+        # 1000.0 m exactly → near (not mid).
+        assert _make_bucket_sensor(k, BUCKET_NEAR, 1000.0).is_on is True
+        assert _make_bucket_sensor(k, BUCKET_MID, 1000.0).is_on is False
 
 
 class TestAsyncSetupEntry:
@@ -475,7 +488,10 @@ class TestAsyncSetupEntry:
         k = pair_key("person.alice", "person.bob")
         gd = _make_group_data(["person.alice", "person.bob"])
         sensor = _make_proximity_sensor(gd, k)
-        assert "person.alice" in sensor._attr_unique_id or "person.bob" in sensor._attr_unique_id
+        assert (
+            "person.alice" in sensor._attr_unique_id
+            or "person.bob" in sensor._attr_unique_id
+        )
 
     def test_tracks_correct_pair_in_group(self):
         entities = ["person.alice", "person.bob", "person.carol"]
@@ -499,7 +515,9 @@ class TestAnyInProximityBinarySensor:
 
     def test_true_when_one_pair_proximate(self):
         entities = ["person.alice", "person.bob", "person.carol"]
-        k = list(itertools.combinations(["person.alice", "person.bob", "person.carol"], 2))[0]
+        k = list(
+            itertools.combinations(["person.alice", "person.bob", "person.carol"], 2)
+        )[0]
         k = pair_key(*k)
         proximity_map = {k: True}
         gd = _make_group_data(entities, proximity_map)

@@ -11,54 +11,42 @@
           "entities": "Vælg 2–5 enheder at spore. Hvert par får sit eget sæt afstands- og nærhedssensorer."
         }
       },
-      "thresholds": {
-        "title": "Nærhedsindstillinger",
-        "description": "Konfigurer nærhedstærskler og debounce.",
+      "distances": {
+        "title": "Afstandsindstillinger",
+        "description": "Angiv zonegrænserne og vælg hvilken zone der udløser nærhedsalarmen.",
         "data": {
-          "entry_threshold_m": "Indgangstærskel (m)",
-          "exit_threshold_m": "Udgangstærskel (m)",
-          "debounce_s": "Vent før reaktion (s)",
-          "show_advanced": "Konfigurer avancerede filtre",
-          "show_zone_thresholds": "Konfigurer nærheds-zonetærskler"
+          "zone_very_near_m": "Grænse for zonen Meget tæt (m)",
+          "zone_near_m": "Grænse for zonen Tæt (m)",
+          "zone_mid_m": "Grænse for zonen Middel (m)",
+          "zone_far_m": "Grænse for zonen Langt (m)",
+          "proximity_zone": "Nærhedsalarmzone",
+          "show_advanced": "Konfigurer avancerede filtre"
         },
         "data_description": {
-          "entry_threshold_m": "Afstand ved hvilken enheder betragtes som nære.",
-          "exit_threshold_m": "Afstand ved hvilken enheder betragtes som ikke-nære. Skal være >= indgangstærskel.",
-          "debounce_s": "Når en lokationsopdatering kommer, hvor længe der ventes før der genberegnes. Nyttigt når telefoner sender flere støjende GPS-målinger i træk — integrationen venter til de stabiliseres. 0 = reager øjeblikkeligt (standard). Hæv til 5–15 s ved jitter.",
-          "show_advanced": "Aktivér for at konfigurere GPS-nøjagtighed, hastighed og pålidelighedsfiltre på næste skærm.",
-          "show_zone_thresholds": "Aktivér for at indstille afstandsgrænserne for Meget tæt, Tæt, Middel og Langt zoner på næste skærm."
+          "zone_very_near_m": "Enheder er 'Meget tæt' ved eller nærmere end denne afstand. Standard: 200 m.",
+          "zone_near_m": "Enheder er 'Tæt' ved eller nærmere end denne afstand. Skal være større end Meget tæt. Standard: 1000 m.",
+          "zone_mid_m": "Enheder er 'Middel' afstand. Skal være større end Tæt. Standard: 5000 m.",
+          "zone_far_m": "Enheder er 'Langt' ved eller nærmere end denne afstand. Skal være større end Middel. Standard: 20000 m.\nUd over dette er 'Meget langt'.",
+          "proximity_zone": "Sensoren 'I nærheden' slås TIL, når enhederne er inden for denne zone eller tættere på (f.eks. valg af 'Tæt' udløser også, når enhederne er 'Meget tæt'). Den slås FRA, når de bevæger sig til næste zone ud.",
+          "show_advanced": "Aktivér for at konfigurere GPS-nøjagtighed, hastighed og pålidelighetsfiltre på næste skærm."
         }
       },
       "advanced": {
         "title": "Avancerede filtre",
         "description": "Valgfrie filtre til at afvise upålidelige lokationsopdateringer.",
         "data": {
+          "debounce_s": "Vent før reaktion (s)",
           "max_accuracy_m": "Maks. GPS-nøjagtighed (m, 0 = deaktiveret)",
           "max_speed_kmh": "Maks. underforstået hastighed (km/h, 0 = deaktiveret)",
           "require_reliable": "Kræv pålidelige data til nærhedsbegivenheder",
           "min_updates_reliable": "Min. opdateringer for pålidelige data"
         },
         "data_description": {
+          "debounce_s": "Når en lokationsopdatering kommer, hvor længe der ventes før der genberegnes. Nyttigt når telefoner sender flere støjende GPS-målinger i træk — integrationen venter til de stabiliseres. 0 = reager øjeblikkeligt (standard). Hæv til 5–15 s ved jitter.",
           "max_accuracy_m": "Afvis lokationsopdateringer hvor GPS-fejlen er større end denne værdi. Telefoner i bevægelse rapporterer typisk 100–250 m nøjagtighed, så 300 m er en sikker standard. En telefon der viser '350 m nøjagtighed' vil blive sprunget over. Sæt til 0 for at deaktivere.",
-          "max_speed_kmh": "Afvis opdateringer, hvor underforstået bevægelseshastighed overstiger denne værdi. Sæt til 0 for at deaktivere.",
+          "max_speed_kmh": "Teleport-bevogtning. Afviser et GPS-fix, hvis den underforståede bevægelseshastighed — efter fratrækning af den kombinerede GPS-nøjagtighed for begge enheder — overstiger denne værdi. Standard: 1000 km/t — blokerer umulige teleporter, mens fly tillades. Sæt til 0 for at deaktivere.",
           "require_reliable": "Afskyd kun proximity_enter-begivenhed, når data anses for pålidelige.",
           "min_updates_reliable": "Mindste antal lokationsopdateringer i vinduet, før data anses for pålidelige."
-        }
-      },
-      "zone_thresholds": {
-        "title": "Nærheds-zonetærskler",
-        "description": "Indstil afstandsgrænserne for hvert nærhedszone. Hver tærskel skal være større end den forrige.",
-        "data": {
-          "zone_very_near_m": "Meget tæt tærskel (m)",
-          "zone_near_m": "Tæt tærskel (m)",
-          "zone_mid_m": "Middel tærskel (m)",
-          "zone_far_m": "Langt tærskel (m)"
-        },
-        "data_description": {
-          "zone_very_near_m": "Enheder anses som 'Meget tæt' ved eller nærmere end denne afstand. Standard: 100 m.",
-          "zone_near_m": "Enheder anses som 'Tæt' ved eller nærmere end denne afstand. Skal være større end Meget tæt. Standard: 500 m.",
-          "zone_mid_m": "Enheder anses som 'Middel' afstand ved eller nærmere end dette. Skal være større end Tæt. Standard: 2000 m.",
-          "zone_far_m": "Enheder anses som 'Langt' ved eller nærmere end denne afstand. Ud over dette er 'Meget langt'. Skal være større end Middel. Standard: 10000 m."
         }
       }
     },
@@ -66,7 +54,6 @@
       "too_few_entities": "Vælg mindst 2 enheder.",
       "too_many_entities": "Vælg højst 5 enheder.",
       "duplicate_entities": "Hver enhed må kun forekomme én gang.",
-      "exit_below_entry": "Udgangstærskel skal være større end eller lig med indgangstærskel.",
       "zone_thresholds_not_ascending": "Zonetærskler skal stige i rækkefølge: Meget tæt < Tæt < Middel < Langt."
     },
     "abort": {
@@ -76,27 +63,30 @@
   },
   "options": {
     "step": {
-      "thresholds": {
-        "title": "Nærhedsindstillinger",
+      "distances": {
+        "title": "Afstandsindstillinger",
+        "description": "Angiv zonegrænserne og vælg hvilken zone der udløser nærhedsalarmen.",
         "data": {
-          "entry_threshold_m": "Indgangstærskel (m)",
-          "exit_threshold_m": "Udgangstærskel (m)",
-          "debounce_s": "Vent før reaktion (s)",
-          "show_advanced": "Konfigurer avancerede filtre",
-          "show_zone_thresholds": "Konfigurer nærheds-zonetærskler"
+          "zone_very_near_m": "Grænse for zonen Meget tæt (m)",
+          "zone_near_m": "Grænse for zonen Tæt (m)",
+          "zone_mid_m": "Grænse for zonen Middel (m)",
+          "zone_far_m": "Grænse for zonen Langt (m)",
+          "proximity_zone": "Nærhedsalarmzone",
+          "show_advanced": "Konfigurer avancerede filtre"
         },
-        "description": "Indstil hvor tæt enhederne skal være for at tælle som 'i nærheden'.",
         "data_description": {
-          "entry_threshold_m": "Hvor tæt (i meter) enhederne skal være for at udløse en 'i nærheden'-hændelse.",
-          "exit_threshold_m": "Hvor langt fra hinanden enhederne skal flytte, før de ikke længere betragtes som i nærheden.",
-          "debounce_s": "Når en lokationsopdatering kommer, hvor længe der ventes før der genberegnes. 0 = reager øjeblikkeligt (standard).",
-          "show_advanced": "Aktivér for at konfigurere GPS-nøjagtighed, hastighed og pålidelighedsfiltre.",
-          "show_zone_thresholds": "Aktivér for at indstille afstandsgrænserne for zonerne."
+          "zone_very_near_m": "Enheder er 'Meget tæt' ved eller nærmere end denne afstand. Standard: 200 m.",
+          "zone_near_m": "Enheder er 'Tæt' ved eller nærmere end denne afstand. Skal være større end Meget tæt. Standard: 1000 m.",
+          "zone_mid_m": "Enheder er 'Middel' afstand. Skal være større end Tæt. Standard: 5000 m.",
+          "zone_far_m": "Enheder er 'Langt' ved eller nærmere end denne afstand. Skal være større end Middel. Standard: 20000 m.\nUd over dette er 'Meget langt'.",
+          "proximity_zone": "Sensoren 'I nærheden' slås TIL, når enhederne er inden for denne zone eller tættere på (f.eks. valg af 'Tæt' udløser også, når enhederne er 'Meget tæt'). Den slås FRA, når de bevæger sig til næste zone ud.",
+          "show_advanced": "Aktivér for at konfigurere GPS-nøjagtighed, hastighed og pålidelighetsfiltre på næste skærm."
         }
       },
       "advanced": {
         "title": "Avancerede filtre",
         "data": {
+          "debounce_s": "Vent før reaktion (s)",
           "max_accuracy_m": "Maks. GPS-nøjagtighed (m, 0 = deaktiveret)",
           "max_speed_kmh": "Maks. underforstået hastighed (km/h, 0 = deaktiveret)",
           "require_reliable": "Kræv pålidelige data til nærhedsbegivenheder",
@@ -104,31 +94,15 @@
         },
         "description": "Disse filtre hjælper med at ignorere dårlige GPS-data.",
         "data_description": {
+          "debounce_s": "Når en lokationsopdatering kommer, hvor længe der ventes før der genberegnes. Nyttigt når telefoner sender flere støjende GPS-målinger i træk — integrationen venter til de stabiliseres. 0 = reager øjeblikkeligt (standard). Hæv til 5–15 s ved jitter.",
           "max_accuracy_m": "Afvis lokationsopdateringer hvor GPS-fejlen er større end denne værdi. Telefoner i bevægelse rapporterer typisk 100–250 m nøjagtighed, så 300 m er en sikker standard. En telefon der viser '350 m nøjagtighed' vil blive sprunget over. Sæt til 0 for at deaktivere.",
-          "max_speed_kmh": "Ignorer opdateringer, der antyder bevægelse hurtigere end dette.",
+          "max_speed_kmh": "Teleport-bevogtning. Afviser et GPS-fix, hvis den underforståede bevægelseshastighed — efter fratrækning af den kombinerede GPS-nøjagtighed for begge enheder — overstiger denne værdi. Standard: 1000 km/t — blokerer umulige teleporter, mens fly tillades. Sæt til 0 for at deaktivere.",
           "require_reliable": "Når aktiveret udløses en 'i nærheden'-hændelse kun efter konsistente opdateringer.",
           "min_updates_reliable": "Hvor mange konsistente opdateringer der kræves, før lokationen betragtes som pålidelig."
-        }
-      },
-      "zone_thresholds": {
-        "title": "Nærheds-zonetærskler",
-        "description": "Indstil afstandsgrænserne for hvert nærhedszone.",
-        "data": {
-          "zone_very_near_m": "Meget tæt tærskel (m)",
-          "zone_near_m": "Tæt tærskel (m)",
-          "zone_mid_m": "Middel tærskel (m)",
-          "zone_far_m": "Langt tærskel (m)"
-        },
-        "data_description": {
-          "zone_very_near_m": "Enheder anses som 'Meget tæt' ved eller nærmere end denne afstand. Standard: 100 m.",
-          "zone_near_m": "Enheder anses som 'Tæt' ved eller nærmere end denne afstand. Standard: 500 m.",
-          "zone_mid_m": "Enheder anses som 'Middel' afstand. Standard: 2000 m.",
-          "zone_far_m": "Enheder anses som 'Langt'. Standard: 10000 m."
         }
       }
     },
     "error": {
-      "exit_below_entry": "Udgangstærskel skal være større end eller lig med indgangstærskel.",
       "zone_thresholds_not_ascending": "Zonetærskler skal stige i rækkefølge: Meget tæt < Tæt < Middel < Langt."
     }
   },
@@ -266,6 +240,16 @@
     "button": {
       "refresh": {
         "name": "Opdater lokation"
+      }
+    }
+  },
+  "selector": {
+    "proximity_zone": {
+      "options": {
+        "very_near": "Meget nær",
+        "near": "Nær",
+        "mid": "Middel",
+        "far": "Langt"
       }
     }
   }

@@ -161,7 +161,9 @@ class TestResolveNotifyService:
 
     def test_returns_none_on_import_error(self):
         btn = _make_button(["person.alice"])
-        with patch.dict("sys.modules", {"homeassistant.components.mobile_app.util": None}):
+        with patch.dict(
+            "sys.modules", {"homeassistant.components.mobile_app.util": None}
+        ):
             result = btn._resolve_notify_service("device_123")
             assert result is None
 
@@ -169,7 +171,9 @@ class TestResolveNotifyService:
         btn = _make_button(["person.alice"])
         mock_util = MagicMock()
         mock_util.webhook_id_from_device_id.return_value = None
-        with patch.dict("sys.modules", {"homeassistant.components.mobile_app.util": mock_util}):
+        with patch.dict(
+            "sys.modules", {"homeassistant.components.mobile_app.util": mock_util}
+        ):
             result = btn._resolve_notify_service("device_123")
             assert result is None
 
@@ -178,7 +182,9 @@ class TestResolveNotifyService:
         mock_util = MagicMock()
         mock_util.webhook_id_from_device_id.return_value = "webhook_abc"
         mock_util.get_notify_service.return_value = "mobile_app_alice_phone"
-        with patch.dict("sys.modules", {"homeassistant.components.mobile_app.util": mock_util}):
+        with patch.dict(
+            "sys.modules", {"homeassistant.components.mobile_app.util": mock_util}
+        ):
             result = btn._resolve_notify_service("device_123")
             assert result == "mobile_app_alice_phone"
 
@@ -201,7 +207,9 @@ class TestAsyncPress:
                 "custom_components.entity_distance.button.er.async_get",
                 return_value=registry,
             ),
-            patch.object(btn, "_resolve_notify_service", return_value="mobile_app_alice"),
+            patch.object(
+                btn, "_resolve_notify_service", return_value="mobile_app_alice"
+            ),
         ):
             await btn.async_press()
 
@@ -293,7 +301,9 @@ class TestAsyncPress:
                 "custom_components.entity_distance.button.er.async_get",
                 return_value=registry,
             ),
-            patch.object(btn, "_resolve_notify_service", return_value="mobile_app_alice"),
+            patch.object(
+                btn, "_resolve_notify_service", return_value="mobile_app_alice"
+            ),
         ):
             await btn.async_press()
 
@@ -311,7 +321,9 @@ class TestAsyncPress:
 
         registry.async_get.side_effect = _reg_get
         # First call raises, second succeeds
-        btn.hass.services.async_call = AsyncMock(side_effect=[Exception("network error"), None])
+        btn.hass.services.async_call = AsyncMock(
+            side_effect=[Exception("network error"), None]
+        )
 
         with (
             patch(
@@ -336,7 +348,10 @@ class TestAsyncSetupEntry:
 
     @pytest.mark.asyncio
     async def test_setup_entry_adds_refresh_button(self):
-        from custom_components.entity_distance.button import RefreshButton, async_setup_entry
+        from custom_components.entity_distance.button import (
+            RefreshButton,
+            async_setup_entry,
+        )
         from custom_components.entity_distance.const import DOMAIN
 
         coordinator = MagicMock()

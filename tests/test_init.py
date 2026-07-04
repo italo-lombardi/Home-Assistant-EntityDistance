@@ -198,7 +198,9 @@ class TestPurgeStaleResources:
 
     @pytest.mark.asyncio
     async def test_deletes_stale_resource(self):
-        from homeassistant.components.lovelace.resources import ResourceStorageCollection
+        from homeassistant.components.lovelace.resources import (
+            ResourceStorageCollection,
+        )
 
         from custom_components.entity_distance import _async_purge_stale_resources
 
@@ -257,7 +259,9 @@ class TestInstallCard:
                 "custom_components.entity_distance._async_register_lovelace_resource",
                 new=AsyncMock(),
             ),
-            patch("custom_components.entity_distance._get_version", return_value="0.2.5"),
+            patch(
+                "custom_components.entity_distance._get_version", return_value="0.2.5"
+            ),
             patch("custom_components.entity_distance.Path") as mock_path_cls,
         ):
             mock_path = MagicMock()
@@ -289,7 +293,9 @@ class TestInstallCard:
                 "custom_components.entity_distance._async_register_lovelace_resource",
                 new=register_resource,
             ),
-            patch("custom_components.entity_distance._get_version", return_value="0.2.5"),
+            patch(
+                "custom_components.entity_distance._get_version", return_value="0.2.5"
+            ),
             patch("custom_components.entity_distance.Path") as mock_path_cls,
         ):
             mock_path = MagicMock()
@@ -309,7 +315,9 @@ class TestInstallCard:
         hass.data = {}
         hass.async_add_executor_job = AsyncMock(side_effect=lambda fn, *a: fn(*a))
         hass.http = MagicMock()
-        hass.http.async_register_static_paths = AsyncMock(side_effect=RuntimeError("dup"))
+        hass.http.async_register_static_paths = AsyncMock(
+            side_effect=RuntimeError("dup")
+        )
 
         register_resource = AsyncMock()
 
@@ -322,7 +330,9 @@ class TestInstallCard:
                 "custom_components.entity_distance._async_register_lovelace_resource",
                 new=register_resource,
             ),
-            patch("custom_components.entity_distance._get_version", return_value="0.2.5"),
+            patch(
+                "custom_components.entity_distance._get_version", return_value="0.2.5"
+            ),
             patch("custom_components.entity_distance.Path") as mock_path_cls,
         ):
             mock_path = MagicMock()
@@ -352,7 +362,9 @@ class TestRegisterLovelaceResource:
 
     @pytest.mark.asyncio
     async def test_creates_when_no_existing(self):
-        from homeassistant.components.lovelace.resources import ResourceStorageCollection
+        from homeassistant.components.lovelace.resources import (
+            ResourceStorageCollection,
+        )
 
         from custom_components.entity_distance import _async_register_lovelace_resource
 
@@ -363,13 +375,17 @@ class TestRegisterLovelaceResource:
         resources.async_create_item = AsyncMock()
         hass.data = {"lovelace": MagicMock(resources=resources)}
 
-        await _async_register_lovelace_resource(hass, "entity-distance-pair-card.js", "/x", "0.2.4")
+        await _async_register_lovelace_resource(
+            hass, "entity-distance-pair-card.js", "/x", "0.2.4"
+        )
 
         resources.async_create_item.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_loads_when_not_loaded(self):
-        from homeassistant.components.lovelace.resources import ResourceStorageCollection
+        from homeassistant.components.lovelace.resources import (
+            ResourceStorageCollection,
+        )
 
         from custom_components.entity_distance import _async_register_lovelace_resource
 
@@ -381,7 +397,9 @@ class TestRegisterLovelaceResource:
         resources.async_create_item = AsyncMock()
         hass.data = {"lovelace": MagicMock(resources=resources)}
 
-        await _async_register_lovelace_resource(hass, "entity-distance-pair-card.js", "/x", "0.2.4")
+        await _async_register_lovelace_resource(
+            hass, "entity-distance-pair-card.js", "/x", "0.2.4"
+        )
 
         resources.async_load.assert_called_once()
 
@@ -397,7 +415,10 @@ class TestRegisterLovelaceResource:
         hass.data = {"lovelace": MagicMock(resources=resources)}
 
         await _async_register_lovelace_resource(
-            hass, "entity-distance-pair-card.js", "/entity-distance-pair-card.js", "0.2.4"
+            hass,
+            "entity-distance-pair-card.js",
+            "/entity-distance-pair-card.js",
+            "0.2.4",
         )
 
         assert len(resources.data) == 2
@@ -416,7 +437,9 @@ class TestRegisterLovelaceResource:
         resources.async_items = MagicMock(return_value=[])
         hass.data = {"lovelace": MagicMock(resources=resources)}
 
-        await _async_register_lovelace_resource(hass, "entity-distance-pair-card.js", "/x", "0.2.4")
+        await _async_register_lovelace_resource(
+            hass, "entity-distance-pair-card.js", "/x", "0.2.4"
+        )
 
         # Neither path should have been touched. spec=[...] guarantees these
         # attrs don't exist; assert that nothing pretended to add them.
@@ -444,7 +467,10 @@ class TestRegisterLovelaceResource:
         hass.data = {"lovelace": MagicMock(resources=resources)}
 
         await _async_register_lovelace_resource(
-            hass, "entity-distance-pair-card.js", f"{url_base}?automatically-added&0.2.4", "0.2.4"
+            hass,
+            "entity-distance-pair-card.js",
+            f"{url_base}?automatically-added&0.2.4",
+            "0.2.4",
         )
 
         # Non-StorageCollection → delete must be skipped despite duplicates present.
@@ -452,7 +478,9 @@ class TestRegisterLovelaceResource:
 
     @pytest.mark.asyncio
     async def test_removes_duplicates_keeps_first(self):
-        from homeassistant.components.lovelace.resources import ResourceStorageCollection
+        from homeassistant.components.lovelace.resources import (
+            ResourceStorageCollection,
+        )
 
         from custom_components.entity_distance import _async_register_lovelace_resource
 
@@ -479,7 +507,9 @@ class TestRegisterLovelaceResource:
 
     @pytest.mark.asyncio
     async def test_updates_url_when_version_changed(self):
-        from homeassistant.components.lovelace.resources import ResourceStorageCollection
+        from homeassistant.components.lovelace.resources import (
+            ResourceStorageCollection,
+        )
 
         from custom_components.entity_distance import _async_register_lovelace_resource
 
@@ -520,7 +550,9 @@ class TestRegisterLovelaceResource:
 
     @pytest.mark.asyncio
     async def test_no_change_when_url_already_current(self):
-        from homeassistant.components.lovelace.resources import ResourceStorageCollection
+        from homeassistant.components.lovelace.resources import (
+            ResourceStorageCollection,
+        )
 
         from custom_components.entity_distance import _async_register_lovelace_resource
 

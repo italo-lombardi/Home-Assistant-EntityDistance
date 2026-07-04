@@ -11,54 +11,42 @@
           "entities": "Selecteer 2–5 entiteiten om te volgen. Elk paar krijgt zijn eigen set afstands- en nabijheidssensoren."
         }
       },
-      "thresholds": {
-        "title": "Nabijheidsinstellingen",
-        "description": "Configureer nabijheidsdrempels en debounce.",
+      "distances": {
+        "title": "Afstandsinstellingen",
+        "description": "Stel de zonegrenzen in en kies welke zone de nabijheidswaarschuwing activeert.",
         "data": {
-          "entry_threshold_m": "Ingangsdrempel (m)",
-          "exit_threshold_m": "Uitgangsdrempel (m)",
-          "debounce_s": "Wachten voor reactie (s)",
-          "show_advanced": "Geavanceerde filters configureren",
-          "show_zone_thresholds": "Nabijheidszone-drempelwaarden configureren"
+          "zone_very_near_m": "Grens zone Zeer dichtbij (m)",
+          "zone_near_m": "Grens zone Dichtbij (m)",
+          "zone_mid_m": "Grens zone Gemiddeld (m)",
+          "zone_far_m": "Grens zone Ver (m)",
+          "proximity_zone": "Nabijheidswaarschuwingszone",
+          "show_advanced": "Geavanceerde filters configureren"
         },
         "data_description": {
-          "entry_threshold_m": "Afstand waarbij entiteiten als nabij worden beschouwd.",
-          "exit_threshold_m": "Afstand waarbij entiteiten niet meer als nabij worden beschouwd. Moet >= ingangsdrempel zijn.",
-          "debounce_s": "Wanneer een locatie-update binnenkomt, hoe lang te wachten voor herberekening. Nuttig wanneer telefoons meerdere ruisachtige GPS-metingen op een rij sturen — de integratie wacht tot ze stabiliseren. 0 = onmiddellijk reageren (standaard). Verhoog naar 5–15 s bij flikkerend aan/uit.",
-          "show_advanced": "Inschakelen om GPS-nauwkeurigheid, snelheid en betrouwbaarheidsfilters te configureren.",
-          "show_zone_thresholds": "Inschakelen om de afstandsgrenzen voor zones in te stellen."
+          "zone_very_near_m": "Entiteiten zijn 'Zeer dichtbij' op of dichter dan deze afstand. Standaard: 200 m.",
+          "zone_near_m": "Entiteiten zijn 'Dichtbij' op of dichter dan deze afstand. Moet groter zijn dan Zeer dichtbij. Standaard: 1000 m.",
+          "zone_mid_m": "Entiteiten zijn op 'Gemiddelde' afstand. Moet groter zijn dan Dichtbij. Standaard: 5000 m.",
+          "zone_far_m": "Entiteiten zijn 'Ver' op of dichter dan deze afstand. Moet groter zijn dan Gemiddeld. Standaard: 20000 m.\nVerder is 'Zeer ver'.",
+          "proximity_zone": "De sensor 'In de buurt' gaat AAN wanneer entiteiten zich in deze zone of dichterbij bevinden (bijv. 'Dichtbij' selecteren triggert ook wanneer entiteiten 'Zeer dichtbij' zijn). Hij gaat UIT wanneer ze naar de volgende zone bewegen.",
+          "show_advanced": "Inschakelen om GPS-nauwkeurigheid, snelheid en betrouwbaarheidsfilters te configureren op het volgende scherm."
         }
       },
       "advanced": {
         "title": "Geavanceerde filters",
         "description": "Optionele filters om onbetrouwbare locatie-updates te weigeren.",
         "data": {
+          "debounce_s": "Wachten voor reactie (s)",
           "max_accuracy_m": "Max. GPS-nauwkeurigheid (m, 0 = uitgeschakeld)",
           "max_speed_kmh": "Max. impliciete snelheid (km/h, 0 = uitgeschakeld)",
           "require_reliable": "Betrouwbare gegevens vereisen voor nabijheidsgebeurtenissen",
           "min_updates_reliable": "Min. updates voor betrouwbare gegevens"
         },
         "data_description": {
+          "debounce_s": "Wanneer een locatie-update binnenkomt, hoe lang te wachten voor herberekening. Nuttig wanneer telefoons meerdere ruisachtige GPS-metingen op een rij sturen — de integratie wacht tot ze stabiliseren. 0 = onmiddellijk reageren (standaard). Verhoog naar 5–15 s bij flikkerend aan/uit.",
           "max_accuracy_m": "Locatie-updates negeren waarbij de GPS-fout groter is dan deze waarde. Telefoons in beweging melden doorgaans een nauwkeurigheid van 100–250 m, dus 300 m is een veilige standaard. Een telefoon met '350 m nauwkeurigheid' wordt overgeslagen. Stel in op 0 om uit te schakelen.",
-          "max_speed_kmh": "Updates weigeren waarbij de impliciete bewegingssnelheid deze waarde overschrijdt. Stel in op 0 om uit te schakelen.",
+          "max_speed_kmh": "Teleportbeveiliging. Verwerpt een GPS-meting als de impliciete bewegingssnelheid — na aftrek van de gecombineerde GPS-nauwkeurigheid van beide apparaten — deze waarde overschrijdt. Standaard: 1000 km/h — blokkeert onmogelijke teleportaties maar staat vliegtuigen toe. Stel in op 0 om uit te schakelen.",
           "require_reliable": "Alleen proximity_enter-gebeurtenis activeren wanneer gegevens als betrouwbaar worden beschouwd.",
           "min_updates_reliable": "Minimum aantal locatie-updates in het venster voordat gegevens als betrouwbaar worden beschouwd."
-        }
-      },
-      "zone_thresholds": {
-        "title": "Nabijheidszone-drempelwaarden",
-        "description": "Stel de afstandsgrenzen in voor elke nabijheidszone. Elke drempelwaarde moet groter zijn dan de vorige.",
-        "data": {
-          "zone_very_near_m": "Drempelwaarde Zeer dichtbij (m)",
-          "zone_near_m": "Drempelwaarde Dichtbij (m)",
-          "zone_mid_m": "Drempelwaarde Middel (m)",
-          "zone_far_m": "Drempelwaarde Ver (m)"
-        },
-        "data_description": {
-          "zone_very_near_m": "Entiteiten zijn 'Zeer dichtbij' op of dichter dan deze afstand. Standaard: 100 m.",
-          "zone_near_m": "Entiteiten zijn 'Dichtbij' op of dichter dan deze afstand. Moet groter zijn dan Zeer dichtbij. Standaard: 500 m.",
-          "zone_mid_m": "Entiteiten zijn op 'Middel' afstand. Moet groter zijn dan Dichtbij. Standaard: 2000 m.",
-          "zone_far_m": "Entiteiten zijn 'Ver'. Verder is 'Zeer ver'. Standaard: 10000 m."
         }
       }
     },
@@ -66,7 +54,6 @@
       "too_few_entities": "Selecteer minimaal 2 entiteiten.",
       "too_many_entities": "Selecteer maximaal 5 entiteiten.",
       "duplicate_entities": "Elke entiteit mag maar één keer voorkomen.",
-      "exit_below_entry": "Uitgangsdrempel moet groter dan of gelijk aan de ingangsdrempel zijn.",
       "zone_thresholds_not_ascending": "Zoneverlopen moeten stijgen in volgorde: Zeer dichtbij < Dichtbij < Middel < Ver."
     },
     "abort": {
@@ -76,27 +63,30 @@
   },
   "options": {
     "step": {
-      "thresholds": {
-        "title": "Nabijheidsinstellingen",
+      "distances": {
+        "title": "Afstandsinstellingen",
+        "description": "Stel de zonegrenzen in en kies welke zone de nabijheidswaarschuwing activeert.",
         "data": {
-          "entry_threshold_m": "Ingangsdrempel (m)",
-          "exit_threshold_m": "Uitgangsdrempel (m)",
-          "debounce_s": "Wachten voor reactie (s)",
-          "show_advanced": "Geavanceerde filters configureren",
-          "show_zone_thresholds": "Nabijheidszone-drempelwaarden configureren"
+          "zone_very_near_m": "Grens zone Zeer dichtbij (m)",
+          "zone_near_m": "Grens zone Dichtbij (m)",
+          "zone_mid_m": "Grens zone Gemiddeld (m)",
+          "zone_far_m": "Grens zone Ver (m)",
+          "proximity_zone": "Nabijheidswaarschuwingszone",
+          "show_advanced": "Geavanceerde filters configureren"
         },
-        "description": "Configureer de nabijheidsdrempelwaarden.",
         "data_description": {
-          "entry_threshold_m": "Hoe dicht (in meters) de entiteiten moeten zijn om een nabijheidsgebeurtenis te activeren.",
-          "exit_threshold_m": "Hoe ver de entiteiten zich moeten verwijderen voordat ze niet meer als nabij worden beschouwd.",
-          "debounce_s": "Wanneer een locatie-update binnenkomt, hoe lang te wachten voor herberekening. 0 = onmiddellijk reageren (standaard).",
-          "show_advanced": "Inschakelen om GPS-, snelheids- en betrouwbaarheidsfilters te configureren.",
-          "show_zone_thresholds": "Inschakelen om zonegrenzen in te stellen."
+          "zone_very_near_m": "Entiteiten zijn 'Zeer dichtbij' op of dichter dan deze afstand. Standaard: 200 m.",
+          "zone_near_m": "Entiteiten zijn 'Dichtbij' op of dichter dan deze afstand. Moet groter zijn dan Zeer dichtbij. Standaard: 1000 m.",
+          "zone_mid_m": "Entiteiten zijn op 'Gemiddelde' afstand. Moet groter zijn dan Dichtbij. Standaard: 5000 m.",
+          "zone_far_m": "Entiteiten zijn 'Ver' op of dichter dan deze afstand. Moet groter zijn dan Gemiddeld. Standaard: 20000 m.\nVerder is 'Zeer ver'.",
+          "proximity_zone": "De sensor 'In de buurt' gaat AAN wanneer entiteiten zich in deze zone of dichterbij bevinden (bijv. 'Dichtbij' selecteren triggert ook wanneer entiteiten 'Zeer dichtbij' zijn). Hij gaat UIT wanneer ze naar de volgende zone bewegen.",
+          "show_advanced": "Inschakelen om GPS-nauwkeurigheid, snelheid en betrouwbaarheidsfilters te configureren op het volgende scherm."
         }
       },
       "advanced": {
         "title": "Geavanceerde filters",
         "data": {
+          "debounce_s": "Wachten voor reactie (s)",
           "max_accuracy_m": "Max. GPS-nauwkeurigheid (m, 0 = uitgeschakeld)",
           "max_speed_kmh": "Max. impliciete snelheid (km/h, 0 = uitgeschakeld)",
           "require_reliable": "Betrouwbare gegevens vereisen voor nabijheidsgebeurtenissen",
@@ -104,31 +94,15 @@
         },
         "description": "Deze filters helpen slechte GPS-gegevens te negeren.",
         "data_description": {
+          "debounce_s": "Wanneer een locatie-update binnenkomt, hoe lang te wachten voor herberekening. Nuttig wanneer telefoons meerdere ruisachtige GPS-metingen op een rij sturen — de integratie wacht tot ze stabiliseren. 0 = onmiddellijk reageren (standaard). Verhoog naar 5–15 s bij flikkerend aan/uit.",
           "max_accuracy_m": "Locatie-updates negeren waarbij de GPS-fout groter is dan deze waarde. Telefoons in beweging melden doorgaans een nauwkeurigheid van 100–250 m, dus 300 m is een veilige standaard. Een telefoon met '350 m nauwkeurigheid' wordt overgeslagen. Stel in op 0 om uit te schakelen.",
-          "max_speed_kmh": "Negeer updates die beweging sneller dan dit impliceren.",
+          "max_speed_kmh": "Teleportbeveiliging. Verwerpt een GPS-meting als de impliciete bewegingssnelheid — na aftrek van de gecombineerde GPS-nauwkeurigheid van beide apparaten — deze waarde overschrijdt. Standaard: 1000 km/h — blokkeert onmogelijke teleportaties maar staat vliegtuigen toe. Stel in op 0 om uit te schakelen.",
           "require_reliable": "Wanneer ingeschakeld wordt een nabijheidsgebeurtenis alleen geactiveerd na consistente updates.",
           "min_updates_reliable": "Hoeveel opeenvolgende updates nodig zijn voordat de locatie als betrouwbaar wordt beschouwd."
-        }
-      },
-      "zone_thresholds": {
-        "title": "Nabijheidszone-drempelwaarden",
-        "description": "Stel de afstandsgrenzen in voor elke nabijheidszone.",
-        "data": {
-          "zone_very_near_m": "Drempelwaarde Zeer dichtbij (m)",
-          "zone_near_m": "Drempelwaarde Dichtbij (m)",
-          "zone_mid_m": "Drempelwaarde Middel (m)",
-          "zone_far_m": "Drempelwaarde Ver (m)"
-        },
-        "data_description": {
-          "zone_very_near_m": "Standaard: 100 m.",
-          "zone_near_m": "Standaard: 500 m.",
-          "zone_mid_m": "Standaard: 2000 m.",
-          "zone_far_m": "Standaard: 10000 m."
         }
       }
     },
     "error": {
-      "exit_below_entry": "Uitgangsdrempel moet groter dan of gelijk aan de ingangsdrempel zijn.",
       "zone_thresholds_not_ascending": "Zoneverlopen moeten stijgen in volgorde: Zeer dichtbij < Dichtbij < Middel < Ver."
     }
   },
@@ -266,6 +240,16 @@
     "button": {
       "refresh": {
         "name": "Locatie vernieuwen"
+      }
+    }
+  },
+  "selector": {
+    "proximity_zone": {
+      "options": {
+        "very_near": "Zeer dichtbij",
+        "near": "Dichtbij",
+        "mid": "Gemiddeld",
+        "far": "Ver"
       }
     }
   }

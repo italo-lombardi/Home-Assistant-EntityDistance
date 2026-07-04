@@ -260,7 +260,9 @@ class TestProximityRestartGap:
     @pytest.mark.asyncio
     async def test_proximity_since_credits_elapsed_on_load(self):
         """On restore, elapsed time since proximity_since is added to proximity_duration_s."""
-        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+        from custom_components.entity_distance.coordinator import (
+            EntityDistanceCoordinator,
+        )
 
         coord = EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)
         coord._pair_states = {
@@ -295,7 +297,9 @@ class TestProximityRestartGap:
     @pytest.mark.asyncio
     async def test_no_proximity_since_does_not_add_gap(self):
         """When proximity_since is absent, proximity_duration_s unchanged."""
-        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+        from custom_components.entity_distance.coordinator import (
+            EntityDistanceCoordinator,
+        )
 
         coord = EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)
         coord._pair_states = {
@@ -353,7 +357,10 @@ class TestCrossMidnightFlush:
         # now = 00:10 on June 2 — crosses midnight
         now = datetime(2024, 6, 2, 0, 10, 0, tzinfo=UTC)
 
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=100.0):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=100.0,
+        ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", now, set())
 
         # today_proximity_seconds must have been reset (new day)
@@ -382,12 +389,17 @@ class TestCrossMidnightFlush:
         now = datetime(2024, 6, 2, 0, 5, 0, tzinfo=UTC)
 
         # dist_m = 300 → "near" bucket (100 < 300 <= 500)
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=300.0):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=300.0,
+        ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", now, set())
 
         assert result.today_reset_date == date(2024, 6, 2)
         # Only post-midnight (5 min) goes to today's bucket — pre-midnight is yesterday's data
-        assert result.today_zone_seconds.get("near", 0.0) == pytest.approx(300.0, abs=2.0)
+        assert result.today_zone_seconds.get("near", 0.0) == pytest.approx(
+            300.0, abs=2.0
+        )
 
     def test_no_flush_when_prev_calc_time_is_none(self):
         """When prev_calc_time is None there is nothing to flush — no error."""
@@ -405,7 +417,10 @@ class TestCrossMidnightFlush:
 
         now = datetime(2024, 6, 2, 0, 10, 0, tzinfo=UTC)
 
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=300.0):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=300.0,
+        ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", now, set())
 
         assert result.today_reset_date == date(2024, 6, 2)
@@ -420,7 +435,10 @@ class TestCrossMidnightFlush:
 class TestCardInstalledKeyUnload:
     @pytest.mark.asyncio
     async def test_card_flag_cleared_when_last_entry_unloads(self):
-        from custom_components.entity_distance import _CARD_INSTALLED_KEY, async_unload_entry
+        from custom_components.entity_distance import (
+            _CARD_INSTALLED_KEY,
+            async_unload_entry,
+        )
 
         coordinator = MagicMock()
         coordinator.async_unload = MagicMock()
@@ -444,7 +462,10 @@ class TestCardInstalledKeyUnload:
 
     @pytest.mark.asyncio
     async def test_card_flag_preserved_when_other_entries_remain(self):
-        from custom_components.entity_distance import _CARD_INSTALLED_KEY, async_unload_entry
+        from custom_components.entity_distance import (
+            _CARD_INSTALLED_KEY,
+            async_unload_entry,
+        )
 
         coordinator = MagicMock()
         coordinator.async_unload = MagicMock()
@@ -487,12 +508,16 @@ class TestGroupBinarySensorUnavailable:
         return GroupData(pairs=pairs, any_in_proximity=False, all_in_proximity=False)
 
     def test_any_in_proximity_returns_none_when_all_invalid(self):
-        gd = self._make_group_data_all_invalid(["person.alice", "person.bob", "person.carol"])
+        gd = self._make_group_data_all_invalid(
+            ["person.alice", "person.bob", "person.carol"]
+        )
         sensor = _make_group_sensor(AnyInProximityBinarySensor, gd)
         assert sensor.is_on is None
 
     def test_all_in_proximity_returns_none_when_all_invalid(self):
-        gd = self._make_group_data_all_invalid(["person.alice", "person.bob", "person.carol"])
+        gd = self._make_group_data_all_invalid(
+            ["person.alice", "person.bob", "person.carol"]
+        )
         sensor = _make_group_sensor(AllInProximityBinarySensor, gd)
         assert sensor.is_on is None
 
@@ -500,7 +525,9 @@ class TestGroupBinarySensorUnavailable:
         import itertools
 
         pairs = {}
-        for a, b in itertools.combinations(["person.alice", "person.bob", "person.carol"], 2):
+        for a, b in itertools.combinations(
+            ["person.alice", "person.bob", "person.carol"], 2
+        ):
             k = pair_key(a, b)
             ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
             ps.data_valid = True
@@ -514,7 +541,9 @@ class TestGroupBinarySensorUnavailable:
         import itertools
 
         pairs = {}
-        for a, b in itertools.combinations(["person.alice", "person.bob", "person.carol"], 2):
+        for a, b in itertools.combinations(
+            ["person.alice", "person.bob", "person.carol"], 2
+        ):
             k = pair_key(a, b)
             ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
             ps.data_valid = True
@@ -561,7 +590,10 @@ class TestTodayProximityAfterReliabilityCheck:
         ps.today_proximity_seconds = 0.0
         # update_count_a/b = 0 → not reliable (need >= 5)
 
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=100.0):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=100.0,
+        ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
         # Reliability check blocked proximity entry
@@ -594,7 +626,10 @@ class TestTodayProximityAfterReliabilityCheck:
         ps.update_count_a = 5
         ps.update_count_b = 5
 
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=100.0):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=100.0,
+        ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
         assert result.proximity is True
@@ -622,7 +657,10 @@ class TestLastSeenTogetherSemantics:
         ps.proximity = True
         ps.proximity_since = datetime(2024, 6, 1, 11, 0, 0, tzinfo=UTC)
 
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=800.0):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=800.0,
+        ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
         assert result.proximity is False
@@ -644,7 +682,10 @@ class TestLastSeenTogetherSemantics:
         old_lts = datetime(2024, 6, 1, 10, 0, 0, tzinfo=UTC)
         ps.last_seen_together = old_lts
 
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=100.0):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=100.0,
+        ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
         assert result.proximity is True
@@ -665,7 +706,10 @@ class TestLastSeenTogetherSemantics:
         ps.proximity = False
         ps.last_seen_together = None
 
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=100.0):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=100.0,
+        ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
         assert result.proximity is True
@@ -686,7 +730,8 @@ class TestLastSeenTogetherSemantics:
         ps.last_seen_together = None
 
         with patch(
-            "custom_components.entity_distance.coordinator.ha_distance", return_value=2500.0
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=2500.0,
         ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
@@ -832,7 +877,9 @@ class TestPrevCalcTimePersistence:
     @pytest.mark.asyncio
     async def test_prev_calc_time_restored_from_storage(self):
         """prev_calc_time is persisted and restored so today-gap isn't lost on restart."""
-        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+        from custom_components.entity_distance.coordinator import (
+            EntityDistanceCoordinator,
+        )
 
         coord = EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)
         coord._pair_states = {
@@ -950,7 +997,9 @@ class TestInvalidateCreditsZoneBucket:
         assert result.today_reset_date == date(2024, 6, 2)
         # 10 min post-midnight credited to proximity and zone
         assert result.today_proximity_seconds == pytest.approx(600.0, abs=2.0)
-        assert result.today_zone_seconds.get("very_near", 0.0) == pytest.approx(600.0, abs=2.0)
+        assert result.today_zone_seconds.get("very_near", 0.0) == pytest.approx(
+            600.0, abs=2.0
+        )
 
 
 class TestResyncHoldFlushesProximity:
@@ -981,14 +1030,17 @@ class TestResyncHoldFlushesProximity:
         ps.last_update_a = _NOW - timedelta(seconds=20)
         ps.last_update_b = _NOW - timedelta(seconds=20)
 
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=100.0):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=100.0,
+        ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
         # Hold fires → proximity session closed
         assert result.proximity is False
         assert result.proximity_since is None
         assert result.proximity_duration_s == pytest.approx(3600.0, abs=1.0)
-        assert result.data_valid is False
+        assert result.data_valid is True
 
 
 @pytest.mark.asyncio
@@ -1018,7 +1070,10 @@ async def test_platform_setup_failure_cleans_up_coordinator():
             "custom_components.entity_distance.EntityDistanceCoordinator",
             return_value=coordinator,
         ),
-        patch("custom_components.entity_distance._async_install_card", new_callable=AsyncMock),
+        patch(
+            "custom_components.entity_distance._async_install_card",
+            new_callable=AsyncMock,
+        ),
         pytest.raises(RuntimeError, match="platform boom"),
     ):
         await async_setup_entry(hass, entry)
@@ -1059,7 +1114,10 @@ class TestHoldFlushCrossMidnight:
         # Hold fires at 00:10 on June 2 — crosses midnight
         now = datetime(2024, 6, 2, 0, 10, 0, tzinfo=UTC)
 
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=50.0):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=50.0,
+        ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", now, set())
 
         # Date rolled → today counters reset
@@ -1076,7 +1134,9 @@ class TestLoadStateLastBucketCredit:
     @pytest.mark.asyncio
     async def test_today_zone_seconds_credited_on_restart(self):
         """last_bucket persisted and credited to today_zone_seconds on proximity restart."""
-        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+        from custom_components.entity_distance.coordinator import (
+            EntityDistanceCoordinator,
+        )
         from custom_components.entity_distance.models import pair_key
 
         coord = EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)
@@ -1106,7 +1166,8 @@ class TestLoadStateLastBucketCredit:
         # Restart at 15:00 same day
         now_load = datetime(2024, 6, 1, 15, 0, 0, tzinfo=UTC)
         with patch(
-            "custom_components.entity_distance.coordinator.dt_util.now", return_value=now_load
+            "custom_components.entity_distance.coordinator.dt_util.now",
+            return_value=now_load,
         ):
             await coord._async_load_state()
 
@@ -1157,7 +1218,7 @@ def _make_unavailable_sensor(cls, ps_kwargs=None, extra_kwargs=None):
 
 
 class TestSensorAvailableFalseReturnsNone:
-    def test_last_seen_together_returns_none(self):
+    def test_last_seen_together_still_returns_value_when_data_invalid(self):
         from datetime import UTC, datetime
 
         from custom_components.entity_distance.sensor import LastSeenTogetherSensor
@@ -1165,16 +1226,18 @@ class TestSensorAvailableFalseReturnsNone:
         s = _make_unavailable_sensor(
             LastSeenTogetherSensor, {"last_seen_together": datetime.now(UTC)}
         )
-        assert s.native_value is None
+        assert s.native_value is not None
 
     def test_gps_accuracy_returns_none(self):
         from custom_components.entity_distance.sensor import GpsAccuracySensor
 
-        s = _make_unavailable_sensor(GpsAccuracySensor, {"accuracy_a": 10.0}, {"_which": "a"})
+        s = _make_unavailable_sensor(
+            GpsAccuracySensor, {"accuracy_a": 10.0}, {"_which": "a"}
+        )
         s._sensor_key = "gps_accuracy_a"
         assert s.native_value is None
 
-    def test_last_update_returns_none(self):
+    def test_last_update_still_returns_value_when_data_invalid(self):
         from datetime import UTC, datetime
 
         from custom_components.entity_distance.sensor import LastUpdateSensor
@@ -1183,19 +1246,21 @@ class TestSensorAvailableFalseReturnsNone:
             LastUpdateSensor, {"last_update_a": datetime.now(UTC)}, {"_which": "a"}
         )
         s._sensor_key = "last_update_a"
-        assert s.native_value is None
+        assert s.native_value is not None
 
-    def test_proximity_tracking_started_returns_none(self):
+    def test_proximity_tracking_started_still_returns_value_when_data_invalid(self):
         from datetime import UTC, datetime
 
-        from custom_components.entity_distance.sensor import ProximityTrackingStartedSensor
+        from custom_components.entity_distance.sensor import (
+            ProximityTrackingStartedSensor,
+        )
 
         s = _make_unavailable_sensor(
             ProximityTrackingStartedSensor,
             {"proximity_tracking_started": datetime.now(UTC)},
         )
         s._sensor_key = "proximity_tracking_started"
-        assert s.native_value is None
+        assert s.native_value is not None
 
     def test_today_unaccounted_returns_none(self):
         # TodayUnaccountedTimeSensor intentionally does NOT gate on data_valid —
@@ -1245,17 +1310,20 @@ class TestSensorAvailableFalseReturnsNone:
         s.hass = hass
         assert s.native_value is None
 
-    def test_proximity_duration_returns_none_when_unavailable(self):
+    def test_proximity_duration_still_returns_value_when_data_invalid(self):
         from datetime import UTC, datetime
 
         from custom_components.entity_distance.sensor import ProximityDurationSensor
 
         s = _make_unavailable_sensor(
             ProximityDurationSensor,
-            {"proximity_tracking_started": datetime.now(UTC), "proximity_duration_s": 3600.0},
+            {
+                "proximity_tracking_started": datetime.now(UTC),
+                "proximity_duration_s": 3600.0,
+            },
         )
         s._sensor_key = "proximity_duration"
-        assert s.native_value is None
+        assert s.native_value is not None
 
 
 # ---------------------------------------------------------------------------
@@ -1267,7 +1335,9 @@ class TestReg1PrevCalcTimeAnchor:
     @pytest.mark.asyncio
     async def test_prev_calc_time_anchors_gap_not_proximity_since(self):
         """REG-1: gap credited on restart anchors on prev_calc_time, not proximity_since."""
-        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+        from custom_components.entity_distance.coordinator import (
+            EntityDistanceCoordinator,
+        )
         from custom_components.entity_distance.models import pair_key
 
         coord = EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)
@@ -1294,7 +1364,8 @@ class TestReg1PrevCalcTimeAnchor:
 
         now_load = datetime(2024, 6, 1, 12, 0, 0, tzinfo=UTC)
         with patch(
-            "custom_components.entity_distance.coordinator.dt_util.now", return_value=now_load
+            "custom_components.entity_distance.coordinator.dt_util.now",
+            return_value=now_load,
         ):
             await coord._async_load_state()
 
@@ -1327,7 +1398,10 @@ class TestReg3CrossMidnightZoneSeconds:
 
         # dist_m = 50 → very_near bucket; 10 min after midnight
         now = datetime(2024, 6, 2, 0, 10, 0, tzinfo=UTC)
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=50.0):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=50.0,
+        ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", now, set())
 
         assert result.today_reset_date == date(2024, 6, 2)
@@ -1359,7 +1433,10 @@ class TestReg4ExitBucketUsesProximityDistance:
         ps.today_zone_seconds = {}
 
         # EXIT: dist_m = 800m (far bucket), but prev_distance_m_snapshot = 50m (very_near)
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=800.0):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=800.0,
+        ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
         assert result.proximity is False
@@ -1402,7 +1479,10 @@ class TestHoldSameDayNoDoubleCount:
         ps.proximity_duration_s = 0.0
         ps.distance_m = 50.0
 
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=50.0):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=50.0,
+        ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
         assert result.proximity is False
@@ -1424,7 +1504,9 @@ class TestZoneSecondsOnlyDuringProximity:
         wall time spent in each distance band, not proximity-gated time."""
         coord = _make_coordinator()
         state_a = _make_state("person.alice", 51.5, -0.1, 20)
-        state_b = _make_state("person.bob", 51.520, -0.1, 20)  # 2km away — not in proximity
+        state_b = _make_state(
+            "person.bob", 51.520, -0.1, 20
+        )  # 2km away — not in proximity
         coord.hass.states.get = MagicMock(
             side_effect=lambda eid: state_a if eid == "person.alice" else state_b
         )
@@ -1438,13 +1520,16 @@ class TestZoneSecondsOnlyDuringProximity:
         ps.today_proximity_seconds = 0.0
 
         with patch(
-            "custom_components.entity_distance.coordinator.ha_distance", return_value=2200.0
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=2200.0,
         ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
         assert result.proximity is False
         # 2200 m → 'far' bucket; 5-min tick → 300 s credited to far.
-        assert result.today_zone_seconds.get("far", 0.0) == pytest.approx(300.0, abs=2.0)
+        assert result.today_zone_seconds.get("far", 0.0) == pytest.approx(
+            300.0, abs=2.0
+        )
         # Proximity total stays gated — must not grow on non-proximity ticks.
         assert result.today_proximity_seconds == 0.0
 
@@ -1484,7 +1569,9 @@ class TestRemainingCoverageBranches:
         """MinDistanceSensor.native_value returns None when coordinator.last_update_success=False."""
         from unittest.mock import MagicMock
 
-        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+        from custom_components.entity_distance.coordinator import (
+            EntityDistanceCoordinator,
+        )
         from custom_components.entity_distance.sensor import MinDistanceSensor
 
         coordinator = MagicMock(spec=EntityDistanceCoordinator)

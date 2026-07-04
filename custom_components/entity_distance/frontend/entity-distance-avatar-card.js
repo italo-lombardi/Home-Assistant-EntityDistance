@@ -740,10 +740,10 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
                   style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.25)">
                   <span class="stat-box-label">⚙ Settings</span>
                   <span class="stat-box-value" style="color:#4338ca;font-size:13px;font-family:ui-monospace,monospace;line-height:1.5;white-space:normal;word-break:break-word">
-                    <div>${settingsAttrs.entry_threshold_m ?? "?"}/${settingsAttrs.exit_threshold_m ?? "?"}m · ${settingsAttrs.debounce_s ?? "?"}s</div>
+                    <div>proximity ≤ ${settingsAttrs.proximity_threshold_m ?? "?"}m (${settingsAttrs.proximity_zone ?? "?"}) · debounce ${settingsAttrs.debounce_s ?? "?"}s</div>
                     <div style="opacity:0.85">zones ${settingsAttrs.zone_very_near_m ?? "?"}/${settingsAttrs.zone_near_m ?? "?"}/${settingsAttrs.zone_mid_m ?? "?"}/${settingsAttrs.zone_far_m ?? "?"}m</div>
                   </span>
-                  <span class="stat-box-sub">entry/exit · debounce · zones</span>
+                  <span class="stat-box-sub">proximity threshold · debounce · zones</span>
                 </div>` : nothing}
             </div>
           ` : nothing}
@@ -916,7 +916,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
           ${this._checkRow("show_proximity_rate", "Show proximity rate % (duration ÷ time since tracking started)")}
           ${this._checkRow("show_last_seen", "Show last seen together")}
           ${this._checkRow("show_unaccounted_time", "Show data gap warning (time since last calculation)")}
-          ${this._checkRow("show_settings", "Show proximity settings summary (entry/exit · debounce · zones)")}
+          ${this._checkRow("show_settings", "Show proximity settings summary (proximity threshold · debounce · zones)")}
 
           <div class="section-title">Layout</div>
           ${this._checkRow("compact", "Compact mode")}

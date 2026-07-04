@@ -11,54 +11,42 @@
           "entities": "Seleccione 2–5 entidades para rastrear. Cada par tendrá su propio conjunto de sensores de distancia y proximidad."
         }
       },
-      "thresholds": {
-        "title": "Configuración de proximidad",
-        "description": "Configure los umbrales de proximidad y el antirrebote.",
+      "distances": {
+        "title": "Configuración de distancias",
+        "description": "Establece los límites de zona y elige qué zona activa la alerta de proximidad.",
         "data": {
-          "entry_threshold_m": "Umbral de entrada (m)",
-          "exit_threshold_m": "Umbral de salida (m)",
-          "debounce_s": "Esperar antes de reaccionar (s)",
-          "show_advanced": "Configurar filtros avanzados",
-          "show_zone_thresholds": "Configurar umbrales de zona de proximidad"
+          "zone_very_near_m": "Límite zona Muy cerca (m)",
+          "zone_near_m": "Límite zona Cerca (m)",
+          "zone_mid_m": "Límite zona Medio (m)",
+          "zone_far_m": "Límite zona Lejos (m)",
+          "proximity_zone": "Zona de alerta de proximidad",
+          "show_advanced": "Configurar filtros avanzados"
         },
         "data_description": {
-          "entry_threshold_m": "Distancia a la que las entidades se consideran en proximidad.",
-          "exit_threshold_m": "Distancia a la que las entidades se consideran fuera de proximidad. Debe ser >= umbral de entrada.",
-          "debounce_s": "Cuando llega una actualización de ubicación, cuánto esperar antes de recalcular. Útil cuando los teléfonos envían varias lecturas GPS ruidosas seguidas — la integración espera a que se estabilicen. 0 = reaccionar al instante (predeterminado). Aumenta a 5–15 s si ves cambios on/off bruscos.",
-          "show_advanced": "Activar para configurar precisión GPS, velocidad y filtros de fiabilidad.",
-          "show_zone_thresholds": "Activar para establecer los límites de distancia de las zonas."
+          "zone_very_near_m": "Las entidades están 'Muy cerca' a esta distancia o menos. Predeterminado: 200 m.",
+          "zone_near_m": "Las entidades están 'Cerca' a esta distancia o menos. Debe ser mayor que Muy cerca. Predeterminado: 1000 m.",
+          "zone_mid_m": "Las entidades están a distancia 'Media'. Debe ser mayor que Cerca. Predeterminado: 5000 m.",
+          "zone_far_m": "Las entidades están 'Lejos' a esta distancia o menos. Debe ser mayor que Medio. Predeterminado: 20000 m.\nMás allá es 'Muy lejos'.",
+          "proximity_zone": "El sensor 'En proximidad' se activa cuando las entidades están dentro de esta zona o más cerca (p. ej., seleccionar 'Cerca' también activa cuando las entidades están 'Muy cerca'). Se desactiva cuando se alejan a la siguiente zona.",
+          "show_advanced": "Activar para configurar precisión GPS, velocidad y filtros de fiabilidad en la siguiente pantalla."
         }
       },
       "advanced": {
         "title": "Filtros avanzados",
         "description": "Filtros opcionales para rechazar actualizaciones de ubicación no fiables.",
         "data": {
+          "debounce_s": "Esperar antes de reaccionar (s)",
           "max_accuracy_m": "Precisión GPS máx. (m, 0 = desactivado)",
           "max_speed_kmh": "Velocidad implícita máx. (km/h, 0 = desactivado)",
           "require_reliable": "Requerir datos fiables para eventos de proximidad",
           "min_updates_reliable": "Actualizaciones mínimas para datos fiables"
         },
         "data_description": {
+          "debounce_s": "Cuando llega una actualización de ubicación, cuánto esperar antes de recalcular. Útil cuando los teléfonos envían varias lecturas GPS ruidosas seguidas — la integración espera a que se estabilicen. 0 = reaccionar al instante (predeterminado). Aumenta a 5–15 s si ves cambios on/off bruscos.",
           "max_accuracy_m": "Ignorar actualizaciones de ubicación donde el error GPS sea mayor que este valor. Los teléfonos en movimiento suelen reportar una precisión de 100–250 m, por lo que 300 m es un valor predeterminado seguro. Un teléfono con \"precisión de 350 m\" sería omitido. Establezca 0 para desactivar.",
-          "max_speed_kmh": "Rechazar actualizaciones donde la velocidad de movimiento implícita supere este valor. Establezca 0 para desactivar.",
+          "max_speed_kmh": "Guardia contra teletransporte. Rechaza una medición GPS si la velocidad de movimiento implícita — tras restar la precisión GPS combinada de ambos dispositivos — supera este valor. Predeterminado: 1000 km/h — bloquea teletransportes imposibles pero permite aviones. Establezca 0 para desactivar.",
           "require_reliable": "Solo disparar evento proximity_enter cuando los datos se consideren fiables.",
           "min_updates_reliable": "Número mínimo de actualizaciones de ubicación en la ventana antes de que los datos se consideren fiables."
-        }
-      },
-      "zone_thresholds": {
-        "title": "Umbrales de zona de proximidad",
-        "description": "Establezca los límites de distancia para cada zona de proximidad. Cada umbral debe ser mayor que el anterior.",
-        "data": {
-          "zone_very_near_m": "Umbral Muy cerca (m)",
-          "zone_near_m": "Umbral Cerca (m)",
-          "zone_mid_m": "Umbral Medio (m)",
-          "zone_far_m": "Umbral Lejos (m)"
-        },
-        "data_description": {
-          "zone_very_near_m": "Las entidades se consideran 'Muy cerca' a esta distancia o menos. Predeterminado: 100 m.",
-          "zone_near_m": "Las entidades se consideran 'Cerca' a esta distancia o menos. Debe ser mayor que Muy cerca. Predeterminado: 500 m.",
-          "zone_mid_m": "Las entidades se consideran a distancia 'Media'. Debe ser mayor que Cerca. Predeterminado: 2000 m.",
-          "zone_far_m": "Las entidades se consideran 'Lejos'. Más allá es 'Muy lejos'. Predeterminado: 10000 m."
         }
       }
     },
@@ -66,7 +54,6 @@
       "too_few_entities": "Seleccione al menos 2 entidades.",
       "too_many_entities": "Seleccione como máximo 5 entidades.",
       "duplicate_entities": "Cada entidad debe aparecer solo una vez.",
-      "exit_below_entry": "El umbral de salida debe ser mayor o igual al umbral de entrada.",
       "zone_thresholds_not_ascending": "Los umbrales de zona deben aumentar en orden: Muy cerca < Cerca < Medio < Lejos."
     },
     "abort": {
@@ -76,27 +63,30 @@
   },
   "options": {
     "step": {
-      "thresholds": {
-        "title": "Configuración de proximidad",
+      "distances": {
+        "title": "Configuración de distancias",
+        "description": "Establece los límites de zona y elige qué zona activa la alerta de proximidad.",
         "data": {
-          "entry_threshold_m": "Umbral de entrada (m)",
-          "exit_threshold_m": "Umbral de salida (m)",
-          "debounce_s": "Esperar antes de reaccionar (s)",
-          "show_advanced": "Configurar filtros avanzados",
-          "show_zone_thresholds": "Configurar umbrales de zona de proximidad"
+          "zone_very_near_m": "Límite zona Muy cerca (m)",
+          "zone_near_m": "Límite zona Cerca (m)",
+          "zone_mid_m": "Límite zona Medio (m)",
+          "zone_far_m": "Límite zona Lejos (m)",
+          "proximity_zone": "Zona de alerta de proximidad",
+          "show_advanced": "Configurar filtros avanzados"
         },
-        "description": "Configure los umbrales de proximidad.",
         "data_description": {
-          "entry_threshold_m": "Qué tan cerca (en metros) deben estar las entidades para activar un evento de proximidad.",
-          "exit_threshold_m": "Qué tan lejos deben moverse las entidades antes de que ya no se consideren cercanas.",
-          "debounce_s": "Cuando llega una actualización de ubicación, cuánto esperar antes de recalcular. 0 = reaccionar al instante (predeterminado).",
-          "show_advanced": "Activar para configurar filtros de GPS, velocidad y fiabilidad.",
-          "show_zone_thresholds": "Activar para establecer límites de zona."
+          "zone_very_near_m": "Las entidades están 'Muy cerca' a esta distancia o menos. Predeterminado: 200 m.",
+          "zone_near_m": "Las entidades están 'Cerca' a esta distancia o menos. Debe ser mayor que Muy cerca. Predeterminado: 1000 m.",
+          "zone_mid_m": "Las entidades están a distancia 'Media'. Debe ser mayor que Cerca. Predeterminado: 5000 m.",
+          "zone_far_m": "Las entidades están 'Lejos' a esta distancia o menos. Debe ser mayor que Medio. Predeterminado: 20000 m.\nMás allá es 'Muy lejos'.",
+          "proximity_zone": "El sensor 'En proximidad' se activa cuando las entidades están dentro de esta zona o más cerca (p. ej., seleccionar 'Cerca' también activa cuando las entidades están 'Muy cerca'). Se desactiva cuando se alejan a la siguiente zona.",
+          "show_advanced": "Activar para configurar precisión GPS, velocidad y filtros de fiabilidad en la siguiente pantalla."
         }
       },
       "advanced": {
         "title": "Filtros avanzados",
         "data": {
+          "debounce_s": "Esperar antes de reaccionar (s)",
           "max_accuracy_m": "Precisión GPS máx. (m, 0 = desactivado)",
           "max_speed_kmh": "Velocidad implícita máx. (km/h, 0 = desactivado)",
           "require_reliable": "Requerir datos fiables para eventos de proximidad",
@@ -104,31 +94,15 @@
         },
         "description": "Estos filtros ayudan a ignorar datos GPS deficientes.",
         "data_description": {
+          "debounce_s": "Cuando llega una actualización de ubicación, cuánto esperar antes de recalcular. Útil cuando los teléfonos envían varias lecturas GPS ruidosas seguidas — la integración espera a que se estabilicen. 0 = reaccionar al instante (predeterminado). Aumenta a 5–15 s si ves cambios on/off bruscos.",
           "max_accuracy_m": "Ignorar actualizaciones de ubicación donde el error GPS sea mayor que este valor. Los teléfonos en movimiento suelen reportar una precisión de 100–250 m, por lo que 300 m es un valor predeterminado seguro. Un teléfono con \"precisión de 350 m\" sería omitido. Establezca 0 para desactivar.",
-          "max_speed_kmh": "Ignorar actualizaciones que impliquen movimiento más rápido que esto.",
+          "max_speed_kmh": "Guardia contra teletransporte. Rechaza una medición GPS si la velocidad de movimiento implícita — tras restar la precisión GPS combinada de ambos dispositivos — supera este valor. Predeterminado: 1000 km/h — bloquea teletransportes imposibles pero permite aviones. Establezca 0 para desactivar.",
           "require_reliable": "Cuando está activo, un evento de proximidad solo se activa tras actualizaciones consistentes.",
           "min_updates_reliable": "Cuántas actualizaciones consecutivas se necesitan antes de considerar la ubicación fiable."
-        }
-      },
-      "zone_thresholds": {
-        "title": "Umbrales de zona de proximidad",
-        "description": "Establezca los límites de distancia para cada zona de proximidad.",
-        "data": {
-          "zone_very_near_m": "Umbral Muy cerca (m)",
-          "zone_near_m": "Umbral Cerca (m)",
-          "zone_mid_m": "Umbral Medio (m)",
-          "zone_far_m": "Umbral Lejos (m)"
-        },
-        "data_description": {
-          "zone_very_near_m": "Predeterminado: 100 m.",
-          "zone_near_m": "Predeterminado: 500 m.",
-          "zone_mid_m": "Predeterminado: 2000 m.",
-          "zone_far_m": "Predeterminado: 10000 m."
         }
       }
     },
     "error": {
-      "exit_below_entry": "El umbral de salida debe ser mayor o igual al umbral de entrada.",
       "zone_thresholds_not_ascending": "Los umbrales de zona deben aumentar en orden: Muy cerca < Cerca < Medio < Lejos."
     }
   },
@@ -266,6 +240,16 @@
     "button": {
       "refresh": {
         "name": "Actualizar ubicación"
+      }
+    }
+  },
+  "selector": {
+    "proximity_zone": {
+      "options": {
+        "very_near": "Muy cerca",
+        "near": "Cerca",
+        "mid": "Medio",
+        "far": "Lejos"
       }
     }
   }

@@ -213,11 +213,10 @@ def calc_bucket(distance_m: float, thresholds: dict[str, float]) -> str:
     return BUCKET_VERY_FAR
 
 
-def _resolve_entities(data: dict) -> list[str]:
-    return list(data.get(CONF_ENTITIES, []))
-
-
 class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
+    # ponytail: push-only coordinator — update_interval=None, no async_refresh() callers.
+    # _async_update_data is intentionally omitted; base class raises NotImplementedError
+    # if called, which would surface any accidental pull-based usage immediately.
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         super().__init__(
             hass,
@@ -230,7 +229,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         self._debouncer: Debouncer | None = None
 
         data = {**entry.data, **entry.options}
-        self._entities: list[str] = _resolve_entities(data)
+        self._entities: list[str] = list(data.get(CONF_ENTITIES, []))
         self._debounce_s: float = data.get(CONF_DEBOUNCE_S, DEFAULT_DEBOUNCE_S)
         self._max_accuracy_m: float = data.get(CONF_MAX_ACCURACY_M, DEFAULT_MAX_ACCURACY_M)
         self._max_speed_kmh: float = data.get(CONF_MAX_SPEED_KMH, DEFAULT_MAX_SPEED_KMH)
@@ -839,24 +838,6 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         return (
             ps.update_count_a >= self._min_updates_reliable
             and ps.update_count_b >= self._min_updates_reliable
-        )
-
-    async def _async_update_data(self) -> GroupData:
-        valid_pairs = [
-            ps for ps in self._pair_states.values() if ps.data_valid and ps.distance_m is not None
-        ]
-        min_dist: float | None = min((ps.distance_m for ps in valid_pairs), default=None)
-        any_prox = any(ps.proximity for ps in self._pair_states.values() if ps.data_valid)
-        all_prox = (
-            bool(valid_pairs)
-            and len(valid_pairs) == len(self._pair_states)
-            and all(ps.proximity for ps in valid_pairs)
-        )
-        return GroupData(
-            pairs=dict(self._pair_states),
-            min_distance_m=min_dist,
-            any_in_proximity=any_prox,
-            all_in_proximity=all_prox,
         )
 
     async def _async_save_state(self) -> None:

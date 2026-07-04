@@ -450,7 +450,9 @@ class TestAdvanceWindow:
         assert ws == window_start
 
     def test_elapsed_window_resets_to_1_and_reanchors(self):
-        from custom_components.entity_distance.const import UPDATES_FREQUENCY_WINDOW_S
+        from custom_components.entity_distance.const import (
+            DEFAULT_UPDATES_WINDOW_S as UPDATES_FREQUENCY_WINDOW_S,
+        )
 
         coordinator = self._make_coordinator()
         now = datetime.now().astimezone()
@@ -460,7 +462,9 @@ class TestAdvanceWindow:
         assert ws == now
 
     def test_at_exactly_window_boundary_resets(self):
-        from custom_components.entity_distance.const import UPDATES_FREQUENCY_WINDOW_S
+        from custom_components.entity_distance.const import (
+            DEFAULT_UPDATES_WINDOW_S as UPDATES_FREQUENCY_WINDOW_S,
+        )
 
         coordinator = self._make_coordinator()
         now = datetime.now().astimezone()
@@ -537,29 +541,45 @@ class TestIsReliable:
 # ---------------------------------------------------------------------------
 
 
-class TestResolveEntities:
-    """Test _resolve_entities helper."""
+class TestEntitiesResolution:
+    """Coordinator wires _entities from config entry data correctly."""
 
-    def test_returns_list_from_data(self):
-        from custom_components.entity_distance.coordinator import _resolve_entities
+    async def test_entities_from_data(self, hass):
+        from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-        data = {"entities": ["person.alice", "person.bob"]}
-        result = _resolve_entities(data)
-        assert result == ["person.alice", "person.bob"]
+        from custom_components.entity_distance.const import DOMAIN
+        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
 
-    def test_returns_empty_when_key_missing(self):
-        from custom_components.entity_distance.coordinator import _resolve_entities
+        entry = MockConfigEntry(
+            domain=DOMAIN, data={"entities": ["person.alice", "person.bob"]}, options={}
+        )
+        entry.add_to_hass(hass)
+        coord = EntityDistanceCoordinator(hass, entry)
+        assert coord.entities == ["person.alice", "person.bob"]
 
-        result = _resolve_entities({})
-        assert result == []
+    async def test_entities_empty_when_key_missing(self, hass):
+        from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-    def test_returns_list_copy(self):
-        from custom_components.entity_distance.coordinator import _resolve_entities
+        from custom_components.entity_distance.const import DOMAIN
+        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
 
-        data = {"entities": ["person.alice"]}
-        result = _resolve_entities(data)
-        result.append("person.bob")
-        assert data["entities"] == ["person.alice"]
+        entry = MockConfigEntry(domain=DOMAIN, data={}, options={})
+        entry.add_to_hass(hass)
+        coord = EntityDistanceCoordinator(hass, entry)
+        assert coord.entities == []
+
+    async def test_entities_is_copy_not_original(self, hass):
+        from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+        from custom_components.entity_distance.const import DOMAIN
+        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+
+        original = ["person.alice"]
+        entry = MockConfigEntry(domain=DOMAIN, data={"entities": original}, options={})
+        entry.add_to_hass(hass)
+        coord = EntityDistanceCoordinator(hass, entry)
+        coord.entities.append("person.bob")
+        assert original == ["person.alice"]
 
 
 # ---------------------------------------------------------------------------
@@ -1795,9 +1815,12 @@ class TestCoordinatorAsyncRecalculate:
 
 
 class TestCoordinatorAsyncUpdateData:
-    """Cover _async_update_data (line 578)."""
+    """Cover async_recalculate setting GroupData via async_set_updated_data."""
 
-    async def test_returns_group_data_with_pair_states(self):
+    @pytest.mark.asyncio
+    async def test_async_recalculate_sets_group_data(self):
+        from unittest.mock import AsyncMock, MagicMock, patch
+
         from custom_components.entity_distance.coordinator import (
             EntityDistanceCoordinator,
         )
@@ -1809,11 +1832,29 @@ class TestCoordinatorAsyncUpdateData:
 
         coord = EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)
         k = pair_key("person.alice", "person.bob")
-        coord._pair_states = {k: PairState(entity_a_id=k[0], entity_b_id=k[1])}
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.data_valid = False
+        coord._pair_states = {k: ps}
+        coord._pending_updates = set()
+        coord._bucket_thresholds = {}
+        coord.hass = MagicMock()
+        coord.hass.states.get.return_value = None
+        coord._async_save_state = AsyncMock()
 
-        result = await coord._async_update_data()
-        assert isinstance(result, GroupData)
-        assert k in result.pairs
+        captured = []
+        coord.async_set_updated_data = lambda g: captured.append(g)
+
+        with patch(
+            "custom_components.entity_distance.coordinator.dt_util.now",
+            return_value=__import__("datetime").datetime(
+                2024, 1, 1, tzinfo=__import__("datetime").timezone.utc
+            ),
+        ):
+            await coord.async_recalculate()
+
+        assert len(captured) == 1
+        assert isinstance(captured[0], GroupData)
+        assert k in captured[0].pairs
 
 
 class TestCoordinatorLoadState:

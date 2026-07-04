@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date, datetime
+from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:  # pragma: no cover
+    from homeassistant.core import HomeAssistant
 _DOMAIN_PRIORITY: dict[str, int] = {
     "person": 0,
     "device_tracker": 1,
@@ -45,9 +48,6 @@ class PairState:
     today_reset_date: date | None = None
     today_zone_seconds: dict[str, float] = field(default_factory=dict)
 
-    def __post_init__(self) -> None:
-        pass
-
     accuracy_a: float | None = None
     accuracy_b: float | None = None
     last_update_a: datetime | None = None
@@ -70,3 +70,10 @@ class GroupData:
     min_distance_m: float | None = None
     any_in_proximity: bool = False
     all_in_proximity: bool = False
+
+
+def friendly_name(hass: HomeAssistant, entity_id: str) -> str:
+    state = hass.states.get(entity_id)
+    if state and state.name:
+        return state.name
+    return entity_id.split(".")[-1].replace("_", " ").title()

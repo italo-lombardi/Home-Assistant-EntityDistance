@@ -33,7 +33,7 @@ from .const import (
     DOMAIN,
 )
 from .coordinator import EntityDistanceCoordinator, calc_bucket
-from .models import PairState, pair_key
+from .models import PairState, friendly_name, pair_key
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -82,10 +82,7 @@ async def async_setup_entry(
     coordinator: EntityDistanceCoordinator = hass.data[DOMAIN][entry.entry_id]
 
     def _friendly_name(entity_id: str) -> str:
-        state = hass.states.get(entity_id)
-        if state and state.name:
-            return state.name
-        return entity_id.split(".")[-1].replace("_", " ").title()
+        return friendly_name(hass, entity_id)
 
     entities_list = coordinator.entities
     group_name = " & ".join(_friendly_name(e) for e in entities_list)
@@ -172,10 +169,6 @@ async def async_setup_entry(
     async_add_entities(all_sensors)
 
 
-def _pair_key_str(k: tuple[str, str]) -> str:
-    return f"{k[0]}__{k[1]}"
-
-
 class EntityDistanceSensorBase(CoordinatorEntity[EntityDistanceCoordinator], SensorEntity):
     _attr_has_entity_name = True
 
@@ -191,7 +184,7 @@ class EntityDistanceSensorBase(CoordinatorEntity[EntityDistanceCoordinator], Sen
         self._entry = entry
         self._pair_key = pair_key_val
         self._sensor_key = sensor_key
-        self._attr_unique_id = f"{entry.entry_id}_{_pair_key_str(pair_key_val)}_{sensor_key}"
+        self._attr_unique_id = f"{entry.entry_id}_{pair_key_val[0]}__{pair_key_val[1]}_{sensor_key}"
         self._attr_device_info = device_info
 
     @property
@@ -668,7 +661,7 @@ class SettingsSensor(CoordinatorEntity[EntityDistanceCoordinator], SensorEntity)
         if pair_key_val is None:
             self._attr_unique_id = f"{entry.entry_id}_settings"
         else:
-            self._attr_unique_id = f"{entry.entry_id}_{_pair_key_str(pair_key_val)}_settings"
+            self._attr_unique_id = f"{entry.entry_id}_{pair_key_val[0]}__{pair_key_val[1]}_settings"
         self._attr_device_info = device_info
 
     @property

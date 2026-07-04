@@ -17,8 +17,6 @@ def mock_config_entry():
     entry.entry_id = "test_entry_id"
     entry.data = {
         "entities": ["person.alice", "person.bob"],
-        "entry_threshold_m": 500,
-        "exit_threshold_m": 700,
         "debounce_s": 0,
         "max_accuracy_m": 200,
         "max_speed_kmh": 150,
@@ -38,8 +36,6 @@ def mock_group_config_entry():
     entry.entry_id = "test_group_entry_id"
     entry.data = {
         "entities": ["person.alice", "person.bob", "person.carol"],
-        "entry_threshold_m": 500,
-        "exit_threshold_m": 700,
         "debounce_s": 0,
         "max_accuracy_m": 200,
         "max_speed_kmh": 150,

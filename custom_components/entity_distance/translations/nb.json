@@ -11,54 +11,42 @@
           "entities": "Velg 2–5 enheter å spore. Hvert par får sitt eget sett med avstand- og nærhetssensorer."
         }
       },
-      "thresholds": {
-        "title": "Nærhetinnstillinger",
-        "description": "Konfigurer nærhetsterskler og debounce.",
+      "distances": {
+        "title": "Avstandsinnstillinger",
+        "description": "Angi sonegrenser og velg hvilken sone som utløser nærhetsvarselet.",
         "data": {
-          "entry_threshold_m": "Inngangsterskel (m)",
-          "exit_threshold_m": "Utgangsterskel (m)",
-          "debounce_s": "Vent før reaksjon (s)",
-          "show_advanced": "Konfigurer avanserte filtre",
-          "show_zone_thresholds": "Konfigurer nærhetssoneterskler"
+          "zone_very_near_m": "Grense sone Svært nær (m)",
+          "zone_near_m": "Grense sone Nær (m)",
+          "zone_mid_m": "Grense sone Middels (m)",
+          "zone_far_m": "Grense sone Langt (m)",
+          "proximity_zone": "Nærhetsvarselsone",
+          "show_advanced": "Konfigurer avanserte filtre"
         },
         "data_description": {
-          "entry_threshold_m": "Avstand der enheter anses som nærliggende.",
-          "exit_threshold_m": "Avstand der enheter ikke lenger anses som nærliggende. Må være >= inngangsterskel.",
-          "debounce_s": "Når en posisjonsoppdatering kommer, hvor lenge det ventes før beregning. Nyttig når telefoner sender flere støyende GPS-målinger på rad — integrasjonen venter til de stabiliseres. 0 = reager umiddelbart (standard). Øk til 5–15 s ved jitter.",
-          "show_advanced": "Slå på for å konfigurere GPS-nøyaktighet, hastighet og pålitelighetsfiltre.",
-          "show_zone_thresholds": "Slå på for å angi avstandsgrensene for sonene."
+          "zone_very_near_m": "Enheter er 'Svært nær' ved eller nærmere enn denne avstanden. Standard: 200 m.",
+          "zone_near_m": "Enheter er 'Nær' ved eller nærmere enn denne avstanden. Må være større enn Svært nær. Standard: 1000 m.",
+          "zone_mid_m": "Enheter er 'Middels' avstand. Må være større enn Nær. Standard: 5000 m.",
+          "zone_far_m": "Enheter er 'Langt' ved eller nærmere enn denne avstanden. Må være større enn Middels. Standard: 20000 m.\nUtover dette er 'Svært langt'.",
+          "proximity_zone": "Sensoren 'I nærheten' slås PÅ når enhetene er innenfor denne sonen eller nærmere (f.eks. valg av 'Nær' utløser også når enhetene er 'Svært nær'). Den slås AV når de beveger seg til neste sone ut.",
+          "show_advanced": "Slå på for å konfigurere GPS-nøyaktighet, hastighet og pålitelighetsfiltre på neste skjerm."
         }
       },
       "advanced": {
         "title": "Avanserte filtre",
         "description": "Valgfrie filtre for å avvise upålitelige posisjonsoppdateringer.",
         "data": {
+          "debounce_s": "Vent før reaksjon (s)",
           "max_accuracy_m": "Maks. GPS-nøyaktighet (m, 0 = deaktivert)",
           "max_speed_kmh": "Maks. implisitt hastighet (km/h, 0 = deaktivert)",
           "require_reliable": "Krev pålitelige data for nærhetshendelser",
           "min_updates_reliable": "Min. oppdateringer for pålitelige data"
         },
         "data_description": {
+          "debounce_s": "Når en posisjonsoppdatering kommer, hvor lenge det ventes før beregning. Nyttig når telefoner sender flere støyende GPS-målinger på rad — integrasjonen venter til de stabiliseres. 0 = reager umiddelbart (standard). Øk til 5–15 s ved jitter.",
           "max_accuracy_m": "Avvis posisjonsoppdateringer der GPS-feilen er større enn denne verdien. Telefoner i bevegelse rapporterer typisk 100–250 m nøyaktighet, så 300 m er en trygg standardverdi. En telefon som viser «350 m nøyaktighet» vil bli hoppet over. Sett til 0 for å deaktivere.",
-          "max_speed_kmh": "Avvis oppdateringer der implisitt bevegelseshastighet overskrider denne verdien. Sett til 0 for å deaktivere.",
+          "max_speed_kmh": "Teleport-vakt. Avviser en GPS-måling hvis den underforståtte bevegelseshastigheten — etter fratrekk av kombinert GPS-nøyaktighet for begge enheter — overstiger denne verdien. Standard: 1000 km/t — blokkerer umulige teleporter, men tillater fly. Sett til 0 for å deaktivere.",
           "require_reliable": "Avskyte proximity_enter-hendelse bare når data anses pålitelige.",
           "min_updates_reliable": "Minimum antall posisjonsoppdateringer i vinduet før data anses pålitelige."
-        }
-      },
-      "zone_thresholds": {
-        "title": "Nærhetssoneterskler",
-        "description": "Angi avstandsgrensene for hver nærhetssone. Hver terskel må være større enn den forrige.",
-        "data": {
-          "zone_very_near_m": "Veldig nær terskel (m)",
-          "zone_near_m": "Nær terskel (m)",
-          "zone_mid_m": "Middels terskel (m)",
-          "zone_far_m": "Langt terskel (m)"
-        },
-        "data_description": {
-          "zone_very_near_m": "Enheter anses som 'Veldig nær' ved eller nærmere enn denne avstanden. Standard: 100 m.",
-          "zone_near_m": "Enheter anses som 'Nær' ved eller nærmere enn denne avstanden. Må være større enn Veldig nær. Standard: 500 m.",
-          "zone_mid_m": "Enheter anses som 'Middels' avstand. Må være større enn Nær. Standard: 2000 m.",
-          "zone_far_m": "Enheter anses som 'Langt'. Utover dette er 'Veldig langt'. Standard: 10000 m."
         }
       }
     },
@@ -66,7 +54,6 @@
       "too_few_entities": "Velg minst 2 enheter.",
       "too_many_entities": "Velg høyst 5 enheter.",
       "duplicate_entities": "Hver enhet må bare forekomme én gang.",
-      "exit_below_entry": "Utgangsterskel må være større enn eller lik inngangsterskel.",
       "zone_thresholds_not_ascending": "Sonetersklene må øke i rekkefølge: Veldig nær < Nær < Middels < Langt."
     },
     "abort": {
@@ -76,27 +63,30 @@
   },
   "options": {
     "step": {
-      "thresholds": {
-        "title": "Nærhetinnstillinger",
+      "distances": {
+        "title": "Avstandsinnstillinger",
+        "description": "Angi sonegrenser og velg hvilken sone som utløser nærhetsvarselet.",
         "data": {
-          "entry_threshold_m": "Inngangsterskel (m)",
-          "exit_threshold_m": "Utgangsterskel (m)",
-          "debounce_s": "Vent før reaksjon (s)",
-          "show_advanced": "Konfigurer avanserte filtre",
-          "show_zone_thresholds": "Konfigurer nærhetssoneterskler"
+          "zone_very_near_m": "Grense sone Svært nær (m)",
+          "zone_near_m": "Grense sone Nær (m)",
+          "zone_mid_m": "Grense sone Middels (m)",
+          "zone_far_m": "Grense sone Langt (m)",
+          "proximity_zone": "Nærhetsvarselsone",
+          "show_advanced": "Konfigurer avanserte filtre"
         },
-        "description": "Konfigurer nærhetstersklene.",
         "data_description": {
-          "entry_threshold_m": "Hvor nær (i meter) enhetene må være for å utløse en 'i nærheten'-hendelse.",
-          "exit_threshold_m": "Hvor langt fra hverandre enhetene må flytte før de ikke lenger anses som i nærheten.",
-          "debounce_s": "Når en posisjonsoppdatering kommer, hvor lenge det ventes før beregning. 0 = reager umiddelbart (standard).",
-          "show_advanced": "Slå på for å konfigurere GPS-, hastighets- og pålitelighetsfiltre.",
-          "show_zone_thresholds": "Slå på for å angi sonegrenser."
+          "zone_very_near_m": "Enheter er 'Svært nær' ved eller nærmere enn denne avstanden. Standard: 200 m.",
+          "zone_near_m": "Enheter er 'Nær' ved eller nærmere enn denne avstanden. Må være større enn Svært nær. Standard: 1000 m.",
+          "zone_mid_m": "Enheter er 'Middels' avstand. Må være større enn Nær. Standard: 5000 m.",
+          "zone_far_m": "Enheter er 'Langt' ved eller nærmere enn denne avstanden. Må være større enn Middels. Standard: 20000 m.\nUtover dette er 'Svært langt'.",
+          "proximity_zone": "Sensoren 'I nærheten' slås PÅ når enhetene er innenfor denne sonen eller nærmere (f.eks. valg av 'Nær' utløser også når enhetene er 'Svært nær'). Den slås AV når de beveger seg til neste sone ut.",
+          "show_advanced": "Slå på for å konfigurere GPS-nøyaktighet, hastighet og pålitelighetsfiltre på neste skjerm."
         }
       },
       "advanced": {
         "title": "Avanserte filtre",
         "data": {
+          "debounce_s": "Vent før reaksjon (s)",
           "max_accuracy_m": "Maks. GPS-nøyaktighet (m, 0 = deaktivert)",
           "max_speed_kmh": "Maks. implisitt hastighet (km/h, 0 = deaktivert)",
           "require_reliable": "Krev pålitelige data for nærhetshendelser",
@@ -104,31 +94,15 @@
         },
         "description": "Disse filtrene hjelper med å ignorere dårlige GPS-data.",
         "data_description": {
+          "debounce_s": "Når en posisjonsoppdatering kommer, hvor lenge det ventes før beregning. Nyttig når telefoner sender flere støyende GPS-målinger på rad — integrasjonen venter til de stabiliseres. 0 = reager umiddelbart (standard). Øk til 5–15 s ved jitter.",
           "max_accuracy_m": "Avvis posisjonsoppdateringer der GPS-feilen er større enn denne verdien. Telefoner i bevegelse rapporterer typisk 100–250 m nøyaktighet, så 300 m er en trygg standardverdi. En telefon som viser «350 m nøyaktighet» vil bli hoppet over. Sett til 0 for å deaktivere.",
-          "max_speed_kmh": "Ignorer oppdateringer som innebærer bevegelse raskere enn dette.",
+          "max_speed_kmh": "Teleport-vakt. Avviser en GPS-måling hvis den underforståtte bevegelseshastigheten — etter fratrekk av kombinert GPS-nøyaktighet for begge enheter — overstiger denne verdien. Standard: 1000 km/t — blokkerer umulige teleporter, men tillater fly. Sett til 0 for å deaktivere.",
           "require_reliable": "Når aktivert utløses en nærhendelse bare etter konsekvente oppdateringer.",
           "min_updates_reliable": "Hvor mange konsekvente oppdateringer som kreves før posisjonen anses som pålitelig."
-        }
-      },
-      "zone_thresholds": {
-        "title": "Nærhetssoneterskler",
-        "description": "Angi avstandsgrensene for hver nærhetssone.",
-        "data": {
-          "zone_very_near_m": "Veldig nær terskel (m)",
-          "zone_near_m": "Nær terskel (m)",
-          "zone_mid_m": "Middels terskel (m)",
-          "zone_far_m": "Langt terskel (m)"
-        },
-        "data_description": {
-          "zone_very_near_m": "Standard: 100 m.",
-          "zone_near_m": "Standard: 500 m.",
-          "zone_mid_m": "Standard: 2000 m.",
-          "zone_far_m": "Standard: 10000 m."
         }
       }
     },
     "error": {
-      "exit_below_entry": "Utgangsterskel må være større enn eller lik inngangsterskel.",
       "zone_thresholds_not_ascending": "Sonetersklene må øke i rekkefølge: Veldig nær < Nær < Middels < Langt."
     }
   },
@@ -266,6 +240,16 @@
     "button": {
       "refresh": {
         "name": "Oppdater posisjon"
+      }
+    }
+  },
+  "selector": {
+    "proximity_zone": {
+      "options": {
+        "very_near": "Svært nær",
+        "near": "Nær",
+        "mid": "Middels",
+        "far": "Langt"
       }
     }
   }

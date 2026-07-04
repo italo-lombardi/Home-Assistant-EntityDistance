@@ -198,7 +198,9 @@ class TestPurgeStaleResources:
 
     @pytest.mark.asyncio
     async def test_deletes_stale_resource(self):
-        from homeassistant.components.lovelace.resources import ResourceStorageCollection
+        from homeassistant.components.lovelace.resources import (
+            ResourceStorageCollection,
+        )
 
         from custom_components.entity_distance import _async_purge_stale_resources
 
@@ -352,7 +354,9 @@ class TestRegisterLovelaceResource:
 
     @pytest.mark.asyncio
     async def test_creates_when_no_existing(self):
-        from homeassistant.components.lovelace.resources import ResourceStorageCollection
+        from homeassistant.components.lovelace.resources import (
+            ResourceStorageCollection,
+        )
 
         from custom_components.entity_distance import _async_register_lovelace_resource
 
@@ -369,7 +373,9 @@ class TestRegisterLovelaceResource:
 
     @pytest.mark.asyncio
     async def test_loads_when_not_loaded(self):
-        from homeassistant.components.lovelace.resources import ResourceStorageCollection
+        from homeassistant.components.lovelace.resources import (
+            ResourceStorageCollection,
+        )
 
         from custom_components.entity_distance import _async_register_lovelace_resource
 
@@ -397,7 +403,10 @@ class TestRegisterLovelaceResource:
         hass.data = {"lovelace": MagicMock(resources=resources)}
 
         await _async_register_lovelace_resource(
-            hass, "entity-distance-pair-card.js", "/entity-distance-pair-card.js", "0.2.4"
+            hass,
+            "entity-distance-pair-card.js",
+            "/entity-distance-pair-card.js",
+            "0.2.4",
         )
 
         assert len(resources.data) == 2
@@ -444,7 +453,10 @@ class TestRegisterLovelaceResource:
         hass.data = {"lovelace": MagicMock(resources=resources)}
 
         await _async_register_lovelace_resource(
-            hass, "entity-distance-pair-card.js", f"{url_base}?automatically-added&0.2.4", "0.2.4"
+            hass,
+            "entity-distance-pair-card.js",
+            f"{url_base}?automatically-added&0.2.4",
+            "0.2.4",
         )
 
         # Non-StorageCollection → delete must be skipped despite duplicates present.
@@ -452,7 +464,9 @@ class TestRegisterLovelaceResource:
 
     @pytest.mark.asyncio
     async def test_removes_duplicates_keeps_first(self):
-        from homeassistant.components.lovelace.resources import ResourceStorageCollection
+        from homeassistant.components.lovelace.resources import (
+            ResourceStorageCollection,
+        )
 
         from custom_components.entity_distance import _async_register_lovelace_resource
 
@@ -479,7 +493,9 @@ class TestRegisterLovelaceResource:
 
     @pytest.mark.asyncio
     async def test_updates_url_when_version_changed(self):
-        from homeassistant.components.lovelace.resources import ResourceStorageCollection
+        from homeassistant.components.lovelace.resources import (
+            ResourceStorageCollection,
+        )
 
         from custom_components.entity_distance import _async_register_lovelace_resource
 
@@ -520,7 +536,9 @@ class TestRegisterLovelaceResource:
 
     @pytest.mark.asyncio
     async def test_no_change_when_url_already_current(self):
-        from homeassistant.components.lovelace.resources import ResourceStorageCollection
+        from homeassistant.components.lovelace.resources import (
+            ResourceStorageCollection,
+        )
 
         from custom_components.entity_distance import _async_register_lovelace_resource
 

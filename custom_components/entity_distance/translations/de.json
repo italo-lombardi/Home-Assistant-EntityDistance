@@ -11,54 +11,42 @@
           "entities": "Wählen Sie 2–5 Entitäten aus. Jedes Paar erhält einen eigenen Satz von Abstands- und Näherungssensoren."
         }
       },
-      "thresholds": {
-        "title": "Näherungseinstellungen",
-        "description": "Näherungsschwellenwerte und Entprellung konfigurieren.",
+      "distances": {
+        "title": "Entfernungseinstellungen",
+        "description": "Legen Sie die Zonengrenzen fest und wählen Sie, welche Zone den Näherungsalarm auslöst.",
         "data": {
-          "entry_threshold_m": "Eintrittsschwelle (m)",
-          "exit_threshold_m": "Austrittsschwelle (m)",
-          "debounce_s": "Wartezeit vor Reaktion (s)",
-          "show_advanced": "Erweiterte Filter konfigurieren",
-          "show_zone_thresholds": "Näherungszonenschwellenwerte konfigurieren"
+          "zone_very_near_m": "Grenze Zone 'Sehr nah' (m)",
+          "zone_near_m": "Grenze Zone 'Nah' (m)",
+          "zone_mid_m": "Grenze Zone 'Mittel' (m)",
+          "zone_far_m": "Grenze Zone 'Weit' (m)",
+          "proximity_zone": "Näherungsalarmzone",
+          "show_advanced": "Erweiterte Filter konfigurieren"
         },
         "data_description": {
-          "entry_threshold_m": "Abstand, bei dem Entitäten als in der Nähe betrachtet werden.",
-          "exit_threshold_m": "Abstand, bei dem Entitäten als nicht mehr in der Nähe betrachtet werden. Muss >= Eintrittsschwelle sein.",
-          "debounce_s": "Wenn ein Standortupdate eintrifft, wie lange gewartet wird, bevor neu berechnet wird. Nützlich wenn Telefone mehrere verrauschte GPS-Werte in Folge senden — die Integration wartet, bis sie sich beruhigen. 0 = sofort reagieren (Standard). Auf 5–15 s erhöhen bei jitterndem Schalten.",
-          "show_advanced": "Aktivieren, um GPS-Genauigkeit, Geschwindigkeit und Zuverlässigkeitsfilter zu konfigurieren.",
-          "show_zone_thresholds": "Aktivieren, um die Abstandsgrenzen für die Zonen festzulegen."
+          "zone_very_near_m": "Entitäten sind 'Sehr nah' bei oder näher als dieser Abstand. Standard: 200 m.",
+          "zone_near_m": "Entitäten sind 'Nah' bei oder näher als dieser Abstand. Muss größer als Sehr nah sein. Standard: 1000 m.",
+          "zone_mid_m": "Entitäten sind 'Mittlerer' Abstand. Muss größer als Nah sein. Standard: 5000 m.",
+          "zone_far_m": "Entitäten sind 'Weit' bei oder näher als dieser Abstand. Muss größer als Mittel sein. Standard: 20000 m.\nDarüber ist 'Sehr weit'.",
+          "proximity_zone": "Der Sensor 'In Proximity' schaltet sich EIN, wenn sich die Entitäten in dieser Zone oder näher befinden (z. B. löst die Auswahl von 'Nah' auch aus, wenn die Entitäten 'Sehr nah' sind). Er schaltet sich AUS, wenn sie sich in die nächste Zone nach außen bewegen.",
+          "show_advanced": "Aktivieren, um GPS-Genauigkeit, Geschwindigkeit und Zuverlässigkeitsfilter zu konfigurieren."
         }
       },
       "advanced": {
         "title": "Erweiterte Filter",
         "description": "Optionale Filter zum Ablehnen unzuverlässiger Standortaktualisierungen.",
         "data": {
+          "debounce_s": "Wartezeit vor Reaktion (s)",
           "max_accuracy_m": "Max. GPS-Genauigkeit (m, 0 = deaktiviert)",
           "max_speed_kmh": "Max. implizite Geschwindigkeit (km/h, 0 = deaktiviert)",
-          "require_reliable": "Zuverlässige Daten für Näherungsereignisse erforderlich",
+          "require_reliable": "Nur auslösen, wenn Daten zuverlässig sind",
           "min_updates_reliable": "Min. Aktualisierungen für zuverlässige Daten"
         },
         "data_description": {
+          "debounce_s": "Wenn ein Standortupdate eintrifft, wie lange gewartet wird, bevor neu berechnet wird. Nützlich wenn Telefone mehrere verrauschte GPS-Werte in Folge senden — die Integration wartet, bis sie sich beruhigen. 0 = sofort reagieren (Standard). Auf 5–15 s erhöhen bei jitterndem Schalten.",
           "max_accuracy_m": "Standortaktualisierungen ignorieren, wenn der GPS-Fehler größer als dieser Wert ist. Telefone in Bewegung melden typischerweise eine Genauigkeit von 100–250 m, daher ist 300 m ein sicherer Standardwert. Ein Telefon mit „350 m Genauigkeit\" würde übersprungen. Auf 0 setzen zum Deaktivieren.",
-          "max_speed_kmh": "Aktualisierungen ablehnen, bei denen die implizierte Bewegungsgeschwindigkeit diesen Wert überschreitet. Auf 0 setzen zum Deaktivieren.",
-          "require_reliable": "Proximity_enter-Ereignis nur auslösen, wenn Daten als zuverlässig gelten.",
-          "min_updates_reliable": "Mindestanzahl von Standortaktualisierungen im Fenster, bevor Daten als zuverlässig gelten."
-        }
-      },
-      "zone_thresholds": {
-        "title": "Näherungszonenschwellenwerte",
-        "description": "Legen Sie die Abstandsgrenzen für jede Näherungszone fest.",
-        "data": {
-          "zone_very_near_m": "Sehr nah Schwellenwert (m)",
-          "zone_near_m": "Nah Schwellenwert (m)",
-          "zone_mid_m": "Mittel Schwellenwert (m)",
-          "zone_far_m": "Weit Schwellenwert (m)"
-        },
-        "data_description": {
-          "zone_very_near_m": "Entitäten gelten als 'Sehr nah' bei oder näher als dieser Abstand. Standard: 100 m.",
-          "zone_near_m": "Entitäten gelten als 'Nah' bei oder näher als dieser Abstand. Muss größer als Sehr nah sein. Standard: 500 m.",
-          "zone_mid_m": "Entitäten gelten als 'Mittel' Abstand. Muss größer als Nah sein. Standard: 2000 m.",
-          "zone_far_m": "Entitäten gelten als 'Weit'. Darüber hinaus ist 'Sehr weit'. Standard: 10000 m."
+          "max_speed_kmh": "Teleport-Schutz. Lehnt eine GPS-Messung ab, wenn die implizierte Bewegungsgeschwindigkeit — nach Abzug der kombinierten GPS-Genauigkeit beider Geräte — diesen Wert überschreitet. Standard: 1000 km/h — blockiert unmögliche Teleporte, erlaubt aber Flugzeuge. Auf 0 setzen zum Deaktivieren.",
+          "require_reliable": "Der Sensor 'In Proximity' schaltet sich nur EIN, wenn die Daten als zuverlässig gelten.",
+          "min_updates_reliable": "Mindestanzahl aufeinanderfolgender Standortaktualisierungen, bevor Daten als zuverlässig gelten."
         }
       }
     },
@@ -66,7 +54,6 @@
       "too_few_entities": "Wählen Sie mindestens 2 Entitäten aus.",
       "too_many_entities": "Wählen Sie höchstens 5 Entitäten aus.",
       "duplicate_entities": "Jede Entität darf nur einmal vorkommen.",
-      "exit_below_entry": "Austrittsschwelle muss größer oder gleich der Eintrittsschwelle sein.",
       "zone_thresholds_not_ascending": "Zonenschwellenwerte müssen aufsteigend sein: Sehr nah < Nah < Mittel < Weit."
     },
     "abort": {
@@ -76,59 +63,46 @@
   },
   "options": {
     "step": {
-      "thresholds": {
-        "title": "Näherungseinstellungen",
+      "distances": {
+        "title": "Entfernungseinstellungen",
+        "description": "Legen Sie die Zonengrenzen fest und wählen Sie, welche Zone den Näherungsalarm auslöst.",
         "data": {
-          "entry_threshold_m": "Eintrittsschwelle (m)",
-          "exit_threshold_m": "Austrittsschwelle (m)",
-          "debounce_s": "Wartezeit vor Reaktion (s)",
-          "show_advanced": "Erweiterte Filter konfigurieren",
-          "show_zone_thresholds": "Näherungszonenschwellenwerte konfigurieren"
+          "zone_very_near_m": "Grenze Zone 'Sehr nah' (m)",
+          "zone_near_m": "Grenze Zone 'Nah' (m)",
+          "zone_mid_m": "Grenze Zone 'Mittel' (m)",
+          "zone_far_m": "Grenze Zone 'Weit' (m)",
+          "proximity_zone": "Näherungsalarmzone",
+          "show_advanced": "Erweiterte Filter konfigurieren"
         },
-        "description": "Konfigurieren Sie die Näherungsschwellenwerte.",
         "data_description": {
-          "entry_threshold_m": "Wie nah (in Metern) die Entitäten sein müssen, um ein 'in der Nähe'-Ereignis auszulösen.",
-          "exit_threshold_m": "Wie weit die Entitäten auseinander sein müssen, bevor sie nicht mehr als in der Nähe gelten.",
-          "debounce_s": "Wenn ein Standortupdate eintrifft, wie lange gewartet wird, bevor neu berechnet wird. 0 = sofort reagieren (Standard).",
-          "show_advanced": "Aktivieren, um GPS-Genauigkeit, Geschwindigkeit und Zuverlässigkeitsfilter zu konfigurieren.",
-          "show_zone_thresholds": "Aktivieren, um Zonengrenzen festzulegen."
+          "zone_very_near_m": "Entitäten sind 'Sehr nah' bei oder näher als dieser Abstand. Standard: 200 m.",
+          "zone_near_m": "Entitäten sind 'Nah' bei oder näher als dieser Abstand. Muss größer als Sehr nah sein. Standard: 1000 m.",
+          "zone_mid_m": "Entitäten sind 'Mittlerer' Abstand. Muss größer als Nah sein. Standard: 5000 m.",
+          "zone_far_m": "Entitäten sind 'Weit' bei oder näher als dieser Abstand. Muss größer als Mittel sein. Standard: 20000 m.\nDarüber ist 'Sehr weit'.",
+          "proximity_zone": "Der Sensor 'In Proximity' schaltet sich EIN, wenn sich die Entitäten in dieser Zone oder näher befinden (z. B. löst die Auswahl von 'Nah' auch aus, wenn die Entitäten 'Sehr nah' sind). Er schaltet sich AUS, wenn sie sich in die nächste Zone nach außen bewegen.",
+          "show_advanced": "Aktivieren, um GPS-Genauigkeit, Geschwindigkeit und Zuverlässigkeitsfilter zu konfigurieren."
         }
       },
       "advanced": {
         "title": "Erweiterte Filter",
         "data": {
+          "debounce_s": "Wartezeit vor Reaktion (s)",
           "max_accuracy_m": "Max. GPS-Genauigkeit (m, 0 = deaktiviert)",
           "max_speed_kmh": "Max. implizite Geschwindigkeit (km/h, 0 = deaktiviert)",
-          "require_reliable": "Zuverlässige Daten für Näherungsereignisse erforderlich",
+          "require_reliable": "Nur auslösen, wenn Daten zuverlässig sind",
           "min_updates_reliable": "Min. Aktualisierungen für zuverlässige Daten"
         },
         "description": "Diese Filter helfen, schlechte GPS-Daten zu ignorieren.",
         "data_description": {
+          "debounce_s": "Wenn ein Standortupdate eintrifft, wie lange gewartet wird, bevor neu berechnet wird. Nützlich wenn Telefone mehrere verrauschte GPS-Werte in Folge senden — die Integration wartet, bis sie sich beruhigen. 0 = sofort reagieren (Standard). Auf 5–15 s erhöhen bei jitterndem Schalten.",
           "max_accuracy_m": "Standortaktualisierungen ignorieren, wenn der GPS-Fehler größer als dieser Wert ist. Telefone in Bewegung melden typischerweise eine Genauigkeit von 100–250 m, daher ist 300 m ein sicherer Standardwert. Ein Telefon mit „350 m Genauigkeit\" würde übersprungen. Auf 0 setzen zum Deaktivieren.",
-          "max_speed_kmh": "Aktualisierungen ablehnen, die eine Bewegung schneller als dies implizieren.",
-          "require_reliable": "Wenn aktiviert, wird ein Näherungsereignis nur nach konsistenten Aktualisierungen ausgelöst.",
-          "min_updates_reliable": "Wie viele konsistente Aktualisierungen erforderlich sind, bevor der Standort als zuverlässig gilt."
-        }
-      },
-      "zone_thresholds": {
-        "title": "Näherungszonenschwellenwerte",
-        "description": "Legen Sie die Abstandsgrenzen für jede Näherungszone fest.",
-        "data": {
-          "zone_very_near_m": "Sehr nah Schwellenwert (m)",
-          "zone_near_m": "Nah Schwellenwert (m)",
-          "zone_mid_m": "Mittel Schwellenwert (m)",
-          "zone_far_m": "Weit Schwellenwert (m)"
-        },
-        "data_description": {
-          "zone_very_near_m": "Standard: 100 m.",
-          "zone_near_m": "Standard: 500 m.",
-          "zone_mid_m": "Standard: 2000 m.",
-          "zone_far_m": "Standard: 10000 m."
+          "max_speed_kmh": "Teleport-Schutz. Lehnt eine GPS-Messung ab, wenn die implizierte Bewegungsgeschwindigkeit — nach Abzug der kombinierten GPS-Genauigkeit beider Geräte — diesen Wert überschreitet. Standard: 1000 km/h — blockiert unmögliche Teleporte, erlaubt aber Flugzeuge. Auf 0 setzen zum Deaktivieren.",
+          "require_reliable": "Der Sensor 'In Proximity' schaltet sich nur EIN, wenn die Daten als zuverlässig gelten.",
+          "min_updates_reliable": "Wie viele aufeinanderfolgende Aktualisierungen erforderlich sind, bevor der Standort als zuverlässig gilt."
         }
       }
     },
     "error": {
-      "exit_below_entry": "Austrittsschwelle muss größer oder gleich der Eintrittsschwelle sein.",
       "zone_thresholds_not_ascending": "Zonenschwellenwerte müssen aufsteigend sein: Sehr nah < Nah < Mittel < Weit."
     }
   },
@@ -151,10 +125,10 @@
         "name": "Näherungsdauer"
       },
       "proximity_tracking_started": {
-        "name": "Proximity Tracking Started"
+        "name": "Näherungsverfolgung gestartet"
       },
       "proximity_rate": {
-        "name": "Proximity Rate"
+        "name": "Näherungsrate"
       },
       "last_seen_together": {
         "name": "Zuletzt zusammen gesehen"
@@ -210,10 +184,10 @@
         "name": "Heutige Zeit Sehr weit"
       },
       "update_count_a": {
-        "name": "Update Count Last 30 min (A)"
+        "name": "Aktualisierungszähler letzte 30 Min (A)"
       },
       "update_count_b": {
-        "name": "Update Count Last 30 min (B)"
+        "name": "Aktualisierungszähler letzte 30 Min (B)"
       },
       "entity_state_a": {
         "name": "Status (A)"
@@ -266,6 +240,16 @@
     "button": {
       "refresh": {
         "name": "Standort aktualisieren"
+      }
+    }
+  },
+  "selector": {
+    "proximity_zone": {
+      "options": {
+        "very_near": "Sehr nah",
+        "near": "Nah",
+        "mid": "Mittel",
+        "far": "Weit"
       }
     }
   }

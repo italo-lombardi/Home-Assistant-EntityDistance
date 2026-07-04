@@ -13,7 +13,15 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.typing import ConfigType
 
-from .const import CONF_ENTITIES, DOMAIN
+from .const import (
+    BUCKET_FAR,
+    BUCKET_MID,
+    BUCKET_NEAR,
+    BUCKET_VERY_NEAR,
+    CONF_ENTITIES,
+    CONF_PROXIMITY_ZONE,
+    DOMAIN,
+)
 from .coordinator import EntityDistanceCoordinator
 from .models import pair_key
 
@@ -43,8 +51,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Migrate config entry from VERSION 1 (single pair) to VERSION 2 (group)."""
+    """Migrate config entry to current VERSION."""
     if entry.version == 1:
+        # v1 → v2: convert entity_a/entity_b pair keys to CONF_ENTITIES list.
+        # Falls through to the v2 → v3 block below — chained migration, intentional.
         new_data = dict(entry.data)
         if CONF_ENTITIES not in new_data:
             entity_a = new_data.get("entity_a")
@@ -75,7 +85,6 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             if not uid.startswith(entry_id_prefix):
                 return None
             suffix = uid[len(entry_id_prefix) :]
-            # Already migrated (contains __ with entity domain)
             if "__" in suffix and "." in suffix.split("__")[0]:
                 return None
             return {"new_unique_id": f"{entry_id_prefix}{pair_prefix}{suffix}"}
@@ -83,9 +92,48 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await er.async_migrate_entries(hass, entry.entry_id, _migrate_unique_id)
         hass.config_entries.async_update_entry(entry, data=new_data, version=2, minor_version=1)
         _LOGGER.info(
-            "entity_distance: migrated entry %s from VERSION 1 to VERSION 2", entry.entry_id
+            "entity_distance: migrated entry %s from VERSION 1 to VERSION 2",
+            entry.entry_id,
         )
-    elif entry.version > 2:
+
+    if entry.version == 2:
+        # VERSION 2 → 3: replace entry/exit thresholds with proximity_zone enum.
+        merged = {**entry.data, **entry.options}
+        # 200 was DEFAULT_ENTRY_THRESHOLD_M in v2 — missing key correctly falls back to old default.
+        entry_m = merged.get("entry_threshold_m", 200)
+        vn = merged.get("zone_very_near_m", 100)
+        n = merged.get("zone_near_m", 500)
+        m = merged.get("zone_mid_m", 2000)
+        f = merged.get("zone_far_m", 10000)
+        zones = [
+            (BUCKET_VERY_NEAR, vn),
+            (BUCKET_NEAR, n),
+            (BUCKET_MID, m),
+            (BUCKET_FAR, f),
+        ]
+        proximity_zone = min(zones, key=lambda z: abs(z[1] - entry_m))[0]
+        new_options = {
+            k: v
+            for k, v in entry.options.items()
+            if k not in ("entry_threshold_m", "exit_threshold_m")
+        }
+        new_options[CONF_PROXIMITY_ZONE] = proximity_zone
+        # Also strip from data if they ended up there (v1→v2 path stored in data)
+        new_data = {
+            k: v
+            for k, v in entry.data.items()
+            if k not in ("entry_threshold_m", "exit_threshold_m")
+        }
+        hass.config_entries.async_update_entry(
+            entry, data=new_data, options=new_options, version=3, minor_version=1
+        )
+        _LOGGER.info(
+            "entity_distance: migrated entry %s from VERSION 2 to VERSION 3 — proximity_zone=%s",
+            entry.entry_id,
+            proximity_zone,
+        )
+
+    if entry.version > 3:
         _LOGGER.error(
             "entity_distance: entry %s has unknown version %s — cannot migrate",
             entry.entry_id,

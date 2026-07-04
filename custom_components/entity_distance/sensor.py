@@ -268,6 +268,10 @@ class ProximityDurationSensor(EntityDistanceSensorBase):
         super().__init__(coordinator, entry, device_info, k, "proximity_duration")
 
     @property
+    def available(self) -> bool:
+        return self.coordinator.last_update_success
+
+    @property
     def native_value(self) -> float | None:
         if not self.available:
             return None
@@ -288,6 +292,10 @@ class LastSeenTogetherSensor(EntityDistanceSensorBase):
         super().__init__(coordinator, entry, device_info, k, "last_seen_together")
 
     @property
+    def available(self) -> bool:
+        return self.coordinator.last_update_success
+
+    @property
     def native_value(self) -> datetime | None:
         if not self.available:
             return None
@@ -304,8 +312,12 @@ class TodayProximityTimeSensor(EntityDistanceSensorBase):
         super().__init__(coordinator, entry, device_info, k, "today_proximity_time")
 
     @property
+    def available(self) -> bool:
+        return self.coordinator.last_update_success
+
+    @property
     def native_value(self) -> float | None:
-        if not self._pair.data_valid:
+        if not self.available:
             return None
         return round(self._pair.today_proximity_seconds / 60, 1)
 
@@ -321,8 +333,12 @@ class TodayZoneTimeSensor(EntityDistanceSensorBase):
         self._attr_translation_key = f"today_zone_time_{bucket}"
 
     @property
+    def available(self) -> bool:
+        return self.coordinator.last_update_success
+
+    @property
     def native_value(self) -> float | None:
-        if not self._pair.data_valid:
+        if not self.available:
             return None
         return round(self._pair.today_zone_seconds.get(self._bucket, 0.0) / 60, 1)
 
@@ -436,6 +452,10 @@ class LastUpdateSensor(EntityDistanceSensorBase):
         self._attr_name = f"Last Update ({name})"
 
     @property
+    def available(self) -> bool:
+        return self.coordinator.last_update_success
+
+    @property
     def native_value(self) -> datetime | None:
         if not self.available:
             return None
@@ -456,8 +476,12 @@ class UpdateCountSensor(EntityDistanceSensorBase):
         self._attr_name = f"Update Count Last {window_min} min ({name})"
 
     @property
+    def available(self) -> bool:
+        return self.coordinator.last_update_success
+
+    @property
     def native_value(self) -> int | None:
-        if not self._pair.data_valid:
+        if not self.available:
             return None
         if self._which == "a":
             window_start = self._pair.update_window_start_a
@@ -477,7 +501,15 @@ class EntityStateSensor(EntityDistanceSensorBase):
     _attr_icon = "mdi:account-circle-outline"
 
     def __init__(
-        self, coordinator, entry, device_info, k, a_name, b_name, which: str, entity_id: str
+        self,
+        coordinator,
+        entry,
+        device_info,
+        k,
+        a_name,
+        b_name,
+        which: str,
+        entity_id: str,
     ):
         super().__init__(coordinator, entry, device_info, k, f"entity_state_{which}")
         self._which = which
@@ -503,6 +535,10 @@ class ProximityTrackingStartedSensor(EntityDistanceSensorBase):
         super().__init__(coordinator, entry, device_info, k, "proximity_tracking_started")
 
     @property
+    def available(self) -> bool:
+        return self.coordinator.last_update_success
+
+    @property
     def native_value(self) -> datetime | None:
         if not self.available:
             return None
@@ -519,9 +555,13 @@ class ProximityRateSensor(EntityDistanceSensorBase):
         super().__init__(coordinator, entry, device_info, k, "proximity_rate")
 
     @property
+    def available(self) -> bool:
+        return self.coordinator.last_update_success
+
+    @property
     def native_value(self) -> float | None:
         ps = self._pair
-        if not ps.data_valid or ps.proximity_tracking_started is None:
+        if not self.available or ps.proximity_tracking_started is None:
             return None
         now = dt_util.now()
         total_s = (now - ps.proximity_tracking_started).total_seconds()
@@ -639,10 +679,10 @@ class SettingsSensor(CoordinatorEntity[EntityDistanceCoordinator], SensorEntity)
     def native_value(self) -> str:
         s = self.coordinator.settings_snapshot
         return (
-            f"{int(s['entry_threshold_m'])}/{int(s['exit_threshold_m'])}m "
-            f"· {int(s['debounce_s'])}s "
+            f"proximity ≤ {int(s['proximity_threshold_m'])}m ({s['proximity_zone']}) "
             f"· zones {int(s['zone_very_near_m'])}/{int(s['zone_near_m'])}"
             f"/{int(s['zone_mid_m'])}/{int(s['zone_far_m'])}m"
+            f" · debounce {int(s['debounce_s'])}s"
         )
 
     @property

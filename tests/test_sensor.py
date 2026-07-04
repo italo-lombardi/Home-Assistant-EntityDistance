@@ -106,9 +106,9 @@ class TestBucketLevelSensor:
     _BUCKET_DISTANCES = [
         (50, BUCKET_VERY_NEAR, 1),
         (300, BUCKET_NEAR, 2),
-        (1000, BUCKET_MID, 3),
-        (5000, BUCKET_FAR, 4),
-        (20000, BUCKET_VERY_FAR, 5),
+        (2000, BUCKET_MID, 3),
+        (10000, BUCKET_FAR, 4),
+        (25000, BUCKET_VERY_FAR, 5),
     ]
 
     def _make_sensor(self, distance_m: float) -> BucketLevelSensor:
@@ -126,15 +126,15 @@ class TestBucketLevelSensor:
         assert sensor.native_value == 2
 
     def test_mid_returns_3(self):
-        sensor = self._make_sensor(1000)
+        sensor = self._make_sensor(2000)
         assert sensor.native_value == 3
 
     def test_far_returns_4(self):
-        sensor = self._make_sensor(5000)
+        sensor = self._make_sensor(10000)
         assert sensor.native_value == 4
 
     def test_very_far_returns_5(self):
-        sensor = self._make_sensor(20000)
+        sensor = self._make_sensor(25000)
         assert sensor.native_value == 5
 
     def test_none_distance_returns_none(self):
@@ -158,14 +158,14 @@ class TestProximityDurationSensor:
         sensor = self._make_sensor(ps)
         assert sensor.native_value is None
 
-    def test_returns_none_when_data_invalid(self):
-        # data_valid=False → available=False → native_value must return None (HA contract)
+    def test_still_returns_value_when_data_invalid(self):
+        # data_valid=False but coordinator available → cumulative sensor returns value, not None
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.data_valid = False
         ps.proximity_tracking_started = datetime.now().astimezone()
         ps.proximity_duration_s = 300.0
         sensor = self._make_sensor(ps)
-        assert sensor.native_value is None
+        assert sensor.native_value is not None
 
     def test_no_live_session_returns_stored_minutes(self):
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
@@ -314,9 +314,9 @@ class TestTodayZoneTimeSensor:
             ps.today_zone_seconds = zone_seconds
         return ps
 
-    def test_returns_none_when_data_invalid(self):
+    def test_still_returns_value_when_data_invalid(self):
         sensor = _make_zone_sensor(BUCKET_VERY_NEAR, self._ps(False))
-        assert sensor.native_value is None
+        assert sensor.native_value is not None
 
     def test_returns_zero_when_bucket_not_in_dict(self):
         # today_zone_seconds is empty; the bucket key is absent → default 0.0
@@ -376,13 +376,13 @@ class TestUpdateCountSensor:
         ps.update_count_b = count_b
         return ps
 
-    def test_returns_none_when_data_invalid_a(self):
+    def test_still_returns_value_when_data_invalid_a(self):
         sensor = _make_count_sensor("a", self._ps(False, count_a=5))
-        assert sensor.native_value is None
+        assert sensor.native_value is not None
 
-    def test_returns_none_when_data_invalid_b(self):
+    def test_still_returns_value_when_data_invalid_b(self):
         sensor = _make_count_sensor("b", self._ps(False, count_b=3))
-        assert sensor.native_value is None
+        assert sensor.native_value is not None
 
     def test_returns_update_count_a(self):
         sensor = _make_count_sensor("a", self._ps(True, count_a=42, count_b=7))
@@ -452,14 +452,14 @@ class TestProximityRateSensor:
     def _make_sensor(self, ps: PairState) -> ProximityRateSensor:
         return _make_sensor(ProximityRateSensor, ps)
 
-    def test_returns_none_when_data_invalid(self):
+    def test_still_returns_value_when_data_invalid(self):
         now = datetime.now().astimezone()
         ps = self._ps(
             data_valid=False,
             proximity_tracking_started=now - timedelta(hours=1),
         )
         sensor = self._make_sensor(ps)
-        assert sensor.native_value is None
+        assert sensor.native_value is not None
 
     def test_returns_none_when_tracking_started_is_none(self):
         ps = self._ps(data_valid=True, proximity_tracking_started=None)
@@ -918,9 +918,9 @@ class TestTodayProximityTimeSensor:
         ps.today_proximity_seconds = today_proximity_seconds
         return _make_sensor(TodayProximityTimeSensor, ps)
 
-    def test_returns_none_when_data_invalid(self):
+    def test_still_returns_value_when_data_invalid(self):
         sensor = self._make(False, 600.0)
-        assert sensor.native_value is None
+        assert sensor.native_value is not None
 
     def test_returns_minutes(self):
         sensor = self._make(True, 600.0)
@@ -938,7 +938,9 @@ class TestTodayProximityTimeSensor:
 
 class TestProximityTrackingStartedSensor:
     def _make(self, tracking_started):
-        from custom_components.entity_distance.sensor import ProximityTrackingStartedSensor
+        from custom_components.entity_distance.sensor import (
+            ProximityTrackingStartedSensor,
+        )
 
         ps = PairState(entity_a_id="person.alice", entity_b_id="person.bob")
         ps.data_valid = True
@@ -1269,7 +1271,9 @@ class TestEntityStateSensor:
 
 class TestProximityTrackingStartedSensorExtra:
     def test_returns_none_when_not_set(self):
-        from custom_components.entity_distance.sensor import ProximityTrackingStartedSensor
+        from custom_components.entity_distance.sensor import (
+            ProximityTrackingStartedSensor,
+        )
 
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.data_valid = True
@@ -1277,7 +1281,9 @@ class TestProximityTrackingStartedSensorExtra:
         assert sensor.native_value is None
 
     def test_returns_timestamp(self):
-        from custom_components.entity_distance.sensor import ProximityTrackingStartedSensor
+        from custom_components.entity_distance.sensor import (
+            ProximityTrackingStartedSensor,
+        )
 
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.data_valid = True
@@ -1299,8 +1305,8 @@ class TestSettingsSensor:
         coordinator = MagicMock()
         coordinator.last_update_success = True
         coordinator.settings_snapshot = {
-            "entry_threshold_m": 200.0,
-            "exit_threshold_m": 500.0,
+            "proximity_zone": "very_near",
+            "proximity_threshold_m": 200,
             "debounce_s": 10,
             "max_accuracy_m": 150,
             "max_speed_kmh": 1000,
@@ -1309,10 +1315,10 @@ class TestSettingsSensor:
             "min_updates_reliable": 3,
             "updates_window_s": 1800,
             "require_reliable": False,
-            "zone_very_near_m": 100,
-            "zone_near_m": 500,
-            "zone_mid_m": 2000,
-            "zone_far_m": 10000,
+            "zone_very_near_m": 200,
+            "zone_near_m": 1000,
+            "zone_mid_m": 5000,
+            "zone_far_m": 20000,
         }
         entry = MagicMock()
         entry.entry_id = "test"
@@ -1325,18 +1331,20 @@ class TestSettingsSensor:
 
     def test_state_summary(self):
         sensor = self._make()
-        # Format: "entry/exit m · debounce s · zones vn/n/m/f m"
-        assert sensor.native_value == "200/500m · 10s · zones 100/500/2000/10000m"
+        # Format: "proximity=<zone> · zones vn/n/m/f m · debounce s"
+        assert (
+            sensor.native_value
+            == "proximity ≤ 200m (very_near) · zones 200/1000/5000/20000m · debounce 10s"
+        )
 
     def test_attributes_carry_all_settings(self):
         sensor = self._make()
         attrs = sensor.extra_state_attributes
-        assert attrs["entry_threshold_m"] == 200.0
-        assert attrs["exit_threshold_m"] == 500.0
-        assert attrs["zone_very_near_m"] == 100
-        assert attrs["zone_far_m"] == 10000
+        assert attrs["proximity_zone"] == "very_near"
+        assert attrs["zone_very_near_m"] == 200
+        assert attrs["zone_far_m"] == 20000
         assert attrs["require_reliable"] is False
-        # All 14 keys present.
+        # All 13 keys present.
         assert len(attrs) == 14
 
     def test_unavailable_when_coordinator_failed(self):

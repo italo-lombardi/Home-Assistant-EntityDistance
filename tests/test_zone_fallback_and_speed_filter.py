@@ -125,7 +125,12 @@ class TestFindZoneByName:
         zone = State(
             "zone.office",
             "0",
-            {"latitude": 51.5, "longitude": -0.1, "radius": 50, "friendly_name": "The Office"},
+            {
+                "latitude": 51.5,
+                "longitude": -0.1,
+                "radius": 50,
+                "friendly_name": "The Office",
+            },
         )
         hass = _make_hass([zone])
         result = _find_zone_by_name(hass, "The Office")
@@ -135,7 +140,12 @@ class TestFindZoneByName:
         zone = State(
             "zone.work",
             "0",
-            {"latitude": 51.5, "longitude": -0.1, "radius": 50, "friendly_name": "Work"},
+            {
+                "latitude": 51.5,
+                "longitude": -0.1,
+                "radius": 50,
+                "friendly_name": "Work",
+            },
         )
         hass = _make_hass([zone])
         result = _find_zone_by_name(hass, "work")
@@ -291,7 +301,8 @@ class TestSpeedFilterNoiseBudget:
         coord.hass.states.async_all.return_value = []
 
         with patch(
-            "custom_components.entity_distance.coordinator.ha_distance", return_value=new_dist
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=new_dist,
         ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", now, set())
         return result
@@ -407,7 +418,10 @@ class TestCalcPairZoneFallback:
         if prev_dist is not None:
             ps.prev_distance_m = prev_dist
             ps.prev_calc_time = now - timedelta(seconds=prev_calc_offset_s or 60)
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=5.0):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=5.0,
+        ):
             result = coord._calc_pair(ps, person_state.entity_id, other_state.entity_id, now, set())
         return result
 
@@ -497,7 +511,10 @@ class TestCalcPairZoneFallback:
         k = pair_key("person.alice", "person.bob")
         ps = coord._pair_states[k]
         now = datetime.now().astimezone()
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=200.0):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=200.0,
+        ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", now, set())
         assert result.data_valid is True
         assert result.accuracy_a == 20.0  # GPS accuracy preserved
@@ -521,7 +538,10 @@ class TestCalcPairZoneFallback:
         k = pair_key("person.alice", "person.bob")
         ps = coord._pair_states[k]
         now = datetime.now().astimezone()
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=5.0):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=5.0,
+        ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", now, set())
         assert result.proximity is True
 
@@ -543,7 +563,10 @@ class TestCalcPairZoneFallback:
         ps = coord._pair_states[k]
         now = datetime.now().astimezone()
         # ha_distance with identical coords = 0
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=0.0):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=0.0,
+        ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", now, set())
         assert result.data_valid is True
         assert result.proximity is True
@@ -580,7 +603,10 @@ class TestResyncSilenceZoneFallback:
         ps.last_update_a = now - timedelta(seconds=700)
         ps.last_update_b = now - timedelta(seconds=700)
 
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=100.0):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=100.0,
+        ):
             coord._calc_pair(ps, "person.alice", "person.bob", now, set())
 
         assert coord._resync_holding[k] is True
@@ -607,7 +633,10 @@ class TestResyncSilenceZoneFallback:
         ps.last_update_a = now - timedelta(seconds=10)
         ps.last_update_b = None  # zone entity never updates via state_changed
 
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=100.0):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=100.0,
+        ):
             coord._calc_pair(ps, "person.alice", "zone.home", now, set())
 
         assert coord._resync_holding[k] is False

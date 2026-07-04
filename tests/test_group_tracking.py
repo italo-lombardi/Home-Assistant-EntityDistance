@@ -263,7 +263,10 @@ class TestCalcPairInvalidations:
         )
         ps = _fresh_pair()
 
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=111.0):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=111.0,
+        ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
         assert result.data_valid is False
@@ -279,7 +282,10 @@ class TestCalcPairInvalidations:
         )
         ps = _fresh_pair()
 
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=111.0):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=111.0,
+        ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
         assert result.data_valid is False
@@ -290,7 +296,9 @@ class TestCalcPairInvalidations:
         coord = _make_coordinator(max_accuracy_m=200.0)
         # zone entity with very poor accuracy — should not be filtered
         state_a = State(
-            "zone.home", "zoning", {"latitude": 51.5, "longitude": -0.1, "gps_accuracy": 9999.0}
+            "zone.home",
+            "zoning",
+            {"latitude": 51.5, "longitude": -0.1, "gps_accuracy": 9999.0},
         )
         state_b = _make_state("person.bob", 51.501, -0.1, accuracy=20.0)
         coord.hass.states.get = MagicMock(
@@ -298,7 +306,10 @@ class TestCalcPairInvalidations:
         )
         ps = PairState(entity_a_id="person.bob", entity_b_id="zone.home")
 
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=111.0):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=111.0,
+        ):
             result = coord._calc_pair(ps, "zone.home", "person.bob", _NOW, set())
 
         assert result.data_valid is True
@@ -318,7 +329,8 @@ class TestCalcPairInvalidations:
 
         # Distance jumped 100_000m in 60s → implied speed = 100000/60*3.6 = 6000 km/h > 150
         with patch(
-            "custom_components.entity_distance.coordinator.ha_distance", return_value=100_000.0
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=100_000.0,
         ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
@@ -343,7 +355,10 @@ class TestCalcPairProximityTransitions:
         ps.proximity = False
 
         # 200m is well inside entry_threshold_m of 500m
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=200.0):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=200.0,
+        ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
         assert result.proximity is True
@@ -361,7 +376,10 @@ class TestCalcPairProximityTransitions:
         ps.proximity_since = datetime(2024, 6, 1, 11, 0, 0, tzinfo=UTC)
 
         # 800m is beyond exit_threshold_m of 700m
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=800.0):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=800.0,
+        ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
         assert result.proximity is False
@@ -379,7 +397,10 @@ class TestCalcPairProximityTransitions:
         ps.proximity_since = datetime(2024, 6, 1, 11, 0, 0, tzinfo=UTC)
 
         # 150m — inside both thresholds, proximity stays True
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=150.0):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=150.0,
+        ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
         assert result.proximity is True
@@ -396,7 +417,8 @@ class TestCalcPairProximityTransitions:
 
         # 2200m — outside entry threshold, stays False
         with patch(
-            "custom_components.entity_distance.coordinator.ha_distance", return_value=2200.0
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=2200.0,
         ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
@@ -419,7 +441,10 @@ class TestCalcPairDirection:
         ps = _fresh_pair()
         # No previous data → direction stays None
 
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=300.0):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=300.0,
+        ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
         assert result.direction is None
@@ -435,7 +460,10 @@ class TestCalcPairDirection:
         ps.prev_distance_m = 300.0  # current will also be 300.0 → delta < 50m
         ps.prev_calc_time = datetime(2024, 6, 1, 11, 59, 0, tzinfo=UTC)
 
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=300.0):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=300.0,
+        ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
         assert result.direction == "stationary"
@@ -451,7 +479,10 @@ class TestCalcPairDirection:
         ps.prev_distance_m = 600.0  # current 200m → delta = -400m → approaching
         ps.prev_calc_time = datetime(2024, 6, 1, 11, 59, 0, tzinfo=UTC)
 
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=200.0):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=200.0,
+        ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
         assert result.direction == "approaching"
@@ -468,7 +499,10 @@ class TestCalcPairDirection:
         ps.prev_distance_m = 200.0  # current 800m → delta = +600m → diverging
         ps.prev_calc_time = datetime(2024, 6, 1, 11, 59, 0, tzinfo=UTC)
 
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=800.0):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=800.0,
+        ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
         assert result.direction == "diverging"
@@ -508,7 +542,10 @@ class TestCalcPairNoEvents:
         ps.update_count_a = 5
         ps.update_count_b = 5
 
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=200.0):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=200.0,
+        ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
         assert coord.hass.bus.fire.call_count == 0
@@ -522,7 +559,10 @@ class TestCalcPairNoEvents:
         ps.update_count_a = 5
         ps.update_count_b = 5
 
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=800.0):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=800.0,
+        ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
         assert coord.hass.bus.fire.call_count == 0
@@ -536,7 +576,8 @@ class TestCalcPairNoEvents:
         ps.update_count_b = 5
 
         with patch(
-            "custom_components.entity_distance.coordinator.ha_distance", return_value=1200.0
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=1200.0,
         ):
             coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
@@ -551,7 +592,10 @@ class TestCalcPairNoEvents:
         ps.update_count_a = 1  # below min_updates_reliable of 10
         ps.update_count_b = 1
 
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=200.0):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=200.0,
+        ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
         assert coord.hass.bus.fire.call_count == 0

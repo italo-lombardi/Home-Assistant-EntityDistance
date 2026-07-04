@@ -19,11 +19,13 @@ Track the distance between any two or more entities — people, devices, or zone
 ## Features
 
 - **Person-to-person, person-to-zone, device-to-zone, zone-to-zone** — any combination of `person`, `device_tracker`, `sensor`, or `zone` entities
-- **Group tracking** — select 2–5 entities; all pairwise distances are tracked under one config entry (2 entities = 1 pair, 3 = 3 pairs, 4 = 6 pairs)
-- **Group sensors** — for 3+ entities: Min Distance, Any In Proximity, All In Proximity
-- **26 sensors per pair** — distance, proximity zone, proximity zone level, proximity duration, proximity rate, proximity tracking started, last seen together, today proximity time, direction, direction level, closing speed, ETA, today zone times, GPS accuracy, last update, update count, entity state, today unaccounted time (per entity where applicable)
-- **Proximity binary sensor** — ON/OFF with configurable entry/exit hysteresis to prevent flickering
+- **Group tracking** — select 2–5 entities; all pairwise distances are tracked under one config entry (2 entities = 1 pair, 3 = 3 pairs, 4 = 6 pairs, 5 = 10 pairs)
+- **Group sensors** — for 3+ entities: Min Distance, Any In Proximity, All In Proximity, Settings
+- **27 sensors per pair** — distance, proximity zone, proximity zone level, proximity duration, proximity rate, proximity tracking started, last seen together, today proximity time, direction, direction level, closing speed, ETA, today zone times, GPS accuracy, last update, update count, entity state, today unaccounted time (per entity where applicable)
+- **Proximity binary sensor** — ON when entities are in the selected proximity zone, OFF when they move to the next zone out (natural hysteresis, no separate entry/exit threshold settings needed)
 - **Same Zone binary sensor** — ON when both entities share the same named zone, OFF otherwise (never `unknown`)
+- **Reliable binary sensor** — ON when both entities have enough recent GPS fixes to meet the reliability threshold
+- **Zone bucket binary sensors** — one per zone (Very Near, Near, Medium, Far, Very Far): ON while the pair's distance falls in that zone
 - **Direction of travel** — approaching, diverging, or stationary
 - **ETA** — estimated minutes until together, only when approaching
 - **Closing speed** — convergence rate in km/h
@@ -33,7 +35,7 @@ Track the distance between any two or more entities — people, devices, or zone
 - **GPS accuracy filter** — reject updates with poor GPS fix quality (default 300 m, tolerates normal mobile GPS noise)
 - **Speed filter** — reject physically implausible location jumps; accuracy-adjusted to ignore GPS bounce in same vehicle
 - **HA 2026.7 compatible** — sensors stay valid when a person is home via WiFi/BT presence scanner (zone coordinate fallback)
-- **Reliability tracking** — require consistent updates before proximity events fire
+- **Reliability tracking** — require consistent updates before the 'In Proximity' sensor turns ON
 - **Diagnostic sensors** — GPS accuracy, last update, update count (last 30 min) per tracked entity
 - **Refresh button** — force immediate mobile app location update
 - **Multiple pairs** — each pair gets its own HA device; add as many as needed
@@ -71,85 +73,39 @@ Select 2–5 entities to track. Supported types: `person`, `device_tracker`, `se
 |-------|-------------|
 | Entities | Select 2 to 5 entities — all pairwise distances are tracked automatically |
 
-For a 2-entity selection you get 1 pair. For 3 entities you get 3 pairs. For 4 entities you get 6 pairs. Each pair gets its own sub-device under the group.
-
-<!-- SCREENSHOT NEEDED: config_flow_step1_entity_select.png
-     What to capture:
-     - Settings → Devices & Services → Add Integration → Entity Distance
-     - Step 1 of the config flow showing the multi-select entity picker
-     - Select 3–4 entities (e.g. person.italo, person.dercy, zone.home, device_tracker.xceed)
-     - Show the entity list expanded so it is clear multiple selections are possible
-     - Recommended: 1200×800 px, light theme
--->
+For a 2-entity selection you get 1 pair. For 3 entities you get 3 pairs. For 4 entities you get 6 pairs. For 5 entities you get 10 pairs. Each pair gets its own sub-device under the group.
 
 ![Config flow step 1 — select entities](assets/screenshots/config_flow_step1_entity_select.png)
 
-### Step 2: Proximity Settings
+### Step 2: Distance Settings
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| Nearby threshold (m) | 200 | Entities must be closer than this to trigger a proximity event |
-| Away threshold (m) | 500 | Entities must move further than this before proximity ends (hysteresis) |
-| Wait before reacting (s) | 0 | After a location update arrives, how long to wait before recalculating. 0 = instant. Raise to 5–15 s if you see jittery on/off switching |
-| Configure proximity zone thresholds | Off | Turn on to customize Very Near / Near / Mid / Far zone distances |
-| Configure advanced filters | Off | Turn on to configure GPS accuracy, speed, and reliability filters |
+| Very Near zone limit (m) | 200 | Entities are 'Very Near' at or closer than this distance |
+| Near zone limit (m) | 1000 | Entities are 'Near' at or closer than this distance |
+| Medium zone limit (m) | 5000 | Entities are at 'Medium' distance at or closer than this |
+| Far zone limit (m) | 20000 | Entities are 'Far' at or closer than this distance; beyond is 'Very Far' |
+| Proximity alert zone | Very Near | The 'In Proximity' sensor turns ON when entities are within this zone or closer, and OFF when they move to the next zone out |
 
-<!-- SCREENSHOT NEEDED: config_flow_step2_proximity_settings.png
-     What to capture:
-     - Step 2 of the config flow: proximity/threshold settings form
-     - Show all fields: Nearby threshold, Away threshold, Wait before reacting,
-       "Configure proximity zone thresholds" toggle, "Configure advanced filters" toggle
-     - Leave all values at their defaults
-     - Recommended: 1200×800 px, light theme
--->
+Thresholds must be strictly increasing: Very Near < Near < Medium < Far.
 
-![Config flow step 2 — proximity settings](assets/screenshots/config_flow_step2_proximity_settings.png)
+Note: selecting **Far** as the proximity zone uses 2× the Far boundary (40,000 m by default) as the exit distance, since there is no zone beyond Far.
 
-### Step 3: Zone Thresholds (optional)
+![Config flow step 2 — distance settings](assets/screenshots/config_flow_step2_distance_settings.png)
 
-Only shown when "Configure proximity zone thresholds" is enabled in Step 2.
-
-| Field | Default | Description |
-|-------|---------|-------------|
-| Very Near threshold (m) | 100 | Distance at or below which entities are Very Near |
-| Near threshold (m) | 500 | Distance at or below which entities are Near |
-| Mid threshold (m) | 2000 | Distance at or below which entities are Mid |
-| Far threshold (m) | 10000 | Distance at or below which entities are Far (beyond this is Very Far) |
-
-Thresholds must be strictly increasing: Very Near < Near < Mid < Far.
-
-<!-- SCREENSHOT NEEDED: config_flow_step3_zone_thresholds.png
-     What to capture:
-     - Step 3 of the config flow: zone threshold settings form
-     - Shown only when "Configure proximity zone thresholds" was enabled in step 2
-     - Show all 4 fields: Very Near, Near, Mid, Far thresholds with default values
-     - Recommended: 1200×800 px, light theme
--->
-
-![Config flow step 3 — zone thresholds](assets/screenshots/config_flow_step3_zone_thresholds.png)
-
-### Step 4: Advanced Filters (optional)
+### Step 3: Advanced Filters (optional)
 
 Only shown when "Configure advanced filters" is enabled in Step 2.
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| Max GPS error radius (m) | 150 | Ignore updates where GPS error exceeds this radius (0 = off) |
+| Wait before reacting (s) | 0 | After a location update arrives, how long to wait before recalculating. 0 = instant. Raise to 5–15 s if you see jittery on/off switching |
+| Max GPS error radius (m) | 300 | Ignore updates where GPS error exceeds this radius (0 = off) |
 | Max speed filter (km/h) | 1000 | Ignore updates implying movement faster than this — catches GPS teleports, allows flights (0 = off) |
-| Only trigger when data is reliable | Off | Require several consistent updates before firing proximity events |
+| Only trigger when data is reliable | Off | Require several consistent updates before turning the 'In Proximity' sensor ON |
 | Consecutive updates required for reliability | 3 | Consecutive updates required before data is considered reliable |
 
-<!-- SCREENSHOT NEEDED: config_flow_step4_advanced_filters.png
-     What to capture:
-     - Step 4 of the config flow: advanced filter settings form
-     - Shown only when "Configure advanced filters" was enabled in step 2
-     - Show all fields: Max GPS error radius, Max speed filter, Only trigger when reliable,
-       Consecutive updates required
-     - Leave all values at their defaults
-     - Recommended: 1200×800 px, light theme
--->
-
-![Config flow step 4 — advanced filters](assets/screenshots/config_flow_step4_advanced_filters.png)
+![Config flow step 3 — advanced filters](assets/screenshots/config_flow_step3_advanced_filters.png)
 
 All settings can be changed after setup via **Configure** on the integration card.
 
@@ -157,14 +113,14 @@ All settings can be changed after setup via **Configure** on the integration car
 
 ## Entities
 
-Each configured group creates one HA device (the group) with per-pair sub-devices. A 2-entity group creates 29 entities (26 sensors + 2 binary sensors + 1 button). A 3-entity group creates 87 pair entities + 3 group sensors.
+Each configured group creates one HA device (the group) with per-pair sub-devices. A 2-entity group creates 36 entities (27 sensors + 8 binary sensors + 1 button). A 3-entity group creates 108 pair entities + 4 group sensors.
 
 | Group size | Pairs | Total entities (approx) |
 |-----------|-------|------------------------|
-| 2 | 1 | 29 |
-| 3 | 3 | 87 + 3 group |
-| 4 | 6 | 174 + 3 group |
-| 5 | 10 | 290 + 3 group |
+| 2 | 1 | 36 |
+| 3 | 3 | 108 + 4 group |
+| 4 | 6 | 216 + 4 group |
+| 5 | 10 | 360 + 4 group |
 
 ### Pair Sensors
 
@@ -173,7 +129,7 @@ Each configured group creates one HA device (the group) with per-pair sub-device
 | Distance | Distance between entities in meters | `distance` |
 | Proximity Zone | Very Near / Near / Medium / Far / Very Far | `enum` |
 | Proximity Zone Number | Numeric zone level: 1 (Very Near) to 5 (Very Far) | — |
-| Proximity Duration | Minutes currently in proximity (live, includes current session) | `duration` |
+| Proximity Duration | Total time entities have been within proximity distance — live, includes the current open session | `duration` |
 | Proximity Tracking Started | Timestamp when tracking began for this pair (set once) | `timestamp` |
 | Proximity Rate | Percentage of tracked time spent in proximity | `%` |
 | Last Seen Together | Timestamp when the last proximity session ended (exit) — shows "Together now" in the Pair Card while currently in proximity | `timestamp` |
@@ -196,6 +152,7 @@ Each configured group creates one HA device (the group) with per-pair sub-device
 | State (Name A) | Current state of entity A (e.g. home, away, zone name) | — |
 | State (Name B) | Current state of entity B (e.g. home, away, zone name) | — |
 | Today Unaccounted Time | Today's elapsed minutes minus sum of bucket times — captures HA-down windows, invalid GPS, and pre-setup time on install day | `duration` |
+| Settings | Diagnostic snapshot: proximity threshold, zone boundaries, debounce. State: `proximity ≤ Xm (zone) · zones vn/n/m/f · debounce Xs`. Full config in attributes | — |
 
 > GPS Accuracy, Last Update, and Update Count are diagnostic sensors — collapsed by default in the HA UI.
 
@@ -203,8 +160,14 @@ Each configured group creates one HA device (the group) with per-pair sub-device
 
 | Entity | Description | Device Class |
 |--------|-------------|--------------|
-| In Proximity | ON when within nearby distance, OFF when beyond away distance | `presence` |
+| In Proximity | ON when entities are within the selected proximity zone (or closer), OFF when they move to the next zone out | `presence` |
 | Same Zone | ON when both entities are in the same named zone (e.g. both `home`), OFF otherwise. Never `unknown` — when either side is `not_home` / `unknown` / `unavailable`, the pair is not in the same zone so the sensor is OFF | — |
+| Reliable | ON when both entities have enough recent GPS updates to meet the reliability threshold | — |
+| Very Near | ON while the pair's current distance falls in the Very Near zone | — |
+| Near | ON while the pair's current distance falls in the Near zone | — |
+| Medium | ON while the pair's current distance falls in the Medium zone | — |
+| Far | ON while the pair's current distance falls in the Far zone | — |
+| Very Far | ON while the pair's current distance falls in the Very Far zone | — |
 
 > `Same Zone` is not created for zone-zone pairs (always trivially true).
 
@@ -215,6 +178,7 @@ Each configured group creates one HA device (the group) with per-pair sub-device
 | Min Distance | Smallest distance across all pairs in the group | `distance` |
 | Any In Proximity | ON when any pair is in proximity | `presence` |
 | All In Proximity | ON when every pair is in proximity | `presence` |
+| Settings | Diagnostic snapshot for the group: zone boundaries, proximity zone, debounce | — |
 
 ### Button
 
@@ -222,32 +186,21 @@ Each configured group creates one HA device (the group) with per-pair sub-device
 |--------|-------------|
 | Refresh Location | Sends a silent push notification to request an immediate location update from both entities (iOS and Android) |
 
-<!-- SCREENSHOT NEEDED: device_card_entities.png
-     What to capture:
-     - Settings → Devices & Services → Entity Distance → click a pair sub-device
-       (e.g. "Italo & Home" or "Dercy & Italo")
-     - Show the full device card with all entities listed
-     - Scroll to show all 29 entities (sensors, binary sensors, button)
-     - Alternatively: two side-by-side screenshots showing top and bottom halves
-     - Recommended: 1200×1600 px (tall), light theme
-     - Tip: use browser DevTools to reduce zoom so more fits in one shot
--->
-
 ![Pair device card — all entities](assets/screenshots/device_card_entities.png)
 
 ---
 
 ## Proximity Zone Thresholds
 
-Default thresholds (configurable via **Configure** → **Configure proximity zone thresholds**):
+Default thresholds (configurable via **Configure** on the integration card):
 
 | Zone | Default Distance | Level |
 |------|-----------------|-------|
-| Very Near | ≤ 100 m | 1 |
-| Near | ≤ 500 m | 2 |
-| Medium | ≤ 2 km | 3 |
-| Far | ≤ 10 km | 4 |
-| Very Far | > 10 km | 5 |
+| Very Near | ≤ 200 m | 1 |
+| Near | ≤ 1000 m | 2 |
+| Medium | ≤ 5 km | 3 |
+| Far | ≤ 20 km | 4 |
+| Very Far | > 20 km | 5 |
 
 The **Proximity Zone Level** sensor exposes the same information as a number (1–5), useful for automations that compare or threshold on zone level without working with strings.
 
@@ -289,7 +242,7 @@ eta_minutes = current_distance_m / closing_speed_m/s / 60
 
 ### Proximity Duration
 
-Accumulated seconds while `In Proximity` is ON. Each update adds `now − prev_calc_time` to the running total. The current open session is included live (not only closed sessions).
+Accumulates time while `In Proximity` is ON. Each tick adds `now − prev_calc_time` to the running total. The current open session is included live. Displayed in minutes.
 
 ### Today Proximity Time / Today Zone Times
 
@@ -301,12 +254,7 @@ Rolling window counter. Increments by 1 on each location update for that entity.
 
 ### In Proximity (Binary Sensor)
 
-Hysteresis logic prevents flickering:
-
-- **ON** when `distance ≤ entry threshold` (default 200 m)
-- **OFF** when `distance > exit threshold` (default 500 m)
-- State unchanged while distance is between the two thresholds
-- Entry and exit thresholds must differ — equal values are rejected at setup time
+ON when `distance ≤ proximity zone boundary`. OFF when `distance > next zone boundary` (natural hysteresis). The active zone is selected at setup — choosing 'Very Near' fires at ≤ 200 m and clears at > 1000 m (Near boundary) by default.
 
 ### State (Entity A / B)
 
@@ -315,7 +263,7 @@ Direct mirror of `hass.states[entity_id].state`. Returns whatever HA reports —
 ### Today Unaccounted Time
 
 ```
-unaccounted_minutes = (now − today_midnight) − sum(today_zone_seconds) / 60
+unaccounted_minutes = ((now − today_midnight).total_seconds() − sum(today_zone_seconds)) / 60
 ```
 
 Measures how many minutes of today are not credited to any zone bucket. Typically caused by HA being down, the pair being invalidated (GPS unavailable, accuracy filter, resync hold), or — on day 1 — by setup happening after midnight (tracking starts mid-day, so the pre-setup hours are legitimately unaccounted by definition). The `tracking_started` attribute exposes when the pair was first set up so a large initial value has obvious context. Clamps to `0` if accounted time exceeds elapsed (cannot go negative).
@@ -368,14 +316,14 @@ automation:
   - alias: "Notify when nearby"
     trigger:
       - platform: state
-        entity_id: binary_sensor.entity_distance_alice_bob_proximity
+        entity_id: binary_sensor.alice_bob_in_proximity
         to: "on"
     action:
       - service: notify.mobile_app
         data:
-          title: "Alice and Bob are nearby"
+          title: "Alice and Bob are in proximity"
           message: >
-            {{ states('sensor.entity_distance_alice_bob_distance') }} m apart
+            {{ states('sensor.alice_bob_distance') }} m apart
 ```
 
 ### Notify when approaching
@@ -385,40 +333,39 @@ automation:
   - alias: "Notify on approach"
     trigger:
       - platform: state
-        entity_id: sensor.entity_distance_alice_bob_direction
+        entity_id: sensor.alice_bob_direction
         to: "approaching"
     action:
       - service: notify.mobile_app
         data:
           title: "Someone is approaching"
           message: >
-            ETA: {{ states('sensor.entity_distance_alice_bob_eta') }} min
+            ETA: {{ states('sensor.alice_bob_eta') }} min
 ```
 
-### Use in an automation with event trigger
+### React when entities come into proximity
 
 ```yaml
 automation:
-  - alias: "React to proximity enter"
+  - alias: "React to proximity"
     trigger:
-      - platform: event
-        event_type: entity_distance_enter
-        event_data:
-          entity_a: person.alice
-          entity_b: person.bob
+      - platform: state
+        entity_id: binary_sensor.alice_bob_in_proximity
+        from: "off"
+        to: "on"
     action:
       - service: notify.mobile_app
         data:
           title: "Together"
           message: >
-            Distance: {{ trigger.event.data.distance_m | round(0) }} m
+            Distance: {{ states('sensor.alice_bob_distance') }} m
 ```
 
 ---
 
 ## Lovelace Cards
 
-The integration ships two custom Lovelace cards, automatically registered as resources when the integration loads.
+The integration ships three custom Lovelace cards, automatically registered as resources when the integration loads.
 
 ### Entity Distance — Pair Card (`entity-distance-pair-card`)
 
@@ -531,47 +478,21 @@ Nodes are placed in a grid based on entity count: 2 = vertical pair, 3 = triangl
 
 The visual editor auto-discovers available groups from hass.states and presents them in a dropdown — no manual entity ID entry required. Use the editor's entity list to reorder nodes, toggle per-entity visibility (eye icon), set the title, enable equal spacing, configure per-node label settings, and configure per-pair distance and zone label visibility.
 
-<!-- SCREENSHOT NEEDED: lovelace_entity_distance_group_card.png
-     What to capture:
-     - A Lovelace dashboard showing the entity-distance-group-card
-     - Use a 4-entity group (person + person + zone + device_tracker) so 6 lines are shown
-     - Ideal state: at least one pair in proximity (green glowing line) and others not
-     - Show the full card including the header badge ("X of 6 pairs in proximity")
-     - Recommended: 800×500 px, light or dark theme
--->
-
 ![Entity Distance — Group Card](assets/screenshots/lovelace_entity_distance_group_card.png)
 
 If auto-registration fails (e.g. YAML-only Lovelace mode), add manually:
 
 ```yaml
 resources:
-  - url: /entity_distance/entity-distance-pair-card.js?0.3.1
+  - url: /entity_distance/entity-distance-pair-card.js?0.4.0
     type: module
-  - url: /entity_distance/entity-distance-avatar-card.js?0.3.1
+  - url: /entity_distance/entity-distance-avatar-card.js?0.4.0
     type: module
-  - url: /entity_distance/entity-distance-group-card.js?0.3.1
+  - url: /entity_distance/entity-distance-group-card.js?0.4.0
     type: module
 ```
 
-<!-- SCREENSHOT NEEDED: lovelace_entity_distance_card.png
-     What to capture:
-     - A Lovelace dashboard showing the entity-distance-pair-card
-     - Ideal state: entities NOT in proximity, with a real distance value (e.g. 3.5 km)
-       so the card shows distance, direction, zone, speed fields populated
-     - Show at least one card, ideally two side-by-side (one person-to-person, one person-to-zone)
-     - Recommended: 800×500 px, light or dark theme (pick the one that looks better)
--->
-
 ![Entity Distance — Pair Card](assets/screenshots/lovelace_entity_distance_card.png)
-
-<!-- SCREENSHOT NEEDED: lovelace_entity_distance_people_card.png
-     What to capture:
-     - A Lovelace dashboard showing the entity-distance-avatar-card
-     - Ideal state: two people with avatars visible, NOT in proximity (so the badge shows "Not in Proximity")
-     - The card should show entity avatars side-by-side with distance and zone info between them
-     - Recommended: 800×400 px, light or dark theme (pick the one that looks better)
--->
 
 ![Entity Distance — Avatar Card](assets/screenshots/lovelace_entity_distance_people_card.png)
 

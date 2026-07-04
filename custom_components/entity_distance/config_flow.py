@@ -9,28 +9,33 @@ from homeassistant.helpers.selector import (
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
 )
 import voluptuous as vol
 
 from .const import (
+    BUCKET_FAR,
+    BUCKET_MID,
+    BUCKET_NEAR,
+    BUCKET_VERY_NEAR,
     CONF_DEBOUNCE_S,
     CONF_ENTITIES,
-    CONF_ENTRY_THRESHOLD_M,
-    CONF_EXIT_THRESHOLD_M,
     CONF_MAX_ACCURACY_M,
     CONF_MAX_SPEED_KMH,
     CONF_MIN_UPDATES_RELIABLE,
+    CONF_PROXIMITY_ZONE,
     CONF_REQUIRE_RELIABLE,
     CONF_ZONE_FAR_M,
     CONF_ZONE_MID_M,
     CONF_ZONE_NEAR_M,
     CONF_ZONE_VERY_NEAR_M,
     DEFAULT_DEBOUNCE_S,
-    DEFAULT_ENTRY_THRESHOLD_M,
-    DEFAULT_EXIT_THRESHOLD_M,
     DEFAULT_MAX_ACCURACY_M,
     DEFAULT_MAX_SPEED_KMH,
     DEFAULT_MIN_UPDATES_RELIABLE,
+    DEFAULT_PROXIMITY_ZONE,
     DEFAULT_REQUIRE_RELIABLE,
     DEFAULT_ZONE_FAR_M,
     DEFAULT_ZONE_MID_M,
@@ -42,11 +47,9 @@ from .const import (
 
 ENTITY_DOMAINS = ["person", "device_tracker", "sensor", "zone"]
 _CONF_SHOW_ADVANCED = "show_advanced"
-_CONF_SHOW_ZONE_THRESHOLDS = "show_zone_thresholds"
 
 _ZONE_OPTIONS_KEYS = {
-    CONF_ENTRY_THRESHOLD_M,
-    CONF_EXIT_THRESHOLD_M,
+    CONF_PROXIMITY_ZONE,
     CONF_DEBOUNCE_S,
     CONF_MAX_ACCURACY_M,
     CONF_MAX_SPEED_KMH,
@@ -58,22 +61,100 @@ _ZONE_OPTIONS_KEYS = {
     CONF_ZONE_FAR_M,
 }
 
+_PROXIMITY_ZONE_OPTIONS = [
+    BUCKET_VERY_NEAR,
+    BUCKET_NEAR,
+    BUCKET_MID,
+    BUCKET_FAR,
+]
+
 
 def _entry_title(entities: list[str]) -> str:
     names = [e.split(".")[-1].replace("_", " ").title() for e in entities]
     return " & ".join(names)
 
 
+def _distances_schema(defaults: dict) -> vol.Schema:
+    return vol.Schema(
+        {
+            vol.Required(
+                CONF_ZONE_VERY_NEAR_M,
+                default=defaults.get(CONF_ZONE_VERY_NEAR_M, DEFAULT_ZONE_VERY_NEAR_M),
+            ): NumberSelector(
+                NumberSelectorConfig(
+                    min=1,
+                    max=50000,
+                    unit_of_measurement="m",
+                    mode=NumberSelectorMode.BOX,
+                )
+            ),
+            vol.Required(
+                CONF_ZONE_NEAR_M,
+                default=defaults.get(CONF_ZONE_NEAR_M, DEFAULT_ZONE_NEAR_M),
+            ): NumberSelector(
+                NumberSelectorConfig(
+                    min=1,
+                    max=50000,
+                    unit_of_measurement="m",
+                    mode=NumberSelectorMode.BOX,
+                )
+            ),
+            vol.Required(
+                CONF_ZONE_MID_M,
+                default=defaults.get(CONF_ZONE_MID_M, DEFAULT_ZONE_MID_M),
+            ): NumberSelector(
+                NumberSelectorConfig(
+                    min=1,
+                    max=100000,
+                    unit_of_measurement="m",
+                    mode=NumberSelectorMode.BOX,
+                )
+            ),
+            vol.Required(
+                CONF_ZONE_FAR_M,
+                default=defaults.get(CONF_ZONE_FAR_M, DEFAULT_ZONE_FAR_M),
+            ): NumberSelector(
+                NumberSelectorConfig(
+                    min=1,
+                    max=200000,
+                    unit_of_measurement="m",
+                    mode=NumberSelectorMode.BOX,
+                )
+            ),
+            vol.Required(
+                CONF_PROXIMITY_ZONE,
+                default=defaults.get(CONF_PROXIMITY_ZONE, DEFAULT_PROXIMITY_ZONE),
+            ): SelectSelector(
+                SelectSelectorConfig(
+                    options=_PROXIMITY_ZONE_OPTIONS,
+                    mode=SelectSelectorMode.LIST,
+                    translation_key="proximity_zone",
+                )
+            ),
+            vol.Required(_CONF_SHOW_ADVANCED, default=False): BooleanSelector(),
+        }
+    )
+
+
+def _validate_distances(user_input: dict) -> dict:
+    """Return errors dict (empty = valid)."""
+    vn = user_input[CONF_ZONE_VERY_NEAR_M]
+    n = user_input[CONF_ZONE_NEAR_M]
+    m = user_input[CONF_ZONE_MID_M]
+    f = user_input[CONF_ZONE_FAR_M]
+    if not (vn < n < m < f):
+        return {"base": "zone_thresholds_not_ascending"}
+    return {}
+
+
 class EntityDistanceConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    VERSION = 2
+    VERSION = 3
     MINOR_VERSION = 1
 
     def __init__(self) -> None:
         self._data: dict = {}
 
     async def async_step_user(self, user_input=None):
-        # Abort any other in-progress flow for this handler so pressing X and
-        # restarting works cleanly instead of hitting already_in_progress.
         for flow in self.hass.config_entries.flow.async_progress_by_handler(DOMAIN):
             if flow["flow_id"] != self.flow_id:
                 self.hass.config_entries.flow.async_abort(flow["flow_id"])
@@ -92,9 +173,8 @@ class EntityDistanceConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 uid = f"{DOMAIN}_{'__'.join(sorted(entities))}"
                 await self.async_set_unique_id(uid)
                 self._abort_if_unique_id_configured()
-
                 self._data.update(user_input)
-                return await self.async_step_thresholds()
+                return await self.async_step_distances()
 
         return self.async_show_form(
             step_id="user",
@@ -108,115 +188,22 @@ class EntityDistanceConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def async_step_thresholds(self, user_input=None):
+    async def async_step_distances(self, user_input=None):
         errors = {}
         if user_input is not None:
-            if user_input[CONF_EXIT_THRESHOLD_M] <= user_input[CONF_ENTRY_THRESHOLD_M]:
-                errors["base"] = "exit_below_entry"
-            else:
+            errors = _validate_distances(user_input)
+            if not errors:
                 show_advanced = user_input.pop(_CONF_SHOW_ADVANCED, False)
-                show_zone = user_input.pop(_CONF_SHOW_ZONE_THRESHOLDS, False)
-                self._data.update(user_input)
-                if show_zone:
-                    self._data["_show_advanced"] = show_advanced
-                    return await self.async_step_zone_thresholds()
-                if show_advanced:
-                    return await self.async_step_advanced()
-                entities = self._data[CONF_ENTITIES]
-                clean = {k: v for k, v in self._data.items() if not k.startswith("_")}
-                return self.async_create_entry(
-                    title=_entry_title(entities),
-                    data=clean,
-                )
-
-        return self.async_show_form(
-            step_id="thresholds",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(
-                        CONF_ENTRY_THRESHOLD_M, default=DEFAULT_ENTRY_THRESHOLD_M
-                    ): NumberSelector(
-                        NumberSelectorConfig(
-                            min=1,
-                            max=50000,
-                            unit_of_measurement="m",
-                            mode=NumberSelectorMode.BOX,
-                        )
-                    ),
-                    vol.Required(
-                        CONF_EXIT_THRESHOLD_M, default=DEFAULT_EXIT_THRESHOLD_M
-                    ): NumberSelector(
-                        NumberSelectorConfig(
-                            min=1,
-                            max=50000,
-                            unit_of_measurement="m",
-                            mode=NumberSelectorMode.BOX,
-                        )
-                    ),
-                    vol.Required(CONF_DEBOUNCE_S, default=DEFAULT_DEBOUNCE_S): NumberSelector(
-                        NumberSelectorConfig(
-                            min=0,
-                            max=60,
-                            unit_of_measurement="s",
-                            mode=NumberSelectorMode.BOX,
-                        )
-                    ),
-                    vol.Required(_CONF_SHOW_ZONE_THRESHOLDS, default=False): BooleanSelector(),
-                    vol.Required(_CONF_SHOW_ADVANCED, default=False): BooleanSelector(),
-                }
-            ),
-            errors=errors,
-        )
-
-    async def async_step_zone_thresholds(self, user_input=None):
-        errors = {}
-        if user_input is not None:
-            vn = user_input[CONF_ZONE_VERY_NEAR_M]
-            n = user_input[CONF_ZONE_NEAR_M]
-            m = user_input[CONF_ZONE_MID_M]
-            f = user_input[CONF_ZONE_FAR_M]
-            if not (vn < n < m < f):
-                errors["base"] = "zone_thresholds_not_ascending"
-            else:
-                show_advanced = self._data.pop("_show_advanced", False)
                 self._data.update(user_input)
                 if show_advanced:
                     return await self.async_step_advanced()
                 entities = self._data[CONF_ENTITIES]
                 clean = {k: v for k, v in self._data.items() if not k.startswith("_")}
-                return self.async_create_entry(
-                    title=_entry_title(entities),
-                    data=clean,
-                )
+                return self.async_create_entry(title=_entry_title(entities), data=clean)
 
         return self.async_show_form(
-            step_id="zone_thresholds",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(
-                        CONF_ZONE_VERY_NEAR_M, default=DEFAULT_ZONE_VERY_NEAR_M
-                    ): NumberSelector(
-                        NumberSelectorConfig(
-                            min=1, max=50000, unit_of_measurement="m", mode=NumberSelectorMode.BOX
-                        )
-                    ),
-                    vol.Required(CONF_ZONE_NEAR_M, default=DEFAULT_ZONE_NEAR_M): NumberSelector(
-                        NumberSelectorConfig(
-                            min=1, max=50000, unit_of_measurement="m", mode=NumberSelectorMode.BOX
-                        )
-                    ),
-                    vol.Required(CONF_ZONE_MID_M, default=DEFAULT_ZONE_MID_M): NumberSelector(
-                        NumberSelectorConfig(
-                            min=1, max=50000, unit_of_measurement="m", mode=NumberSelectorMode.BOX
-                        )
-                    ),
-                    vol.Required(CONF_ZONE_FAR_M, default=DEFAULT_ZONE_FAR_M): NumberSelector(
-                        NumberSelectorConfig(
-                            min=1, max=200000, unit_of_measurement="m", mode=NumberSelectorMode.BOX
-                        )
-                    ),
-                }
-            ),
+            step_id="distances",
+            data_schema=_distances_schema(self._data),
             errors=errors,
         )
 
@@ -225,15 +212,20 @@ class EntityDistanceConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self._data.update(user_input)
             entities = self._data[CONF_ENTITIES]
             clean = {k: v for k, v in self._data.items() if not k.startswith("_")}
-            return self.async_create_entry(
-                title=_entry_title(entities),
-                data=clean,
-            )
+            return self.async_create_entry(title=_entry_title(entities), data=clean)
 
         return self.async_show_form(
             step_id="advanced",
             data_schema=vol.Schema(
                 {
+                    vol.Required(CONF_DEBOUNCE_S, default=DEFAULT_DEBOUNCE_S): NumberSelector(
+                        NumberSelectorConfig(
+                            min=0,
+                            max=60,
+                            unit_of_measurement="s",
+                            mode=NumberSelectorMode.BOX,
+                        )
+                    ),
                     vol.Required(
                         CONF_MAX_ACCURACY_M, default=DEFAULT_MAX_ACCURACY_M
                     ): NumberSelector(
@@ -277,82 +269,14 @@ class EntityDistanceOptionsFlow(config_entries.OptionsFlow):
     async def async_step_init(self, user_input=None):
         self._data = dict(self.config_entry.data)
         self._data.update(self.config_entry.options)
-        return await self.async_step_thresholds(user_input)
+        return await self.async_step_distances(user_input)
 
-    async def async_step_thresholds(self, user_input=None):
+    async def async_step_distances(self, user_input=None):
         errors = {}
         if user_input is not None:
-            if user_input[CONF_EXIT_THRESHOLD_M] <= user_input[CONF_ENTRY_THRESHOLD_M]:
-                errors["base"] = "exit_below_entry"
-            else:
+            errors = _validate_distances(user_input)
+            if not errors:
                 show_advanced = user_input.pop(_CONF_SHOW_ADVANCED, False)
-                show_zone = user_input.pop(_CONF_SHOW_ZONE_THRESHOLDS, False)
-                self._data.update(user_input)
-                if show_zone:
-                    self._data["_show_advanced"] = show_advanced
-                    return await self.async_step_zone_thresholds()
-                if show_advanced:
-                    return await self.async_step_advanced()
-                return self.async_create_entry(
-                    title="",
-                    data={k: v for k, v in self._data.items() if k in _ZONE_OPTIONS_KEYS},
-                )
-
-        return self.async_show_form(
-            step_id="thresholds",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(
-                        CONF_ENTRY_THRESHOLD_M,
-                        default=self._data.get(CONF_ENTRY_THRESHOLD_M, DEFAULT_ENTRY_THRESHOLD_M),
-                    ): NumberSelector(
-                        NumberSelectorConfig(
-                            min=1,
-                            max=50000,
-                            unit_of_measurement="m",
-                            mode=NumberSelectorMode.BOX,
-                        )
-                    ),
-                    vol.Required(
-                        CONF_EXIT_THRESHOLD_M,
-                        default=self._data.get(CONF_EXIT_THRESHOLD_M, DEFAULT_EXIT_THRESHOLD_M),
-                    ): NumberSelector(
-                        NumberSelectorConfig(
-                            min=1,
-                            max=50000,
-                            unit_of_measurement="m",
-                            mode=NumberSelectorMode.BOX,
-                        )
-                    ),
-                    vol.Required(
-                        CONF_DEBOUNCE_S,
-                        default=self._data.get(CONF_DEBOUNCE_S, DEFAULT_DEBOUNCE_S),
-                    ): NumberSelector(
-                        NumberSelectorConfig(
-                            min=0,
-                            max=60,
-                            unit_of_measurement="s",
-                            mode=NumberSelectorMode.BOX,
-                        )
-                    ),
-                    vol.Required(_CONF_SHOW_ZONE_THRESHOLDS, default=False): BooleanSelector(),
-                    vol.Required(_CONF_SHOW_ADVANCED, default=False): BooleanSelector(),
-                }
-            ),
-            errors=errors,
-        )
-
-    async def async_step_zone_thresholds(self, user_input=None):
-        errors = {}
-        if user_input is not None:
-            vn = user_input[CONF_ZONE_VERY_NEAR_M]
-            n = user_input[CONF_ZONE_NEAR_M]
-            m = user_input[CONF_ZONE_MID_M]
-            f = user_input[CONF_ZONE_FAR_M]
-            if not (vn < n < m < f):
-                errors["base"] = "zone_thresholds_not_ascending"
-            else:
-                show_advanced = self._data.pop("_show_advanced", False)
                 self._data.update(user_input)
                 if show_advanced:
                     return await self.async_step_advanced()
@@ -362,43 +286,8 @@ class EntityDistanceOptionsFlow(config_entries.OptionsFlow):
                 )
 
         return self.async_show_form(
-            step_id="zone_thresholds",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(
-                        CONF_ZONE_VERY_NEAR_M,
-                        default=self._data.get(CONF_ZONE_VERY_NEAR_M, DEFAULT_ZONE_VERY_NEAR_M),
-                    ): NumberSelector(
-                        NumberSelectorConfig(
-                            min=1, max=50000, unit_of_measurement="m", mode=NumberSelectorMode.BOX
-                        )
-                    ),
-                    vol.Required(
-                        CONF_ZONE_NEAR_M,
-                        default=self._data.get(CONF_ZONE_NEAR_M, DEFAULT_ZONE_NEAR_M),
-                    ): NumberSelector(
-                        NumberSelectorConfig(
-                            min=1, max=50000, unit_of_measurement="m", mode=NumberSelectorMode.BOX
-                        )
-                    ),
-                    vol.Required(
-                        CONF_ZONE_MID_M,
-                        default=self._data.get(CONF_ZONE_MID_M, DEFAULT_ZONE_MID_M),
-                    ): NumberSelector(
-                        NumberSelectorConfig(
-                            min=1, max=50000, unit_of_measurement="m", mode=NumberSelectorMode.BOX
-                        )
-                    ),
-                    vol.Required(
-                        CONF_ZONE_FAR_M,
-                        default=self._data.get(CONF_ZONE_FAR_M, DEFAULT_ZONE_FAR_M),
-                    ): NumberSelector(
-                        NumberSelectorConfig(
-                            min=1, max=200000, unit_of_measurement="m", mode=NumberSelectorMode.BOX
-                        )
-                    ),
-                }
-            ),
+            step_id="distances",
+            data_schema=_distances_schema(self._data),
             errors=errors,
         )
 
@@ -414,6 +303,17 @@ class EntityDistanceOptionsFlow(config_entries.OptionsFlow):
             step_id="advanced",
             data_schema=vol.Schema(
                 {
+                    vol.Required(
+                        CONF_DEBOUNCE_S,
+                        default=self._data.get(CONF_DEBOUNCE_S, DEFAULT_DEBOUNCE_S),
+                    ): NumberSelector(
+                        NumberSelectorConfig(
+                            min=0,
+                            max=60,
+                            unit_of_measurement="s",
+                            mode=NumberSelectorMode.BOX,
+                        )
+                    ),
                     vol.Required(
                         CONF_MAX_ACCURACY_M,
                         default=self._data.get(CONF_MAX_ACCURACY_M, DEFAULT_MAX_ACCURACY_M),

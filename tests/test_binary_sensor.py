@@ -256,17 +256,17 @@ class TestBucketBinarySensor:
 
     def test_near_on_in_band(self):
         k = pair_key("person.alice", "person.bob")
-        s = _make_bucket_sensor(k, BUCKET_NEAR, 300.0)
+        s = _make_bucket_sensor(k, BUCKET_NEAR, 500.0)
         assert s.is_on is True
 
     def test_mid_on_in_band(self):
         k = pair_key("person.alice", "person.bob")
-        s = _make_bucket_sensor(k, BUCKET_MID, 1500.0)
+        s = _make_bucket_sensor(k, BUCKET_MID, 3000.0)
         assert s.is_on is True
 
     def test_far_on_in_band(self):
         k = pair_key("person.alice", "person.bob")
-        s = _make_bucket_sensor(k, BUCKET_FAR, 5000.0)
+        s = _make_bucket_sensor(k, BUCKET_FAR, 15000.0)
         assert s.is_on is True
 
     def test_very_far_on_above_far(self):
@@ -300,13 +300,13 @@ class TestBucketBinarySensor:
         assert on_count == 1
 
     def test_exact_threshold_lands_in_lower_bucket(self):
-        # _calc_bucket uses `<= threshold`; exactly 100.0 m should be very_near.
+        # _calc_bucket uses `<= threshold`; exactly 200.0 m should be very_near.
         k = pair_key("person.alice", "person.bob")
-        assert _make_bucket_sensor(k, BUCKET_VERY_NEAR, 100.0).is_on is True
-        assert _make_bucket_sensor(k, BUCKET_NEAR, 100.0).is_on is False
-        # 500.0 m exactly → near (not mid).
-        assert _make_bucket_sensor(k, BUCKET_NEAR, 500.0).is_on is True
-        assert _make_bucket_sensor(k, BUCKET_MID, 500.0).is_on is False
+        assert _make_bucket_sensor(k, BUCKET_VERY_NEAR, 200.0).is_on is True
+        assert _make_bucket_sensor(k, BUCKET_NEAR, 200.0).is_on is False
+        # 1000.0 m exactly → near (not mid).
+        assert _make_bucket_sensor(k, BUCKET_NEAR, 1000.0).is_on is True
+        assert _make_bucket_sensor(k, BUCKET_MID, 1000.0).is_on is False
 
 
 class TestAsyncSetupEntry:

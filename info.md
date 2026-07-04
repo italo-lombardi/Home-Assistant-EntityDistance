@@ -9,7 +9,7 @@ Track the distance between any two or more entities — people, devices, or zone
 - **Group sensors** — for 3+ entities: Min Distance, Any In Proximity, All In Proximity
 - 26 sensors per pair: distance, proximity zone, proximity zone level, proximity duration, proximity rate, proximity tracking started, last seen together, today proximity time, today zone times, direction, direction level, closing speed, ETA, GPS accuracy, last update, update count, entity state, today unaccounted time
 - **Same Zone** binary sensor per pair — ON when both entities share the same named zone, OFF otherwise (never `unknown`)
-- Proximity binary sensor with configurable entry/exit hysteresis thresholds
+- Proximity binary sensor driven by zone boundaries — select which zone triggers "In Proximity"; exit is automatically the next zone out (natural hysteresis, no redundant threshold settings)
 - Direction of travel — approaching, diverging, or stationary (GPS jitter filtered)
 - ETA sensor — estimated minutes until together (only when approaching)
 - Closing speed sensor — convergence rate in km/h

@@ -336,7 +336,10 @@ class TestAsyncSetupEntry:
 
     @pytest.mark.asyncio
     async def test_setup_entry_adds_refresh_button(self):
-        from custom_components.entity_distance.button import RefreshButton, async_setup_entry
+        from custom_components.entity_distance.button import (
+            RefreshButton,
+            async_setup_entry,
+        )
         from custom_components.entity_distance.const import DOMAIN
 
         coordinator = MagicMock()

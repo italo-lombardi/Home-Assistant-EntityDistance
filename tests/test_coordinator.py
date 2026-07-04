@@ -13,6 +13,7 @@ from custom_components.entity_distance.const import (
     BUCKET_NEAR,
     BUCKET_VERY_FAR,
     BUCKET_VERY_NEAR,
+    CONF_PROXIMITY_ZONE,
     DEFAULT_ZONE_FAR_M,
     DEFAULT_ZONE_MID_M,
     DEFAULT_ZONE_NEAR_M,
@@ -79,22 +80,27 @@ class TestCalcBucket:
         assert calc_bucket(300, _DEFAULT_THRESHOLDS) == BUCKET_NEAR
 
     def test_mid(self):
-        assert calc_bucket(1000, _DEFAULT_THRESHOLDS) == BUCKET_MID
+        assert calc_bucket(2000, _DEFAULT_THRESHOLDS) == BUCKET_MID
 
     def test_far(self):
-        assert calc_bucket(5000, _DEFAULT_THRESHOLDS) == BUCKET_FAR
+        assert calc_bucket(10000, _DEFAULT_THRESHOLDS) == BUCKET_FAR
 
     def test_very_far(self):
-        assert calc_bucket(15000, _DEFAULT_THRESHOLDS) == BUCKET_VERY_FAR
+        assert calc_bucket(25000, _DEFAULT_THRESHOLDS) == BUCKET_VERY_FAR
 
     def test_exact_boundary_very_near(self):
         assert calc_bucket(100, _DEFAULT_THRESHOLDS) == BUCKET_VERY_NEAR
 
     def test_just_over_boundary(self):
-        assert calc_bucket(101, _DEFAULT_THRESHOLDS) == BUCKET_NEAR
+        assert calc_bucket(201, _DEFAULT_THRESHOLDS) == BUCKET_NEAR
 
     def test_custom_thresholds(self):
-        custom = {BUCKET_VERY_NEAR: 50, BUCKET_NEAR: 200, BUCKET_MID: 1000, BUCKET_FAR: 5000}
+        custom = {
+            BUCKET_VERY_NEAR: 50,
+            BUCKET_NEAR: 200,
+            BUCKET_MID: 1000,
+            BUCKET_FAR: 5000,
+        }
         assert calc_bucket(30, custom) == BUCKET_VERY_NEAR
         assert calc_bucket(100, custom) == BUCKET_NEAR
         assert calc_bucket(500, custom) == BUCKET_MID
@@ -105,7 +111,12 @@ class TestCalcBucket:
 class TestCalcBucketCustomThresholds:
     """Test calc_bucket with non-default threshold values at boundary edges."""
 
-    _CUSTOM = {BUCKET_VERY_NEAR: 50, BUCKET_NEAR: 150, BUCKET_MID: 500, BUCKET_FAR: 2000}
+    _CUSTOM = {
+        BUCKET_VERY_NEAR: 50,
+        BUCKET_NEAR: 150,
+        BUCKET_MID: 500,
+        BUCKET_FAR: 2000,
+    }
 
     def test_at_very_near_upper_boundary(self):
         assert calc_bucket(50, self._CUSTOM) == BUCKET_VERY_NEAR
@@ -414,7 +425,9 @@ class TestAdvanceWindow:
     """Test EntityDistanceCoordinator._advance_window helper."""
 
     def _make_coordinator(self):
-        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+        from custom_components.entity_distance.coordinator import (
+            EntityDistanceCoordinator,
+        )
 
         coordinator = EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)
         coordinator._min_updates_reliable = 3
@@ -461,7 +474,9 @@ class TestIsReliable:
     """Test EntityDistanceCoordinator.is_reliable helper."""
 
     def _make_coordinator(self, min_updates: int = 3):
-        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+        from custom_components.entity_distance.coordinator import (
+            EntityDistanceCoordinator,
+        )
 
         coordinator = EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)
         coordinator._min_updates_reliable = min_updates
@@ -632,7 +647,10 @@ class TestCalcPairHaDistanceInvalid:
             state_a if eid == "person.alice" else state_b
         )
 
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=None):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=None,
+        ):
             result = coordinator._calc_pair(
                 ps, "person.alice", "person.bob", datetime.now().astimezone(), set()
             )
@@ -689,11 +707,14 @@ class TestCalcPairResyncHold:
         )
 
         with patch(
-            "custom_components.entity_distance.coordinator.ha_distance", return_value=5000.0
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=5000.0,
         ):
             result = coordinator._calc_pair(ps, "person.alice", "person.bob", now, set())
 
-        assert result.data_valid is False
+        assert result.data_valid is True
+        assert result.prev_calc_time is None
+        assert result.prev_distance_m is None
 
     def test_data_valid_after_hold_expires(self):
         from custom_components.entity_distance.models import pair_key
@@ -714,7 +735,8 @@ class TestCalcPairResyncHold:
         )
 
         with patch(
-            "custom_components.entity_distance.coordinator.ha_distance", return_value=5000.0
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=5000.0,
         ):
             result = coordinator._calc_pair(ps, "person.alice", "person.bob", now, set())
 
@@ -785,7 +807,8 @@ class TestCalcPairMidnightReset:
         )
 
         with patch(
-            "custom_components.entity_distance.coordinator.ha_distance", return_value=5000.0
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=5000.0,
         ):
             result = coordinator._calc_pair(
                 ps, "person.alice", "person.bob", datetime.now().astimezone(), set()
@@ -824,7 +847,8 @@ class TestCalcPairTimingEdges:
         )
 
         with patch(
-            "custom_components.entity_distance.coordinator.ha_distance", return_value=10_000.0
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=10_000.0,
         ):
             result = coordinator._calc_pair(ps, "person.alice", "person.bob", now, set())
         assert result.data_valid is True
@@ -849,7 +873,10 @@ class TestCalcPairTimingEdges:
             state_a if eid == "person.alice" else state_b
         )
 
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=120.0):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=120.0,
+        ):
             result = coordinator._calc_pair(ps, "person.alice", "person.bob", now, set())
         assert result.data_valid is True
 
@@ -873,7 +900,10 @@ class TestCalcPairTimingEdges:
             state_a if eid == "person.alice" else state_b
         )
 
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=500.0):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=500.0,
+        ):
             result = coordinator._calc_pair(ps, "person.alice", "person.bob", now, set())
 
         assert result.proximity is True
@@ -900,7 +930,8 @@ class TestCalcPairTimingEdges:
         )
 
         with patch(
-            "custom_components.entity_distance.coordinator.ha_distance", return_value=1000.0
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=1000.0,
         ):
             result = coordinator._calc_pair(ps, "person.alice", "person.bob", now, set())
 
@@ -939,7 +970,10 @@ class TestCalcPairTimingEdges:
             state_a if eid == "person.alice" else state_b
         )
 
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=50.0):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=50.0,
+        ):
             result = coordinator._calc_pair(ps, "person.alice", "person.bob", midnight_utc, set())
 
         # Date rolled: counters reset, but post_hold == 0 → no bucket credit
@@ -1143,7 +1177,8 @@ class TestCalcPairResyncSilence:
         )
 
         with patch(
-            "custom_components.entity_distance.coordinator.ha_distance", return_value=5000.0
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=5000.0,
         ):
             coordinator._calc_pair(
                 ps, "person.alice", "person.bob", datetime.now().astimezone(), set()
@@ -1185,7 +1220,10 @@ class TestCalcPairRequireReliable:
             state_a if eid == "person.alice" else state_b
         )
 
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=1.0):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=1.0,
+        ):
             result = coordinator._calc_pair(
                 ps, "person.alice", "person.bob", datetime.now().astimezone(), set()
             )
@@ -1213,7 +1251,9 @@ class TestCoordinatorProperties:
             DEFAULT_ZONE_NEAR_M,
             DEFAULT_ZONE_VERY_NEAR_M,
         )
-        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+        from custom_components.entity_distance.coordinator import (
+            EntityDistanceCoordinator,
+        )
 
         coord = EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)
         coord._entities = ["person.alice", "person.bob"]
@@ -1237,8 +1277,8 @@ class TestCoordinatorProperties:
 
     def test_settings_snapshot(self):
         coord = self._make()
+        coord._proximity_zone = "very_near"
         coord._entry_threshold_m = 200.0
-        coord._exit_threshold_m = 500.0
         coord._debounce_s = 10
         coord._max_accuracy_m = 150
         coord._max_speed_kmh = 1000
@@ -1248,8 +1288,8 @@ class TestCoordinatorProperties:
         coord._updates_window_s = 1800
         coord._require_reliable = False
         snap = coord.settings_snapshot
-        assert snap["entry_threshold_m"] == 200.0
-        assert snap["zone_very_near_m"] == 100
+        assert snap["proximity_zone"] == "very_near"
+        assert snap["zone_very_near_m"] == 200
         assert "emit_bus_events" not in snap
         assert len(snap) == 14
 
@@ -1351,6 +1391,41 @@ class TestNoBusEvents:
         assert coordinator.hass.bus.fire.call_count == 0
 
 
+class TestUnrecognisedProximityZone:
+    """Coordinator warns and defaults to very_near on invalid proximity_zone."""
+
+    async def test_invalid_zone_logs_warning_and_defaults(self, hass, caplog):
+        from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+        from custom_components.entity_distance.const import (
+            BUCKET_VERY_NEAR,
+            DOMAIN,
+        )
+        from custom_components.entity_distance.coordinator import (
+            EntityDistanceCoordinator,
+        )
+
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={
+                "entities": ["person.alice", "person.bob"],
+                "proximity_zone": "totally_invalid",
+            },
+            options={},
+        )
+        entry.add_to_hass(hass)
+
+        import logging
+
+        with caplog.at_level(
+            logging.WARNING, logger="custom_components.entity_distance.coordinator"
+        ):
+            coord = EntityDistanceCoordinator(hass, entry)
+
+        assert coord._proximity_zone == BUCKET_VERY_NEAR
+        assert any("unrecognised proximity_zone" in r.message for r in caplog.records)
+
+
 # ---------------------------------------------------------------------------
 # Constructor __init__ via real hass + MockConfigEntry
 # ---------------------------------------------------------------------------
@@ -1363,14 +1438,14 @@ class TestCoordinatorInit:
         from pytest_homeassistant_custom_component.common import MockConfigEntry
 
         from custom_components.entity_distance.const import DOMAIN
-        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+        from custom_components.entity_distance.coordinator import (
+            EntityDistanceCoordinator,
+        )
 
         entry = MockConfigEntry(
             domain=DOMAIN,
             data={
                 "entities": ["person.alice", "person.bob"],
-                "entry_threshold_m": 500,
-                "exit_threshold_m": 700,
                 "debounce_s": 1,
                 "max_accuracy_m": 200,
                 "max_speed_kmh": 150,
@@ -1392,14 +1467,14 @@ class TestCoordinatorInit:
         from pytest_homeassistant_custom_component.common import MockConfigEntry
 
         from custom_components.entity_distance.const import DOMAIN
-        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+        from custom_components.entity_distance.coordinator import (
+            EntityDistanceCoordinator,
+        )
 
         entry = MockConfigEntry(
             domain=DOMAIN,
             data={
                 "entities": ["person.a", "person.b", "person.c"],
-                "entry_threshold_m": 500,
-                "exit_threshold_m": 700,
                 "debounce_s": 1,
                 "max_accuracy_m": 200,
                 "max_speed_kmh": 150,
@@ -1419,14 +1494,14 @@ class TestCoordinatorInit:
         from pytest_homeassistant_custom_component.common import MockConfigEntry
 
         from custom_components.entity_distance.const import DOMAIN
-        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+        from custom_components.entity_distance.coordinator import (
+            EntityDistanceCoordinator,
+        )
 
         entry = MockConfigEntry(
             domain=DOMAIN,
             data={
                 "entities": ["person.alice", "person.bob"],
-                "entry_threshold_m": 100,
-                "exit_threshold_m": 200,
                 "debounce_s": 1,
                 "max_accuracy_m": 200,
                 "max_speed_kmh": 150,
@@ -1436,12 +1511,12 @@ class TestCoordinatorInit:
                 "updates_window_s": 1800,
                 "require_reliable": False,
             },
-            options={"entry_threshold_m": 999},
+            options={CONF_PROXIMITY_ZONE: BUCKET_NEAR},
         )
         entry.add_to_hass(hass)
         coord = EntityDistanceCoordinator(hass, entry)
 
-        assert coord._entry_threshold_m == 999
+        assert coord._entry_threshold_m == coord._bucket_thresholds[BUCKET_NEAR]
 
 
 # ---------------------------------------------------------------------------
@@ -1456,7 +1531,9 @@ class TestCoordinatorLifecycle:
         from pytest_homeassistant_custom_component.common import MockConfigEntry
 
         from custom_components.entity_distance.const import DOMAIN
-        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+        from custom_components.entity_distance.coordinator import (
+            EntityDistanceCoordinator,
+        )
 
         if entities is None:
             entities = ["person.alice", "person.bob"]
@@ -1464,8 +1541,6 @@ class TestCoordinatorLifecycle:
             domain=DOMAIN,
             data={
                 "entities": entities,
-                "entry_threshold_m": 500,
-                "exit_threshold_m": 700,
                 "debounce_s": 0.01,
                 "max_accuracy_m": 200,
                 "max_speed_kmh": 150,
@@ -1652,8 +1727,14 @@ class TestCoordinatorAsyncRecalculate:
     async def test_recalculate_calls_calc_pair_and_saves(self):
         from unittest.mock import AsyncMock, MagicMock, patch
 
-        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
-        from custom_components.entity_distance.models import GroupData, PairState, pair_key
+        from custom_components.entity_distance.coordinator import (
+            EntityDistanceCoordinator,
+        )
+        from custom_components.entity_distance.models import (
+            GroupData,
+            PairState,
+            pair_key,
+        )
 
         coord = EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)
         k = pair_key("person.alice", "person.bob")
@@ -1683,7 +1764,9 @@ class TestCoordinatorAsyncRecalculate:
     async def test_recalculate_no_valid_pairs_min_dist_none(self):
         from unittest.mock import AsyncMock, MagicMock, patch
 
-        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+        from custom_components.entity_distance.coordinator import (
+            EntityDistanceCoordinator,
+        )
         from custom_components.entity_distance.models import PairState, pair_key
 
         coord = EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)
@@ -1715,8 +1798,14 @@ class TestCoordinatorAsyncUpdateData:
     """Cover _async_update_data (line 578)."""
 
     async def test_returns_group_data_with_pair_states(self):
-        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
-        from custom_components.entity_distance.models import GroupData, PairState, pair_key
+        from custom_components.entity_distance.coordinator import (
+            EntityDistanceCoordinator,
+        )
+        from custom_components.entity_distance.models import (
+            GroupData,
+            PairState,
+            pair_key,
+        )
 
         coord = EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)
         k = pair_key("person.alice", "person.bob")
@@ -1733,7 +1822,9 @@ class TestCoordinatorLoadState:
     def _make_coord_with_store(self, stored_data):
         from unittest.mock import AsyncMock, MagicMock
 
-        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+        from custom_components.entity_distance.coordinator import (
+            EntityDistanceCoordinator,
+        )
         from custom_components.entity_distance.models import PairState, pair_key
 
         coord = EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)

@@ -141,7 +141,9 @@ class TestTodayUnaccountedTimeSensor:
 
 class TestPersistence:
     def _make_coordinator(self, stored_data=None):
-        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+        from custom_components.entity_distance.coordinator import (
+            EntityDistanceCoordinator,
+        )
 
         hass = MagicMock()
         entry = MagicMock()

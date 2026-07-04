@@ -8,7 +8,10 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import HomeAssistant, State, callback
 from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.event import async_track_state_change_event, async_track_time_interval
+from homeassistant.helpers.event import (
+    async_track_state_change_event,
+    async_track_time_interval,
+)
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
@@ -22,11 +25,10 @@ from .const import (
     BUCKET_VERY_NEAR,
     CONF_DEBOUNCE_S,
     CONF_ENTITIES,
-    CONF_ENTRY_THRESHOLD_M,
-    CONF_EXIT_THRESHOLD_M,
     CONF_MAX_ACCURACY_M,
     CONF_MAX_SPEED_KMH,
     CONF_MIN_UPDATES_RELIABLE,
+    CONF_PROXIMITY_ZONE,
     CONF_REQUIRE_RELIABLE,
     CONF_RESYNC_HOLD_S,
     CONF_RESYNC_SILENCE_S,
@@ -36,11 +38,10 @@ from .const import (
     CONF_ZONE_NEAR_M,
     CONF_ZONE_VERY_NEAR_M,
     DEFAULT_DEBOUNCE_S,
-    DEFAULT_ENTRY_THRESHOLD_M,
-    DEFAULT_EXIT_THRESHOLD_M,
     DEFAULT_MAX_ACCURACY_M,
     DEFAULT_MAX_SPEED_KMH,
     DEFAULT_MIN_UPDATES_RELIABLE,
+    DEFAULT_PROXIMITY_ZONE,
     DEFAULT_REQUIRE_RELIABLE,
     DEFAULT_RESYNC_HOLD_S,
     DEFAULT_RESYNC_SILENCE_S,
@@ -230,8 +231,6 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
 
         data = {**entry.data, **entry.options}
         self._entities: list[str] = _resolve_entities(data)
-        self._entry_threshold_m: float = data.get(CONF_ENTRY_THRESHOLD_M, DEFAULT_ENTRY_THRESHOLD_M)
-        self._exit_threshold_m: float = data.get(CONF_EXIT_THRESHOLD_M, DEFAULT_EXIT_THRESHOLD_M)
         self._debounce_s: float = data.get(CONF_DEBOUNCE_S, DEFAULT_DEBOUNCE_S)
         self._max_accuracy_m: float = data.get(CONF_MAX_ACCURACY_M, DEFAULT_MAX_ACCURACY_M)
         self._max_speed_kmh: float = data.get(CONF_MAX_SPEED_KMH, DEFAULT_MAX_SPEED_KMH)
@@ -248,6 +247,25 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             BUCKET_MID: data.get(CONF_ZONE_MID_M, DEFAULT_ZONE_MID_M),
             BUCKET_FAR: data.get(CONF_ZONE_FAR_M, DEFAULT_ZONE_FAR_M),
         }
+        # Derive entry/exit from the selected proximity zone — zones ARE the alert vocabulary.
+        _zone_keys = [BUCKET_VERY_NEAR, BUCKET_NEAR, BUCKET_MID, BUCKET_FAR]
+        _prox_zone = data.get(CONF_PROXIMITY_ZONE, DEFAULT_PROXIMITY_ZONE)
+        if _prox_zone not in _zone_keys:
+            _LOGGER.warning(
+                "entity_distance: unrecognised proximity_zone %r — defaulting to %s",
+                _prox_zone,
+                _zone_keys[0],
+            )
+        _zone_idx = _zone_keys.index(_prox_zone) if _prox_zone in _zone_keys else 0
+        self._proximity_zone: str = _zone_keys[_zone_idx]
+        self._entry_threshold_m: float = self._bucket_thresholds[_zone_keys[_zone_idx]]
+        _next_idx = min(_zone_idx + 1, len(_zone_keys) - 1)
+        self._exit_threshold_m: float = (
+            self._bucket_thresholds[_zone_keys[_next_idx]]
+            if _next_idx != _zone_idx
+            else self._bucket_thresholds[_zone_keys[-1]]
+            * 2  # ponytail: no zone beyond far — 2× far boundary as exit approximation
+        )
 
         self._pair_states: dict[tuple[str, str], PairState] = {}
         for a, b in itertools.combinations(self._entities, 2):
@@ -286,8 +304,8 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         """All proximity / filter settings the coordinator was constructed with.
         Exposed so a diagnostic sensor can present them on the device card."""
         return {
-            "entry_threshold_m": self._entry_threshold_m,
-            "exit_threshold_m": self._exit_threshold_m,
+            "proximity_zone": self._proximity_zone,
+            "proximity_threshold_m": self._entry_threshold_m,
             "debounce_s": self._debounce_s,
             "max_accuracy_m": self._max_accuracy_m,
             "max_speed_kmh": self._max_speed_kmh,
@@ -660,7 +678,9 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             hold_until = self._resync_hold_until.get(k)
             if hold_until and now < hold_until:
                 _LOGGER.debug(
-                    "entity_distance: in resync hold for pair (%s, %s)", entity_a, entity_b
+                    "entity_distance: in resync hold for pair (%s, %s)",
+                    entity_a,
+                    entity_b,
                 )
                 # Close any open proximity session before returning — the hold window
                 # should not be counted as valid proximity time.
@@ -693,7 +713,6 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 # spurious speed-filter rejection against a stale prev_distance_m.
                 ps.prev_calc_time = None
                 ps.prev_distance_m = None
-                ps.data_valid = False
                 return ps
             self._resync_holding[k] = False
             self._resync_hold_until[k] = None
@@ -784,9 +803,11 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             # On EXIT tick, _elapsed_s covers time when pair was inside threshold —
             # use prev_distance_m_snapshot (the proximity-era distance) for the bucket.
             bucket_for_elapsed = calc_bucket(
-                prev_distance_m_snapshot
-                if was_proximity and prev_distance_m_snapshot is not None
-                else dist_m,
+                (
+                    prev_distance_m_snapshot
+                    if was_proximity and prev_distance_m_snapshot is not None
+                    else dist_m
+                ),
                 self._bucket_thresholds,
             )
             ps.today_zone_seconds[bucket_for_elapsed] = (
@@ -847,17 +868,21 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 "today_proximity_seconds": ps.today_proximity_seconds,
                 "today_zone_seconds": ps.today_zone_seconds,
                 "proximity_duration_s": ps.proximity_duration_s,
-                "proximity_tracking_started": ps.proximity_tracking_started.isoformat()
-                if ps.proximity_tracking_started
-                else None,
-                "last_seen_together": ps.last_seen_together.isoformat()
-                if ps.last_seen_together
-                else None,
-                "proximity_since": ps.proximity_since.isoformat() if ps.proximity_since else None,
-                "prev_calc_time": ps.prev_calc_time.isoformat() if ps.prev_calc_time else None,
-                "last_bucket": calc_bucket(ps.distance_m, self._bucket_thresholds)
-                if ps.distance_m is not None
-                else None,
+                "proximity_tracking_started": (
+                    ps.proximity_tracking_started.isoformat()
+                    if ps.proximity_tracking_started
+                    else None
+                ),
+                "last_seen_together": (
+                    ps.last_seen_together.isoformat() if ps.last_seen_together else None
+                ),
+                "proximity_since": (ps.proximity_since.isoformat() if ps.proximity_since else None),
+                "prev_calc_time": (ps.prev_calc_time.isoformat() if ps.prev_calc_time else None),
+                "last_bucket": (
+                    calc_bucket(ps.distance_m, self._bucket_thresholds)
+                    if ps.distance_m is not None
+                    else None
+                ),
             }
         await self._store.async_save(payload)
 

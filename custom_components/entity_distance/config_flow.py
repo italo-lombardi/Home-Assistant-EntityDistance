@@ -218,9 +218,7 @@ class EntityDistanceConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="advanced",
             data_schema=vol.Schema(
                 {
-                    vol.Required(
-                        CONF_DEBOUNCE_S, default=DEFAULT_DEBOUNCE_S
-                    ): NumberSelector(
+                    vol.Required(CONF_DEBOUNCE_S, default=DEFAULT_DEBOUNCE_S): NumberSelector(
                         NumberSelectorConfig(
                             min=0,
                             max=60,
@@ -238,9 +236,7 @@ class EntityDistanceConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             mode=NumberSelectorMode.BOX,
                         )
                     ),
-                    vol.Required(
-                        CONF_MAX_SPEED_KMH, default=DEFAULT_MAX_SPEED_KMH
-                    ): NumberSelector(
+                    vol.Required(CONF_MAX_SPEED_KMH, default=DEFAULT_MAX_SPEED_KMH): NumberSelector(
                         NumberSelectorConfig(
                             min=0,
                             max=2000,
@@ -286,9 +282,7 @@ class EntityDistanceOptionsFlow(config_entries.OptionsFlow):
                     return await self.async_step_advanced()
                 return self.async_create_entry(
                     title="",
-                    data={
-                        k: v for k, v in self._data.items() if k in _ZONE_OPTIONS_KEYS
-                    },
+                    data={k: v for k, v in self._data.items() if k in _ZONE_OPTIONS_KEYS},
                 )
 
         return self.async_show_form(
@@ -322,9 +316,7 @@ class EntityDistanceOptionsFlow(config_entries.OptionsFlow):
                     ),
                     vol.Required(
                         CONF_MAX_ACCURACY_M,
-                        default=self._data.get(
-                            CONF_MAX_ACCURACY_M, DEFAULT_MAX_ACCURACY_M
-                        ),
+                        default=self._data.get(CONF_MAX_ACCURACY_M, DEFAULT_MAX_ACCURACY_M),
                     ): NumberSelector(
                         NumberSelectorConfig(
                             min=0,
@@ -335,9 +327,7 @@ class EntityDistanceOptionsFlow(config_entries.OptionsFlow):
                     ),
                     vol.Required(
                         CONF_MAX_SPEED_KMH,
-                        default=self._data.get(
-                            CONF_MAX_SPEED_KMH, DEFAULT_MAX_SPEED_KMH
-                        ),
+                        default=self._data.get(CONF_MAX_SPEED_KMH, DEFAULT_MAX_SPEED_KMH),
                     ): NumberSelector(
                         NumberSelectorConfig(
                             min=0,
@@ -348,9 +338,7 @@ class EntityDistanceOptionsFlow(config_entries.OptionsFlow):
                     ),
                     vol.Required(
                         CONF_REQUIRE_RELIABLE,
-                        default=self._data.get(
-                            CONF_REQUIRE_RELIABLE, DEFAULT_REQUIRE_RELIABLE
-                        ),
+                        default=self._data.get(CONF_REQUIRE_RELIABLE, DEFAULT_REQUIRE_RELIABLE),
                     ): BooleanSelector(),
                     vol.Required(
                         CONF_MIN_UPDATES_RELIABLE,

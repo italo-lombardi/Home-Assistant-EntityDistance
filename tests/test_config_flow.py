@@ -164,17 +164,13 @@ class TestConfigFlowUserStep:
 
     async def test_valid_distances_creates_entry(self, flow_manager):
         flow_id = await self._init_to_distances(flow_manager)
-        result = await flow_manager.async_configure(
-            flow_id, user_input=_DISTANCES_DEFAULTS
-        )
+        result = await flow_manager.async_configure(flow_id, user_input=_DISTANCES_DEFAULTS)
         assert result["type"] == FlowResultType.CREATE_ENTRY
         assert CONF_ENTITIES in result["data"]
 
     async def test_show_advanced_key_not_in_entry_data(self, flow_manager):
         flow_id = await self._init_to_distances(flow_manager)
-        result = await flow_manager.async_configure(
-            flow_id, user_input=_DISTANCES_DEFAULTS
-        )
+        result = await flow_manager.async_configure(flow_id, user_input=_DISTANCES_DEFAULTS)
         assert result["type"] == FlowResultType.CREATE_ENTRY
         assert "show_advanced" not in result["data"]
         assert "_show_advanced" not in result["data"]
@@ -220,21 +216,15 @@ class TestConfigFlowUserStep:
 
     async def test_entry_contains_proximity_zone(self, flow_manager):
         flow_id = await self._init_to_distances(flow_manager)
-        result = await flow_manager.async_configure(
-            flow_id, user_input=_DISTANCES_DEFAULTS
-        )
+        result = await flow_manager.async_configure(flow_id, user_input=_DISTANCES_DEFAULTS)
         assert result["type"] == FlowResultType.CREATE_ENTRY
         assert result["data"][CONF_PROXIMITY_ZONE] == DEFAULT_PROXIMITY_ZONE
 
     async def test_three_entities_entry_contains_all_three(self, flow_manager):
         result = await flow_manager.async_init(DOMAIN, context={"source": SOURCE_USER})
         flow_id = result["flow_id"]
-        await flow_manager.async_configure(
-            flow_id, user_input=_USER_STEP_THREE_ENTITIES
-        )
-        result2 = await flow_manager.async_configure(
-            flow_id, user_input=_DISTANCES_DEFAULTS
-        )
+        await flow_manager.async_configure(flow_id, user_input=_USER_STEP_THREE_ENTITIES)
+        result2 = await flow_manager.async_configure(flow_id, user_input=_DISTANCES_DEFAULTS)
         assert result2["type"] == FlowResultType.CREATE_ENTRY
         entities = result2["data"][CONF_ENTITIES]
         assert set(entities) == {"person.alice", "person.bob", "person.carol"}
@@ -245,20 +235,14 @@ class TestConfigFlowDistancesToAdvanced:
         hass.data.setdefault(DATA_COMPONENTS, {})[f"{DOMAIN}.config_flow"] = object()
         with mock_config_flow(DOMAIN, EntityDistanceConfigFlow):
             flow_manager = hass.config_entries.flow
-            result = await flow_manager.async_init(
-                DOMAIN, context={"source": SOURCE_USER}
-            )
+            result = await flow_manager.async_init(DOMAIN, context={"source": SOURCE_USER})
             flow_id = result["flow_id"]
-            await flow_manager.async_configure(
-                flow_id, user_input=_USER_STEP_TWO_ENTITIES
-            )
+            await flow_manager.async_configure(flow_id, user_input=_USER_STEP_TWO_ENTITIES)
             await flow_manager.async_configure(
                 flow_id,
                 user_input={**_DISTANCES_DEFAULTS, "show_advanced": True},
             )
-            result3 = await flow_manager.async_configure(
-                flow_id, user_input=_OPTIONS_ADVANCED
-            )
+            result3 = await flow_manager.async_configure(flow_id, user_input=_OPTIONS_ADVANCED)
             assert result3["type"] == FlowResultType.CREATE_ENTRY
             assert CONF_ENTITIES in result3["data"]
             assert result3["data"][CONF_MAX_ACCURACY_M] == DEFAULT_MAX_ACCURACY_M
@@ -321,17 +305,13 @@ class TestOptionsFlowInit:
         self, hass, options_flow_entry
     ):
         with mock_config_flow(DOMAIN, EntityDistanceConfigFlow):
-            result = await hass.config_entries.options.async_init(
-                options_flow_entry.entry_id
-            )
+            result = await hass.config_entries.options.async_init(options_flow_entry.entry_id)
         assert result["type"] == FlowResultType.FORM
         assert result["step_id"] == "distances"
 
     async def test_options_flow_form_has_schema(self, hass, options_flow_entry):
         with mock_config_flow(DOMAIN, EntityDistanceConfigFlow):
-            result = await hass.config_entries.options.async_init(
-                options_flow_entry.entry_id
-            )
+            result = await hass.config_entries.options.async_init(options_flow_entry.entry_id)
         assert result["step_id"] == "distances"
         assert result["data_schema"] is not None
 
@@ -376,9 +356,7 @@ class TestOptionsFlowDistances:
             )
         assert options_flow_entry.options[CONF_PROXIMITY_ZONE] == "near"
 
-    async def test_show_advanced_true_routes_to_advanced_step(
-        self, hass, options_flow_entry
-    ):
+    async def test_show_advanced_true_routes_to_advanced_step(self, hass, options_flow_entry):
         flow_id = await self._init_options(hass, options_flow_entry)
         with mock_config_flow(DOMAIN, EntityDistanceConfigFlow):
             result = await hass.config_entries.options.async_configure(
@@ -412,9 +390,7 @@ class TestOptionsFlowAdvanced:
     async def test_advanced_shows_form(self, hass, options_flow_entry):
         flow_id = await self._init_to_advanced(hass, options_flow_entry)
         with mock_config_flow(DOMAIN, EntityDistanceConfigFlow):
-            result = await hass.config_entries.options.async_configure(
-                flow_id, user_input=None
-            )
+            result = await hass.config_entries.options.async_configure(flow_id, user_input=None)
         assert result["type"] == FlowResultType.FORM
         assert result["step_id"] == "advanced"
 
@@ -426,9 +402,7 @@ class TestOptionsFlowAdvanced:
             )
         assert result["type"] == FlowResultType.CREATE_ENTRY
 
-    async def test_advanced_values_saved_to_entry_options(
-        self, hass, options_flow_entry
-    ):
+    async def test_advanced_values_saved_to_entry_options(self, hass, options_flow_entry):
         flow_id = await self._init_to_advanced(hass, options_flow_entry)
         with mock_config_flow(DOMAIN, EntityDistanceConfigFlow):
             await hass.config_entries.options.async_configure(
@@ -447,27 +421,19 @@ class TestOptionsFlowAdvanced:
         assert opts[CONF_REQUIRE_RELIABLE] is True
         assert opts[CONF_MIN_UPDATES_RELIABLE] == 5
 
-    async def test_options_only_contain_zone_option_keys(
-        self, hass, options_flow_entry
-    ):
+    async def test_options_only_contain_zone_option_keys(self, hass, options_flow_entry):
         flow_id = await self._init_to_advanced(hass, options_flow_entry)
         with mock_config_flow(DOMAIN, EntityDistanceConfigFlow):
-            await hass.config_entries.options.async_configure(
-                flow_id, user_input=_OPTIONS_ADVANCED
-            )
+            await hass.config_entries.options.async_configure(flow_id, user_input=_OPTIONS_ADVANCED)
         opts = options_flow_entry.options
         assert CONF_ENTITIES not in opts
         from custom_components.entity_distance.config_flow import _ZONE_OPTIONS_KEYS
 
         assert all(k in _ZONE_OPTIONS_KEYS for k in opts)
 
-    async def test_distances_and_advanced_saves_all_keys(
-        self, hass, options_flow_entry
-    ):
+    async def test_distances_and_advanced_saves_all_keys(self, hass, options_flow_entry):
         with mock_config_flow(DOMAIN, EntityDistanceConfigFlow):
-            result = await hass.config_entries.options.async_init(
-                options_flow_entry.entry_id
-            )
+            result = await hass.config_entries.options.async_init(options_flow_entry.entry_id)
             flow_id = result["flow_id"]
             await hass.config_entries.options.async_configure(
                 flow_id, user_input={**_DISTANCES_DEFAULTS, "show_advanced": True}

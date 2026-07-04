@@ -74,9 +74,7 @@ class TestPairKeyHelper:
         assert pair_key("z.entity", "a.entity") == ("a.entity", "z.entity")
 
     def test_same_result_both_orders(self):
-        assert pair_key("person.bob", "person.alice") == pair_key(
-            "person.alice", "person.bob"
-        )
+        assert pair_key("person.bob", "person.alice") == pair_key("person.alice", "person.bob")
 
     def test_unique_keys_for_different_pairs(self):
         k1 = pair_key("person.alice", "person.bob")
@@ -123,9 +121,7 @@ class TestGroupSensors:
             ps.distance_m = distances[i]
             ps.data_valid = True
             pairs[k] = ps
-        min_dist = min(
-            ps.distance_m for ps in pairs.values() if ps.distance_m is not None
-        )
+        min_dist = min(ps.distance_m for ps in pairs.values() if ps.distance_m is not None)
         gd = GroupData(pairs=pairs, min_distance_m=min_dist)
         sensor = self._make_min_distance_sensor(gd)
         assert sensor.native_value == 100.0
@@ -170,9 +166,7 @@ def _make_coordinator(
     return coord
 
 
-def _make_state(
-    entity_id: str, lat: float, lon: float, accuracy: float | None = None
-) -> State:
+def _make_state(entity_id: str, lat: float, lon: float, accuracy: float | None = None) -> State:
     attrs: dict = {"latitude": lat, "longitude": lon}
     if accuracy is not None:
         attrs["gps_accuracy"] = accuracy
@@ -218,9 +212,7 @@ class TestCalcPairInvalidations:
 
     def test_entity_a_unavailable(self):
         coord = _make_coordinator()
-        state_a = State(
-            "person.alice", STATE_UNAVAILABLE, {"latitude": 51.5, "longitude": -0.1}
-        )
+        state_a = State("person.alice", STATE_UNAVAILABLE, {"latitude": 51.5, "longitude": -0.1})
         state_b = _make_state("person.bob", 51.5, -0.1, 20)
         coord.hass.states.get = MagicMock(
             side_effect=lambda eid: state_a if eid == "person.alice" else state_b
@@ -235,9 +227,7 @@ class TestCalcPairInvalidations:
     def test_entity_b_unknown(self):
         coord = _make_coordinator()
         state_a = _make_state("person.alice", 51.5, -0.1, 20)
-        state_b = State(
-            "person.bob", STATE_UNKNOWN, {"latitude": 51.5, "longitude": -0.09}
-        )
+        state_b = State("person.bob", STATE_UNKNOWN, {"latitude": 51.5, "longitude": -0.09})
         coord.hass.states.get = MagicMock(
             side_effect=lambda eid: state_a if eid == "person.alice" else state_b
         )

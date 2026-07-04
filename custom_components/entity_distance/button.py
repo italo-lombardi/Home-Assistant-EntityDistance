@@ -92,13 +92,9 @@ class RefreshButton(CoordinatorEntity[EntityDistanceCoordinator], ButtonEntity):
                     notify_service,
                 )
             except Exception as err:  # noqa: BLE001
-                _LOGGER.warning(
-                    "entity_distance: refresh failed for %s: %s", entity_id, err
-                )
+                _LOGGER.warning("entity_distance: refresh failed for %s: %s", entity_id, err)
 
-    def _resolve_device_id(
-        self, registry: er.EntityRegistry, entity_id: str
-    ) -> str | None:
+    def _resolve_device_id(self, registry: er.EntityRegistry, entity_id: str) -> str | None:
         entry = registry.async_get(entity_id)
         if entry is not None and entry.device_id is not None:
             return entry.device_id

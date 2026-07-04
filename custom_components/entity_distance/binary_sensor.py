@@ -75,9 +75,7 @@ async def async_setup_entry(
             via_device=(DOMAIN, entry.entry_id),
         )
         is_zone_pair = k[0].startswith("zone.") and k[1].startswith("zone.")
-        sensors.append(
-            ProximityBinarySensor(coordinator, entry, pair_dev, k, a_name, b_name)
-        )
+        sensors.append(ProximityBinarySensor(coordinator, entry, pair_dev, k, a_name, b_name))
         sensors.append(ReliableBinarySensor(coordinator, entry, pair_dev, k))
         if not is_zone_pair:
             sensors.append(SameZoneBinarySensor(coordinator, entry, pair_dev, k))
@@ -98,9 +96,7 @@ async def async_setup_entry(
     async_add_entities(sensors)
 
 
-class ProximityBinarySensor(
-    CoordinatorEntity[EntityDistanceCoordinator], BinarySensorEntity
-):
+class ProximityBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], BinarySensorEntity):
     _attr_has_entity_name = True
     _attr_device_class = BinarySensorDeviceClass.PRESENCE
     _attr_translation_key = "proximity"
@@ -134,9 +130,7 @@ class ProximityBinarySensor(
         return self._pair.proximity
 
 
-class SameZoneBinarySensor(
-    CoordinatorEntity[EntityDistanceCoordinator], BinarySensorEntity
-):
+class SameZoneBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], BinarySensorEntity):
     _attr_has_entity_name = True
     _attr_translation_key = "same_zone"
 
@@ -177,9 +171,7 @@ class SameZoneBinarySensor(
         return zone_a == zone_b
 
 
-class BucketBinarySensor(
-    CoordinatorEntity[EntityDistanceCoordinator], BinarySensorEntity
-):
+class BucketBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], BinarySensorEntity):
     """On while the pair's current distance falls in a specific bucket."""
 
     _attr_has_entity_name = True
@@ -216,9 +208,7 @@ class BucketBinarySensor(
         return current == self._bucket
 
 
-class AnyInProximityBinarySensor(
-    CoordinatorEntity[EntityDistanceCoordinator], BinarySensorEntity
-):
+class AnyInProximityBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], BinarySensorEntity):
     _attr_has_entity_name = True
     _attr_device_class = BinarySensorDeviceClass.PRESENCE
     _attr_translation_key = "any_in_proximity"
@@ -242,9 +232,7 @@ class AnyInProximityBinarySensor(
         return self.coordinator.data.any_in_proximity
 
 
-class AllInProximityBinarySensor(
-    CoordinatorEntity[EntityDistanceCoordinator], BinarySensorEntity
-):
+class AllInProximityBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], BinarySensorEntity):
     _attr_has_entity_name = True
     _attr_device_class = BinarySensorDeviceClass.PRESENCE
     _attr_translation_key = "all_in_proximity"
@@ -268,9 +256,7 @@ class AllInProximityBinarySensor(
         return self.coordinator.data.all_in_proximity
 
 
-class ReliableBinarySensor(
-    CoordinatorEntity[EntityDistanceCoordinator], BinarySensorEntity
-):
+class ReliableBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], BinarySensorEntity):
     """On while both sides of the pair have ≥ min_updates_reliable fresh GPS fixes
     in the rolling window. Surfaces the same signal that used to ride along as the
     `reliable: bool` field in the (now-removed) bus-event payload, so automations

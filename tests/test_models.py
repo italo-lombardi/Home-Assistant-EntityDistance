@@ -32,9 +32,7 @@ class TestPairKey:
         assert b == "person.bob"
 
     def test_symmetric(self):
-        assert pair_key("person.alice", "zone.home") == pair_key(
-            "zone.home", "person.alice"
-        )
+        assert pair_key("person.alice", "zone.home") == pair_key("zone.home", "person.alice")
 
     def test_unknown_domain_last(self):
         assert pair_key("custom.thing", "person.alice")[0] == "person.alice"

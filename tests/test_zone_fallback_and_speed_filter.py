@@ -20,9 +20,7 @@ from tests.conftest import make_state, make_zone_state
 # ---------------------------------------------------------------------------
 
 
-def _make_hass(
-    zone_states: list[State] | None = None, extra: dict[str, State] | None = None
-):
+def _make_hass(zone_states: list[State] | None = None, extra: dict[str, State] | None = None):
     """Return a minimal hass mock with a state machine."""
     hass = MagicMock()
     zone_states = zone_states or []
@@ -246,9 +244,7 @@ class TestResolveCoords:
 
     def test_zone_fallback_missing_radius_returns_none_accuracy(self):
         state = State("person.alice", "home", {})
-        zone = State(
-            "zone.home", "0", {"latitude": 51.5, "longitude": -0.1}
-        )  # no radius
+        zone = State("zone.home", "0", {"latitude": 51.5, "longitude": -0.1})  # no radius
         hass = _make_hass([zone])
         result, fallback = _resolve_coords(state, hass)
         assert fallback is True
@@ -426,9 +422,7 @@ class TestCalcPairZoneFallback:
             "custom_components.entity_distance.coordinator.ha_distance",
             return_value=5.0,
         ):
-            result = coord._calc_pair(
-                ps, person_state.entity_id, other_state.entity_id, now, set()
-            )
+            result = coord._calc_pair(ps, person_state.entity_id, other_state.entity_id, now, set())
         return result
 
     def test_zone_fallback_accuracy_filter_skipped(self):

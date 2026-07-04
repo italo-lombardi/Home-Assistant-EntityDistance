@@ -387,9 +387,7 @@ class TestProximitySincePersistence:
         # Simulate what ProximityDurationSensor.native_value computes
         total_s = ps.proximity_duration_s
         if ps.proximity and ps.proximity_since:
-            total_s += (
-                datetime.now().astimezone() - ps.proximity_since
-            ).total_seconds()
+            total_s += (datetime.now().astimezone() - ps.proximity_since).total_seconds()
 
         assert total_s >= 300 + 20 * 60  # at least 5 + 20 min
 
@@ -694,9 +692,7 @@ class TestCalcPairResyncHold:
         from custom_components.entity_distance.models import pair_key
         from tests.conftest import make_state
 
-        coordinator = _make_calc_pair_coordinator(
-            resync_silence_s=0.0, resync_hold_s=3600.0
-        )
+        coordinator = _make_calc_pair_coordinator(resync_silence_s=0.0, resync_hold_s=3600.0)
         k = pair_key("person.alice", "person.bob")
         ps = coordinator._pair_states[k]
 
@@ -714,9 +710,7 @@ class TestCalcPairResyncHold:
             "custom_components.entity_distance.coordinator.ha_distance",
             return_value=5000.0,
         ):
-            result = coordinator._calc_pair(
-                ps, "person.alice", "person.bob", now, set()
-            )
+            result = coordinator._calc_pair(ps, "person.alice", "person.bob", now, set())
 
         assert result.data_valid is True
         assert result.prev_calc_time is None
@@ -726,17 +720,13 @@ class TestCalcPairResyncHold:
         from custom_components.entity_distance.models import pair_key
         from tests.conftest import make_state
 
-        coordinator = _make_calc_pair_coordinator(
-            resync_silence_s=0.0, resync_hold_s=60.0
-        )
+        coordinator = _make_calc_pair_coordinator(resync_silence_s=0.0, resync_hold_s=60.0)
         k = pair_key("person.alice", "person.bob")
         ps = coordinator._pair_states[k]
 
         now = datetime.now().astimezone()
         coordinator._resync_holding[k] = True
-        coordinator._resync_hold_until[k] = now - timedelta(
-            seconds=1
-        )  # already expired
+        coordinator._resync_hold_until[k] = now - timedelta(seconds=1)  # already expired
 
         state_a = make_state("person.alice", 51.5, -0.1)
         state_b = make_state("person.bob", 51.6, -0.2)
@@ -748,9 +738,7 @@ class TestCalcPairResyncHold:
             "custom_components.entity_distance.coordinator.ha_distance",
             return_value=5000.0,
         ):
-            result = coordinator._calc_pair(
-                ps, "person.alice", "person.bob", now, set()
-            )
+            result = coordinator._calc_pair(ps, "person.alice", "person.bob", now, set())
 
         assert result.data_valid is True
         assert coordinator._resync_holding[k] is False
@@ -862,9 +850,7 @@ class TestCalcPairTimingEdges:
             "custom_components.entity_distance.coordinator.ha_distance",
             return_value=10_000.0,
         ):
-            result = coordinator._calc_pair(
-                ps, "person.alice", "person.bob", now, set()
-            )
+            result = coordinator._calc_pair(ps, "person.alice", "person.bob", now, set())
         assert result.data_valid is True
 
     def test_closing_speed_skipped_when_delta_zero(self):
@@ -891,9 +877,7 @@ class TestCalcPairTimingEdges:
             "custom_components.entity_distance.coordinator.ha_distance",
             return_value=120.0,
         ):
-            result = coordinator._calc_pair(
-                ps, "person.alice", "person.bob", now, set()
-            )
+            result = coordinator._calc_pair(ps, "person.alice", "person.bob", now, set())
         assert result.data_valid is True
 
     def test_proximity_entry_with_existing_tracking_started(self):
@@ -920,9 +904,7 @@ class TestCalcPairTimingEdges:
             "custom_components.entity_distance.coordinator.ha_distance",
             return_value=500.0,
         ):
-            result = coordinator._calc_pair(
-                ps, "person.alice", "person.bob", now, set()
-            )
+            result = coordinator._calc_pair(ps, "person.alice", "person.bob", now, set())
 
         assert result.proximity is True
         assert result.proximity_tracking_started == existing
@@ -933,9 +915,7 @@ class TestCalcPairTimingEdges:
         from custom_components.entity_distance.models import pair_key
         from tests.conftest import make_state
 
-        coordinator = _make_calc_pair_coordinator(
-            entry_threshold_m=100.0, exit_threshold_m=200.0
-        )
+        coordinator = _make_calc_pair_coordinator(entry_threshold_m=100.0, exit_threshold_m=200.0)
         k = pair_key("person.alice", "person.bob")
         ps = coordinator._pair_states[k]
         ps.proximity = True
@@ -953,9 +933,7 @@ class TestCalcPairTimingEdges:
             "custom_components.entity_distance.coordinator.ha_distance",
             return_value=1000.0,
         ):
-            result = coordinator._calc_pair(
-                ps, "person.alice", "person.bob", now, set()
-            )
+            result = coordinator._calc_pair(ps, "person.alice", "person.bob", now, set())
 
         assert result.proximity is False
         assert result.proximity_duration_s == 42.0
@@ -970,9 +948,7 @@ class TestCalcPairTimingEdges:
         from custom_components.entity_distance.models import pair_key
         from tests.conftest import make_state
 
-        coordinator = _make_calc_pair_coordinator(
-            resync_silence_s=0.0, resync_hold_s=3600.0
-        )
+        coordinator = _make_calc_pair_coordinator(resync_silence_s=0.0, resync_hold_s=3600.0)
         k = pair_key("person.alice", "person.bob")
         ps = coordinator._pair_states[k]
 
@@ -998,9 +974,7 @@ class TestCalcPairTimingEdges:
             "custom_components.entity_distance.coordinator.ha_distance",
             return_value=50.0,
         ):
-            result = coordinator._calc_pair(
-                ps, "person.alice", "person.bob", midnight_utc, set()
-            )
+            result = coordinator._calc_pair(ps, "person.alice", "person.bob", midnight_utc, set())
 
         # Date rolled: counters reset, but post_hold == 0 → no bucket credit
         # because no real time elapsed past midnight.
@@ -1186,9 +1160,7 @@ class TestCalcPairResyncSilence:
 
         from tests.conftest import make_state
 
-        coordinator = _make_calc_pair_coordinator(
-            resync_silence_s=60.0, resync_hold_s=300.0
-        )
+        coordinator = _make_calc_pair_coordinator(resync_silence_s=60.0, resync_hold_s=300.0)
         from custom_components.entity_distance.models import pair_key
 
         k = pair_key("person.alice", "person.bob")
@@ -1616,9 +1588,7 @@ class TestCoordinatorLifecycle:
             coord._async_tick(None)
         mock_create.assert_not_called()
 
-    async def test_async_setup_preserves_existing_proximity_tracking_started(
-        self, hass
-    ):
+    async def test_async_setup_preserves_existing_proximity_tracking_started(self, hass):
         # When restored _pair_states already carry a proximity_tracking_started
         # timestamp, async_setup must NOT overwrite it. Covers the False branch
         # of the per-pair init guard.
@@ -1845,9 +1815,7 @@ class TestCoordinatorLoadState:
         await coord._async_load_state()  # should not raise
 
     async def test_missing_blob_for_pair_skips(self):
-        coord, _ = self._make_coord_with_store(
-            {"other__key": {"proximity_duration_s": 5.0}}
-        )
+        coord, _ = self._make_coord_with_store({"other__key": {"proximity_duration_s": 5.0}})
         await coord._async_load_state()  # should not raise
 
     async def test_loads_proximity_duration(self):

@@ -397,9 +397,7 @@ class TestCrossMidnightFlush:
 
         assert result.today_reset_date == date(2024, 6, 2)
         # Only post-midnight (5 min) goes to today's bucket — pre-midnight is yesterday's data
-        assert result.today_zone_seconds.get("near", 0.0) == pytest.approx(
-            300.0, abs=2.0
-        )
+        assert result.today_zone_seconds.get("near", 0.0) == pytest.approx(300.0, abs=2.0)
 
     def test_no_flush_when_prev_calc_time_is_none(self):
         """When prev_calc_time is None there is nothing to flush — no error."""
@@ -508,16 +506,12 @@ class TestGroupBinarySensorUnavailable:
         return GroupData(pairs=pairs, any_in_proximity=False, all_in_proximity=False)
 
     def test_any_in_proximity_returns_none_when_all_invalid(self):
-        gd = self._make_group_data_all_invalid(
-            ["person.alice", "person.bob", "person.carol"]
-        )
+        gd = self._make_group_data_all_invalid(["person.alice", "person.bob", "person.carol"])
         sensor = _make_group_sensor(AnyInProximityBinarySensor, gd)
         assert sensor.is_on is None
 
     def test_all_in_proximity_returns_none_when_all_invalid(self):
-        gd = self._make_group_data_all_invalid(
-            ["person.alice", "person.bob", "person.carol"]
-        )
+        gd = self._make_group_data_all_invalid(["person.alice", "person.bob", "person.carol"])
         sensor = _make_group_sensor(AllInProximityBinarySensor, gd)
         assert sensor.is_on is None
 
@@ -525,9 +519,7 @@ class TestGroupBinarySensorUnavailable:
         import itertools
 
         pairs = {}
-        for a, b in itertools.combinations(
-            ["person.alice", "person.bob", "person.carol"], 2
-        ):
+        for a, b in itertools.combinations(["person.alice", "person.bob", "person.carol"], 2):
             k = pair_key(a, b)
             ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
             ps.data_valid = True
@@ -541,9 +533,7 @@ class TestGroupBinarySensorUnavailable:
         import itertools
 
         pairs = {}
-        for a, b in itertools.combinations(
-            ["person.alice", "person.bob", "person.carol"], 2
-        ):
+        for a, b in itertools.combinations(["person.alice", "person.bob", "person.carol"], 2):
             k = pair_key(a, b)
             ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
             ps.data_valid = True
@@ -997,9 +987,7 @@ class TestInvalidateCreditsZoneBucket:
         assert result.today_reset_date == date(2024, 6, 2)
         # 10 min post-midnight credited to proximity and zone
         assert result.today_proximity_seconds == pytest.approx(600.0, abs=2.0)
-        assert result.today_zone_seconds.get("very_near", 0.0) == pytest.approx(
-            600.0, abs=2.0
-        )
+        assert result.today_zone_seconds.get("very_near", 0.0) == pytest.approx(600.0, abs=2.0)
 
 
 class TestResyncHoldFlushesProximity:
@@ -1231,9 +1219,7 @@ class TestSensorAvailableFalseReturnsNone:
     def test_gps_accuracy_returns_none(self):
         from custom_components.entity_distance.sensor import GpsAccuracySensor
 
-        s = _make_unavailable_sensor(
-            GpsAccuracySensor, {"accuracy_a": 10.0}, {"_which": "a"}
-        )
+        s = _make_unavailable_sensor(GpsAccuracySensor, {"accuracy_a": 10.0}, {"_which": "a"})
         s._sensor_key = "gps_accuracy_a"
         assert s.native_value is None
 
@@ -1504,9 +1490,7 @@ class TestZoneSecondsOnlyDuringProximity:
         wall time spent in each distance band, not proximity-gated time."""
         coord = _make_coordinator()
         state_a = _make_state("person.alice", 51.5, -0.1, 20)
-        state_b = _make_state(
-            "person.bob", 51.520, -0.1, 20
-        )  # 2km away — not in proximity
+        state_b = _make_state("person.bob", 51.520, -0.1, 20)  # 2km away — not in proximity
         coord.hass.states.get = MagicMock(
             side_effect=lambda eid: state_a if eid == "person.alice" else state_b
         )
@@ -1527,9 +1511,7 @@ class TestZoneSecondsOnlyDuringProximity:
 
         assert result.proximity is False
         # 2200 m → 'far' bucket; 5-min tick → 300 s credited to far.
-        assert result.today_zone_seconds.get("far", 0.0) == pytest.approx(
-            300.0, abs=2.0
-        )
+        assert result.today_zone_seconds.get("far", 0.0) == pytest.approx(300.0, abs=2.0)
         # Proximity total stays gated — must not grow on non-proximity ticks.
         assert result.today_proximity_seconds == 0.0
 

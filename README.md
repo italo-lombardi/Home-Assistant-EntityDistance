@@ -20,7 +20,7 @@ Track the distance between any two or more entities — people, devices, or zone
 
 - **Person-to-person, person-to-zone, device-to-zone, zone-to-zone** — any combination of `person`, `device_tracker`, `sensor`, or `zone` entities
 - **Group tracking** — select 2–5 entities; all pairwise distances are tracked under one config entry (2 entities = 1 pair, 3 = 3 pairs, 4 = 6 pairs, 5 = 10 pairs)
-- **Group sensors** — for 3+ entities: Min Distance, Any In Proximity, All In Proximity
+- **Group sensors** — for 3+ entities: Min Distance, Any In Proximity, All In Proximity, Settings
 - **27 sensors per pair** — distance, proximity zone, proximity zone level, proximity duration, proximity rate, proximity tracking started, last seen together, today proximity time, direction, direction level, closing speed, ETA, today zone times, GPS accuracy, last update, update count, entity state, today unaccounted time (per entity where applicable)
 - **Proximity binary sensor** — ON when entities are in the selected proximity zone, OFF when they move to the next zone out (natural hysteresis, no separate entry/exit threshold settings needed)
 - **Same Zone binary sensor** — ON when both entities share the same named zone, OFF otherwise (never `unknown`)
@@ -113,14 +113,14 @@ All settings can be changed after setup via **Configure** on the integration car
 
 ## Entities
 
-Each configured group creates one HA device (the group) with per-pair sub-devices. A 2-entity group creates 36 entities (27 sensors + 8 binary sensors + 1 button). A 3-entity group creates 108 pair entities + 3 group sensors.
+Each configured group creates one HA device (the group) with per-pair sub-devices. A 2-entity group creates 36 entities (27 sensors + 8 binary sensors + 1 button). A 3-entity group creates 108 pair entities + 4 group sensors.
 
 | Group size | Pairs | Total entities (approx) |
 |-----------|-------|------------------------|
 | 2 | 1 | 36 |
-| 3 | 3 | 108 + 3 group |
-| 4 | 6 | 216 + 3 group |
-| 5 | 10 | 360 + 3 group |
+| 3 | 3 | 108 + 4 group |
+| 4 | 6 | 216 + 4 group |
+| 5 | 10 | 360 + 4 group |
 
 ### Pair Sensors
 
@@ -129,7 +129,7 @@ Each configured group creates one HA device (the group) with per-pair sub-device
 | Distance | Distance between entities in meters | `distance` |
 | Proximity Zone | Very Near / Near / Medium / Far / Very Far | `enum` |
 | Proximity Zone Number | Numeric zone level: 1 (Very Near) to 5 (Very Far) | — |
-| Proximity Duration | Minutes in proximity (live, includes current session). Stored internally in seconds; displayed as minutes | `duration` |
+| Proximity Duration | Total time entities have been within proximity distance — live, includes the current open session | `duration` |
 | Proximity Tracking Started | Timestamp when tracking began for this pair (set once) | `timestamp` |
 | Proximity Rate | Percentage of tracked time spent in proximity | `%` |
 | Last Seen Together | Timestamp when the last proximity session ended (exit) — shows "Together now" in the Pair Card while currently in proximity | `timestamp` |
@@ -152,7 +152,7 @@ Each configured group creates one HA device (the group) with per-pair sub-device
 | State (Name A) | Current state of entity A (e.g. home, away, zone name) | — |
 | State (Name B) | Current state of entity B (e.g. home, away, zone name) | — |
 | Today Unaccounted Time | Today's elapsed minutes minus sum of bucket times — captures HA-down windows, invalid GPS, and pre-setup time on install day | `duration` |
-| Settings | Diagnostic snapshot: proximity threshold, zone boundaries, debounce. State: `proximity ≤ Xm (zone) · zones vn/n/m/fm · debounce Xs`. Full config in attributes | — |
+| Settings | Diagnostic snapshot: proximity threshold, zone boundaries, debounce. State: `proximity ≤ Xm (zone) · zones vn/n/m/f · debounce Xs`. Full config in attributes | — |
 
 > GPS Accuracy, Last Update, and Update Count are diagnostic sensors — collapsed by default in the HA UI.
 
@@ -178,6 +178,7 @@ Each configured group creates one HA device (the group) with per-pair sub-device
 | Min Distance | Smallest distance across all pairs in the group | `distance` |
 | Any In Proximity | ON when any pair is in proximity | `presence` |
 | All In Proximity | ON when every pair is in proximity | `presence` |
+| Settings | Diagnostic snapshot for the group: zone boundaries, proximity zone, debounce | — |
 
 ### Button
 
@@ -241,7 +242,7 @@ eta_minutes = current_distance_m / closing_speed_m/s / 60
 
 ### Proximity Duration
 
-Accumulated seconds while `In Proximity` is ON. Each update adds `now − prev_calc_time` to the running total. The current open session is included live (not only closed sessions).
+Accumulates time while `In Proximity` is ON. Each tick adds `now − prev_calc_time` to the running total. The current open session is included live. Displayed in minutes.
 
 ### Today Proximity Time / Today Zone Times
 

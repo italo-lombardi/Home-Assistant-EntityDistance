@@ -324,9 +324,7 @@ class TestTodayZoneTimeSensor:
         assert sensor.native_value == 0.0
 
     def test_very_near_bucket_minutes(self):
-        sensor = _make_zone_sensor(
-            BUCKET_VERY_NEAR, self._ps(True, {BUCKET_VERY_NEAR: 120.0})
-        )
+        sensor = _make_zone_sensor(BUCKET_VERY_NEAR, self._ps(True, {BUCKET_VERY_NEAR: 120.0}))
         assert sensor.native_value == 2.0  # 120 / 60
 
     def test_near_bucket_minutes(self):
@@ -342,9 +340,7 @@ class TestTodayZoneTimeSensor:
         assert sensor.native_value == 30.0  # 1800 / 60
 
     def test_very_far_bucket_minutes(self):
-        sensor = _make_zone_sensor(
-            BUCKET_VERY_FAR, self._ps(True, {BUCKET_VERY_FAR: 3600.0})
-        )
+        sensor = _make_zone_sensor(BUCKET_VERY_FAR, self._ps(True, {BUCKET_VERY_FAR: 3600.0}))
         assert sensor.native_value == 60.0  # 3600 / 60
 
     def test_rounds_to_one_decimal(self):
@@ -362,10 +358,7 @@ class TestTodayZoneTimeSensor:
         from homeassistant.const import EntityCategory
 
         sensor = _make_zone_sensor(BUCKET_VERY_NEAR, self._ps(True, {}))
-        assert (
-            sensor.entity_category is None
-            or sensor.entity_category != EntityCategory.DIAGNOSTIC
-        )
+        assert sensor.entity_category is None or sensor.entity_category != EntityCategory.DIAGNOSTIC
 
 
 # ---------------------------------------------------------------------------
@@ -412,9 +405,7 @@ class TestUpdateCountSensor:
 
         ps = self._ps(True, count_a=5, count_b=3)
         # Use the coordinator's window (1800s set in _make_count_sensor)
-        ps.update_window_start_a = datetime.now().astimezone() - timedelta(
-            seconds=1800 + 60
-        )
+        ps.update_window_start_a = datetime.now().astimezone() - timedelta(seconds=1800 + 60)
         sensor = _make_count_sensor("a", ps)
         assert sensor.native_value == 0
 
@@ -434,9 +425,7 @@ class TestUpdateCountSensor:
         from datetime import timedelta
 
         ps = self._ps(True, count_a=2, count_b=9)
-        ps.update_window_start_b = datetime.now().astimezone() - timedelta(
-            seconds=1800 + 60
-        )
+        ps.update_window_start_b = datetime.now().astimezone() - timedelta(seconds=1800 + 60)
         sensor = _make_count_sensor("b", ps)
         assert sensor.native_value == 0
 
@@ -1260,9 +1249,7 @@ class TestEntityStateSensor:
 
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.data_valid = True
-        sensor = _make_extra_sensor(
-            EntityStateSensor, ps, _tracked_entity_id="person.a"
-        )
+        sensor = _make_extra_sensor(EntityStateSensor, ps, _tracked_entity_id="person.a")
         hass = MagicMock()
         state_mock = MagicMock()
         state_mock.state = "home"
@@ -1275,9 +1262,7 @@ class TestEntityStateSensor:
 
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.data_valid = True
-        sensor = _make_extra_sensor(
-            EntityStateSensor, ps, _tracked_entity_id="person.a"
-        )
+        sensor = _make_extra_sensor(EntityStateSensor, ps, _tracked_entity_id="person.a")
         hass = MagicMock()
         hass.states.get.return_value = None
         sensor.hass = hass

@@ -90,9 +90,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             return {"new_unique_id": f"{entry_id_prefix}{pair_prefix}{suffix}"}
 
         await er.async_migrate_entries(hass, entry.entry_id, _migrate_unique_id)
-        hass.config_entries.async_update_entry(
-            entry, data=new_data, version=2, minor_version=1
-        )
+        hass.config_entries.async_update_entry(entry, data=new_data, version=2, minor_version=1)
         _LOGGER.info(
             "entity_distance: migrated entry %s from VERSION 1 to VERSION 2",
             entry.entry_id,
@@ -183,9 +181,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     if unload_ok:
-        coordinator: EntityDistanceCoordinator = hass.data[DOMAIN].pop(
-            entry.entry_id, None
-        )
+        coordinator: EntityDistanceCoordinator = hass.data[DOMAIN].pop(entry.entry_id, None)
         if coordinator:
             coordinator.async_unload()
         # Clear the card-installed flag when the last entry unloads so resources
@@ -198,9 +194,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def _async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    _LOGGER.debug(
-        "entity_distance: options updated — reloading entry %s", entry.entry_id
-    )
+    _LOGGER.debug("entity_distance: options updated — reloading entry %s", entry.entry_id)
     await hass.config_entries.async_reload(entry.entry_id)
 
 
@@ -244,13 +238,9 @@ async def _async_install_card(hass: HomeAssistant) -> None:
             _LOGGER.warning("entity_distance: card JS not found at %s", source)
             continue
         try:
-            await hass.http.async_register_static_paths(
-                [StaticPathConfig(url, str(source), True)]
-            )
+            await hass.http.async_register_static_paths([StaticPathConfig(url, str(source), True)])
         except RuntimeError as err:
-            _LOGGER.debug(
-                "entity_distance: static path %s already registered (%s)", url, err
-            )
+            _LOGGER.debug("entity_distance: static path %s already registered (%s)", url, err)
         await _async_register_lovelace_resource(hass, filename, url, version)
 
     domain_data[_CARD_INSTALLED_KEY] = True
@@ -279,15 +269,9 @@ async def _async_register_lovelace_resource(
 
     if not existing:
         if getattr(resources, "async_create_item", None):
-            await resources.async_create_item(
-                {"res_type": "module", "url": resource_url}
-            )
-            _LOGGER.info(
-                "entity_distance: registered %s as Lovelace resource", resource_url
-            )
-        elif getattr(resources, "data", None) and getattr(
-            resources.data, "append", None
-        ):
+            await resources.async_create_item({"res_type": "module", "url": resource_url})
+            _LOGGER.info("entity_distance: registered %s as Lovelace resource", resource_url)
+        elif getattr(resources, "data", None) and getattr(resources.data, "append", None):
             resources.data.append({"type": "module", "url": resource_url})
         return
 
@@ -295,9 +279,7 @@ async def _async_register_lovelace_resource(
     for r in existing[1:]:
         if isinstance(resources, ResourceStorageCollection):
             await resources.async_delete_item(r["id"])
-            _LOGGER.info(
-                "entity_distance: removed duplicate Lovelace resource %s", r["url"]
-            )
+            _LOGGER.info("entity_distance: removed duplicate Lovelace resource %s", r["url"])
 
     first = existing[0]
     if first.get("url") != resource_url:
@@ -305,8 +287,6 @@ async def _async_register_lovelace_resource(
             await resources.async_update_item(
                 first["id"], {"res_type": "module", "url": resource_url}
             )
-            _LOGGER.info(
-                "entity_distance: updated Lovelace resource to %s", resource_url
-            )
+            _LOGGER.info("entity_distance: updated Lovelace resource to %s", resource_url)
         else:
             first["url"] = resource_url

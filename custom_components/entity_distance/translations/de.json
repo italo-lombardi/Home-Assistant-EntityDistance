@@ -39,7 +39,7 @@
           "min_updates_reliable": "Min. Aktualisierungen für zuverlässige Daten"
         },
         "data_description": {
-          "max_accuracy_m": "Standortaktualisierungen mit schlechterer GPS-Genauigkeit als diesem Wert ablehnen. Auf 0 setzen zum Deaktivieren.",
+          "max_accuracy_m": "Standortaktualisierungen ignorieren, wenn der GPS-Fehler größer als dieser Wert ist. Telefone in Bewegung melden typischerweise eine Genauigkeit von 100–250 m, daher ist 300 m ein sicherer Standardwert. Ein Telefon mit „350 m Genauigkeit\" würde übersprungen. Auf 0 setzen zum Deaktivieren.",
           "max_speed_kmh": "Aktualisierungen ablehnen, bei denen die implizierte Bewegungsgeschwindigkeit diesen Wert überschreitet. Auf 0 setzen zum Deaktivieren.",
           "require_reliable": "Proximity_enter-Ereignis nur auslösen, wenn Daten als zuverlässig gelten.",
           "min_updates_reliable": "Mindestanzahl von Standortaktualisierungen im Fenster, bevor Daten als zuverlässig gelten."
@@ -104,7 +104,7 @@
         },
         "description": "Diese Filter helfen, schlechte GPS-Daten zu ignorieren.",
         "data_description": {
-          "max_accuracy_m": "Standortaktualisierungen ablehnen, bei denen der GPS-Fehler größer als dieser Wert ist.",
+          "max_accuracy_m": "Standortaktualisierungen ignorieren, wenn der GPS-Fehler größer als dieser Wert ist. Telefone in Bewegung melden typischerweise eine Genauigkeit von 100–250 m, daher ist 300 m ein sicherer Standardwert. Ein Telefon mit „350 m Genauigkeit\" würde übersprungen. Auf 0 setzen zum Deaktivieren.",
           "max_speed_kmh": "Aktualisierungen ablehnen, die eine Bewegung schneller als dies implizieren.",
           "require_reliable": "Wenn aktiviert, wird ein Näherungsereignis nur nach konsistenten Aktualisierungen ausgelöst.",
           "min_updates_reliable": "Wie viele konsistente Aktualisierungen erforderlich sind, bevor der Standort als zuverlässig gilt."

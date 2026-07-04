@@ -39,7 +39,7 @@
           "min_updates_reliable": "Min. oppdateringer for pålitelige data"
         },
         "data_description": {
-          "max_accuracy_m": "Avvis posisjonsoppdateringer med GPS-nøyaktighet dårligere enn denne verdien. Sett til 0 for å deaktivere.",
+          "max_accuracy_m": "Avvis posisjonsoppdateringer der GPS-feilen er større enn denne verdien. Telefoner i bevegelse rapporterer typisk 100–250 m nøyaktighet, så 300 m er en trygg standardverdi. En telefon som viser «350 m nøyaktighet» vil bli hoppet over. Sett til 0 for å deaktivere.",
           "max_speed_kmh": "Avvis oppdateringer der implisitt bevegelseshastighet overskrider denne verdien. Sett til 0 for å deaktivere.",
           "require_reliable": "Avskyte proximity_enter-hendelse bare når data anses pålitelige.",
           "min_updates_reliable": "Minimum antall posisjonsoppdateringer i vinduet før data anses pålitelige."
@@ -104,7 +104,7 @@
         },
         "description": "Disse filtrene hjelper med å ignorere dårlige GPS-data.",
         "data_description": {
-          "max_accuracy_m": "Ignorer posisjonsoppdateringer der GPS-feilen er større enn dette.",
+          "max_accuracy_m": "Avvis posisjonsoppdateringer der GPS-feilen er større enn denne verdien. Telefoner i bevegelse rapporterer typisk 100–250 m nøyaktighet, så 300 m er en trygg standardverdi. En telefon som viser «350 m nøyaktighet» vil bli hoppet over. Sett til 0 for å deaktivere.",
           "max_speed_kmh": "Ignorer oppdateringer som innebærer bevegelse raskere enn dette.",
           "require_reliable": "Når aktivert utløses en nærhendelse bare etter konsekvente oppdateringer.",
           "min_updates_reliable": "Hvor mange konsekvente oppdateringer som kreves før posisjonen anses som pålitelig."

@@ -39,7 +39,7 @@
           "min_updates_reliable": "Mises à jour min. pour données fiables"
         },
         "data_description": {
-          "max_accuracy_m": "Rejeter les mises à jour de localisation avec une précision GPS inférieure à cette valeur. Mettre à 0 pour désactiver.",
+          "max_accuracy_m": "Rejeter les mises à jour de localisation où l'erreur GPS est supérieure à cette valeur. Les téléphones en mouvement rapportent généralement une précision de 100–250 m, donc 300 m est une valeur par défaut sûre. Un téléphone affichant « précision 350 m » serait ignoré. Mettre à 0 pour désactiver.",
           "max_speed_kmh": "Rejeter les mises à jour où la vitesse de déplacement implicite dépasse cette valeur. Mettre à 0 pour désactiver.",
           "require_reliable": "Déclencher l'événement proximity_enter uniquement lorsque les données sont fiables.",
           "min_updates_reliable": "Nombre minimum de mises à jour de localisation dans la fenêtre avant que les données soient considérées fiables."
@@ -104,7 +104,7 @@
         },
         "description": "Ces filtres aident à ignorer les données GPS incorrectes.",
         "data_description": {
-          "max_accuracy_m": "Ignorer les mises à jour de localisation où l'erreur GPS dépasse cette valeur.",
+          "max_accuracy_m": "Rejeter les mises à jour de localisation où l'erreur GPS est supérieure à cette valeur. Les téléphones en mouvement rapportent généralement une précision de 100–250 m, donc 300 m est une valeur par défaut sûre. Un téléphone affichant « précision 350 m » serait ignoré. Mettre à 0 pour désactiver.",
           "max_speed_kmh": "Ignorer les mises à jour impliquant un mouvement plus rapide que cela.",
           "require_reliable": "Quand activé, un événement de proximité ne se déclenche qu'après des mises à jour cohérentes.",
           "min_updates_reliable": "Combien de mises à jour consécutives sont nécessaires avant de considérer la localisation fiable."

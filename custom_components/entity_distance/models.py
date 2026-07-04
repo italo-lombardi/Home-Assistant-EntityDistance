@@ -45,9 +45,6 @@ class PairState:
     today_reset_date: date | None = None
     today_zone_seconds: dict[str, float] = field(default_factory=dict)
 
-    def __post_init__(self) -> None:
-        pass
-
     accuracy_a: float | None = None
     accuracy_b: float | None = None
     last_update_a: datetime | None = None
@@ -70,3 +67,11 @@ class GroupData:
     min_distance_m: float | None = None
     any_in_proximity: bool = False
     all_in_proximity: bool = False
+
+
+def friendly_name(hass, entity_id: str) -> str:
+    """Return a display name for *entity_id*, falling back to a title-cased slug."""
+    state = hass.states.get(entity_id)
+    if state and state.name:
+        return state.name
+    return entity_id.split(".")[-1].replace("_", " ").title()

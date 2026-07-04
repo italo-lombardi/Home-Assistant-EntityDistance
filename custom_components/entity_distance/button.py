@@ -13,6 +13,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import EntityDistanceCoordinator
+from .models import friendly_name
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,10 +26,7 @@ async def async_setup_entry(
     coordinator: EntityDistanceCoordinator = hass.data[DOMAIN][entry.entry_id]
 
     def _friendly_name(entity_id: str) -> str:
-        state = hass.states.get(entity_id)
-        if state and state.name:
-            return state.name
-        return entity_id.split(".")[-1].replace("_", " ").title()
+        return friendly_name(hass, entity_id)
 
     entities_list = coordinator.entities
     group_name = " & ".join(_friendly_name(e) for e in entities_list)

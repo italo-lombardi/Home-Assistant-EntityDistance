@@ -1391,6 +1391,41 @@ class TestNoBusEvents:
         assert coordinator.hass.bus.fire.call_count == 0
 
 
+class TestUnrecognisedProximityZone:
+    """Coordinator warns and defaults to very_near on invalid proximity_zone."""
+
+    async def test_invalid_zone_logs_warning_and_defaults(self, hass, caplog):
+        from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+        from custom_components.entity_distance.const import (
+            BUCKET_VERY_NEAR,
+            DOMAIN,
+        )
+        from custom_components.entity_distance.coordinator import (
+            EntityDistanceCoordinator,
+        )
+
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={
+                "entities": ["person.alice", "person.bob"],
+                "proximity_zone": "totally_invalid",
+            },
+            options={},
+        )
+        entry.add_to_hass(hass)
+
+        import logging
+
+        with caplog.at_level(
+            logging.WARNING, logger="custom_components.entity_distance.coordinator"
+        ):
+            coord = EntityDistanceCoordinator(hass, entry)
+
+        assert coord._proximity_zone == BUCKET_VERY_NEAR
+        assert any("unrecognised proximity_zone" in r.message for r in caplog.records)
+
+
 # ---------------------------------------------------------------------------
 # Constructor __init__ via real hass + MockConfigEntry
 # ---------------------------------------------------------------------------

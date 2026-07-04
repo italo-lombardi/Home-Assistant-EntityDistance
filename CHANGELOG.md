@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-## [0.4.0] - 2026-07-04
+## [0.4.0] - 2026-07-05
 
 > **⚠ BREAKING CHANGE — proximity alert distances will change on upgrade**
 >

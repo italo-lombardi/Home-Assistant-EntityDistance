@@ -1568,3 +1568,107 @@ class TestRemainingCoverageBranches:
         s._attr_unique_id = "test_min"
         s._attr_device_info = {}
         assert s.native_value is None
+
+
+class TestCumulativeSensorCoordinatorFailedReturnsNone:
+    """Cumulative sensors return None when coordinator.last_update_success=False."""
+
+    def _make_sensor(self, sensor_cls, extra_kwargs=None):
+        from unittest.mock import MagicMock
+
+        from custom_components.entity_distance.coordinator import (
+            EntityDistanceCoordinator,
+        )
+        from custom_components.entity_distance.models import GroupData, PairState, pair_key
+
+        coordinator = MagicMock(spec=EntityDistanceCoordinator)
+        coordinator.last_update_success = False
+        k = pair_key("person.alice", "person.bob")
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.data_valid = True
+        ps.proximity_tracking_started = None
+        ps.proximity_duration_s = 100.0
+        ps.proximity = False
+        ps.proximity_since = None
+        ps.today_proximity_seconds = 60.0
+        ps.today_zone_seconds = {"very_near": 30.0}
+        ps.last_seen_together = None
+        ps.update_count_a = 5
+        ps.update_window_start_a = None
+        coordinator.data = GroupData(pairs={k: ps})
+        coordinator.bucket_thresholds = {"very_near": 200, "near": 1000, "mid": 5000, "far": 20000}
+        coordinator.updates_window_s = 1800
+        entry = MagicMock()
+        entry.entry_id = "test"
+        kwargs = {"coordinator": coordinator, "entry": entry}
+        if extra_kwargs:
+            kwargs.update(extra_kwargs)
+        s = sensor_cls.__new__(sensor_cls)
+        s.coordinator = coordinator
+        s._entry = entry
+        s._pair_key = k
+        s._attr_unique_id = "test"
+        s._attr_device_info = {}
+        if extra_kwargs:
+            for attr, val in extra_kwargs.items():
+                setattr(s, attr, val)
+        return s
+
+    def test_proximity_duration_returns_none(self):
+        from custom_components.entity_distance.sensor import ProximityDurationSensor
+
+        s = self._make_sensor(ProximityDurationSensor)
+        s._sensor_key = "proximity_duration"
+        assert s.native_value is None
+
+    def test_last_seen_together_returns_none(self):
+        from custom_components.entity_distance.sensor import LastSeenTogetherSensor
+
+        s = self._make_sensor(LastSeenTogetherSensor)
+        s._sensor_key = "last_seen_together"
+        assert s.native_value is None
+
+    def test_today_proximity_time_returns_none(self):
+        from custom_components.entity_distance.sensor import TodayProximityTimeSensor
+
+        s = self._make_sensor(TodayProximityTimeSensor)
+        s._sensor_key = "today_proximity_time"
+        assert s.native_value is None
+
+    def test_today_zone_time_returns_none(self):
+        from custom_components.entity_distance.sensor import TodayZoneTimeSensor
+
+        s = self._make_sensor(TodayZoneTimeSensor)
+        s._sensor_key = "today_zone_time_very_near"
+        s._bucket = "very_near"
+        assert s.native_value is None
+
+    def test_proximity_rate_returns_none(self):
+        from custom_components.entity_distance.sensor import ProximityRateSensor
+
+        s = self._make_sensor(ProximityRateSensor)
+        s._sensor_key = "proximity_rate"
+        assert s.native_value is None
+
+    def test_proximity_tracking_started_returns_none(self):
+        from custom_components.entity_distance.sensor import ProximityTrackingStartedSensor
+
+        s = self._make_sensor(ProximityTrackingStartedSensor)
+        s._sensor_key = "proximity_tracking_started"
+        assert s.native_value is None
+
+    def test_update_count_returns_none(self):
+        from custom_components.entity_distance.sensor import UpdateCountSensor
+
+        s = self._make_sensor(UpdateCountSensor)
+        s._sensor_key = "update_count_a"
+        s._which = "a"
+        assert s.native_value is None
+
+    def test_last_update_sensor_returns_none(self):
+        from custom_components.entity_distance.sensor import LastUpdateSensor
+
+        s = self._make_sensor(LastUpdateSensor)
+        s._sensor_key = "last_update_a"
+        s._which = "a"
+        assert s.native_value is None

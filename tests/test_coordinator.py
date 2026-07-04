@@ -1446,8 +1446,6 @@ class TestCoordinatorInit:
             domain=DOMAIN,
             data={
                 "entities": ["person.alice", "person.bob"],
-                "entry_threshold_m": 500,
-                "exit_threshold_m": 700,
                 "debounce_s": 1,
                 "max_accuracy_m": 200,
                 "max_speed_kmh": 150,
@@ -1477,8 +1475,6 @@ class TestCoordinatorInit:
             domain=DOMAIN,
             data={
                 "entities": ["person.a", "person.b", "person.c"],
-                "entry_threshold_m": 500,
-                "exit_threshold_m": 700,
                 "debounce_s": 1,
                 "max_accuracy_m": 200,
                 "max_speed_kmh": 150,
@@ -1545,8 +1541,6 @@ class TestCoordinatorLifecycle:
             domain=DOMAIN,
             data={
                 "entities": entities,
-                "entry_threshold_m": 500,
-                "exit_threshold_m": 700,
                 "debounce_s": 0.01,
                 "max_accuracy_m": 200,
                 "max_speed_kmh": 150,

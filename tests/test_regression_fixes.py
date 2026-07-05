@@ -991,8 +991,8 @@ class TestInvalidateCreditsZoneBucket:
 
 
 class TestResyncHoldFlushesProximity:
-    def test_hold_closes_proximity_session(self):
-        """Resync hold early-return credits proximity_duration_s before nulling."""
+    def test_hold_freezes_proximity_session(self):
+        """Resync hold early-return leaves proximity=True (FREEZE) — no session close during hold."""
         coord = _make_coordinator()
         k = pair_key("person.alice", "person.bob")
         state_a = _make_state("person.alice", 51.5, -0.1, 20)
@@ -1024,11 +1024,124 @@ class TestResyncHoldFlushesProximity:
         ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
-        # Hold fires → proximity session closed
-        assert result.proximity is False
-        assert result.proximity_since is None
-        assert result.proximity_duration_s == pytest.approx(3600.0, abs=1.0)
+        # FREEZE: proximity stays True, session untouched, duration not yet credited
+        assert result.proximity is True
+        assert result.proximity_since == datetime(2024, 6, 1, 11, 0, 0, tzinfo=UTC)
+        assert result.proximity_duration_s == pytest.approx(0.0, abs=1.0)
         assert result.data_valid is True
+
+    def test_hold_expiry_no_proximity_session(self):
+        """Hold expires with proximity=False — expiry path runs without session credit."""
+        coord = _make_coordinator()
+        k = pair_key("person.alice", "person.bob")
+        state_a = _make_state("person.alice", 51.5, -0.1, 20)
+        state_b = _make_state("person.bob", 51.501, -0.1, 20)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: state_a if eid == "person.alice" else state_b
+        )
+        coord.hass.bus.fire = MagicMock()
+
+        coord._resync_silence_s = 10.0
+        coord._resync_hold_s = 300.0
+        coord._resync_holding = {k: True}
+        coord._resync_hold_until = {k: _NOW - timedelta(seconds=1)}  # expired
+
+        ps = _fresh_pair()
+        ps.proximity = False  # not in proximity at expiry
+        ps.proximity_since = None
+        ps.today_reset_date = _NOW.date()
+        ps.today_proximity_seconds = 100.0
+        ps.proximity_duration_s = 500.0
+
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=5000.0,
+        ):
+            result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+
+        # Hold released, no session to credit — counters unchanged
+        assert coord._resync_holding[k] is False
+        assert result.proximity_duration_s == pytest.approx(500.0, abs=1.0)
+        assert result.today_proximity_seconds == pytest.approx(100.0, abs=1.0)
+
+    def test_hold_expiry_same_day_proximity_open_credits_duration(self):
+        """Hold expires same day with proximity=True — duration credited, proximity_since advanced."""
+        coord = _make_coordinator()
+        k = pair_key("person.alice", "person.bob")
+        state_a = _make_state("person.alice", 51.5, -0.1, 20)
+        state_b = _make_state("person.bob", 51.501, -0.1, 20)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: state_a if eid == "person.alice" else state_b
+        )
+        coord.hass.bus.fire = MagicMock()
+
+        coord._resync_silence_s = 10.0
+        coord._resync_hold_s = 60.0
+        coord._resync_holding = {k: True}
+        coord._resync_hold_until = {k: _NOW - timedelta(seconds=1)}  # expired
+
+        ps = _fresh_pair()
+        ps.proximity = True
+        prox_start = datetime(2024, 6, 1, 11, 0, 0, tzinfo=UTC)
+        ps.proximity_since = prox_start
+        ps.today_reset_date = _NOW.date()  # same day
+        ps.today_proximity_seconds = 0.0
+        ps.proximity_duration_s = 0.0
+        ps.distance_m = 50.0
+
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=50.0,
+        ):
+            result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+
+        # Same-day expiry: duration credited, proximity_since advanced to now
+        assert coord._resync_holding[k] is False
+        assert result.proximity_duration_s == pytest.approx(3600.0, abs=2.0)
+        assert result.proximity_since == _NOW
+        assert result.proximity is True
+
+    def test_hold_expiry_cross_midnight_post_hold_zero_skips_bucket(self):
+        """Hold expires exactly at midnight — post_hold==0, bucket credit must be skipped."""
+        from custom_components.entity_distance.models import pair_key
+
+        coord = _make_coordinator()
+        k = pair_key("person.alice", "person.bob")
+        # Hold already expired
+        midnight = datetime(2024, 6, 2, 0, 0, 0, tzinfo=UTC)
+        coord._resync_silence_s = 10.0
+        coord._resync_hold_s = 60.0
+        coord._resync_holding = {k: True}
+        coord._resync_hold_until = {k: midnight - timedelta(seconds=1)}
+
+        state_a = _make_state("person.alice", 51.5, -0.1, 20)
+        state_b = _make_state("person.bob", 51.501, -0.1, 20)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: state_a if eid == "person.alice" else state_b
+        )
+        coord.hass.bus.fire = MagicMock()
+
+        ps = _fresh_pair()
+        ps.proximity = True
+        # Proximity started just before midnight — post_hold == 0 at midnight
+        ps.proximity_since = midnight - timedelta(seconds=300)
+        ps.distance_m = 50.0
+        ps.today_reset_date = date(2024, 6, 1)  # date rolled
+        ps.today_proximity_seconds = 999.0
+        ps.today_zone_seconds = {"near": 999.0}
+        ps.proximity_duration_s = 0.0
+
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=50.0,
+        ):
+            result = coord._calc_pair(ps, "person.alice", "person.bob", midnight, set())
+
+        # Date rolled, post_hold==0 → counters reset but no bucket credit
+        assert result.today_reset_date == date(2024, 6, 2)
+        assert result.today_proximity_seconds == pytest.approx(0.0, abs=1.0)
+        assert result.today_zone_seconds == {}
+        assert result.proximity_duration_s == pytest.approx(300.0, abs=2.0)
 
 
 @pytest.mark.asyncio
@@ -1071,17 +1184,20 @@ async def test_platform_setup_failure_cleans_up_coordinator():
 
 
 class TestHoldFlushCrossMidnight:
-    def test_hold_after_midnight_resets_today_counters(self):
-        """Hold firing after midnight date-rolls today counters and credits post-midnight only."""
+    def test_hold_after_midnight_freezes_proximity_credits_on_expiry(self):
+        """FREEZE: hold active at midnight does not roll today counters mid-hold.
+        On hold expiry, elapsed since proximity_since is credited and proximity_since advances."""
         from custom_components.entity_distance.models import pair_key
 
         coord = _make_coordinator()
         coord._resync_silence_s = 10.0
         coord._resync_hold_s = 300.0
         k = pair_key("person.alice", "person.bob")
+
+        # Hold already expired — expiry tick
+        now = datetime(2024, 6, 2, 0, 10, 0, tzinfo=UTC)
         coord._resync_holding = {k: True}
-        hold_until = datetime(2024, 6, 2, 0, 10, 0, tzinfo=UTC) + timedelta(seconds=200)
-        coord._resync_hold_until = {k: hold_until}
+        coord._resync_hold_until = {k: now - timedelta(seconds=1)}  # expired
 
         state_a = _make_state("person.alice", 51.5, -0.1, 20)
         state_b = _make_state("person.bob", 51.501, -0.1, 20)
@@ -1099,23 +1215,21 @@ class TestHoldFlushCrossMidnight:
         ps.today_proximity_seconds = 3000.0
         ps.proximity_duration_s = 0.0
 
-        # Hold fires at 00:10 on June 2 — crosses midnight
-        now = datetime(2024, 6, 2, 0, 10, 0, tzinfo=UTC)
-
         with patch(
             "custom_components.entity_distance.coordinator.ha_distance",
             return_value=50.0,
         ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", now, set())
 
-        # Date rolled → today counters reset
+        # Hold expired → session credited, date rolled, proximity_since advanced to now
         assert result.today_reset_date == date(2024, 6, 2)
         assert result.today_proximity_seconds == pytest.approx(
             600.0, abs=2.0
         )  # 10 min post-midnight
-        # lifetime counter: 15 min total (23:55 → 00:10)
-        assert result.proximity_duration_s == pytest.approx(900.0, abs=2.0)
-        assert result.proximity is False
+        assert result.proximity_duration_s == pytest.approx(900.0, abs=2.0)  # 15 min total
+        # FREEZE: proximity stays True after expiry credit, proximity_since advanced
+        assert result.proximity is True
+        assert result.proximity_since == now
 
 
 class TestLoadStateLastBucketCredit:
@@ -1437,8 +1551,8 @@ class TestReg4ExitBucketUsesProximityDistance:
 
 
 class TestHoldSameDayNoDoubleCount:
-    def test_same_day_hold_does_not_double_count_today_proximity(self):
-        """B1: same-day resync hold must not add post_hold to today_proximity_seconds again."""
+    def test_same_day_hold_freezes_proximity_no_duration_credit(self):
+        """FREEZE: same-day hold leaves proximity=True and does not credit duration mid-hold."""
         from custom_components.entity_distance.models import pair_key
 
         coord = _make_coordinator()
@@ -1460,8 +1574,7 @@ class TestHoldSameDayNoDoubleCount:
         ps.proximity = True
         ps.proximity_since = datetime(2024, 6, 1, 11, 0, 0, tzinfo=UTC)
         ps.today_reset_date = _NOW.date()  # same day — no date roll
-        # Simulate 3600s already accumulated tick-by-tick
-        ps.today_proximity_seconds = 3600.0
+        ps.today_proximity_seconds = 3600.0  # already accumulated tick-by-tick
         ps.proximity_duration_s = 0.0
         ps.distance_m = 50.0
 
@@ -1471,11 +1584,10 @@ class TestHoldSameDayNoDoubleCount:
         ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
-        assert result.proximity is False
-        # today_proximity_seconds must be unchanged (still 3600s) — hold must NOT add elapsed again
+        # FREEZE: proximity stays True, no duration credit during hold
+        assert result.proximity is True
         assert result.today_proximity_seconds == pytest.approx(3600.0, abs=1.0)
-        # lifetime counter gets elapsed (12:00 - 11:00 = 3600s)
-        assert result.proximity_duration_s == pytest.approx(3600.0, abs=1.0)
+        assert result.proximity_duration_s == pytest.approx(0.0, abs=1.0)
 
 
 # ---------------------------------------------------------------------------

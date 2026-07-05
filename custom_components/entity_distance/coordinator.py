@@ -727,10 +727,13 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 ps.proximity_since = now
             self._resync_holding[k] = False
             self._resync_hold_until[k] = None
-            # Reset staleness clocks so the hold doesn't re-arm immediately on
-            # the very next tick — treat hold expiry as a fresh observation.
-            ps.last_update_a = now
-            ps.last_update_b = now
+            # Reset staleness clocks only for non-zone sides so the hold doesn't
+            # re-arm immediately. Zone entities never emit state_changed so stamping
+            # last_update for them gives a misleading "last seen" timestamp.
+            if not _is_zone(state_a):
+                ps.last_update_a = now
+            if not _is_zone(state_b):
+                ps.last_update_b = now
 
         # Proximity transitions — after hold check so early-return doesn't leave
         # ps.proximity mutated while the sensor state has not yet been written.

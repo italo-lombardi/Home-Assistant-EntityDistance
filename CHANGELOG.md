@@ -2,48 +2,6 @@
 
 ## [Unreleased]
 
-## [0.4.0-beta.3] - 2026-07-05
-
-### Fixed
-
-- **`binary_sensor.in_proximity` no longer flickers during GPS silence (FREEZE hold).** The
-  resync hold previously reset `ps.proximity = False` for 60 s when GPS went silent >10 min,
-  causing `in_proximity` to flicker OFF→ON every quiet cycle even while the person was
-  physically present. The hold now **freezes** proximity state — `in_proximity` stays at its
-  last known value for the hold duration. On hold expiry, the open session is credited to
-  `proximity_duration_s` and `proximity_since` advances, so lifetime counters remain accurate.
-  A new `hold_active` attribute on `binary_sensor.in_proximity` lets critical automations
-  (security, alarm arming) detect when the hold is active and suppress safety-sensitive actions.
-
-- **Direction/speed/ETA now work for zone-vs-person pairs** (e.g. "Dercy & Home").
-  The direction block previously required both sides to be GPS entities (`not is_zone_a
-  and not is_zone_b`), so direction was permanently `unknown` whenever one entity was
-  a real zone. Guard changed to `not zone_fallback_a and not zone_fallback_b` —
-  true zone entities (fixed points) produce valid direction on every tick after the
-  first. Zone-fallback persons (scanner-only, collapsed to zone centre) remain
-  excluded since their coords are synthetic.
-
-- **GPS teleport guard for direction on zone-vs-person pairs.** The speed filter
-  (`is_zone` guard) is intentionally skipped for zone pairs, leaving direction
-  computation unguarded against GPS jumps. A new independent check rejects any
-  direction reading where implied speed exceeds `max_speed_kmh` (or
-  `DEFAULT_MAX_SPEED_KMH = 1000 km/h` when the speed filter is disabled). On
-  rejection, `prev_distance_m` is nulled so the next tick starts from a clean
-  baseline instead of comparing against the post-teleport position.
-
-- **Window boundary corrected (`>` → `>=`).** A GPS update arriving at exactly
-  `T + updates_window_s` was counted in the old window rather than starting a new
-  one. The boundary is now closed: elapsed ≥ window resets the count.
-
-### Internal
-
-- `direction_teleport_rejected` flag propagates the teleport check result to the
-  `prev_distance_m` null-out at the end of `_calc_pair`, same pattern as
-  `zone_fallback`.
-- 11 new tests covering zone-vs-person direction (approaching, diverging, teleport
-  rejection with/without speed filter, delta_s=0), zone+zone pair behaviour, and
-  exact window boundary; 526 tests, 100% line + branch coverage.
-
 ## [0.4.0] - 2026-07-05
 
 > **⚠ BREAKING CHANGE — proximity alert distances will change on upgrade**
@@ -96,11 +54,44 @@
 
 ### Fixed
 
+- **`binary_sensor.in_proximity` no longer flickers during GPS silence.** The
+  resync hold previously reset `ps.proximity = False` for 60 s when GPS went
+  silent >10 min, causing `in_proximity` to flicker OFF→ON every quiet cycle
+  while the person was physically present. Hold now **freezes** proximity state
+  — `in_proximity` stays at its last known value for the hold duration. On hold
+  expiry, the open session is credited to `proximity_duration_s` and
+  `proximity_since` advances, so lifetime counters remain accurate. A new
+  `hold_active` attribute on `binary_sensor.in_proximity` lets critical
+  automations (security, alarm arming) detect when the hold is active and
+  suppress safety-sensitive actions.
+
+- **Direction/speed/ETA now work for zone-vs-person pairs** (e.g. `person.dercy`
+  & `zone.home`). Previously permanently `unknown` because the direction guard
+  required both sides to be GPS entities. True zone entities (fixed points) now
+  produce valid direction after the first tick. Zone-fallback persons
+  (scanner-only, collapsed to zone centre) remain excluded since their coords
+  are synthetic.
+
+- **GPS teleport guard for direction on zone-vs-person pairs.** A GPS jump on
+  the person side could produce nonsense directions (40,000+ km/h). A new guard
+  rejects any direction reading where implied speed exceeds `max_speed_kmh` (or
+  1,000 km/h when the speed filter is disabled), nulling `prev_distance_m` so
+  the next tick starts from a clean baseline.
+
+- **`last_update_home` (zone entity) now correctly shows `unknown`.** The hold
+  expiry clock-reset previously stamped `last_update` for zone entities,
+  producing a misleading timestamp implying the zone had sent a location update.
+  Zones are static and never emit `state_changed`. Only non-zone sides now get
+  their staleness clock reset on hold expiry.
+
+- **Window boundary corrected (`>` → `>=`).** A GPS update arriving at exactly
+  `T + updates_window_s` was counted in the old window rather than starting a
+  new one. The boundary is now closed: elapsed ≥ window resets the count.
+
 - **Sensors no longer go `unavailable` during resync hold.** The resync silence
-  mechanism (which pauses proximity transitions for 60 s when GPS has been
-  silent for 10+ minutes) previously set `data_valid = False`, making all 35+
-  sensors flash `unavailable` for the hold duration. Hold now correctly suppresses
-  only proximity entry/exit transitions; sensors keep their last computed values.
+  mechanism previously set `data_valid = False`, making all 35+ sensors flash
+  `unavailable` for the hold duration. Hold now correctly suppresses only
+  proximity entry/exit transitions; sensors keep their last computed values.
   Cumulative sensors (proximity duration, today times, proximity rate, last seen
   together, update counts, tracking started) now report their values regardless
   of GPS staleness — they hold historical facts that do not expire.
@@ -116,47 +107,28 @@
   Existing GPS-tracked entities are completely unaffected.
 
 - **GPS noise false positives — accuracy-adjusted speed filter.** Two phones
-  in the same car could trigger a spurious 1300+ km/h speed filter rejection:
-  one phone's GPS bounced back to its true position after a noisy fix, and the
-  bounce had a short delta_t implying an impossible speed. The filter now
-  subtracts the combined GPS noise budget (previous and current accuracy for
-  both entities, four terms) from the raw distance delta before computing
-  implied speed. A position change indistinguishable from GPS noise no longer
-  causes invalidation. The outer guard also switches from absolute distance to
-  change magnitude, closing a bypass where a teleport landing inside the
-  accuracy bubble could skip speed checking entirely.
+  in the same car could trigger a spurious 1300+ km/h speed filter rejection
+  when one phone's GPS bounced after a noisy fix. The filter now subtracts the
+  combined GPS noise budget (previous and current accuracy for both entities,
+  four terms) from the raw distance delta before computing implied speed. A
+  position change indistinguishable from GPS noise no longer causes invalidation.
+  The outer guard also switches from absolute distance to change magnitude,
+  closing a bypass where a teleport landing inside the accuracy bubble could
+  skip speed checking entirely.
 
 - **Default `max_accuracy_m` raised from 150 → 300 m.** Phones in motion
   routinely report 100–250 m GPS accuracy. The old default caused sensors to
-  flash `unknown` whenever a device's GPS error exceeded 150 m (96+
-  occurrences/day observed in real-world use). 300 m rejects genuinely bad
-  fixes while tolerating normal mobile GPS noise. Existing config entries are
-  unaffected — the value is stored per-entry; update yours manually via
-  Settings → Integrations → Entity Distance → Configure.
+  flash `unknown` whenever a device's GPS error exceeded 150 m. 300 m rejects
+  genuinely bad fixes while tolerating normal mobile GPS noise. Existing config
+  entries are unaffected.
 
-- **Filter log levels demoted WARNING → DEBUG.** The accuracy and speed
-  filters working as designed is not an error. 96 WARNINGs/day trained users
-  to ignore their HA log, burying real problems. Both filters now log at
-  DEBUG. WARNING is preserved for entity-not-found, invalid coordinates, and
-  storage corruption.
+- **Filter log levels demoted WARNING → DEBUG.** The accuracy and speed filters
+  working as designed is not an error. Both filters now log at DEBUG. WARNING
+  is preserved for entity-not-found, invalid coordinates, and storage corruption.
 
 ### Internal
 
-- `_resolve_coords()` replaces `_get_coords()` at call sites. New
-  `_find_zone_by_name()` helper resolves a zone by object_id, slugified name,
-  or `State.name`.
-- `zone_fallback` flag propagates from coord resolution through `is_zone_a/b`,
-  correctly skipping accuracy filter, speed filter, direction computation,
-  resync silence, and `require_reliable` gate for zone-fallback entities.
-- `ps.prev_distance_m` nulled on zone-fallback ticks (zone-centre baseline
-  unusable for speed/direction on first post-fallback GPS tick).
-- `ps.accuracy_a/b` set to `None` on zone-fallback ticks (prevents stale zone
-  radius inflating `noise_budget_m` on GPS recovery).
-- Resync silence refactored to use `_is_zone()` directly (not the composite
-  flag) and evaluate per-side staleness — a stale GPS tracker paired with a
-  home-via-scanner person now correctly triggers a resync hold.
-- 33 new tests covering all new code paths; 515 tests, 100% line + branch
-  coverage.
+- 533 tests, 100% line + branch coverage.
 
 ## [0.3.1] - 2026-06-22
 

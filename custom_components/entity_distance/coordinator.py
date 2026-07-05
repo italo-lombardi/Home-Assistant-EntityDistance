@@ -755,6 +755,9 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                             )
                 # Advance proximity_since so the next EXIT does not re-count the hold window.
                 ps.proximity_since = now
+                # Null the snapshot so the _elapsed_s block below does not double-credit
+                # the same window that gap_s / post_hold already credited above.
+                prev_calc_time_snapshot = None
             self._resync_holding[k] = False
             self._resync_hold_until[k] = None
             # Reset staleness clocks only for non-zone sides so the hold doesn't

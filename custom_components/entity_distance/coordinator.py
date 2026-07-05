@@ -699,6 +699,12 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 # binary_sensor.in_proximity does not flicker during GPS silence.
                 # Credit today_proximity_seconds and today_zone_seconds for this
                 # tick so hold windows don't create gaps in daily time totals.
+                # Advance prev_distance_m/prev_calc_time to current values so the
+                # expiry tick can compute direction (delta_m=0 if stationary, or
+                # actual movement delta if pair moved during silence).
+                # Speed filter: default MAX_SPEED_KMH=1000 makes false rejections
+                # physically impossible. Users with very low max_speed_kmh and pairs
+                # that genuinely move during GPS silence may see a one-tick invalidation.
                 if ps.proximity and prev_calc_time_snapshot is not None:
                     _hold_elapsed_s = max(0.0, (now - prev_calc_time_snapshot).total_seconds())
                     if _hold_elapsed_s > 0:
@@ -708,10 +714,8 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                         ps.today_zone_seconds[_hold_bucket] = (
                             ps.today_zone_seconds.get(_hold_bucket, 0.0) + _hold_elapsed_s
                         )
-                # Null the baseline so the first post-hold tick doesn't trigger a
-                # spurious speed-filter rejection against a stale prev_distance_m.
-                ps.prev_calc_time = None
-                ps.prev_distance_m = None
+                ps.prev_distance_m = dist_m
+                ps.prev_calc_time = now
                 return ps
             # Hold expired — credit elapsed proximity time if session still open,
             # then advance proximity_since to now (fresh session start post-hold).
@@ -729,11 +733,26 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                     pre_hold = max(0.0, (midnight_utc - prox_since_utc).total_seconds())
                     post_hold = max(0.0, elapsed - pre_hold)
                     ps.today_proximity_seconds += post_hold
-                    if ps.distance_m is not None and post_hold > 0:
+                    # ponytail: distance_m always set at line 638 before this block
+                    if post_hold > 0:
                         hold_bucket = calc_bucket(ps.distance_m, self._bucket_thresholds)
                         ps.today_zone_seconds[hold_bucket] = (
                             ps.today_zone_seconds.get(hold_bucket, 0.0) + post_hold
                         )
+                else:
+                    # Same-day expiry. In-hold ticks credited each active tick up to
+                    # prev_calc_time_snapshot; gap from hold_until to now credited here.
+                    # (window from last active tick → hold_until is intentionally not
+                    # credited — it was GPS-silent time with no confirmed position.)
+                    if hold_until is not None:
+                        gap_s = max(0.0, (now - hold_until).total_seconds())
+                        if gap_s > 0:
+                            ps.today_proximity_seconds += gap_s
+                            # ponytail: distance_m always set at line 638 before this block
+                            exp_bucket = calc_bucket(ps.distance_m, self._bucket_thresholds)
+                            ps.today_zone_seconds[exp_bucket] = (
+                                ps.today_zone_seconds.get(exp_bucket, 0.0) + gap_s
+                            )
                 # Advance proximity_since so the next EXIT does not re-count the hold window.
                 ps.proximity_since = now
             self._resync_holding[k] = False

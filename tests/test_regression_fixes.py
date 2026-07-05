@@ -1190,6 +1190,104 @@ class TestResyncHoldFlushesProximity:
         assert result.proximity_since == _NOW
         assert result.proximity is True
 
+    def test_hold_expiry_same_day_gap_credited(self):
+        """Same-day expiry: gap from hold_until to now credited to today_proximity_seconds."""
+        coord = _make_coordinator()
+        k = pair_key("person.alice", "person.bob")
+        state_a = _make_state("person.alice", 51.5, -0.1, 20)
+        state_b = _make_state("person.bob", 51.501, -0.1, 20)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: state_a if eid == "person.alice" else state_b
+        )
+        coord.hass.bus.fire = MagicMock()
+        coord._resync_silence_s = 10.0
+        coord._resync_hold_s = 60.0
+        # hold_until = 30s before _NOW — so gap_s = 30s
+        coord._resync_holding = {k: True}
+        coord._resync_hold_until = {k: _NOW - timedelta(seconds=30)}
+
+        ps = _fresh_pair()
+        ps.proximity = True
+        ps.proximity_since = datetime(2024, 6, 1, 11, 0, 0, tzinfo=UTC)
+        ps.today_reset_date = _NOW.date()  # same day
+        ps.today_proximity_seconds = 500.0
+        ps.distance_m = 50.0
+        ps.proximity_duration_s = 0.0
+
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=50.0,
+        ):
+            result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+
+        # Gap of 30s from hold_until to now credited
+        assert result.today_proximity_seconds == pytest.approx(530.0, abs=2.0)
+
+    def test_hold_expiry_null_hold_until_skips_gap(self):
+        """Expiry with hold_until=None — no crash, gap credit skipped."""
+        coord = _make_coordinator()
+        k = pair_key("person.alice", "person.bob")
+        state_a = _make_state("person.alice", 51.5, -0.1, 20)
+        state_b = _make_state("person.bob", 51.501, -0.1, 20)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: state_a if eid == "person.alice" else state_b
+        )
+        coord.hass.bus.fire = MagicMock()
+        coord._resync_silence_s = 10.0
+        coord._resync_hold_s = 60.0
+        coord._resync_holding = {k: True}
+        coord._resync_hold_until = {k: None}  # inconsistent sentinel
+
+        ps = _fresh_pair()
+        ps.proximity = True
+        ps.proximity_since = datetime(2024, 6, 1, 11, 0, 0, tzinfo=UTC)
+        ps.today_reset_date = _NOW.date()
+        ps.today_proximity_seconds = 500.0
+        ps.distance_m = 50.0
+
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=50.0,
+        ):
+            result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+
+        # No crash, gap not credited (hold_until=None)
+        assert coord._resync_holding[k] is False
+        assert (
+            result.proximity is True
+        )  # pair within threshold, proximity stays on via normal logic
+
+    def test_hold_expiry_same_day_gap_zero_skips_credit(self):
+        """hold_until == now → gap_s = 0, no extra credit beyond hold ticks."""
+        coord = _make_coordinator()
+        k = pair_key("person.alice", "person.bob")
+        state_a = _make_state("person.alice", 51.5, -0.1, 20)
+        state_b = _make_state("person.bob", 51.501, -0.1, 20)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: state_a if eid == "person.alice" else state_b
+        )
+        coord.hass.bus.fire = MagicMock()
+        coord._resync_silence_s = 10.0
+        coord._resync_hold_s = 60.0
+        coord._resync_holding = {k: True}
+        coord._resync_hold_until = {k: _NOW}  # expired exactly at now → gap = 0
+
+        ps = _fresh_pair()
+        ps.proximity = True
+        ps.proximity_since = datetime(2024, 6, 1, 11, 0, 0, tzinfo=UTC)
+        ps.today_reset_date = _NOW.date()
+        ps.today_proximity_seconds = 500.0
+        ps.distance_m = 50.0
+
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=50.0,
+        ):
+            result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+
+        # gap_s = 0 → today_proximity_seconds unchanged by gap block
+        assert result.today_proximity_seconds == pytest.approx(500.0, abs=1.0)
+
     def _make_zone_person_coord(self, zone_first: bool):
         from unittest.mock import MagicMock
 

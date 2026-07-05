@@ -126,6 +126,10 @@ class ProximityBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], Binary
             return None
         return self._pair.proximity
 
+    @property
+    def extra_state_attributes(self) -> dict:
+        return {"hold_active": self.coordinator._resync_holding.get(self._pair_key, False)}
+
 
 class SameZoneBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], BinarySensorEntity):
     _attr_has_entity_name = True

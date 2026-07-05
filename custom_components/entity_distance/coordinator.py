@@ -691,42 +691,40 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             hold_until = self._resync_hold_until.get(k)
             if hold_until and now < hold_until:
                 _LOGGER.debug(
-                    "entity_distance: in resync hold for pair (%s, %s)",
+                    "entity_distance: in resync hold for pair (%s, %s) — freezing proximity state",
                     entity_a,
                     entity_b,
                 )
-                # Close any open proximity session before returning — the hold window
-                # should not be counted as valid proximity time.
-                if ps.proximity and ps.proximity_since:
-                    elapsed = max(0.0, (now - ps.proximity_since).total_seconds())
-                    ps.proximity_duration_s += elapsed
-                    # Only credit today counters when the date rolled — same-day hold must
-                    # not double-count time already accumulated tick-by-tick in today_proximity_seconds.
-                    hold_date_rolled = (
-                        ps.today_reset_date is None or ps.today_reset_date != now.date()
-                    )
-                    if hold_date_rolled:
-                        ps.today_proximity_seconds = 0.0
-                        ps.today_zone_seconds = {}
-                        ps.today_reset_date = now.date()
-                        midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
-                        midnight_utc = midnight.astimezone(UTC)
-                        prox_since_utc = ps.proximity_since.astimezone(UTC)
-                        pre_hold = max(0.0, (midnight_utc - prox_since_utc).total_seconds())
-                        post_hold = max(0.0, elapsed - pre_hold)
-                        ps.today_proximity_seconds += post_hold
-                        if ps.distance_m is not None and post_hold > 0:
-                            hold_bucket = calc_bucket(ps.distance_m, self._bucket_thresholds)
-                            ps.today_zone_seconds[hold_bucket] = (
-                                ps.today_zone_seconds.get(hold_bucket, 0.0) + post_hold
-                            )
-                    ps.proximity = False
-                    ps.proximity_since = None
+                # FREEZE: leave ps.proximity / ps.proximity_since untouched so
+                # binary_sensor.in_proximity does not flicker during GPS silence.
                 # Null the baseline so the first post-hold tick doesn't trigger a
                 # spurious speed-filter rejection against a stale prev_distance_m.
                 ps.prev_calc_time = None
                 ps.prev_distance_m = None
                 return ps
+            # Hold expired — credit elapsed proximity time if session still open,
+            # then advance proximity_since to now (fresh session start post-hold).
+            if ps.proximity and ps.proximity_since:
+                elapsed = max(0.0, (now - ps.proximity_since).total_seconds())
+                ps.proximity_duration_s += elapsed
+                hold_date_rolled = ps.today_reset_date is None or ps.today_reset_date != now.date()
+                if hold_date_rolled:
+                    ps.today_proximity_seconds = 0.0
+                    ps.today_zone_seconds = {}
+                    ps.today_reset_date = now.date()
+                    midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+                    midnight_utc = midnight.astimezone(UTC)
+                    prox_since_utc = ps.proximity_since.astimezone(UTC)
+                    pre_hold = max(0.0, (midnight_utc - prox_since_utc).total_seconds())
+                    post_hold = max(0.0, elapsed - pre_hold)
+                    ps.today_proximity_seconds += post_hold
+                    if ps.distance_m is not None and post_hold > 0:
+                        hold_bucket = calc_bucket(ps.distance_m, self._bucket_thresholds)
+                        ps.today_zone_seconds[hold_bucket] = (
+                            ps.today_zone_seconds.get(hold_bucket, 0.0) + post_hold
+                        )
+                # Advance proximity_since so the next EXIT does not re-count the hold window.
+                ps.proximity_since = now
             self._resync_holding[k] = False
             self._resync_hold_until[k] = None
             # Reset staleness clocks so the hold doesn't re-arm immediately on

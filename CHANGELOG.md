@@ -6,6 +6,15 @@
 
 ### Fixed
 
+- **`binary_sensor.in_proximity` no longer flickers during GPS silence (FREEZE hold).** The
+  resync hold previously reset `ps.proximity = False` for 60 s when GPS went silent >10 min,
+  causing `in_proximity` to flicker OFF→ON every quiet cycle even while the person was
+  physically present. The hold now **freezes** proximity state — `in_proximity` stays at its
+  last known value for the hold duration. On hold expiry, the open session is credited to
+  `proximity_duration_s` and `proximity_since` advances, so lifetime counters remain accurate.
+  A new `hold_active` attribute on `binary_sensor.in_proximity` lets critical automations
+  (security, alarm arming) detect when the hold is active and suppress safety-sensitive actions.
+
 - **Direction/speed/ETA now work for zone-vs-person pairs** (e.g. "Dercy & Home").
   The direction block previously required both sides to be GPS entities (`not is_zone_a
   and not is_zone_b`), so direction was permanently `unknown` whenever one entity was

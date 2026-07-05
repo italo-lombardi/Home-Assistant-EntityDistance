@@ -622,7 +622,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 else:
                     direction = DIRECTION_DIVERGING
 
-                closing_speed_kmh = abs(delta_m / delta_s) * 3.6
+                closing_speed_kmh = implied_speed_kmh
                 if direction == DIRECTION_APPROACHING and closing_speed_kmh > 0:
                     closing_speed_m_per_s = closing_speed_kmh / 3.6
                     eta_minutes = dist_m / closing_speed_m_per_s / 60

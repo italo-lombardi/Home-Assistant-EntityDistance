@@ -1101,6 +1101,72 @@ class TestResyncHoldFlushesProximity:
         assert result.proximity_since == _NOW
         assert result.proximity is True
 
+    def _make_zone_person_coord(self, zone_first: bool):
+        from unittest.mock import MagicMock
+
+        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+        from custom_components.entity_distance.models import PairState, pair_key
+        from tests.conftest import make_zone_state
+
+        zone = make_zone_state("zone.home", 51.5, -0.1, radius=100)
+        person = _make_state("person.alice", 51.5, -0.1, 20)
+        if zone_first:
+            entities = ["zone.home", "person.alice"]
+            get = lambda eid: zone if eid == "zone.home" else person  # noqa: E731
+            k = pair_key("zone.home", "person.alice")
+            lu_a, lu_b = None, _NOW - timedelta(seconds=10)
+        else:
+            entities = ["person.alice", "zone.home"]
+            get = lambda eid: person if eid == "person.alice" else zone  # noqa: E731
+            k = pair_key("person.alice", "zone.home")
+            lu_a, lu_b = _NOW - timedelta(seconds=10), None
+        coord = EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)
+        coord.hass = MagicMock()
+        coord.hass.states.get = MagicMock(side_effect=get)
+        coord._entities = entities
+        coord._max_accuracy_m = 0.0
+        coord._max_speed_kmh = 0.0
+        coord._entry_threshold_m = 200.0
+        coord._exit_threshold_m = 1000.0
+        coord._bucket_thresholds = _BUCKET_THRESHOLDS
+        coord._resync_silence_s = 600.0
+        coord._resync_hold_s = 60.0
+        coord._min_updates_reliable = 1
+        coord._require_reliable = False
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.last_update_a = lu_a
+        ps.last_update_b = lu_b
+        coord._pair_states = {k: ps}
+        coord._resync_holding = {k: True}
+        coord._resync_hold_until = {k: _NOW - timedelta(seconds=1)}
+        return coord, ps
+
+    def test_hold_expiry_zone_side_last_update_not_stamped(self):
+        """Zone entity on A side must NOT get last_update stamped on hold expiry."""
+        from unittest.mock import patch
+
+        coord, ps = self._make_zone_person_coord(zone_first=True)
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=50.0,
+        ):
+            coord._calc_pair(ps, "zone.home", "person.alice", _NOW, set())
+        assert ps.last_update_a is None  # zone side untouched
+        assert ps.last_update_b == _NOW  # person side reset
+
+    def test_hold_expiry_zone_b_side_last_update_not_stamped(self):
+        """Zone entity on B side must NOT get last_update stamped on hold expiry."""
+        from unittest.mock import patch
+
+        coord, ps = self._make_zone_person_coord(zone_first=False)
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=50.0,
+        ):
+            coord._calc_pair(ps, "person.alice", "zone.home", _NOW, set())
+        assert ps.last_update_a == _NOW  # person side reset
+        assert ps.last_update_b is None  # zone side untouched
+
     def test_hold_expiry_cross_midnight_post_hold_zero_skips_bucket(self):
         """Hold expires exactly at midnight — post_hold==0, bucket credit must be skipped."""
         from custom_components.entity_distance.models import pair_key

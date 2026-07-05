@@ -612,12 +612,9 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                     self._max_speed_kmh if self._max_speed_kmh > 0 else DEFAULT_MAX_SPEED_KMH
                 )
                 if implied_speed_kmh > direction_speed_cap:
-                    # GPS teleport — discard direction/speed and null baseline so next
-                    # tick doesn't compare against the post-teleport position.
-                    delta_s = 0.0
                     direction_teleport_rejected = True
 
-            if delta_s > 0:
+            if delta_s > 0 and not direction_teleport_rejected:
                 if abs(delta_m) < STATIONARY_THRESHOLD_M:
                     direction = DIRECTION_STATIONARY
                 elif delta_m < 0:

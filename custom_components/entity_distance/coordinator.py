@@ -697,6 +697,17 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 )
                 # FREEZE: leave ps.proximity / ps.proximity_since untouched so
                 # binary_sensor.in_proximity does not flicker during GPS silence.
+                # Credit today_proximity_seconds and today_zone_seconds for this
+                # tick so hold windows don't create gaps in daily time totals.
+                if ps.proximity and prev_calc_time_snapshot is not None:
+                    _hold_elapsed_s = max(0.0, (now - prev_calc_time_snapshot).total_seconds())
+                    if _hold_elapsed_s > 0:
+                        ps.today_proximity_seconds += _hold_elapsed_s
+                        # ponytail: distance_m always set at line 638 before this block
+                        _hold_bucket = calc_bucket(ps.distance_m, self._bucket_thresholds)
+                        ps.today_zone_seconds[_hold_bucket] = (
+                            ps.today_zone_seconds.get(_hold_bucket, 0.0) + _hold_elapsed_s
+                        )
                 # Null the baseline so the first post-hold tick doesn't trigger a
                 # spurious speed-filter rejection against a stale prev_distance_m.
                 ps.prev_calc_time = None

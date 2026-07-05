@@ -88,6 +88,12 @@
   `T + updates_window_s` was counted in the old window rather than starting a
   new one. The boundary is now closed: elapsed ≥ window resets the count.
 
+- **`today_proximity_time` gap during resync hold eliminated.** While the hold
+  was active (up to 60 s per GPS-silent cycle), `today_proximity_seconds` and
+  `today_zone_seconds` stopped accumulating because the hold's early return
+  bypassed the `_elapsed_s` block. Each GPS-silent cycle lost ~1 min from today's
+  proximity tally. The hold path now credits the elapsed slice before returning.
+
 - **Sensors no longer go `unavailable` during resync hold.** The resync silence
   mechanism previously set `data_valid = False`, making all 35+ sensors flash
   `unavailable` for the hold duration. Hold now correctly suppresses only

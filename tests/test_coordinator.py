@@ -745,8 +745,51 @@ class TestCalcPairResyncHold:
             result = coordinator._calc_pair(ps, "person.alice", "person.bob", now, set())
 
         assert result.data_valid is True
-        assert result.prev_calc_time is None
-        assert result.prev_distance_m is None
+        # prev_calc_time and prev_distance_m are advanced to current values so the
+        # expiry tick sees delta_m=0 → stationary instead of direction=unknown
+        assert result.prev_calc_time == now
+        assert result.prev_distance_m == 5000.0
+
+    def test_direction_not_unknown_on_hold_expiry_tick(self):
+        """End-to-end: in-hold tick sets baseline → expiry tick produces stationary, not unknown."""
+        from custom_components.entity_distance.models import pair_key
+        from tests.conftest import make_state
+
+        coordinator = _make_calc_pair_coordinator(resync_silence_s=0.0, resync_hold_s=60.0)
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+        now = datetime.now().astimezone()
+
+        state_a = make_state("person.alice", 51.5, -0.1)
+        state_b = make_state("person.bob", 51.6, -0.2)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+
+        # Tick 1 — hold active, sets prev_distance_m/prev_calc_time
+        coordinator._resync_holding[k] = True
+        hold_until = now + timedelta(seconds=30)
+        coordinator._resync_hold_until[k] = hold_until
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=5000.0,
+        ):
+            coordinator._calc_pair(ps, "person.alice", "person.bob", now, set())
+        assert coordinator._resync_holding[k] is True  # still in hold
+
+        # Tick 2 — hold expired, pair at same distance
+        expiry_now = now + timedelta(seconds=61)
+        coordinator._resync_hold_until[k] = now  # mark as expired
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=5000.0,
+        ):
+            result = coordinator._calc_pair(ps, "person.alice", "person.bob", expiry_now, set())
+
+        assert coordinator._resync_holding[k] is False
+        # direction must not be unknown — stationary since delta_m = 0
+        assert result.direction is not None
+        assert result.direction == "stationary"
 
     def test_data_valid_after_hold_expires(self):
         from custom_components.entity_distance.models import pair_key
@@ -774,6 +817,42 @@ class TestCalcPairResyncHold:
 
         assert result.data_valid is True
         assert coordinator._resync_holding[k] is False
+
+    def test_hold_expiry_same_day_credits_gap_to_today_proximity(self):
+        """Hold expiry same-day: gap from hold_until→now must credit today_proximity_seconds."""
+        from custom_components.entity_distance.models import pair_key
+        from tests.conftest import make_state
+
+        coordinator = _make_calc_pair_coordinator(resync_silence_s=0.0, resync_hold_s=60.0)
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+
+        now = datetime.now().astimezone()
+        hold_until = now - timedelta(seconds=90)  # expired 90s ago
+
+        ps.proximity = True
+        ps.proximity_since = now - timedelta(hours=1)
+        ps.today_reset_date = now.date()
+        ps.today_proximity_seconds = 100.0
+        ps.today_zone_seconds = {"very_near": 100.0}
+        coordinator._resync_holding[k] = True
+        coordinator._resync_hold_until[k] = hold_until
+
+        state_a = make_state("person.alice", 51.5, -0.1)
+        state_b = make_state("person.bob", 51.501, -0.1)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=100.0,
+        ):
+            result = coordinator._calc_pair(ps, "person.alice", "person.bob", now, set())
+
+        assert coordinator._resync_holding[k] is False
+        # Gap of 90s must be credited to today_proximity_seconds
+        assert result.today_proximity_seconds >= 100.0 + 90.0
 
 
 class TestCalcPairMissingState:

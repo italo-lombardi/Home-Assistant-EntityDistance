@@ -820,11 +820,9 @@ class TestZoneZonePair:
         assert result.direction == "stationary"
 
     def test_zone_zone_speed_filter_skipped(self):
-        # Speed filter (line 561) is skipped for zone pairs (is_zone_a=True) — data_valid
-        # is not affected by large distance deltas. The patched distance also triggers the
-        # direction teleport guard (~36000 km/h > DEFAULT_MAX_SPEED_KMH=1000), so direction
-        # stays None and prev_distance_m is nulled. In production zone-zone pairs always
-        # return the same distance (fixed points), so the teleport guard never fires there.
+        # Speed filter (line 561) is skipped for zone pairs (is_zone_a=True).
+        # However the direction teleport guard DOES fire here (~36000 km/h > DEFAULT_MAX_SPEED_KMH=1000)
+        # so direction stays None and prev_distance_m is nulled — both are correct and expected.
         zone_a = make_zone_state("zone.home", 51.5, -0.1, radius=100)
         zone_b = make_zone_state("zone.work", 51.6, -0.2, radius=50)
         coord, k, ps, now = self._make_zone_zone_coord(

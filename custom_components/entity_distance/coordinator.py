@@ -608,7 +608,9 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 # Use configured limit when set; fall back to DEFAULT_MAX_SPEED_KMH so
                 # disabling the speed filter (max_speed_kmh=0) still rejects teleports
                 # for direction computation on zone-vs-person pairs.
-                direction_speed_cap = self._max_speed_kmh if self._max_speed_kmh > 0 else DEFAULT_MAX_SPEED_KMH
+                direction_speed_cap = (
+                    self._max_speed_kmh if self._max_speed_kmh > 0 else DEFAULT_MAX_SPEED_KMH
+                )
                 if implied_speed_kmh > direction_speed_cap:
                     # GPS teleport — discard direction/speed and null baseline so next
                     # tick doesn't compare against the post-teleport position.

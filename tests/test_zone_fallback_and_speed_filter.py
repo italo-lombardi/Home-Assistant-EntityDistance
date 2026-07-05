@@ -640,3 +640,215 @@ class TestResyncSilenceZoneFallback:
             coord._calc_pair(ps, "person.alice", "zone.home", now, set())
 
         assert coord._resync_holding[k] is False
+
+
+# ---------------------------------------------------------------------------
+# Direction computed for true zone-vs-person pairs
+# ---------------------------------------------------------------------------
+
+
+class TestDirectionZoneVsPerson:
+    """Direction/speed/ETA must be computed when one entity is a real zone (not zone_fallback)."""
+
+    def test_true_zone_vs_person_direction_approaching(self):
+        zone = make_zone_state("zone.home", 51.5, -0.1, radius=100)
+        person = make_state("person.bob", 51.6, -0.2, accuracy=10)
+        hass = _make_hass(zone_states=[zone], extra={person.entity_id: person})
+        coord = _make_coord_coordinator(
+            entities=["zone.home", "person.bob"],
+            hass=hass,
+        )
+        k = pair_key("zone.home", "person.bob")
+        ps = coord._pair_states[k]
+        now = datetime.now().astimezone()
+        ps.prev_distance_m = 500.0
+        ps.prev_calc_time = now - timedelta(seconds=60)
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=100.0,  # closer → approaching
+        ):
+            result = coord._calc_pair(ps, "zone.home", "person.bob", now, set())
+        assert result.direction == "approaching"
+        assert result.closing_speed_kmh is not None
+
+    def test_true_zone_vs_person_direction_diverging(self):
+        zone = make_zone_state("zone.home", 51.5, -0.1, radius=100)
+        person = make_state("person.bob", 51.6, -0.2, accuracy=10)
+        hass = _make_hass(zone_states=[zone], extra={person.entity_id: person})
+        coord = _make_coord_coordinator(
+            entities=["zone.home", "person.bob"],
+            hass=hass,
+        )
+        k = pair_key("zone.home", "person.bob")
+        ps = coord._pair_states[k]
+        now = datetime.now().astimezone()
+        ps.prev_distance_m = 100.0
+        ps.prev_calc_time = now - timedelta(seconds=60)
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=1500.0,  # farther → diverging
+        ):
+            result = coord._calc_pair(ps, "zone.home", "person.bob", now, set())
+        assert result.direction == "diverging"
+
+    def test_zone_vs_person_gps_teleport_rejected(self):
+        # Person GPS jumps 99.5km in 60s → ~5970 km/h, max=150 → direction must be None
+        # prev_distance_m must also be nulled so next tick starts fresh
+        zone = make_zone_state("zone.home", 51.5, -0.1, radius=100)
+        person = make_state("person.bob", 51.6, -0.2, accuracy=10)
+        hass = _make_hass(zone_states=[zone], extra={person.entity_id: person})
+        coord = _make_coord_coordinator(
+            entities=["zone.home", "person.bob"],
+            max_speed_kmh=150.0,
+            hass=hass,
+        )
+        k = pair_key("zone.home", "person.bob")
+        ps = coord._pair_states[k]
+        now = datetime.now().astimezone()
+        ps.prev_distance_m = 500.0
+        ps.prev_calc_time = now - timedelta(seconds=60)
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=100000.0,
+        ):
+            result = coord._calc_pair(ps, "zone.home", "person.bob", now, set())
+        assert result.direction is None
+        assert result.closing_speed_kmh is None
+        assert result.prev_distance_m is None  # baseline nulled so next tick starts fresh
+
+    def test_zone_vs_person_gps_teleport_rejected_when_speed_disabled(self):
+        # max_speed_kmh=0 (disabled) must still reject GPS teleport for direction via DEFAULT_MAX_SPEED_KMH
+        zone = make_zone_state("zone.home", 51.5, -0.1, radius=100)
+        person = make_state("person.bob", 51.6, -0.2, accuracy=10)
+        hass = _make_hass(zone_states=[zone], extra={person.entity_id: person})
+        coord = _make_coord_coordinator(
+            entities=["zone.home", "person.bob"],
+            max_speed_kmh=0.0,  # speed filter disabled
+            hass=hass,
+        )
+        k = pair_key("zone.home", "person.bob")
+        ps = coord._pair_states[k]
+        now = datetime.now().astimezone()
+        ps.prev_distance_m = 500.0
+        ps.prev_calc_time = now - timedelta(seconds=60)
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=500000.0,  # ~29970 km/h — well above DEFAULT_MAX_SPEED_KMH=1000
+        ):
+            result = coord._calc_pair(ps, "zone.home", "person.bob", now, set())
+        assert result.direction is None
+        assert result.prev_distance_m is None
+
+    def test_zone_vs_person_delta_s_zero_direction_none(self):
+        # Same-millisecond double update: delta_s=0 → direction and speed must stay None
+        zone = make_zone_state("zone.home", 51.5, -0.1, radius=100)
+        person = make_state("person.bob", 51.6, -0.2, accuracy=10)
+        hass = _make_hass(zone_states=[zone], extra={person.entity_id: person})
+        coord = _make_coord_coordinator(
+            entities=["zone.home", "person.bob"],
+            hass=hass,
+        )
+        k = pair_key("zone.home", "person.bob")
+        ps = coord._pair_states[k]
+        now = datetime.now().astimezone()
+        ps.prev_distance_m = 500.0
+        ps.prev_calc_time = now  # same instant → delta_s=0
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=100.0,
+        ):
+            result = coord._calc_pair(ps, "zone.home", "person.bob", now, set())
+        assert result.direction is None
+        assert result.closing_speed_kmh is None
+
+
+class TestZoneZonePair:
+    """Two real zone entities as a pair — fixed points, no GPS noise, no state changes."""
+
+    def _make_zone_zone_coord(self, zone_a, zone_b, prev_dist=None, prev_offset_s=None):
+        hass = _make_hass(
+            zone_states=[zone_a, zone_b],
+            extra={zone_a.entity_id: zone_a, zone_b.entity_id: zone_b},
+        )
+        coord = _make_coord_coordinator(
+            entities=[zone_a.entity_id, zone_b.entity_id],
+            max_speed_kmh=150.0,
+            resync_silence_s=600.0,
+            hass=hass,
+        )
+        k = pair_key(zone_a.entity_id, zone_b.entity_id)
+        ps = coord._pair_states[k]
+        now = datetime.now().astimezone()
+        if prev_dist is not None:
+            ps.prev_distance_m = prev_dist
+            ps.prev_calc_time = now - timedelta(seconds=prev_offset_s or 60)
+        return coord, k, ps, now
+
+    def test_zone_zone_data_valid(self):
+        zone_a = make_zone_state("zone.home", 51.5, -0.1, radius=100)
+        zone_b = make_zone_state("zone.work", 51.6, -0.2, radius=50)
+        coord, k, ps, now = self._make_zone_zone_coord(zone_a, zone_b)
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=10000.0,
+        ):
+            result = coord._calc_pair(ps, zone_a.entity_id, zone_b.entity_id, now, set())
+        assert result.data_valid is True
+
+    def test_zone_zone_direction_none_on_first_tick(self):
+        zone_a = make_zone_state("zone.home", 51.5, -0.1, radius=100)
+        zone_b = make_zone_state("zone.work", 51.6, -0.2, radius=50)
+        coord, k, ps, now = self._make_zone_zone_coord(zone_a, zone_b)
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=10000.0,
+        ):
+            result = coord._calc_pair(ps, zone_a.entity_id, zone_b.entity_id, now, set())
+        assert result.direction is None
+
+    def test_zone_zone_direction_stationary_on_second_tick(self):
+        zone_a = make_zone_state("zone.home", 51.5, -0.1, radius=100)
+        zone_b = make_zone_state("zone.work", 51.6, -0.2, radius=50)
+        coord, k, ps, now = self._make_zone_zone_coord(
+            zone_a, zone_b, prev_dist=10000.0, prev_offset_s=60
+        )
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=10000.0,
+        ):
+            result = coord._calc_pair(ps, zone_a.entity_id, zone_b.entity_id, now, set())
+        assert result.direction == "stationary"
+
+    def test_zone_zone_speed_filter_skipped(self):
+        # Speed filter (line 561) is skipped for zone pairs (is_zone_a=True) — data_valid
+        # is not affected by large distance deltas. The patched distance also triggers the
+        # direction teleport guard (~36000 km/h > DEFAULT_MAX_SPEED_KMH=1000), so direction
+        # stays None and prev_distance_m is nulled. In production zone-zone pairs always
+        # return the same distance (fixed points), so the teleport guard never fires there.
+        zone_a = make_zone_state("zone.home", 51.5, -0.1, radius=100)
+        zone_b = make_zone_state("zone.work", 51.6, -0.2, radius=50)
+        coord, k, ps, now = self._make_zone_zone_coord(
+            zone_a, zone_b, prev_dist=100.0, prev_offset_s=5
+        )
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=50000.0,  # ~36000 km/h — speed filter skipped, direction teleport guard fires
+        ):
+            result = coord._calc_pair(ps, zone_a.entity_id, zone_b.entity_id, now, set())
+        assert result.data_valid is True
+        assert result.last_error != "speed_filter"
+        assert result.direction is None  # teleport guard fired
+        assert result.prev_distance_m is None  # baseline nulled by teleport guard
+
+    def test_zone_zone_resync_hold_not_triggered(self):
+        zone_a = make_zone_state("zone.home", 51.5, -0.1, radius=100)
+        zone_b = make_zone_state("zone.work", 51.6, -0.2, radius=50)
+        coord, k, ps, now = self._make_zone_zone_coord(zone_a, zone_b)
+        ps.last_update_a = now - timedelta(seconds=3600)
+        ps.last_update_b = now - timedelta(seconds=3600)
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=10000.0,
+        ):
+            coord._calc_pair(ps, zone_a.entity_id, zone_b.entity_id, now, set())
+        assert coord._resync_holding[k] is False

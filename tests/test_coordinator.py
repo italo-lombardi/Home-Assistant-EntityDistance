@@ -468,10 +468,22 @@ class TestAdvanceWindow:
 
         coordinator = self._make_coordinator()
         now = datetime.now().astimezone()
-        exactly_at_boundary = now - timedelta(seconds=UPDATES_FREQUENCY_WINDOW_S + 1)
+        exactly_at_boundary = now - timedelta(seconds=UPDATES_FREQUENCY_WINDOW_S)
         count, ws = coordinator._advance_window(5, exactly_at_boundary, now)
         assert count == 1
         assert ws == now
+
+    def test_one_second_before_boundary_does_not_reset(self):
+        from custom_components.entity_distance.const import (
+            DEFAULT_UPDATES_WINDOW_S as UPDATES_FREQUENCY_WINDOW_S,
+        )
+
+        coordinator = self._make_coordinator()
+        now = datetime.now().astimezone()
+        just_inside = now - timedelta(seconds=UPDATES_FREQUENCY_WINDOW_S - 1)
+        count, ws = coordinator._advance_window(5, just_inside, now)
+        assert count == 6
+        assert ws == just_inside
 
 
 class TestIsReliable:

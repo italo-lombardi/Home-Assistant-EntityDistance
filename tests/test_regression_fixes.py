@@ -992,7 +992,7 @@ class TestInvalidateCreditsZoneBucket:
 
 class TestResyncHoldFlushesProximity:
     def test_hold_freezes_proximity_session(self):
-        """Resync hold early-return leaves proximity=True (FREEZE) — no session close during hold."""
+        """FREEZE: hold leaves proximity=True, credits today_proximity_seconds for the tick."""
         coord = _make_coordinator()
         k = pair_key("person.alice", "person.bob")
         state_a = _make_state("person.alice", 51.5, -0.1, 20)
@@ -1011,12 +1011,12 @@ class TestResyncHoldFlushesProximity:
         ps = _fresh_pair()
         ps.proximity = True
         ps.proximity_since = datetime(2024, 6, 1, 11, 0, 0, tzinfo=UTC)
+        ps.distance_m = 100.0
+        ps.prev_calc_time = _NOW - timedelta(seconds=60)  # 60s since last tick
         ps.today_reset_date = _NOW.date()
-        ps.today_proximity_seconds = 0.0
+        ps.today_proximity_seconds = 500.0
         ps.proximity_duration_s = 0.0
         ps.data_valid = True
-        ps.last_update_a = _NOW - timedelta(seconds=20)
-        ps.last_update_b = _NOW - timedelta(seconds=20)
 
         with patch(
             "custom_components.entity_distance.coordinator.ha_distance",
@@ -1024,11 +1024,100 @@ class TestResyncHoldFlushesProximity:
         ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
-        # FREEZE: proximity stays True, session untouched, duration not yet credited
+        # FREEZE: proximity stays True, session untouched, duration not credited mid-hold
         assert result.proximity is True
         assert result.proximity_since == datetime(2024, 6, 1, 11, 0, 0, tzinfo=UTC)
         assert result.proximity_duration_s == pytest.approx(0.0, abs=1.0)
         assert result.data_valid is True
+        # today_proximity_seconds credited for this tick's elapsed time
+        assert result.today_proximity_seconds == pytest.approx(560.0, abs=2.0)
+
+    def test_hold_accumulates_zero_when_prev_calc_time_is_now(self):
+        """Hold tick with prev_calc_time=now produces zero elapsed — no accumulation."""
+        coord = _make_coordinator()
+        k = pair_key("person.alice", "person.bob")
+        state_a = _make_state("person.alice", 51.5, -0.1, 20)
+        state_b = _make_state("person.bob", 51.501, -0.1, 20)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: state_a if eid == "person.alice" else state_b
+        )
+        coord.hass.bus.fire = MagicMock()
+        coord._resync_silence_s = 10.0
+        coord._resync_hold_s = 300.0
+        coord._resync_holding = {k: True}
+        coord._resync_hold_until = {k: _NOW + timedelta(seconds=250)}
+
+        ps = _fresh_pair()
+        ps.proximity = True
+        ps.distance_m = 100.0
+        ps.prev_calc_time = _NOW  # same instant → elapsed = 0
+        ps.today_proximity_seconds = 500.0
+
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=100.0,
+        ):
+            result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+
+        assert result.today_proximity_seconds == pytest.approx(500.0, abs=0.01)
+
+    def test_hold_no_credit_when_not_in_proximity(self):
+        """Hold tick with proximity=False — today_proximity_seconds must NOT increment."""
+        coord = _make_coordinator()
+        k = pair_key("person.alice", "person.bob")
+        state_a = _make_state("person.alice", 51.5, -0.1, 20)
+        state_b = _make_state("person.bob", 51.501, -0.1, 20)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: state_a if eid == "person.alice" else state_b
+        )
+        coord.hass.bus.fire = MagicMock()
+        coord._resync_silence_s = 10.0
+        coord._resync_hold_s = 300.0
+        coord._resync_holding = {k: True}
+        coord._resync_hold_until = {k: _NOW + timedelta(seconds=250)}
+
+        ps = _fresh_pair()
+        ps.proximity = False  # NOT in proximity
+        ps.distance_m = 5000.0
+        ps.prev_calc_time = _NOW - timedelta(seconds=60)
+        ps.today_proximity_seconds = 100.0
+
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=5000.0,
+        ):
+            result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+
+        assert result.today_proximity_seconds == pytest.approx(100.0, abs=0.01)
+
+    def test_hold_no_credit_when_prev_calc_time_none(self):
+        """Hold tick with prev_calc_time=None — today_proximity_seconds must NOT increment."""
+        coord = _make_coordinator()
+        k = pair_key("person.alice", "person.bob")
+        state_a = _make_state("person.alice", 51.5, -0.1, 20)
+        state_b = _make_state("person.bob", 51.501, -0.1, 20)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: state_a if eid == "person.alice" else state_b
+        )
+        coord.hass.bus.fire = MagicMock()
+        coord._resync_silence_s = 10.0
+        coord._resync_hold_s = 300.0
+        coord._resync_holding = {k: True}
+        coord._resync_hold_until = {k: _NOW + timedelta(seconds=250)}
+
+        ps = _fresh_pair()
+        ps.proximity = True
+        ps.distance_m = 50.0
+        ps.prev_calc_time = None  # no previous tick
+        ps.today_proximity_seconds = 100.0
+
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=50.0,
+        ):
+            result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+
+        assert result.today_proximity_seconds == pytest.approx(100.0, abs=0.01)
 
     def test_hold_expiry_no_proximity_session(self):
         """Hold expires with proximity=False — expiry path runs without session credit."""

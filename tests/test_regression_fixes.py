@@ -1288,6 +1288,51 @@ class TestResyncHoldFlushesProximity:
         # gap_s = 0 → today_proximity_seconds unchanged by gap block
         assert result.today_proximity_seconds == pytest.approx(500.0, abs=1.0)
 
+    def test_hold_expiry_no_double_credit_when_prev_calc_time_set(self):
+        """Expiry tick with prev_calc_time set to last hold tick must not double-credit.
+
+        Bug: hold ticks advance prev_calc_time ≈ hold_until. On expiry:
+        - gap_s = now - hold_until credits today_proximity_seconds
+        - _elapsed_s = now - prev_calc_time ≈ gap_s would credit the same window again
+
+        Fix: nulling prev_calc_time_snapshot after expiry credit prevents _elapsed_s
+        from running the proximity accumulator.
+        """
+        coord = _make_coordinator()
+        k = pair_key("person.alice", "person.bob")
+        state_a = _make_state("person.alice", 51.5, -0.1, 20)
+        state_b = _make_state("person.bob", 51.501, -0.1, 20)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: state_a if eid == "person.alice" else state_b
+        )
+        coord.hass.bus.fire = MagicMock()
+        coord._resync_silence_s = 10.0
+        coord._resync_hold_s = 60.0
+        # hold_until = 60s ago; prev_calc_time = hold_until (last hold tick)
+        hold_until = _NOW - timedelta(seconds=60)
+        coord._resync_holding = {k: True}
+        coord._resync_hold_until = {k: hold_until}
+
+        ps = _fresh_pair()
+        ps.proximity = True
+        ps.proximity_since = datetime(2024, 6, 1, 11, 0, 0, tzinfo=UTC)
+        ps.today_reset_date = _NOW.date()
+        ps.today_proximity_seconds = 500.0
+        ps.distance_m = 50.0
+        ps.proximity_duration_s = 0.0
+        # Simulate: last hold tick set prev_calc_time ≈ hold_until
+        ps.prev_calc_time = hold_until
+        ps.prev_distance_m = 50.0
+
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=50.0,
+        ):
+            result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+
+        # Only gap_s = 60s should be credited, not gap_s + _elapsed_s (which would be 120s)
+        assert result.today_proximity_seconds == pytest.approx(560.0, abs=2.0)
+
     def _make_zone_person_coord(self, zone_first: bool):
         from unittest.mock import MagicMock
 

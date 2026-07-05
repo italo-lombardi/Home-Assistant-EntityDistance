@@ -136,9 +136,25 @@
   working as designed is not an error. Both filters now log at DEBUG. WARNING
   is preserved for entity-not-found, invalid coordinates, and storage corruption.
 
+- **`today_proximity_time` no longer over-counts by ~1 minute on hold expiry.**
+  When a GPS update arrived at the same time as the scheduled tick after hold
+  expiry, the gap credit (`now − hold_until`) and the regular `_elapsed_s`
+  accumulation (`now − prev_calc_time`) covered the same ~60 s window, producing
+  a +2 s overcredit in the per-minute display. Fixed: `prev_calc_time_snapshot`
+  is nulled after the expiry gap is credited, preventing the `_elapsed_s` block
+  from double-counting the same interval.
+
+- **Direction/approach speed/ETA no longer show `unknown` for ~1 minute after
+  hold expiry.** The resync hold previously nulled `prev_distance_m` and
+  `prev_calc_time` on each hold tick, so the expiry tick had no baseline from
+  which to compute direction. Fixed: hold ticks now advance `prev_calc_time` and
+  `prev_distance_m` to the current values, giving the expiry tick a valid
+  baseline and producing `stationary` (or actual movement) immediately rather
+  than `unknown` for the first post-hold minute.
+
 ### Internal
 
-- 533 tests, 100% line + branch coverage.
+- 556 tests, 100% line + branch coverage.
 
 ## [0.3.1] - 2026-06-22
 

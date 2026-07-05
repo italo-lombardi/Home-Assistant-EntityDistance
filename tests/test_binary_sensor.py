@@ -125,6 +125,28 @@ def _make_same_zone_sensor(
     return sensor
 
 
+class TestProximityBinarySensor:
+    def test_hold_active_false_when_not_holding(self):
+        k = pair_key("person.alice", "person.bob")
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.data_valid = True
+        ps.proximity = True
+        gd = GroupData(pairs={k: ps})
+        sensor = _make_proximity_sensor(gd, k)
+        sensor.coordinator._resync_holding = {k: False}
+        assert sensor.extra_state_attributes == {"hold_active": False}
+
+    def test_hold_active_true_when_holding(self):
+        k = pair_key("person.alice", "person.bob")
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.data_valid = True
+        ps.proximity = True
+        gd = GroupData(pairs={k: ps})
+        sensor = _make_proximity_sensor(gd, k)
+        sensor.coordinator._resync_holding = {k: True}
+        assert sensor.extra_state_attributes == {"hold_active": True}
+
+
 class TestSameZoneBinarySensor:
     def test_true_when_both_same_named_zone(self):
         k = pair_key("person.alice", "person.bob")

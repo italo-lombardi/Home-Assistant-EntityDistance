@@ -971,10 +971,8 @@ class TestCalcPairTimingEdges:
         assert result.proximity_duration_s == 42.0
 
     def test_resync_hold_post_hold_zero_skips_bucket(self):
-        # Resync hold closes the open session and rolls today counters when
-        # the date changes. If `now` is exactly at midnight while proximity
-        # started just before, post_hold == 0 — bucket increment must be
-        # skipped (no credit for zero elapsed time).
+        # FREEZE: hold active at midnight — proximity stays True, counters NOT touched
+        # during hold. Date roll and bucket credit only happen on hold expiry.
         from datetime import datetime
 
         from custom_components.entity_distance.models import pair_key
@@ -984,13 +982,12 @@ class TestCalcPairTimingEdges:
         k = pair_key("person.alice", "person.bob")
         ps = coordinator._pair_states[k]
 
-        # Anchor to a fixed UTC midnight to make post_hold == 0 deterministic.
         midnight_utc = datetime(2024, 1, 2, tzinfo=UTC)
         ps.proximity = True
         ps.proximity_since = midnight_utc - timedelta(seconds=300)
         ps.distance_m = 50.0
         ps.today_reset_date = (midnight_utc - timedelta(days=1)).date()  # date rolled
-        ps.today_proximity_seconds = 999.0  # gets reset
+        ps.today_proximity_seconds = 999.0
         ps.today_zone_seconds = {"near": 999.0}
 
         coordinator._resync_holding[k] = True
@@ -1008,10 +1005,10 @@ class TestCalcPairTimingEdges:
         ):
             result = coordinator._calc_pair(ps, "person.alice", "person.bob", midnight_utc, set())
 
-        # Date rolled: counters reset, but post_hold == 0 → no bucket credit
-        # because no real time elapsed past midnight.
-        assert result.today_proximity_seconds == 0.0
-        assert result.today_zone_seconds == {}
+        # FREEZE: hold still active → proximity=True, counters unchanged mid-hold
+        assert result.proximity is True
+        assert result.today_proximity_seconds == pytest.approx(999.0, abs=1.0)
+        assert result.today_zone_seconds == {"near": 999.0}
 
 
 # ---------------------------------------------------------------------------

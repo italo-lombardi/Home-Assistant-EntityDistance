@@ -2,6 +2,39 @@
 
 ## [Unreleased]
 
+## [0.4.0-beta.3] - 2026-07-05
+
+### Fixed
+
+- **Direction/speed/ETA now work for zone-vs-person pairs** (e.g. "Dercy & Home").
+  The direction block previously required both sides to be GPS entities (`not is_zone_a
+  and not is_zone_b`), so direction was permanently `unknown` whenever one entity was
+  a real zone. Guard changed to `not zone_fallback_a and not zone_fallback_b` —
+  true zone entities (fixed points) produce valid direction on every tick after the
+  first. Zone-fallback persons (scanner-only, collapsed to zone centre) remain
+  excluded since their coords are synthetic.
+
+- **GPS teleport guard for direction on zone-vs-person pairs.** The speed filter
+  (`is_zone` guard) is intentionally skipped for zone pairs, leaving direction
+  computation unguarded against GPS jumps. A new independent check rejects any
+  direction reading where implied speed exceeds `max_speed_kmh` (or
+  `DEFAULT_MAX_SPEED_KMH = 1000 km/h` when the speed filter is disabled). On
+  rejection, `prev_distance_m` is nulled so the next tick starts from a clean
+  baseline instead of comparing against the post-teleport position.
+
+- **Window boundary corrected (`>` → `>=`).** A GPS update arriving at exactly
+  `T + updates_window_s` was counted in the old window rather than starting a new
+  one. The boundary is now closed: elapsed ≥ window resets the count.
+
+### Internal
+
+- `direction_teleport_rejected` flag propagates the teleport check result to the
+  `prev_distance_m` null-out at the end of `_calc_pair`, same pattern as
+  `zone_fallback`.
+- 11 new tests covering zone-vs-person direction (approaching, diverging, teleport
+  rejection with/without speed filter, delta_s=0), zone+zone pair behaviour, and
+  exact window boundary; 526 tests, 100% line + branch coverage.
+
 ## [0.4.0] - 2026-07-05
 
 > **⚠ BREAKING CHANGE — proximity alert distances will change on upgrade**

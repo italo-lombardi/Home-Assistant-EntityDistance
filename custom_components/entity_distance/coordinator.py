@@ -592,24 +592,37 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         direction: str | None = None
         closing_speed_kmh: float | None = None
         eta_minutes: float | None = None
+        direction_teleport_rejected = False
 
         if (
-            not is_zone_a
-            and not is_zone_b
+            not zone_fallback_a
+            and not zone_fallback_b
             and ps.prev_distance_m is not None
             and ps.prev_calc_time is not None
         ):
             delta_m = dist_m - ps.prev_distance_m
             delta_s = max(0.0, (now - ps.prev_calc_time).total_seconds())
 
-            if abs(delta_m) < STATIONARY_THRESHOLD_M:
-                direction = DIRECTION_STATIONARY
-            elif delta_m < 0:
-                direction = DIRECTION_APPROACHING
-            else:
-                direction = DIRECTION_DIVERGING
+            if delta_s > 0:
+                implied_speed_kmh = abs(delta_m / delta_s) * 3.6
+                # Use configured limit when set; fall back to DEFAULT_MAX_SPEED_KMH so
+                # disabling the speed filter (max_speed_kmh=0) still rejects teleports
+                # for direction computation on zone-vs-person pairs.
+                direction_speed_cap = self._max_speed_kmh if self._max_speed_kmh > 0 else DEFAULT_MAX_SPEED_KMH
+                if implied_speed_kmh > direction_speed_cap:
+                    # GPS teleport — discard direction/speed and null baseline so next
+                    # tick doesn't compare against the post-teleport position.
+                    delta_s = 0.0
+                    direction_teleport_rejected = True
 
             if delta_s > 0:
+                if abs(delta_m) < STATIONARY_THRESHOLD_M:
+                    direction = DIRECTION_STATIONARY
+                elif delta_m < 0:
+                    direction = DIRECTION_APPROACHING
+                else:
+                    direction = DIRECTION_DIVERGING
+
                 closing_speed_kmh = abs(delta_m / delta_s) * 3.6
                 if direction == DIRECTION_APPROACHING and closing_speed_kmh > 0:
                     closing_speed_m_per_s = closing_speed_kmh / 3.6
@@ -635,7 +648,9 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         ps.accuracy_b = None if zone_fallback_b else acc_b
         # Zone-center baseline is unusable for speed/direction on next GPS tick —
         # null it so the first post-fallback tick doesn't compare GPS against zone centroid.
-        if zone_fallback_a or zone_fallback_b:
+        # Also null after a direction teleport rejection so the next tick starts fresh
+        # rather than comparing against the post-teleport position.
+        if zone_fallback_a or zone_fallback_b or direction_teleport_rejected:
             ps.prev_distance_m = None
         ps.data_valid = True
         ps.last_error = None
@@ -829,7 +844,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         an earlier refactor did) made it possible to drift the `>` boundary
         on one side without the other.
         """
-        if window_start is None or (now - window_start).total_seconds() > self._updates_window_s:
+        if window_start is None or (now - window_start).total_seconds() >= self._updates_window_s:
             return 1, now
         return count + 1, window_start
 

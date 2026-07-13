@@ -21,6 +21,7 @@ Coordinates are generic (Dublin area) — no real user data.
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 import time
@@ -45,7 +46,7 @@ def _set(entity_id: str, state: str, lat=None, lon=None, accuracy=10) -> None:
     body = {"state": state, "attributes": attrs}
     req = urllib.request.Request(
         f"{HA_URL}/api/states/{entity_id}",
-        data=__import__("json").dumps(body).encode(),
+        data=json.dumps(body).encode(),
         headers={"Authorization": f"Bearer {HA_TOKEN}", "Content-Type": "application/json"},
         method="POST",
     )

@@ -190,6 +190,39 @@ Each configured group creates one HA device (the group) with per-pair sub-device
 
 ---
 
+## Database & Recorder
+
+Each pair creates many sensors, and the daily-duration sensors carry long-term
+statistics (`state_class=measurement`) so you can chart time-together over days.
+On large groups (many pairs) this can add up in the recorder database.
+
+Categorical, diagnostic, and high-churn sensors (Distance, Direction, Closing
+Speed, ETA, GPS Accuracy, Update Count, Proximity Rate, Bucket Level) carry
+**no** long-term statistics — they only keep normal state history. So the
+`statistics` / `statistics_short_term` tables are driven only by the
+daily-duration sensors (Proximity Duration, Today Proximity Time, Today Zone
+Times, Today Unaccounted Time, Min Distance).
+
+If you don't chart those and want to minimise database growth, exclude the
+domain (or specific entities) from the recorder in `configuration.yaml`:
+
+```yaml
+recorder:
+  exclude:
+    entities:
+      # Drop long-term stats + history for sensors you don't need charted:
+      - sensor.alice_bob_today_proximity_time
+      - sensor.alice_bob_proximity_duration
+    # Or exclude everything this integration produces:
+    # entity_globs:
+    #   - sensor.*_today_*_time
+```
+
+Excluding is per-entity and reversible — the sensors still work live in the UI
+and automations; only their recorded history/statistics are dropped.
+
+---
+
 ## Proximity Zone Thresholds
 
 Default thresholds (configurable via **Configure** on the integration card):

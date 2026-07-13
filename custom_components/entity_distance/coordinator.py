@@ -563,11 +563,23 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             and ps.prev_distance_m is not None
             and ps.prev_calc_time is not None
             and self._max_speed_kmh > 0
-            and abs(dist_m - ps.prev_distance_m) > (acc_a or 0.0) + (acc_b or 0.0)
+            and abs(dist_m - ps.prev_distance_m)
+            > (ps.accuracy_a or 0.0) + (ps.accuracy_b or 0.0) + (acc_a or 0.0) + (acc_b or 0.0)
         ):
             delta_s = max(0.0, (now - ps.prev_calc_time).total_seconds())
             if delta_s >= 5.0:
-                noise_budget_m = (acc_a or 0.0) + (acc_b or 0.0)
+                # Noise budget = uncertainty of the DELTA |dist_now - dist_prev|, which
+                # combines both endpoints: dist_prev's fix (ps.accuracy_a/b, written last
+                # tick at ~L640) and dist_now's fix (acc_a/b, current tick). All four terms
+                # are correct error propagation — not a double-count. Do not drop the
+                # ps.accuracy_* endpoints. (Tighter alternative if ever wanted: quadrature
+                # sqrt(sum of squares) instead of the linear sum.)
+                noise_budget_m = (
+                    (ps.accuracy_a or 0.0)
+                    + (ps.accuracy_b or 0.0)
+                    + (acc_a or 0.0)
+                    + (acc_b or 0.0)
+                )
                 adjusted_delta_m = max(0.0, abs(dist_m - ps.prev_distance_m) - noise_budget_m)
                 implied_speed_kmh = adjusted_delta_m / delta_s * 3.6
                 if implied_speed_kmh > self._max_speed_kmh:

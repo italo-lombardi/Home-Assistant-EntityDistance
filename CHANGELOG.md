@@ -17,16 +17,10 @@
   statistics on the daily-duration sensors (Proximity Duration, Today Proximity
   Time, Today Zone Time, Today Unaccounted Time, Min Distance) are unchanged.
 
-### Fixed
-
-- **Speed filter noise gate no longer double-counts GPS accuracy.** The
-  accuracy-adjusted speed filter summed the *previous* tick's accuracy budget
-  together with the *current* tick's, making the gate roughly twice as loose as
-  intended. It now uses current-tick accuracies only. **Behavioral note:** the
-  gate is now stricter, so genuine GPS bounce that previously passed may be
-  rejected as a teleport. At the default `max_speed_kmh` there is ample
-  headroom; installs with a low custom `max_speed_kmh` may see new one-tick
-  rejections — raise `max_speed_kmh` if legitimate movement is being filtered.
+  > Note: Home Assistant caches `state_class` in its entity registry and does
+  > not downgrade it automatically on upgrade. Existing long-term statistics for
+  > these sensors stop growing but prior rows remain until purged; new installs
+  > get the reduced footprint immediately.
 
 ## [0.4.0] - 2026-07-05
 

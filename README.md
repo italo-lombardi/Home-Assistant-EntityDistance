@@ -222,7 +222,10 @@ Requires at least two location updates. Compares current distance to previous di
 - `Δdistance < 0` → **Approaching**
 - `Δdistance > 0` → **Diverging**
 
-The 50 m stationary threshold is fixed and not configurable.
+The 50 m stationary threshold is fixed and not configurable. When **both** sides
+of a pair are in a zone (e.g. everyone home), there is no relative motion to
+measure, so Direction reports **Stationary** and Approach Speed `0` rather than
+unknown.
 
 ### Approach Speed
 
@@ -238,7 +241,7 @@ Available on any update where two prior positions exist. Nonzero even when diver
 eta_minutes = current_distance_m / closing_speed_m/s / 60
 ```
 
-**Only populated when direction is Approaching and closing speed > 0.** `None` on the first update, when stationary, or when diverging. Assumes constant speed — no traffic or route awareness.
+**Only populated when direction is Approaching and closing speed > 0.** `None` on the first update, when stationary, or when diverging. Assumes constant speed — no traffic or route awareness. The sensor also exposes an `eta_status` attribute (`approaching` / `not_approaching` / `stationary`) so a card can show why there is no ETA.
 
 ### Proximity Duration
 
@@ -271,6 +274,18 @@ Measures how many minutes of today are not credited to any zone bucket. Typicall
 ### Live Updates
 
 All sensors refresh on a 1-minute timer tick even when entities don't move. This keeps duration and gap sensors accurate between GPS updates. Entity state changes also trigger an immediate recalculate (debounced by the configured delay).
+
+### Signal loss & grace window
+
+When a pair briefly loses a valid GPS fix (a blip, a tunnel, an idle phone), its
+sensors keep showing the **last known value for up to 15 minutes** instead of
+flipping straight to `unknown`. After that window, they report `unknown`. This
+prevents intermittent flicker. Staleness is still visible via the **Last Update**
+sensor and the **Reliable** binary sensor. The window is a fixed constant
+(`GRACE_WINDOW_S` in `const.py`); no proximity time is credited while a pair is
+stale. The last distance/direction/speed/ETA are also restored after a Home
+Assistant restart, so sensors show their last value immediately rather than
+waiting for the next GPS fix.
 
 ---
 
@@ -309,57 +324,9 @@ trigger:
 
 ## Automation Ideas
 
-### Notify when entities are nearby
-
-```yaml
-automation:
-  - alias: "Notify when nearby"
-    trigger:
-      - platform: state
-        entity_id: binary_sensor.alice_bob_in_proximity
-        to: "on"
-    action:
-      - service: notify.mobile_app
-        data:
-          title: "Alice and Bob are in proximity"
-          message: >
-            {{ states('sensor.alice_bob_distance') }} m apart
-```
-
-### Notify when approaching
-
-```yaml
-automation:
-  - alias: "Notify on approach"
-    trigger:
-      - platform: state
-        entity_id: sensor.alice_bob_direction
-        to: "approaching"
-    action:
-      - service: notify.mobile_app
-        data:
-          title: "Someone is approaching"
-          message: >
-            ETA: {{ states('sensor.alice_bob_eta') }} min
-```
-
-### React when entities come into proximity
-
-```yaml
-automation:
-  - alias: "React to proximity"
-    trigger:
-      - platform: state
-        entity_id: binary_sensor.alice_bob_in_proximity
-        from: "off"
-        to: "on"
-    action:
-      - service: notify.mobile_app
-        data:
-          title: "Together"
-          message: >
-            Distance: {{ states('sensor.alice_bob_distance') }} m
-```
+See **[AUTOMATION_EXAMPLES.md](AUTOMATION_EXAMPLES.md)** for ready-to-use automations
+— proximity alerts, approach-based lighting, ETA announcements, separation warnings,
+reliability gating, and daily summaries.
 
 ---
 

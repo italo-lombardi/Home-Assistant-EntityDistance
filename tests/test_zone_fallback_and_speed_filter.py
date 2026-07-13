@@ -795,7 +795,9 @@ class TestZoneZonePair:
             result = coord._calc_pair(ps, zone_a.entity_id, zone_b.entity_id, now, set())
         assert result.data_valid is True
 
-    def test_zone_zone_direction_none_on_first_tick(self):
+    def test_zone_zone_direction_stationary_on_first_tick(self):
+        # Both sides zone-based → genuinely stationary relative to each other, even
+        # with no prior baseline. Reports "stationary" instead of leaving it unknown.
         zone_a = make_zone_state("zone.home", 51.5, -0.1, radius=100)
         zone_b = make_zone_state("zone.work", 51.6, -0.2, radius=50)
         coord, k, ps, now = self._make_zone_zone_coord(zone_a, zone_b)
@@ -804,7 +806,8 @@ class TestZoneZonePair:
             return_value=10000.0,
         ):
             result = coord._calc_pair(ps, zone_a.entity_id, zone_b.entity_id, now, set())
-        assert result.direction is None
+        assert result.direction == "stationary"
+        assert result.closing_speed_kmh == 0.0
 
     def test_zone_zone_direction_stationary_on_second_tick(self):
         zone_a = make_zone_state("zone.home", 51.5, -0.1, radius=100)

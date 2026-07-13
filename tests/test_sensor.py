@@ -50,6 +50,7 @@ _DEFAULT_THRESHOLDS = {
 def _make_sensor(cls, pair_state: PairState):
     """Build a sensor instance with a minimal coordinator/entry mock."""
     coordinator = MagicMock()
+    coordinator.is_within_grace.return_value = False
     k = pair_key(pair_state.entity_a_id, pair_state.entity_b_id)
     coordinator.data = GroupData(pairs={k: pair_state})
     coordinator.bucket_thresholds = _DEFAULT_THRESHOLDS
@@ -227,6 +228,7 @@ class TestProximityDurationSensor:
 def _make_zone_sensor(bucket: str, pair_state: PairState) -> TodayZoneTimeSensor:
     """Build a TodayZoneTimeSensor with the given bucket and PairState."""
     coordinator = MagicMock()
+    coordinator.is_within_grace.return_value = False
     k = pair_key(pair_state.entity_a_id, pair_state.entity_b_id)
     coordinator.data = GroupData(pairs={k: pair_state})
     coordinator.bucket_thresholds = _DEFAULT_THRESHOLDS
@@ -246,6 +248,7 @@ def _make_zone_sensor(bucket: str, pair_state: PairState) -> TodayZoneTimeSensor
 def _make_count_sensor(which: str, pair_state: PairState) -> UpdateCountSensor:
     """Build an UpdateCountSensor for entity 'a' or 'b'."""
     coordinator = MagicMock()
+    coordinator.is_within_grace.return_value = False
     k = pair_key(pair_state.entity_a_id, pair_state.entity_b_id)
     coordinator.data = GroupData(pairs={k: pair_state})
     coordinator.bucket_thresholds = _DEFAULT_THRESHOLDS
@@ -549,6 +552,7 @@ def _make_unaccounted_sensor(pair_state):
     from custom_components.entity_distance.sensor import TodayUnaccountedTimeSensor
 
     coordinator = MagicMock()
+    coordinator.is_within_grace.return_value = False
     k = pair_key(pair_state.entity_a_id, pair_state.entity_b_id)
     coordinator.data = GroupData(pairs={k: pair_state})
     coordinator.bucket_thresholds = _DEFAULT_THRESHOLDS
@@ -791,6 +795,7 @@ def _make_gps_sensor(which: str, pair_state: PairState):
     from custom_components.entity_distance.sensor import GpsAccuracySensor
 
     coordinator = MagicMock()
+    coordinator.is_within_grace.return_value = False
     k = pair_key(pair_state.entity_a_id, pair_state.entity_b_id)
     coordinator.data = GroupData(pairs={k: pair_state})
     coordinator.bucket_thresholds = _DEFAULT_THRESHOLDS
@@ -841,6 +846,7 @@ def _make_last_update_sensor(which: str, pair_state: PairState):
     from custom_components.entity_distance.sensor import LastUpdateSensor
 
     coordinator = MagicMock()
+    coordinator.is_within_grace.return_value = False
     k = pair_key(pair_state.entity_a_id, pair_state.entity_b_id)
     coordinator.data = GroupData(pairs={k: pair_state})
     entry = MagicMock()
@@ -968,6 +974,7 @@ class TestMinDistanceSensor:
         from custom_components.entity_distance.sensor import MinDistanceSensor
 
         coordinator = MagicMock()
+        coordinator.is_within_grace.return_value = False
         coordinator.data = GroupData(min_distance_m=min_distance_m)
         entry = MagicMock()
         entry.entry_id = "test_entry"
@@ -1078,6 +1085,7 @@ class TestProximityDurationSensorEdgeCases:
 
 def _make_extra_sensor(cls, ps: PairState, **kwargs):
     coordinator = MagicMock()
+    coordinator.is_within_grace.return_value = False
     k = pair_key(ps.entity_a_id, ps.entity_b_id)
     coordinator.data = GroupData(pairs={k: ps})
     coordinator.bucket_thresholds = _DEFAULT_THRESHOLDS
@@ -1093,6 +1101,34 @@ def _make_extra_sensor(cls, ps: PairState, **kwargs):
     for attr, val in kwargs.items():
         setattr(sensor, attr, val)
     return sensor
+
+
+class TestGraceWindowDisplay:
+    """During the display grace window, sensors show last value; base available True."""
+
+    def test_shows_last_value_within_grace_despite_invalid(self):
+        from custom_components.entity_distance.sensor import DistanceSensor
+
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.distance_m = 123.4
+        ps.data_valid = False  # invalid, but within grace
+        sensor = _make_extra_sensor(DistanceSensor, ps)
+        sensor.coordinator.is_within_grace.return_value = True
+        sensor.coordinator.last_update_success = True
+        assert sensor.native_value == 123.4
+        assert sensor.available is True
+
+    def test_unknown_when_invalid_and_past_grace(self):
+        from custom_components.entity_distance.sensor import DistanceSensor
+
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.distance_m = 123.4
+        ps.data_valid = False
+        sensor = _make_extra_sensor(DistanceSensor, ps)
+        sensor.coordinator.is_within_grace.return_value = False
+        sensor.coordinator.last_update_success = True
+        assert sensor.native_value is None
+        assert sensor.available is False
 
 
 class TestDirectionSensor:
@@ -1180,6 +1216,35 @@ class TestEtaSensorExtra:
         ps.data_valid = False
         sensor = _make_extra_sensor(EtaSensor, ps)
         assert sensor.native_value is None
+
+    def test_eta_status_approaching(self):
+        from custom_components.entity_distance.sensor import EtaSensor
+
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.eta_minutes = 5.0
+        ps.data_valid = True
+        sensor = _make_extra_sensor(EtaSensor, ps)
+        assert sensor.extra_state_attributes["eta_status"] == "approaching"
+
+    def test_eta_status_stationary(self):
+        from custom_components.entity_distance.sensor import EtaSensor
+
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.eta_minutes = None
+        ps.direction = "stationary"
+        ps.data_valid = True
+        sensor = _make_extra_sensor(EtaSensor, ps)
+        assert sensor.extra_state_attributes["eta_status"] == "stationary"
+
+    def test_eta_status_not_approaching(self):
+        from custom_components.entity_distance.sensor import EtaSensor
+
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.eta_minutes = None
+        ps.direction = "diverging"
+        ps.data_valid = True
+        sensor = _make_extra_sensor(EtaSensor, ps)
+        assert sensor.extra_state_attributes["eta_status"] == "not_approaching"
 
 
 class TestGpsAccuracySensorExtra:
@@ -1303,6 +1368,7 @@ class TestSettingsSensor:
         from custom_components.entity_distance.sensor import SettingsSensor
 
         coordinator = MagicMock()
+        coordinator.is_within_grace.return_value = False
         coordinator.last_update_success = True
         coordinator.settings_snapshot = {
             "proximity_zone": "very_near",
@@ -1362,6 +1428,7 @@ class TestAsyncSetupEntrySensor:
         from custom_components.entity_distance.sensor import async_setup_entry
 
         coordinator = MagicMock()
+        coordinator.is_within_grace.return_value = False
         coordinator.entities = ["zone.home", "zone.work"]
         coordinator.data = MagicMock()
 
@@ -1395,6 +1462,7 @@ class TestAsyncSetupEntrySensor:
         from custom_components.entity_distance.sensor import async_setup_entry
 
         coordinator = MagicMock()
+        coordinator.is_within_grace.return_value = False
         coordinator.entities = ["person.alice", "person.bob"]
         coordinator.data = MagicMock()
 
@@ -1421,6 +1489,7 @@ class TestAsyncSetupEntrySensor:
         from custom_components.entity_distance.sensor import async_setup_entry
 
         coordinator = MagicMock()
+        coordinator.is_within_grace.return_value = False
         coordinator.entities = ["person.alice", "person.bob", "person.carol"]
         coordinator.data = MagicMock()
 
@@ -1445,6 +1514,7 @@ class TestAsyncSetupEntrySensor:
         from custom_components.entity_distance.sensor import async_setup_entry
 
         coordinator = MagicMock()
+        coordinator.is_within_grace.return_value = False
         coordinator.entities = ["person.alice", "person.bob"]
         coordinator.data = MagicMock()
 
@@ -1469,6 +1539,7 @@ class TestAsyncSetupEntrySensor:
         from custom_components.entity_distance.sensor import async_setup_entry
 
         coordinator = MagicMock()
+        coordinator.is_within_grace.return_value = False
         coordinator.entities = ["person.alice", "person.bob"]
         coordinator.data = MagicMock()
 

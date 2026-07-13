@@ -43,6 +43,10 @@ class PairState:
     proximity_duration_s: float = 0.0
     proximity_tracking_started: datetime | None = None
     last_seen_together: datetime | None = None
+    # Last proximity value while the pair was valid. Read by binary sensors during
+    # the display grace window so in_proximity holds its last on/off instead of
+    # dropping to off the instant a fix is missed. Accrual never reads this.
+    last_proximity: bool = False
 
     today_proximity_seconds: float = 0.0
     today_reset_date: date | None = None
@@ -60,6 +64,9 @@ class PairState:
 
     data_valid: bool = False
     last_error: str | None = None
+    # When the pair first went invalid while it had prior valid data. Drives the
+    # display grace window (show last value instead of unknown). None when valid.
+    stale_since: datetime | None = None
 
 
 @dataclass

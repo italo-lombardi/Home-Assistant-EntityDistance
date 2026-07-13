@@ -45,3 +45,8 @@ BUCKET_VERY_FAR = "very_far"
 BUCKETS = [BUCKET_VERY_NEAR, BUCKET_NEAR, BUCKET_MID, BUCKET_FAR, BUCKET_VERY_FAR]
 
 STATIONARY_THRESHOLD_M = 50.0
+
+# How long a pair keeps showing its last-known values after signal loss before
+# sensors report unknown. Covers GPS blips / short gaps without flapping; a
+# genuinely-off source still goes unknown once this elapses.
+GRACE_WINDOW_S = 900  # 15 min

@@ -189,7 +189,17 @@ class EntityDistanceSensorBase(CoordinatorEntity[EntityDistanceCoordinator], Sen
 
     @property
     def available(self) -> bool:
-        return self.coordinator.last_update_success and self._pair.data_valid
+        return self.coordinator.last_update_success and self._show_value
+
+    @property
+    def _show_value(self) -> bool:
+        """True when sensors should display the pair's last-known values.
+
+        Either the pair is currently valid, or it lost signal recently enough to
+        still be inside the display grace window (show last value, not unknown).
+        """
+        ps = self._pair
+        return ps.data_valid or self.coordinator.is_within_grace(ps, dt_util.now())
 
     @property
     def _pair(self) -> PairState:
@@ -208,7 +218,7 @@ class DistanceSensor(EntityDistanceSensorBase):
 
     @property
     def native_value(self) -> float | None:
-        if not self._pair.data_valid:
+        if not self._show_value:
             return None
         return self._pair.distance_m
 
@@ -230,7 +240,7 @@ class BucketSensor(EntityDistanceSensorBase):
 
     @property
     def native_value(self) -> str | None:
-        if self._pair.distance_m is None or not self._pair.data_valid:
+        if self._pair.distance_m is None or not self._show_value:
             return None
         return calc_bucket(self._pair.distance_m, self.coordinator.bucket_thresholds)
 
@@ -243,7 +253,7 @@ class BucketLevelSensor(EntityDistanceSensorBase):
 
     @property
     def native_value(self) -> int | None:
-        if self._pair.distance_m is None or not self._pair.data_valid:
+        if self._pair.distance_m is None or not self._show_value:
             return None
         bucket = calc_bucket(self._pair.distance_m, self.coordinator.bucket_thresholds)
         return _BUCKET_LEVEL[bucket]
@@ -358,7 +368,7 @@ class DirectionSensor(EntityDistanceSensorBase):
 
     @property
     def native_value(self) -> str | None:
-        if not self._pair.data_valid:
+        if not self._show_value:
             return None
         return self._pair.direction
 
@@ -371,7 +381,7 @@ class DirectionLevelSensor(EntityDistanceSensorBase):
 
     @property
     def native_value(self) -> int | None:
-        if not self._pair.data_valid or self._pair.direction is None:
+        if not self._show_value or self._pair.direction is None:
             return None
         return _DIRECTION_LEVEL.get(self._pair.direction)
 
@@ -386,7 +396,7 @@ class ClosingSpeedSensor(EntityDistanceSensorBase):
 
     @property
     def native_value(self) -> float | None:
-        if not self._pair.data_valid:
+        if not self._show_value:
             return None
         return (
             round(self._pair.closing_speed_kmh, 1)
@@ -405,9 +415,23 @@ class EtaSensor(EntityDistanceSensorBase):
 
     @property
     def native_value(self) -> float | None:
-        if not self._pair.data_valid:
+        if not self._show_value:
             return None
         return round(self._pair.eta_minutes, 1) if self._pair.eta_minutes is not None else None
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        # ETA is a minutes sensor, so it can only be a number or None. When there is
+        # no ETA (not approaching), expose WHY here so a card can show a reason
+        # instead of a bare unknown.
+        ps = self._pair
+        if ps.eta_minutes is not None:
+            status = "approaching"
+        elif ps.direction == DIRECTION_STATIONARY:
+            status = "stationary"
+        else:
+            status = "not_approaching"
+        return {"eta_status": status}
 
 
 class GpsAccuracySensor(EntityDistanceSensorBase):

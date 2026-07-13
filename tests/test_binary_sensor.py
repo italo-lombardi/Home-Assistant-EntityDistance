@@ -150,6 +150,35 @@ class TestProximityBinarySensor:
         sensor.coordinator._resync_holding = {k: True}
         assert sensor.extra_state_attributes == {"hold_active": True}
 
+    def test_is_on_true_when_valid_and_proximity(self):
+        k = pair_key("person.alice", "person.bob")
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.data_valid = True
+        ps.proximity = True
+        sensor = _make_proximity_sensor(GroupData(pairs={k: ps}), k)
+        assert sensor.is_on is True
+
+    def test_is_on_none_when_invalid_and_no_grace(self):
+        k = pair_key("person.alice", "person.bob")
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.data_valid = False
+        sensor = _make_proximity_sensor(GroupData(pairs={k: ps}), k)
+        sensor.coordinator.is_within_grace.return_value = False
+        assert sensor.is_on is None
+
+    def test_is_on_holds_last_proximity_during_grace(self):
+        # BUG regression: _invalidate forces ps.proximity=False, but during the
+        # display grace window the sensor must hold last_proximity (True), not flip
+        # off on a blip.
+        k = pair_key("person.alice", "person.bob")
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.data_valid = False  # invalidated
+        ps.proximity = False  # forced False by _invalidate
+        ps.last_proximity = True  # was together before the blip
+        sensor = _make_proximity_sensor(GroupData(pairs={k: ps}), k)
+        sensor.coordinator.is_within_grace.return_value = True
+        assert sensor.is_on is True
+
 
 class TestSameZoneBinarySensor:
     def test_true_when_both_same_named_zone(self):

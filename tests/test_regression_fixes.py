@@ -852,6 +852,8 @@ class TestInvalidateWhileInProximity:
         ps = _fresh_pair()
         ps.distance_m = 250.0  # had valid data before
         ps.direction = "approaching"
+        ps.proximity = True  # was in proximity before the blip
+        ps.last_proximity = True
         ps.today_proximity_seconds = 100.0
         ps.today_reset_date = _NOW.date()
 
@@ -860,6 +862,10 @@ class TestInvalidateWhileInProximity:
         assert result.data_valid is False
         assert result.stale_since == _NOW  # grace window opened
         assert result.distance_m == 250.0  # last value retained for display
+        # last_proximity preserved so grace-gated binary sensor holds ON, even though
+        # _invalidate forces ps.proximity False.
+        assert result.proximity is False
+        assert result.last_proximity is True
         # no extra proximity time credited during the silent window
         assert result.today_proximity_seconds == pytest.approx(100.0, abs=1.0)
 

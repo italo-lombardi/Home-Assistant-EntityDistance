@@ -133,9 +133,14 @@ class ProximityBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], Binary
 
     @property
     def is_on(self) -> bool | None:
-        if not _show(self.coordinator, self._pair):
-            return None
-        return self._pair.proximity
+        ps = self._pair
+        if ps.data_valid:
+            return ps.proximity
+        # Within grace: hold the last valid proximity value instead of the
+        # _invalidate-forced False, so a blip doesn't flip in_proximity off.
+        if self.coordinator.is_within_grace(ps, dt_util.now()):
+            return ps.last_proximity
+        return None
 
     @property
     def extra_state_attributes(self) -> dict:

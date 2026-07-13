@@ -412,16 +412,24 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
 
         self._pair_states = pair_states_out
 
-        # Compute group aggregates — only count pairs with valid data
-        valid_pairs = [
-            ps for ps in self._pair_states.values() if ps.data_valid and ps.distance_m is not None
+        # Compute group aggregates. A pair counts if it's valid, or within its
+        # display grace window (using its last valid proximity/distance) — so a
+        # brief blip on one pair doesn't drop it out of any/all aggregation.
+        def _shown(ps: PairState) -> bool:
+            return ps.data_valid or self.is_within_grace(ps, now)
+
+        def _prox(ps: PairState) -> bool:
+            return ps.proximity if ps.data_valid else ps.last_proximity
+
+        shown_pairs = [
+            ps for ps in self._pair_states.values() if _shown(ps) and ps.distance_m is not None
         ]
-        min_dist: float | None = min((ps.distance_m for ps in valid_pairs), default=None)
-        any_prox = any(ps.proximity for ps in self._pair_states.values() if ps.data_valid)
+        min_dist: float | None = min((ps.distance_m for ps in shown_pairs), default=None)
+        any_prox = any(_prox(ps) for ps in self._pair_states.values() if _shown(ps))
         all_prox = (
-            bool(valid_pairs)
-            and len(valid_pairs) == len(self._pair_states)
-            and all(ps.proximity for ps in valid_pairs)
+            bool(shown_pairs)
+            and len(shown_pairs) == len(self._pair_states)
+            and all(_prox(ps) for ps in shown_pairs)
         )
 
         group = GroupData(
@@ -487,7 +495,9 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             # Display grace: if the pair had valid data, keep showing it (distance_m,
             # direction, etc. are intentionally NOT cleared above) for GRACE_WINDOW_S
             # before sensors report unknown. Display-only — data_valid stays False so
-            # no proximity time is credited for the silent window.
+            # no proximity time is credited for the silent window. last_proximity is
+            # NOT touched here — it holds the last valid on/off so grace-gated binary
+            # sensors don't flip off on a blip.
             if ps.distance_m is not None and ps.stale_since is None:
                 ps.stale_since = now
             return ps
@@ -828,6 +838,11 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 entity_b,
             )
 
+        # Snapshot the settled proximity value on this valid tick so grace-gated
+        # binary sensors can hold it (instead of the _invalidate-forced False)
+        # during a later signal blip.
+        ps.last_proximity = ps.proximity
+
         # Daily reset with cross-midnight flush.
         # Zero daily counters first, then write the pre-midnight slice, so the
         # flush data is not overwritten by the reset (bug: previously zeroed after writing).
@@ -951,6 +966,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 "direction": ps.direction,
                 "closing_speed_kmh": ps.closing_speed_kmh,
                 "eta_minutes": ps.eta_minutes,
+                "last_proximity": ps.last_proximity,
                 "last_bucket": (
                     calc_bucket(ps.distance_m, self._bucket_thresholds)
                     if ps.distance_m is not None
@@ -1028,9 +1044,12 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 # Restore last-known display values so sensors show them immediately.
                 # prev_distance_m is intentionally NOT restored — the first live tick
                 # rebuilds a clean motion baseline (avoids a false teleport from
-                # comparing a stale distance against a near-zero delta_s). data_valid
-                # is set so values display right away; if the first live tick fails,
-                # _invalidate then opens a fresh grace window.
+                # comparing a stale distance against a near-zero delta_s).
+                # Restored values enter the DISPLAY GRACE WINDOW (stale_since=now_load,
+                # data_valid stays False) rather than being marked valid: if the source
+                # is still offline at boot, the stale value is shown for at most
+                # GRACE_WINDOW_S and then honestly goes unknown, instead of lingering
+                # indefinitely until the first live tick. A good first tick clears it.
                 stored_distance = blob.get("distance_m")
                 if stored_distance is not None:
                     ps.distance_m = float(stored_distance)
@@ -1039,7 +1058,8 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                     ps.closing_speed_kmh = float(csk) if csk is not None else None
                     eta = blob.get("eta_minutes")
                     ps.eta_minutes = float(eta) if eta is not None else None
-                    ps.data_valid = True
+                    ps.last_proximity = bool(blob.get("last_proximity", False))
+                    ps.stale_since = now_load
             except Exception:  # noqa: BLE001
                 _LOGGER.warning(
                     "entity_distance: failed to restore persisted state for pair %s, starting fresh",

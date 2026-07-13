@@ -11,9 +11,12 @@
   for up to 15 minutes instead of immediately flipping to `unknown`. Once the
   window elapses, they report `unknown` honestly. This stops the intermittent
   flicker on distance, direction, closing speed, ETA, proximity, and reliability
-  sensors. Staleness stays visible via the Last Update sensor and the Reliable
-  binary sensor. Grace is display-only — no proximity time is credited during
-  the silent window.
+  sensors — the proximity binary sensor holds its last on/off (not forced off)
+  through the window. Staleness stays visible via the Last Update sensor and the
+  Reliable binary sensor. Grace is display-only — no proximity time is credited
+  during the silent window. Restored values after a restart also enter the grace
+  window, so a still-offline source goes honestly unknown after 15 minutes rather
+  than showing a stale value indefinitely.
 - **Motion state persisted across restart.** The last distance/direction/speed/
   ETA are saved and restored, so after a Home Assistant restart these sensors
   show their last value immediately rather than sitting `unknown` until the next

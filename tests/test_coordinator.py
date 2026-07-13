@@ -2020,8 +2020,8 @@ class TestCoordinatorLoadState:
         await coord._async_load_state()  # should catch exception silently
 
     async def test_restores_last_known_display_values(self):
-        # Persisted distance/direction/etc. are restored so sensors show them
-        # immediately after restart (data_valid True), without restoring
+        # Persisted distance/direction/etc. are restored into the display grace
+        # window so sensors show them immediately after restart, without restoring
         # prev_distance_m (fresh motion baseline built by the first live tick).
         coord, k = self._make_coord_with_store(
             {
@@ -2031,6 +2031,7 @@ class TestCoordinatorLoadState:
                     "direction": "approaching",
                     "closing_speed_kmh": 5.0,
                     "eta_minutes": 8.0,
+                    "last_proximity": True,
                 }
             }
         )
@@ -2040,7 +2041,11 @@ class TestCoordinatorLoadState:
         assert ps.direction == "approaching"
         assert ps.closing_speed_kmh == 5.0
         assert ps.eta_minutes == 8.0
-        assert ps.data_valid is True
+        assert ps.last_proximity is True
+        # Restored into grace: shown but not marked valid, so a still-offline source
+        # goes honestly unknown after GRACE_WINDOW_S instead of lingering forever.
+        assert ps.data_valid is False
+        assert ps.stale_since is not None
         assert ps.prev_distance_m is None  # baseline NOT restored
 
     async def test_restore_display_values_handles_none_speed_and_eta(self):
@@ -2060,7 +2065,8 @@ class TestCoordinatorLoadState:
         assert ps.distance_m == 100.0
         assert ps.closing_speed_kmh is None
         assert ps.eta_minutes is None
-        assert ps.data_valid is True
+        assert ps.data_valid is False
+        assert ps.stale_since is not None
 
 
 class TestIsWithinGrace:

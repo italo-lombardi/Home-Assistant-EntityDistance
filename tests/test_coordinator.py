@@ -2018,3 +2018,80 @@ class TestCoordinatorLoadState:
             {"person.alice__person.bob": {"proximity_duration_s": "not-a-float"}}
         )
         await coord._async_load_state()  # should catch exception silently
+
+    async def test_restores_last_known_display_values(self):
+        # Persisted distance/direction/etc. are restored so sensors show them
+        # immediately after restart (data_valid True), without restoring
+        # prev_distance_m (fresh motion baseline built by the first live tick).
+        coord, k = self._make_coord_with_store(
+            {
+                "person.alice__person.bob": {
+                    "proximity_duration_s": 0.0,
+                    "distance_m": 42.5,
+                    "direction": "approaching",
+                    "closing_speed_kmh": 5.0,
+                    "eta_minutes": 8.0,
+                }
+            }
+        )
+        await coord._async_load_state()
+        ps = coord._pair_states[k]
+        assert ps.distance_m == 42.5
+        assert ps.direction == "approaching"
+        assert ps.closing_speed_kmh == 5.0
+        assert ps.eta_minutes == 8.0
+        assert ps.data_valid is True
+        assert ps.prev_distance_m is None  # baseline NOT restored
+
+    async def test_restore_display_values_handles_none_speed_and_eta(self):
+        coord, k = self._make_coord_with_store(
+            {
+                "person.alice__person.bob": {
+                    "proximity_duration_s": 0.0,
+                    "distance_m": 100.0,
+                    "direction": None,
+                    "closing_speed_kmh": None,
+                    "eta_minutes": None,
+                }
+            }
+        )
+        await coord._async_load_state()
+        ps = coord._pair_states[k]
+        assert ps.distance_m == 100.0
+        assert ps.closing_speed_kmh is None
+        assert ps.eta_minutes is None
+        assert ps.data_valid is True
+
+
+class TestIsWithinGrace:
+    """Cover is_within_grace True/False branches."""
+
+    def _coord(self):
+        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+
+        return EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)
+
+    def test_false_when_never_stale(self):
+        from custom_components.entity_distance.models import PairState
+
+        coord = self._coord()
+        ps = PairState(entity_a_id="a", entity_b_id="b")  # stale_since None
+        assert coord.is_within_grace(ps, datetime.now().astimezone()) is False
+
+    def test_true_within_window(self):
+        from custom_components.entity_distance.models import PairState
+
+        coord = self._coord()
+        now = datetime.now().astimezone()
+        ps = PairState(entity_a_id="a", entity_b_id="b")
+        ps.stale_since = now - timedelta(seconds=60)
+        assert coord.is_within_grace(ps, now) is True
+
+    def test_false_past_window(self):
+        from custom_components.entity_distance.models import PairState
+
+        coord = self._coord()
+        now = datetime.now().astimezone()
+        ps = PairState(entity_a_id="a", entity_b_id="b")
+        ps.stale_since = now - timedelta(seconds=1000)  # > GRACE_WINDOW_S (900)
+        assert coord.is_within_grace(ps, now) is False

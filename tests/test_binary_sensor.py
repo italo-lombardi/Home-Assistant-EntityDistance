@@ -48,6 +48,7 @@ def _make_proximity_sensor(
     group_data: GroupData, pair_key_val: tuple[str, str]
 ) -> ProximityBinarySensor:
     coordinator = MagicMock()
+    coordinator.is_within_grace.return_value = False
     coordinator.data = group_data
     entry = MagicMock()
     entry.entry_id = "test_entry"
@@ -62,6 +63,7 @@ def _make_proximity_sensor(
 
 def _make_any_sensor(group_data: GroupData) -> AnyInProximityBinarySensor:
     coordinator = MagicMock()
+    coordinator.is_within_grace.return_value = False
     coordinator.data = group_data
     entry = MagicMock()
     entry.entry_id = "test_entry"
@@ -75,6 +77,7 @@ def _make_any_sensor(group_data: GroupData) -> AnyInProximityBinarySensor:
 
 def _make_all_sensor(group_data: GroupData) -> AllInProximityBinarySensor:
     coordinator = MagicMock()
+    coordinator.is_within_grace.return_value = False
     coordinator.data = group_data
     entry = MagicMock()
     entry.entry_id = "test_entry"
@@ -94,6 +97,7 @@ def _make_same_zone_sensor(
     name_b: str | None = None,
 ) -> SameZoneBinarySensor:
     coordinator = MagicMock()
+    coordinator.is_within_grace.return_value = False
     entry = MagicMock()
     entry.entry_id = "test_entry"
     sensor = SameZoneBinarySensor.__new__(SameZoneBinarySensor)
@@ -243,6 +247,7 @@ def _make_bucket_sensor(
     data_valid: bool = True,
 ) -> BucketBinarySensor:
     coordinator = MagicMock()
+    coordinator.is_within_grace.return_value = False
     ps = PairState(entity_a_id=pair_key_val[0], entity_b_id=pair_key_val[1])
     ps.data_valid = data_valid
     ps.distance_m = distance_m
@@ -337,6 +342,7 @@ class TestAsyncSetupEntry:
         from custom_components.entity_distance.const import DOMAIN
 
         coordinator = MagicMock()
+        coordinator.is_within_grace.return_value = False
         coordinator.entities = ["person.alice", "person.bob"]
         coordinator.data = MagicMock()
 
@@ -362,6 +368,7 @@ class TestAsyncSetupEntry:
         from custom_components.entity_distance.const import DOMAIN
 
         coordinator = MagicMock()
+        coordinator.is_within_grace.return_value = False
         coordinator.entities = ["zone.home", "zone.work"]
         coordinator.data = MagicMock()
 
@@ -386,6 +393,7 @@ class TestAsyncSetupEntry:
         from custom_components.entity_distance.const import DOMAIN
 
         coordinator = MagicMock()
+        coordinator.is_within_grace.return_value = False
         coordinator.entities = ["person.alice", "person.bob", "person.carol"]
         coordinator.data = MagicMock()
 
@@ -410,6 +418,7 @@ class TestAsyncSetupEntry:
         from custom_components.entity_distance.const import DOMAIN
 
         coordinator = MagicMock()
+        coordinator.is_within_grace.return_value = False
         coordinator.entities = ["person.alice", "person.bob"]
         coordinator.data = MagicMock()
 
@@ -434,6 +443,7 @@ class TestAsyncSetupEntry:
         from custom_components.entity_distance.const import DOMAIN
 
         coordinator = MagicMock()
+        coordinator.is_within_grace.return_value = False
         coordinator.entities = ["person.alice", "person.bob"]
         coordinator.data = MagicMock()
 
@@ -455,6 +465,7 @@ class TestAsyncSetupEntry:
         from custom_components.entity_distance.const import DOMAIN
 
         coordinator = MagicMock()
+        coordinator.is_within_grace.return_value = False
         coordinator.entities = ["person.alice", "person.bob"]
         coordinator.data = MagicMock()
 
@@ -591,6 +602,7 @@ def _make_reliable_sensor(
     is_reliable_return: bool,
 ) -> ReliableBinarySensor:
     coordinator = MagicMock()
+    coordinator.is_within_grace.return_value = False
     coordinator.data = MagicMock()
     coordinator.data.pairs = {pair_key_val: ps}
     coordinator.is_reliable = MagicMock(return_value=is_reliable_return)
@@ -639,6 +651,7 @@ class TestReliableBinarySensor:
         # from coordinator.data.pairs. data_valid defaults to False → is_on=None.
         k = pair_key("person.alice", "person.bob")
         coordinator = MagicMock()
+        coordinator.is_within_grace.return_value = False
         coordinator.data = MagicMock()
         coordinator.data.pairs = {}
         coordinator.is_reliable = MagicMock(return_value=True)

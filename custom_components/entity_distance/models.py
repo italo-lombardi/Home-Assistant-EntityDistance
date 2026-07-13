@@ -60,6 +60,9 @@ class PairState:
 
     data_valid: bool = False
     last_error: str | None = None
+    # When the pair first went invalid while it had prior valid data. Drives the
+    # display grace window (show last value instead of unknown). None when valid.
+    stale_since: datetime | None = None
 
 
 @dataclass

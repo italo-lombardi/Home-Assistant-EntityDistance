@@ -13,6 +13,7 @@ from homeassistant.helpers.device_registry import DeviceEntryType
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import dt as dt_util
 
 from .const import BUCKETS, DOMAIN
 from .coordinator import EntityDistanceCoordinator, calc_bucket
@@ -21,6 +22,16 @@ from .models import PairState, friendly_name, pair_key
 _LOGGER = logging.getLogger(__name__)
 
 _HOME_ZONE_ENTITY_ID = "zone.home"
+
+
+def _show(coordinator: EntityDistanceCoordinator, ps: PairState) -> bool:
+    """True when a binary sensor should reflect the pair's last-known state.
+
+    Matches the sensor platform's grace behaviour: valid now, or lost signal
+    recently enough to still be inside the display grace window (so it holds its
+    last on/off instead of flapping to unknown).
+    """
+    return ps.data_valid or coordinator.is_within_grace(ps, dt_util.now())
 
 
 def _zone_match_value(entity_id: str, state) -> str:
@@ -122,7 +133,7 @@ class ProximityBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], Binary
 
     @property
     def is_on(self) -> bool | None:
-        if not self._pair.data_valid:
+        if not _show(self.coordinator, self._pair):
             return None
         return self._pair.proximity
 
@@ -203,7 +214,7 @@ class BucketBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], BinarySen
     @property
     def is_on(self) -> bool | None:
         ps = self._pair
-        if not ps.data_valid or ps.distance_m is None:
+        if not _show(self.coordinator, ps) or ps.distance_m is None:
             return None
         current = calc_bucket(ps.distance_m, self.coordinator.bucket_thresholds)
         return current == self._bucket
@@ -228,7 +239,7 @@ class AnyInProximityBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], B
     @property
     def is_on(self) -> bool | None:
         pairs = self.coordinator.data.pairs
-        if not any(ps.data_valid for ps in pairs.values()):
+        if not any(_show(self.coordinator, ps) for ps in pairs.values()):
             return None
         return self.coordinator.data.any_in_proximity
 
@@ -252,7 +263,7 @@ class AllInProximityBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], B
     @property
     def is_on(self) -> bool | None:
         pairs = self.coordinator.data.pairs
-        if not any(ps.data_valid for ps in pairs.values()):
+        if not any(_show(self.coordinator, ps) for ps in pairs.values()):
             return None
         return self.coordinator.data.all_in_proximity
 
@@ -289,6 +300,6 @@ class ReliableBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], BinaryS
     @property
     def is_on(self) -> bool | None:
         ps = self._pair
-        if not ps.data_valid:
+        if not _show(self.coordinator, ps):
             return None
         return self.coordinator.is_reliable(ps)

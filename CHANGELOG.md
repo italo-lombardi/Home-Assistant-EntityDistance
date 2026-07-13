@@ -4,8 +4,33 @@
 
 ## [0.4.1] - 2026-07-13
 
+### Added
+
+- **Display grace window (15 min).** When a pair briefly loses a valid GPS fix
+  (blip, tunnel, idle phone), its sensors now keep showing the last known value
+  for up to 15 minutes instead of immediately flipping to `unknown`. Once the
+  window elapses, they report `unknown` honestly. This stops the intermittent
+  flicker on distance, direction, closing speed, ETA, proximity, and reliability
+  sensors. Staleness stays visible via the Last Update sensor and the Reliable
+  binary sensor. Grace is display-only — no proximity time is credited during
+  the silent window.
+- **Motion state persisted across restart.** The last distance/direction/speed/
+  ETA are saved and restored, so after a Home Assistant restart these sensors
+  show their last value immediately rather than sitting `unknown` until the next
+  GPS fix.
+- **ETA reason attribute.** The ETA sensor exposes an `eta_status` attribute
+  (`approaching` / `not_approaching` / `stationary`) so a card can show why
+  there is no ETA instead of a bare `unknown`.
+
 ### Changed
 
+- **Both-home direction is now `stationary`.** When both sides of a pair are in
+  a zone (e.g. everyone home), Direction reports `stationary` and Closing Speed
+  `0` instead of `unknown` — there is no relative motion to measure, and that is
+  now stated plainly.
+- **Consistent availability.** Numeric and binary sensors for a pair now share
+  the same availability, so a single signal loss no longer splits into
+  `unavailable` (numeric) vs `unknown` (binary).
 - **Statistics volume reduced.** Removed long-term statistics (`state_class`)
   from eight sensors where statistics carried no charting value: Distance,
   Bucket Level, Direction Level, Closing Speed, ETA, GPS Accuracy, Update

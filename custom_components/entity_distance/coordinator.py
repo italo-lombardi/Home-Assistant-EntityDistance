@@ -54,6 +54,7 @@ from .const import (
     DIRECTION_DIVERGING,
     DIRECTION_STATIONARY,
     DOMAIN,
+    GRACE_WINDOW_S,
     STATIONARY_THRESHOLD_M,
 )
 from .models import GroupData, PairState, pair_key
@@ -483,6 +484,12 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             ps.last_error = reason
             ps.prev_calc_time = None
             ps.prev_distance_m = None
+            # Display grace: if the pair had valid data, keep showing it (distance_m,
+            # direction, etc. are intentionally NOT cleared above) for GRACE_WINDOW_S
+            # before sensors report unknown. Display-only — data_valid stays False so
+            # no proximity time is credited for the silent window.
+            if ps.distance_m is not None and ps.stale_since is None:
+                ps.stale_since = now
             return ps
 
         if state_a is None or state_b is None:
@@ -639,6 +646,14 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                     eta_minutes = dist_m / closing_speed_m_per_s / 60
                     eta_minutes = min(eta_minutes, 1440.0)
 
+        # Both sides zone-based (e.g. everyone home) with no motion measured: the
+        # pair is genuinely stationary relative to each other. Report stationary/0
+        # instead of leaving direction unknown. Skipped when a teleport was rejected
+        # (that intentionally leaves direction None for a fresh baseline next tick).
+        if direction is None and not direction_teleport_rejected and is_zone_a and is_zone_b:
+            direction = DIRECTION_STATIONARY
+            closing_speed_kmh = 0.0
+
         was_proximity = ps.proximity
 
         # Capture baseline distance/time before writing new values so C3 flush
@@ -664,6 +679,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             ps.prev_distance_m = None
         ps.data_valid = True
         ps.last_error = None
+        ps.stale_since = None  # valid tick — exit any display grace window
 
         reliable = self.is_reliable(ps)
 
@@ -899,6 +915,16 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             and ps.update_count_b >= self._min_updates_reliable
         )
 
+    def is_within_grace(self, ps: PairState, now: datetime) -> bool:
+        """True when a stale pair should still display its last-known values.
+
+        Display-only: the pair is invalid (data_valid False) but lost signal less
+        than GRACE_WINDOW_S ago, so sensors show the last value instead of unknown.
+        """
+        return (
+            ps.stale_since is not None and (now - ps.stale_since).total_seconds() < GRACE_WINDOW_S
+        )
+
     async def _async_save_state(self) -> None:
         payload: dict = {}
         for k, ps in self._pair_states.items():
@@ -918,6 +944,13 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 ),
                 "proximity_since": (ps.proximity_since.isoformat() if ps.proximity_since else None),
                 "prev_calc_time": (ps.prev_calc_time.isoformat() if ps.prev_calc_time else None),
+                # Persist last-known display values so sensors show them immediately
+                # after restart (inside a grace window) instead of unknown until the
+                # first live tick rebuilds them.
+                "distance_m": ps.distance_m,
+                "direction": ps.direction,
+                "closing_speed_kmh": ps.closing_speed_kmh,
+                "eta_minutes": ps.eta_minutes,
                 "last_bucket": (
                     calc_bucket(ps.distance_m, self._bucket_thresholds)
                     if ps.distance_m is not None
@@ -992,6 +1025,21 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                     prev_calc_time_str = blob.get("prev_calc_time")
                     if prev_calc_time_str:
                         ps.prev_calc_time = datetime.fromisoformat(prev_calc_time_str)
+                # Restore last-known display values so sensors show them immediately.
+                # prev_distance_m is intentionally NOT restored — the first live tick
+                # rebuilds a clean motion baseline (avoids a false teleport from
+                # comparing a stale distance against a near-zero delta_s). data_valid
+                # is set so values display right away; if the first live tick fails,
+                # _invalidate then opens a fresh grace window.
+                stored_distance = blob.get("distance_m")
+                if stored_distance is not None:
+                    ps.distance_m = float(stored_distance)
+                    ps.direction = blob.get("direction")
+                    csk = blob.get("closing_speed_kmh")
+                    ps.closing_speed_kmh = float(csk) if csk is not None else None
+                    eta = blob.get("eta_minutes")
+                    ps.eta_minutes = float(eta) if eta is not None else None
+                    ps.data_valid = True
             except Exception:  # noqa: BLE001
                 _LOGGER.warning(
                     "entity_distance: failed to restore persisted state for pair %s, starting fresh",

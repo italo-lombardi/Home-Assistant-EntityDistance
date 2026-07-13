@@ -19,6 +19,7 @@ _DEFAULT_THRESHOLDS = {}
 
 def _make_sensor(cls, pair_state: PairState, extra=None):
     coordinator = MagicMock()
+    coordinator.is_within_grace.return_value = False
     k = pair_key(pair_state.entity_a_id, pair_state.entity_b_id)
     coordinator.data = GroupData(pairs={k: pair_state})
     coordinator.bucket_thresholds = _DEFAULT_THRESHOLDS

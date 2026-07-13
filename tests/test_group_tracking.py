@@ -87,6 +87,7 @@ class TestGroupSensors:
         from custom_components.entity_distance.sensor import MinDistanceSensor
 
         coordinator = MagicMock()
+        coordinator.is_within_grace.return_value = False
         coordinator.data = group_data
         entry = MagicMock()
         entry.entry_id = "test_group_entry"

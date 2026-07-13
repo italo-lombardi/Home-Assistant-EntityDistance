@@ -77,6 +77,7 @@ def _fresh_pair() -> PairState:
 
 def _make_group_sensor(sensor_cls, group_data: GroupData):
     coordinator = MagicMock()
+    coordinator.is_within_grace.return_value = False
     coordinator.data = group_data
     entry = MagicMock()
     entry.entry_id = "test_entry"
@@ -439,6 +440,7 @@ class TestCardInstalledKeyUnload:
         )
 
         coordinator = MagicMock()
+        coordinator.is_within_grace.return_value = False
         coordinator.async_unload = MagicMock()
 
         hass = MagicMock()
@@ -466,6 +468,7 @@ class TestCardInstalledKeyUnload:
         )
 
         coordinator = MagicMock()
+        coordinator.is_within_grace.return_value = False
         coordinator.async_unload = MagicMock()
         other_coordinator = MagicMock()
 
@@ -768,6 +771,7 @@ class TestSetupEntryResourceLeak:
         from custom_components.entity_distance import async_setup_entry
 
         coordinator = MagicMock()
+        coordinator.is_within_grace.return_value = False
         coordinator.async_setup = AsyncMock(side_effect=RuntimeError("boom"))
         coordinator.async_unload = MagicMock()
 
@@ -835,6 +839,42 @@ class TestInvalidateWhileInProximity:
         assert result.data_valid is False
         # today_proximity_seconds must stay 3600 — not 7200 (double-count)
         assert result.today_proximity_seconds == pytest.approx(3600.0, abs=1.0)
+
+    def test_invalidate_sets_stale_since_and_retains_display_values(self):
+        """Grace: _invalidate opens a stale window and keeps last distance for display,
+        without crediting extra proximity time (data_valid stays False)."""
+        coord = _make_coordinator()
+        state_b = _make_state("person.bob", 51.5, -0.1, 20)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: None if eid == "person.alice" else state_b
+        )
+
+        ps = _fresh_pair()
+        ps.distance_m = 250.0  # had valid data before
+        ps.direction = "approaching"
+        ps.today_proximity_seconds = 100.0
+        ps.today_reset_date = _NOW.date()
+
+        result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+
+        assert result.data_valid is False
+        assert result.stale_since == _NOW  # grace window opened
+        assert result.distance_m == 250.0  # last value retained for display
+        # no extra proximity time credited during the silent window
+        assert result.today_proximity_seconds == pytest.approx(100.0, abs=1.0)
+
+    def test_invalidate_no_stale_when_never_had_data(self):
+        """A pair that never had valid data (distance_m None) does not open a grace
+        window — nothing to display, so it goes unknown immediately."""
+        coord = _make_coordinator()
+        state_b = _make_state("person.bob", 51.5, -0.1, 20)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: None if eid == "person.alice" else state_b
+        )
+        ps = _fresh_pair()  # distance_m None
+        result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+        assert result.data_valid is False
+        assert result.stale_since is None
 
     def test_invalidate_date_rolled_credits_post_midnight_only(self):
         """_invalidate() cross-midnight: only post-midnight slice added to today counters."""
@@ -913,6 +953,7 @@ class TestSensorAvailableAndDataValid:
         from custom_components.entity_distance.models import pair_key as pk
 
         coordinator = MagicMock()
+        coordinator.is_within_grace.return_value = False
         k = pk("person.a", "person.b")
         coordinator.data.pairs = {k: ps}
         entry = MagicMock()
@@ -935,6 +976,7 @@ class TestSensorAvailableAndDataValid:
         from custom_components.entity_distance.models import pair_key as pk
 
         coordinator = MagicMock()
+        coordinator.is_within_grace.return_value = False
         coordinator.last_update_success = True
         k = pk("person.a", "person.b")
         coordinator.data.pairs = {k: ps}
@@ -1448,6 +1490,7 @@ async def test_platform_setup_failure_cleans_up_coordinator():
     from custom_components.entity_distance import async_setup_entry
 
     coordinator = MagicMock()
+    coordinator.is_within_grace.return_value = False
     coordinator.async_setup = AsyncMock()
     coordinator.async_recalculate = AsyncMock()
     coordinator.async_unload = MagicMock()
@@ -1598,6 +1641,7 @@ def _make_unavailable_sensor(cls, ps_kwargs=None, extra_kwargs=None):
         for k, v in ps_kwargs.items():
             setattr(ps, k, v)
     coordinator = MagicMock()
+    coordinator.is_within_grace.return_value = False
     coordinator.last_update_success = True
     k = pk("person.a", "person.b")
     coordinator.data = MagicMock()
@@ -1688,6 +1732,7 @@ class TestSensorAvailableFalseReturnsNone:
 
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         coordinator = MagicMock()
+        coordinator.is_within_grace.return_value = False
         coordinator.last_update_success = False  # coordinator failed
         k = pk("person.a", "person.b")
         coordinator.data = MagicMock()
@@ -1943,6 +1988,7 @@ class TestRemainingCoverageBranches:
         ps.data_valid = True
         ps.proximity_tracking_started = None
         coordinator = MagicMock()
+        coordinator.is_within_grace.return_value = False
         coordinator.last_update_success = True
         k = pk("person.a", "person.b")
         coordinator.data = MagicMock()

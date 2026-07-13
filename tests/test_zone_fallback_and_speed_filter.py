@@ -309,7 +309,7 @@ class TestSpeedFilterNoiseBudget:
 
     def test_gps_bounce_in_same_car_passes(self):
         # Two phones in same car. Bounce-back: 1285m delta in 5s = 924 km/h raw.
-        # noise_budget = 200+200+200+200=800m, adjusted=485m → 349 km/h < 1000. Passes.
+        # noise_budget = current-tick acc only = 200+200=400m, adjusted=885m → 637 km/h < 1000. Passes.
         result = self._run_speed_filter(
             prev_dist=1285.0,
             new_dist=0.0,
@@ -355,7 +355,7 @@ class TestSpeedFilterNoiseBudget:
 
     def test_colocation_guard_skips_filter(self):
         # prev_dist=0, new_dist=5m → abs(5-0)=5m.
-        # noise_budget = 50+50+50+50=200m → 5 <= 200 → guard false → block skipped.
+        # noise_budget = current-tick acc only = 50+50=100m → 5 <= 100 → guard false → block skipped.
         # Filter skipped entirely.
         result = self._run_speed_filter(
             prev_dist=0.0,

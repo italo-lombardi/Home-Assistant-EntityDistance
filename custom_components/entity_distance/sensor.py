@@ -200,7 +200,6 @@ class EntityDistanceSensorBase(CoordinatorEntity[EntityDistanceCoordinator], Sen
 
 class DistanceSensor(EntityDistanceSensorBase):
     _attr_device_class = SensorDeviceClass.DISTANCE
-    _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_native_unit_of_measurement = UnitOfLength.METERS
     _attr_translation_key = "distance"
 
@@ -237,7 +236,6 @@ class BucketSensor(EntityDistanceSensorBase):
 
 
 class BucketLevelSensor(EntityDistanceSensorBase):
-    _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_translation_key = "bucket_level"
 
     def __init__(self, coordinator, entry, device_info, k):
@@ -366,7 +364,6 @@ class DirectionSensor(EntityDistanceSensorBase):
 
 
 class DirectionLevelSensor(EntityDistanceSensorBase):
-    _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_translation_key = "direction_level"
 
     def __init__(self, coordinator, entry, device_info, k):
@@ -381,7 +378,6 @@ class DirectionLevelSensor(EntityDistanceSensorBase):
 
 class ClosingSpeedSensor(EntityDistanceSensorBase):
     _attr_device_class = SensorDeviceClass.SPEED
-    _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_native_unit_of_measurement = UnitOfSpeed.KILOMETERS_PER_HOUR
     _attr_translation_key = "closing_speed"
 
@@ -401,7 +397,6 @@ class ClosingSpeedSensor(EntityDistanceSensorBase):
 
 class EtaSensor(EntityDistanceSensorBase):
     _attr_device_class = SensorDeviceClass.DURATION
-    _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_native_unit_of_measurement = UnitOfTime.MINUTES
     _attr_translation_key = "eta"
 
@@ -417,7 +412,6 @@ class EtaSensor(EntityDistanceSensorBase):
 
 class GpsAccuracySensor(EntityDistanceSensorBase):
     _attr_device_class = SensorDeviceClass.DISTANCE
-    _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_native_unit_of_measurement = UnitOfLength.METERS
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
@@ -456,7 +450,6 @@ class LastUpdateSensor(EntityDistanceSensorBase):
 
 
 class UpdateCountSensor(EntityDistanceSensorBase):
-    _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_native_unit_of_measurement = "updates"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_icon = "mdi:update"
@@ -539,7 +532,6 @@ class ProximityTrackingStartedSensor(EntityDistanceSensorBase):
 
 
 class ProximityRateSensor(EntityDistanceSensorBase):
-    _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_native_unit_of_measurement = "%"
     _attr_translation_key = "proximity_rate"
     _attr_suggested_display_precision = 1

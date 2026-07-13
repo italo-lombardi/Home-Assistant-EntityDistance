@@ -2,6 +2,26 @@
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-07-13
+
+### Changed
+
+- **Statistics volume reduced.** Removed long-term statistics (`state_class`)
+  from eight sensors where statistics carried no charting value: Distance,
+  Bucket Level, Direction Level, Closing Speed, ETA, GPS Accuracy, Update
+  Count, and Proximity Rate. These are categorical, diagnostic, or high-churn
+  recomputed values whose mean/sum charts were meaningless. On instances with
+  many pairs this table was the dominant database consumer. **No history is
+  lost** — the state history graph (recorder states table) still works for all
+  of these sensors; only the long-term statistics/mean-charts are dropped. Time
+  statistics on the daily-duration sensors (Proximity Duration, Today Proximity
+  Time, Today Zone Time, Today Unaccounted Time, Min Distance) are unchanged.
+
+  > Note: Home Assistant caches `state_class` in its entity registry and does
+  > not downgrade it automatically on upgrade. Existing long-term statistics for
+  > these sensors stop growing but prior rows remain until purged; new installs
+  > get the reduced footprint immediately.
+
 ## [0.4.0] - 2026-07-05
 
 > **⚠ BREAKING CHANGE — proximity alert distances will change on upgrade**

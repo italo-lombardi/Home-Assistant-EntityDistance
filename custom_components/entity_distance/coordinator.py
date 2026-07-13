@@ -568,6 +568,17 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         ):
             delta_s = max(0.0, (now - ps.prev_calc_time).total_seconds())
             if delta_s >= 5.0:
+                # Noise budget = uncertainty of the DELTA |dist_now - dist_prev|, which
+                # combines both endpoints: dist_prev's fix (ps.accuracy_a/b, written last
+                # tick at ~L640) and dist_now's fix (acc_a/b, current tick). All four terms
+                # are correct error propagation — not a double-count. Do not drop the
+                # ps.accuracy_* endpoints.
+                # ponytail: linear sum is the conservative worst-case bound. Upgrade path if
+                # a real teleport ever slips through: math.hypot(a,b,c,d) — quadrature is the
+                # statistically-correct combination for independent GPS errors (~half the
+                # budget → tighter gate). Not done now: no evidence the gate is too loose,
+                # and tighter risks false-rejecting genuine bounce (correlated urban-canyon
+                # errors violate independence). Update the guard at ~L567 to match if changed.
                 noise_budget_m = (
                     (ps.accuracy_a or 0.0)
                     + (ps.accuracy_b or 0.0)

@@ -2,6 +2,32 @@
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-07-13
+
+### Changed
+
+- **Statistics volume reduced.** Removed long-term statistics (`state_class`)
+  from eight sensors where statistics carried no charting value: Distance,
+  Bucket Level, Direction Level, Closing Speed, ETA, GPS Accuracy, Update
+  Count, and Proximity Rate. These are categorical, diagnostic, or high-churn
+  recomputed values whose mean/sum charts were meaningless. On instances with
+  many pairs this table was the dominant database consumer. **No history is
+  lost** — the state history graph (recorder states table) still works for all
+  of these sensors; only the long-term statistics/mean-charts are dropped. Time
+  statistics on the daily-duration sensors (Proximity Duration, Today Proximity
+  Time, Today Zone Time, Today Unaccounted Time, Min Distance) are unchanged.
+
+### Fixed
+
+- **Speed filter noise gate no longer double-counts GPS accuracy.** The
+  accuracy-adjusted speed filter summed the *previous* tick's accuracy budget
+  together with the *current* tick's, making the gate roughly twice as loose as
+  intended. It now uses current-tick accuracies only. **Behavioral note:** the
+  gate is now stricter, so genuine GPS bounce that previously passed may be
+  rejected as a teleport. At the default `max_speed_kmh` there is ample
+  headroom; installs with a low custom `max_speed_kmh` may see new one-tick
+  rejections — raise `max_speed_kmh` if legitimate movement is being filtered.
+
 ## [0.4.0] - 2026-07-05
 
 > **⚠ BREAKING CHANGE — proximity alert distances will change on upgrade**

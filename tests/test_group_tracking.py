@@ -154,7 +154,6 @@ def _make_coordinator(
     coord._entities = ["person.alice", "person.bob"]
     coord._pair_states = {}
     coord._max_accuracy_m = max_accuracy_m
-    coord._stationary_threshold_m = max(15.0, max_accuracy_m * 0.15)
     coord._max_speed_kmh = max_speed_kmh
     coord._entry_threshold_m = entry_threshold_m
     coord._exit_threshold_m = exit_threshold_m

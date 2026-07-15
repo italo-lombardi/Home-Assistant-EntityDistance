@@ -236,10 +236,6 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         self._entities: list[str] = list(data.get(CONF_ENTITIES, []))
         self._debounce_s: float = data.get(CONF_DEBOUNCE_S, DEFAULT_DEBOUNCE_S)
         self._max_accuracy_m: float = data.get(CONF_MAX_ACCURACY_M, DEFAULT_MAX_ACCURACY_M)
-        self._stationary_threshold_m: float = max(
-            STATIONARY_THRESHOLD_MIN_M,
-            self._max_accuracy_m * STATIONARY_THRESHOLD_FACTOR,
-        )
         self._max_speed_kmh: float = data.get(CONF_MAX_SPEED_KMH, DEFAULT_MAX_SPEED_KMH)
         self._resync_silence_s: float = data.get(CONF_RESYNC_SILENCE_S, DEFAULT_RESYNC_SILENCE_S)
         self._resync_hold_s: float = data.get(CONF_RESYNC_HOLD_S, DEFAULT_RESYNC_HOLD_S)
@@ -310,7 +306,8 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             "proximity_threshold_m": self._entry_threshold_m,
             "debounce_s": self._debounce_s,
             "max_accuracy_m": self._max_accuracy_m,
-            "stationary_threshold_m": self._stationary_threshold_m,
+            "stationary_threshold_factor": STATIONARY_THRESHOLD_FACTOR,
+            "stationary_threshold_min_m": STATIONARY_THRESHOLD_MIN_M,
             "max_speed_kmh": self._max_speed_kmh,
             "resync_silence_s": self._resync_silence_s,
             "resync_hold_s": self._resync_hold_s,
@@ -647,7 +644,21 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                     direction_teleport_rejected = True
 
             if delta_s > 0 and not direction_teleport_rejected:
-                if abs(delta_m) < self._stationary_threshold_m:
+                # Per-tick stationary threshold: scale with the noise budget of this
+                # specific pair of fixes. Two devices with acc=10m → budget=40m →
+                # threshold=20m → 40m real movement registers. Two devices with acc=150m
+                # → budget=600m → threshold=300m → noise absorbed honestly.
+                _tick_noise_budget = (
+                    (ps.accuracy_a or 0.0)
+                    + (ps.accuracy_b or 0.0)
+                    + (acc_a or 0.0)
+                    + (acc_b or 0.0)
+                )
+                _stationary_threshold = max(
+                    STATIONARY_THRESHOLD_MIN_M,
+                    _tick_noise_budget * STATIONARY_THRESHOLD_FACTOR,
+                )
+                if abs(delta_m) < _stationary_threshold:
                     direction = DIRECTION_STATIONARY
                 elif delta_m < 0:
                     direction = DIRECTION_APPROACHING

@@ -634,7 +634,6 @@ def _make_calc_pair_coordinator(
     coordinator._entry_threshold_m = entry_threshold_m
     coordinator._exit_threshold_m = exit_threshold_m
     coordinator._max_accuracy_m = max_accuracy_m
-    coordinator._stationary_threshold_m = max(15.0, max_accuracy_m * 0.15)
     coordinator._max_speed_kmh = max_speed_kmh
     coordinator._resync_silence_s = resync_silence_s
     coordinator._resync_hold_s = resync_hold_s
@@ -1393,7 +1392,6 @@ class TestCoordinatorProperties:
         coord._entry_threshold_m = 200.0
         coord._debounce_s = 10
         coord._max_accuracy_m = 150
-        coord._stationary_threshold_m = max(15.0, 150 * 0.15)
         coord._max_speed_kmh = 1000
         coord._resync_silence_s = 600
         coord._resync_hold_s = 60
@@ -1405,7 +1403,9 @@ class TestCoordinatorProperties:
         assert snap["proximity_zone"] == "very_near"
         assert snap["zone_very_near_m"] == 200
         assert "emit_bus_events" not in snap
-        assert len(snap) == 16
+        assert len(snap) == 17
+        assert snap["stationary_threshold_factor"] == 0.15
+        assert snap["stationary_threshold_min_m"] == 15.0
 
 
 # ---------------------------------------------------------------------------
@@ -2238,83 +2238,81 @@ class TestStrictExitThreshold:
         assert ps.proximity is False, "501m > 500m exit → should be OFF"
 
 
-class TestStationaryThresholdDerivation:
-    """_stationary_threshold_m = max(15.0, max_accuracy_m * 0.15) in __init__."""
+class TestStationaryThresholdPerTick:
+    """Stationary threshold is computed per-tick from the noise budget of each fix pair.
 
-    async def test_default_accuracy_derives_threshold(self, hass):
-        """max_accuracy_m=300 → threshold = max(15, 300*0.15) = 45.0."""
-        from pytest_homeassistant_custom_component.common import MockConfigEntry
+    Formula: threshold = max(STATIONARY_THRESHOLD_MIN_M,
+                             (ps.accuracy_a + ps.accuracy_b + acc_a + acc_b) * STATIONARY_THRESHOLD_FACTOR)
+    """
 
-        from custom_components.entity_distance.const import DOMAIN
-        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+    def _run_tick(self, prev_dist, curr_dist, prev_acc_a, prev_acc_b, curr_acc):
+        """Run one direction tick and return the resulting PairState."""
+        from unittest.mock import patch
 
-        entry = MockConfigEntry(
-            domain=DOMAIN,
-            data={
-                "entities": ["person.alice", "person.bob"],
-                "debounce_s": 0,
-                "max_accuracy_m": 300,
-                "max_speed_kmh": 1000,
-                "resync_silence_s": 0,
-                "resync_hold_s": 60,
-                "min_updates_reliable": 3,
-                "updates_window_s": 1800,
-                "require_reliable": False,
-            },
+        from custom_components.entity_distance.models import pair_key
+        from tests.conftest import make_state
+
+        coordinator = _make_calc_pair_coordinator(max_speed_kmh=0.0)
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+
+        now = datetime.now().astimezone()
+        ps.prev_distance_m = prev_dist
+        ps.prev_calc_time = now - timedelta(seconds=10)
+        ps.accuracy_a = prev_acc_a
+        ps.accuracy_b = prev_acc_b
+
+        state_a = make_state("person.alice", 51.5, -0.1, accuracy=curr_acc)
+        state_b = make_state("person.bob", 51.6, -0.2, accuracy=curr_acc)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
         )
-        entry.add_to_hass(hass)
-        coord = EntityDistanceCoordinator(hass, entry)
-        assert coord._stationary_threshold_m == pytest.approx(45.0)
 
-    async def test_low_accuracy_clamps_to_minimum(self, hass):
-        """max_accuracy_m=50 → 50*0.15=7.5 < 15 → clamped to 15.0."""
-        from pytest_homeassistant_custom_component.common import MockConfigEntry
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=curr_dist,
+        ):
+            return coordinator._calc_pair(ps, "person.alice", "person.bob", now, set())
 
-        from custom_components.entity_distance.const import DOMAIN
-        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
-
-        entry = MockConfigEntry(
-            domain=DOMAIN,
-            data={
-                "entities": ["person.alice", "person.bob"],
-                "debounce_s": 0,
-                "max_accuracy_m": 50,
-                "max_speed_kmh": 1000,
-                "resync_silence_s": 0,
-                "resync_hold_s": 60,
-                "min_updates_reliable": 3,
-                "updates_window_s": 1800,
-                "require_reliable": False,
-            },
+    def test_stationary_with_high_accuracy_noise(self):
+        """Two devices each acc=100m → noise_budget=400m → threshold=60m; delta=50m → STATIONARY."""
+        # prev_acc_a=100, prev_acc_b=100, curr_acc_a=100, curr_acc_b=100
+        # budget = 400, threshold = max(15, 400*0.15) = 60m
+        # delta = 500 - 550 = -50m → abs=50 < 60 → stationary
+        result = self._run_tick(
+            prev_dist=500.0,
+            curr_dist=550.0,
+            prev_acc_a=100.0,
+            prev_acc_b=100.0,
+            curr_acc=100.0,
         )
-        entry.add_to_hass(hass)
-        coord = EntityDistanceCoordinator(hass, entry)
-        assert coord._stationary_threshold_m == 15.0
+        assert result.direction == "stationary"
 
-    async def test_zero_accuracy_clamps_to_minimum(self, hass):
-        """max_accuracy_m=0 (filter off) → clamped to 15.0."""
-        from pytest_homeassistant_custom_component.common import MockConfigEntry
-
-        from custom_components.entity_distance.const import DOMAIN
-        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
-
-        entry = MockConfigEntry(
-            domain=DOMAIN,
-            data={
-                "entities": ["person.alice", "person.bob"],
-                "debounce_s": 0,
-                "max_accuracy_m": 0,
-                "max_speed_kmh": 1000,
-                "resync_silence_s": 0,
-                "resync_hold_s": 60,
-                "min_updates_reliable": 3,
-                "updates_window_s": 1800,
-                "require_reliable": False,
-            },
+    def test_approaching_with_low_accuracy_noise(self):
+        """Two devices each acc=10m → noise_budget=40m → threshold=15m; delta=40m → APPROACHING."""
+        # budget = 40, threshold = max(15, 40*0.15) = max(15, 6) = 15m
+        # delta = 500 - 460 = -40m → abs=40 > 15 → approaching
+        result = self._run_tick(
+            prev_dist=500.0,
+            curr_dist=460.0,
+            prev_acc_a=10.0,
+            prev_acc_b=10.0,
+            curr_acc=10.0,
         )
-        entry.add_to_hass(hass)
-        coord = EntityDistanceCoordinator(hass, entry)
-        assert coord._stationary_threshold_m == 15.0
+        assert result.direction == "approaching"
+
+    def test_stationary_threshold_min_floor(self):
+        """Zone entities (acc=None→0) → noise_budget=0 → threshold=STATIONARY_THRESHOLD_MIN_M=15m; delta=5m → STATIONARY."""
+        # budget = 0, threshold = max(15, 0) = 15m
+        # delta = 5m < 15m → stationary
+        result = self._run_tick(
+            prev_dist=100.0,
+            curr_dist=105.0,
+            prev_acc_a=None,
+            prev_acc_b=None,
+            curr_acc=None,
+        )
+        assert result.direction == "stationary"
 
 
 class TestGraceWindowConfig:

@@ -27,7 +27,7 @@
           "zone_near_m": "Entiteiten zijn 'Dichtbij' op of dichter dan deze afstand. Moet groter zijn dan Zeer dichtbij. Standaard: 1000 m.",
           "zone_mid_m": "Entiteiten zijn op 'Gemiddelde' afstand. Moet groter zijn dan Dichtbij. Standaard: 5000 m.",
           "zone_far_m": "Entiteiten zijn 'Ver' op of dichter dan deze afstand. Moet groter zijn dan Gemiddeld. Standaard: 20000 m.\nVerder is 'Zeer ver'.",
-          "proximity_zone": "De sensor 'In de buurt' gaat AAN wanneer entiteiten zich in deze zone of dichterbij bevinden (bijv. 'Dichtbij' selecteren triggert ook wanneer entiteiten 'Zeer dichtbij' zijn). Hij gaat UIT wanneer ze naar de volgende zone bewegen.",
+          "proximity_zone": "De sensor 'In de buurt' gaat AAN wanneer entiteiten zich in deze zone of dichterbij bevinden (bijv. 'Dichtbij' selecteren triggert ook wanneer entiteiten 'Zeer dichtbij' zijn). Hij gaat UIT wanneer de afstand de grens van die zone overschrijdt (strikte drempel). Schakel 'Wachten voor reactie' (debounce) in de geavanceerde filters in om snel schakelen nabij de grens door GPS-ruis te voorkomen.",
           "show_advanced": "Inschakelen om GPS-nauwkeurigheid, snelheid en betrouwbaarheidsfilters te configureren op het volgende scherm."
         }
       },
@@ -35,18 +35,24 @@
         "title": "Geavanceerde filters",
         "description": "Optionele filters om onbetrouwbare locatie-updates te weigeren.",
         "data": {
-          "debounce_s": "Wachten voor reactie (s)",
           "max_accuracy_m": "Max. GPS-nauwkeurigheid (m, 0 = uitgeschakeld)",
+          "debounce_s": "Wachten voor reactie (s)",
+          "grace_window_s": "Weergave-tolerantievenster (s)",
           "max_speed_kmh": "Max. impliciete snelheid (km/h, 0 = uitgeschakeld)",
           "require_reliable": "Betrouwbare gegevens vereisen voor nabijheidsgebeurtenissen",
-          "min_updates_reliable": "Min. updates voor betrouwbare gegevens"
+          "min_updates_reliable": "Min. updates voor betrouwbare gegevens",
+          "resync_silence_s": "GPS-stilte voor bevriezing (s)",
+          "resync_hold_s": "Duur nabijheidsbevriezing (s)"
         },
         "data_description": {
-          "debounce_s": "Wanneer een locatie-update binnenkomt, hoe lang te wachten voor herberekening. Nuttig wanneer telefoons meerdere ruisachtige GPS-metingen op een rij sturen — de integratie wacht tot ze stabiliseren. 0 = onmiddellijk reageren (standaard). Verhoog naar 5–15 s bij flikkerend aan/uit.",
           "max_accuracy_m": "Locatie-updates negeren waarbij de GPS-fout groter is dan deze waarde. Telefoons in beweging melden doorgaans een nauwkeurigheid van 100–250 m, dus 300 m is een veilige standaard. Een telefoon met '350 m nauwkeurigheid' wordt overgeslagen. Stel in op 0 om uit te schakelen.",
+          "debounce_s": "Wanneer een locatie-update binnenkomt, hoe lang te wachten voor herberekening. Nuttig wanneer telefoons meerdere ruisachtige GPS-metingen op een rij sturen — de integratie wacht tot ze stabiliseren. 0 = onmiddellijk reageren (standaard). Verhoog naar 5–15 s bij flikkerend aan/uit.",
+          "grace_window_s": "Wanneer een paar kort het GPS-signaal verliest (storing, tunnel, inactieve telefoon), tonen sensoren de laatste bekende waarde gedurende deze tijd voordat ze onbekend rapporteren. Voorkomt intermittent flikkeren. Standaard: 900 s (15 min). Bereik: 60–3600 s.",
           "max_speed_kmh": "Teleportbeveiliging. Verwerpt een GPS-meting als de impliciete bewegingssnelheid — na aftrek van de gecombineerde GPS-nauwkeurigheid van beide apparaten — deze waarde overschrijdt. Standaard: 1000 km/h — blokkeert onmogelijke teleportaties maar staat vliegtuigen toe. Stel in op 0 om uit te schakelen.",
           "require_reliable": "Alleen proximity_enter-gebeurtenis activeren wanneer gegevens als betrouwbaar worden beschouwd.",
-          "min_updates_reliable": "Minimum aantal locatie-updates in het venster voordat gegevens als betrouwbaar worden beschouwd."
+          "min_updates_reliable": "Minimum aantal locatie-updates in het venster voordat gegevens als betrouwbaar worden beschouwd.",
+          "resync_silence_s": "Als alle gevolgde entiteiten gedurende deze tijd geen GPS-updates sturen, wordt de nabijheidsstatus bevroren om valse wijzigingen te voorkomen terwijl op het signaal gewacht wordt. Standaard: 600 s (10 min). Bereik: 60–3600 s.",
+          "resync_hold_s": "Hoe lang de nabijheidsstatus bevroren blijft nadat GPS-stilte is gedetecteerd. Stel in op 0 om bevriezing uit te schakelen (stiltedetectie blijft actief voor tijdsboekhouding). Standaard: 60 s. Bereik: 0–300 s."
         }
       }
     },
@@ -79,26 +85,32 @@
           "zone_near_m": "Entiteiten zijn 'Dichtbij' op of dichter dan deze afstand. Moet groter zijn dan Zeer dichtbij. Standaard: 1000 m.",
           "zone_mid_m": "Entiteiten zijn op 'Gemiddelde' afstand. Moet groter zijn dan Dichtbij. Standaard: 5000 m.",
           "zone_far_m": "Entiteiten zijn 'Ver' op of dichter dan deze afstand. Moet groter zijn dan Gemiddeld. Standaard: 20000 m.\nVerder is 'Zeer ver'.",
-          "proximity_zone": "De sensor 'In de buurt' gaat AAN wanneer entiteiten zich in deze zone of dichterbij bevinden (bijv. 'Dichtbij' selecteren triggert ook wanneer entiteiten 'Zeer dichtbij' zijn). Hij gaat UIT wanneer ze naar de volgende zone bewegen.",
+          "proximity_zone": "De sensor 'In de buurt' gaat AAN wanneer entiteiten zich in deze zone of dichterbij bevinden (bijv. 'Dichtbij' selecteren triggert ook wanneer entiteiten 'Zeer dichtbij' zijn). Hij gaat UIT wanneer de afstand de grens van die zone overschrijdt (strikte drempel). Schakel 'Wachten voor reactie' (debounce) in de geavanceerde filters in om snel schakelen nabij de grens door GPS-ruis te voorkomen.",
           "show_advanced": "Inschakelen om GPS-nauwkeurigheid, snelheid en betrouwbaarheidsfilters te configureren op het volgende scherm."
         }
       },
       "advanced": {
         "title": "Geavanceerde filters",
+        "description": "Deze filters helpen slechte GPS-gegevens te negeren.",
         "data": {
-          "debounce_s": "Wachten voor reactie (s)",
           "max_accuracy_m": "Max. GPS-nauwkeurigheid (m, 0 = uitgeschakeld)",
+          "debounce_s": "Wachten voor reactie (s)",
+          "grace_window_s": "Weergave-tolerantievenster (s)",
           "max_speed_kmh": "Max. impliciete snelheid (km/h, 0 = uitgeschakeld)",
           "require_reliable": "Betrouwbare gegevens vereisen voor nabijheidsgebeurtenissen",
-          "min_updates_reliable": "Min. updates voor betrouwbare gegevens"
+          "min_updates_reliable": "Min. updates voor betrouwbare gegevens",
+          "resync_silence_s": "GPS-stilte voor bevriezing (s)",
+          "resync_hold_s": "Duur nabijheidsbevriezing (s)"
         },
-        "description": "Deze filters helpen slechte GPS-gegevens te negeren.",
         "data_description": {
-          "debounce_s": "Wanneer een locatie-update binnenkomt, hoe lang te wachten voor herberekening. Nuttig wanneer telefoons meerdere ruisachtige GPS-metingen op een rij sturen — de integratie wacht tot ze stabiliseren. 0 = onmiddellijk reageren (standaard). Verhoog naar 5–15 s bij flikkerend aan/uit.",
           "max_accuracy_m": "Locatie-updates negeren waarbij de GPS-fout groter is dan deze waarde. Telefoons in beweging melden doorgaans een nauwkeurigheid van 100–250 m, dus 300 m is een veilige standaard. Een telefoon met '350 m nauwkeurigheid' wordt overgeslagen. Stel in op 0 om uit te schakelen.",
+          "debounce_s": "Wanneer een locatie-update binnenkomt, hoe lang te wachten voor herberekening. Nuttig wanneer telefoons meerdere ruisachtige GPS-metingen op een rij sturen — de integratie wacht tot ze stabiliseren. 0 = onmiddellijk reageren (standaard). Verhoog naar 5–15 s bij flikkerend aan/uit.",
+          "grace_window_s": "Wanneer een paar kort het GPS-signaal verliest (storing, tunnel, inactieve telefoon), tonen sensoren de laatste bekende waarde gedurende deze tijd voordat ze onbekend rapporteren. Voorkomt intermittent flikkeren. Standaard: 900 s (15 min). Bereik: 60–3600 s.",
           "max_speed_kmh": "Teleportbeveiliging. Verwerpt een GPS-meting als de impliciete bewegingssnelheid — na aftrek van de gecombineerde GPS-nauwkeurigheid van beide apparaten — deze waarde overschrijdt. Standaard: 1000 km/h — blokkeert onmogelijke teleportaties maar staat vliegtuigen toe. Stel in op 0 om uit te schakelen.",
           "require_reliable": "Wanneer ingeschakeld wordt een nabijheidsgebeurtenis alleen geactiveerd na consistente updates.",
-          "min_updates_reliable": "Hoeveel opeenvolgende updates nodig zijn voordat de locatie als betrouwbaar wordt beschouwd."
+          "min_updates_reliable": "Hoeveel opeenvolgende updates nodig zijn voordat de locatie als betrouwbaar wordt beschouwd.",
+          "resync_silence_s": "Als alle gevolgde entiteiten gedurende deze tijd geen GPS-updates sturen, wordt de nabijheidsstatus bevroren om valse wijzigingen te voorkomen terwijl op het signaal gewacht wordt. Standaard: 600 s (10 min). Bereik: 60–3600 s.",
+          "resync_hold_s": "Hoe lang de nabijheidsstatus bevroren blijft nadat GPS-stilte is gedetecteerd. Stel in op 0 om bevriezing uit te schakelen (stiltedetectie blijft actief voor tijdsboekhouding). Standaard: 60 s. Bereik: 0–300 s."
         }
       }
     },

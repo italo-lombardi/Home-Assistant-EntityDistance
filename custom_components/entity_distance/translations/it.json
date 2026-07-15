@@ -27,7 +27,7 @@
           "zone_near_m": "Le entità sono 'Vicino' a questa distanza o meno. Deve essere maggiore di Molto vicino. Predefinito: 1000 m.",
           "zone_mid_m": "Le entità sono a distanza 'Media'. Deve essere maggiore di Vicino. Predefinito: 5000 m.",
           "zone_far_m": "Le entità sono 'Lontano' a questa distanza o meno. Deve essere maggiore di Medio. Predefinito: 20000 m.\nOltre è 'Molto lontano'.",
-          "proximity_zone": "Il sensore 'In prossimità' si attiva quando le entità sono in questa zona o più vicine (es. selezionare 'Vicino' si attiva anche quando le entità sono 'Molto vicino'). Si disattiva quando si spostano alla zona successiva.",
+          "proximity_zone": "Il sensore 'In prossimità' si attiva quando le entità sono in questa zona o più vicine (es. selezionare 'Vicino' si attiva anche quando le entità sono 'Molto vicino'). Si disattiva quando la distanza supera il limite di quella zona (soglia rigorosa). Per evitare commutazioni rapide vicino al limite causate dal rumore GPS, attiva 'Attendere prima di reagire' (debounce) nei filtri avanzati.",
           "show_advanced": "Attiva per configurare precisione GPS, velocità e filtri di affidabilità nella schermata successiva."
         }
       },
@@ -35,18 +35,24 @@
         "title": "Filtri avanzati",
         "description": "Filtri opzionali per rifiutare aggiornamenti di posizione inaffidabili.",
         "data": {
-          "debounce_s": "Attendere prima di reagire (s)",
           "max_accuracy_m": "Precisione GPS max. (m, 0 = disabilitato)",
+          "debounce_s": "Attendere prima di reagire (s)",
+          "grace_window_s": "Finestra di tolleranza visualizzazione (s)",
           "max_speed_kmh": "Velocità implicita max. (km/h, 0 = disabilitato)",
           "require_reliable": "Richiedi dati affidabili per gli eventi di prossimità",
-          "min_updates_reliable": "Aggiornamenti minimi per dati affidabili"
+          "min_updates_reliable": "Aggiornamenti minimi per dati affidabili",
+          "resync_silence_s": "Silenzio GPS prima del congelamento (s)",
+          "resync_hold_s": "Durata congelamento prossimità (s)"
         },
         "data_description": {
-          "debounce_s": "Quando arriva un aggiornamento della posizione, quanto attendere prima di ricalcolare. Utile quando i telefoni inviano più letture GPS rumorose di fila — l'integrazione aspetta che si stabilizzino. 0 = reagisce subito (predefinito). Alzare a 5–15 s in caso di on/off oscillante.",
           "max_accuracy_m": "Ignora aggiornamenti di posizione con errore GPS superiore a questo valore. I telefoni in movimento riportano tipicamente una precisione di 100–250 m, quindi 300 m è un valore predefinito sicuro. Un telefono con \"precisione 350 m\" verrebbe ignorato. Imposta a 0 per disabilitare.",
+          "debounce_s": "Quando arriva un aggiornamento della posizione, quanto attendere prima di ricalcolare. Utile quando i telefoni inviano più letture GPS rumorose di fila — l'integrazione aspetta che si stabilizzino. 0 = reagisce subito (predefinito). Alzare a 5–15 s in caso di on/off oscillante.",
+          "grace_window_s": "Quando una coppia perde brevemente il segnale GPS (interruzione, tunnel, telefono inattivo), i sensori mantengono l'ultimo valore noto per questa durata prima di segnalare sconosciuto. Previene flickering intermittente. Predefinito: 900 s (15 min). Intervallo: 60–3600 s.",
           "max_speed_kmh": "Protezione da teletrasporto. Rifiuta un fix GPS se la velocità di movimento implicita — dopo aver sottratto la precisione GPS combinata di entrambi i dispositivi — supera questo valore. Predefinito: 1000 km/h — blocca teleport impossibili ma consente aerei. Imposta a 0 per disabilitare.",
           "require_reliable": "Attiva l'evento proximity_enter solo quando i dati sono considerati affidabili.",
-          "min_updates_reliable": "Numero minimo di aggiornamenti di posizione nella finestra prima che i dati siano considerati affidabili."
+          "min_updates_reliable": "Numero minimo di aggiornamenti di posizione nella finestra prima che i dati siano considerati affidabili.",
+          "resync_silence_s": "Se tutte le entità tracciate smettono di inviare aggiornamenti GPS per questa durata, lo stato di prossimità viene congelato per evitare cambiamenti falsi mentre si attende il ritorno del segnale. Predefinito: 600 s (10 min). Intervallo: 60–3600 s.",
+          "resync_hold_s": "Per quanto tempo mantenere lo stato di prossimità congelato dopo il rilevamento del silenzio GPS. Imposta a 0 per disabilitare il congelamento (il rilevamento del silenzio continua per la contabilità del tempo). Predefinito: 60 s. Intervallo: 0–300 s."
         }
       }
     },
@@ -79,26 +85,32 @@
           "zone_near_m": "Le entità sono 'Vicino' a questa distanza o meno. Deve essere maggiore di Molto vicino. Predefinito: 1000 m.",
           "zone_mid_m": "Le entità sono a distanza 'Media'. Deve essere maggiore di Vicino. Predefinito: 5000 m.",
           "zone_far_m": "Le entità sono 'Lontano' a questa distanza o meno. Deve essere maggiore di Medio. Predefinito: 20000 m.\nOltre è 'Molto lontano'.",
-          "proximity_zone": "Il sensore 'In prossimità' si attiva quando le entità sono in questa zona o più vicine (es. selezionare 'Vicino' si attiva anche quando le entità sono 'Molto vicino'). Si disattiva quando si spostano alla zona successiva.",
+          "proximity_zone": "Il sensore 'In prossimità' si attiva quando le entità sono in questa zona o più vicine (es. selezionare 'Vicino' si attiva anche quando le entità sono 'Molto vicino'). Si disattiva quando la distanza supera il limite di quella zona (soglia rigorosa). Per evitare commutazioni rapide vicino al limite causate dal rumore GPS, attiva 'Attendere prima di reagire' (debounce) nei filtri avanzati.",
           "show_advanced": "Attiva per configurare precisione GPS, velocità e filtri di affidabilità nella schermata successiva."
         }
       },
       "advanced": {
         "title": "Filtri avanzati",
+        "description": "Questi filtri aiutano a ignorare i dati GPS errati.",
         "data": {
-          "debounce_s": "Attendere prima di reagire (s)",
           "max_accuracy_m": "Precisione GPS max. (m, 0 = disabilitato)",
+          "debounce_s": "Attendere prima di reagire (s)",
+          "grace_window_s": "Finestra di tolleranza visualizzazione (s)",
           "max_speed_kmh": "Velocità implicita max. (km/h, 0 = disabilitato)",
           "require_reliable": "Richiedi dati affidabili per gli eventi di prossimità",
-          "min_updates_reliable": "Aggiornamenti minimi per dati affidabili"
+          "min_updates_reliable": "Aggiornamenti minimi per dati affidabili",
+          "resync_silence_s": "Silenzio GPS prima del congelamento (s)",
+          "resync_hold_s": "Durata congelamento prossimità (s)"
         },
-        "description": "Questi filtri aiutano a ignorare i dati GPS errati.",
         "data_description": {
-          "debounce_s": "Quando arriva un aggiornamento della posizione, quanto attendere prima di ricalcolare. Utile quando i telefoni inviano più letture GPS rumorose di fila — l'integrazione aspetta che si stabilizzino. 0 = reagisce subito (predefinito). Alzare a 5–15 s in caso di on/off oscillante.",
           "max_accuracy_m": "Ignora aggiornamenti di posizione con errore GPS superiore a questo valore. I telefoni in movimento riportano tipicamente una precisione di 100–250 m, quindi 300 m è un valore predefinito sicuro. Un telefono con \"precisione 350 m\" verrebbe ignorato. Imposta a 0 per disabilitare.",
+          "debounce_s": "Quando arriva un aggiornamento della posizione, quanto attendere prima di ricalcolare. Utile quando i telefoni inviano più letture GPS rumorose di fila — l'integrazione aspetta che si stabilizzino. 0 = reagisce subito (predefinito). Alzare a 5–15 s in caso di on/off oscillante.",
+          "grace_window_s": "Quando una coppia perde brevemente il segnale GPS (interruzione, tunnel, telefono inattivo), i sensori mantengono l'ultimo valore noto per questa durata prima di segnalare sconosciuto. Previene flickering intermittente. Predefinito: 900 s (15 min). Intervallo: 60–3600 s.",
           "max_speed_kmh": "Protezione da teletrasporto. Rifiuta un fix GPS se la velocità di movimento implicita — dopo aver sottratto la precisione GPS combinata di entrambi i dispositivi — supera questo valore. Predefinito: 1000 km/h — blocca teleport impossibili ma consente aerei. Imposta a 0 per disabilitare.",
           "require_reliable": "Quando attivo, un evento di prossimità si attiva solo dopo aggiornamenti coerenti.",
-          "min_updates_reliable": "Quanti aggiornamenti consecutivi sono necessari prima di considerare la posizione affidabile."
+          "min_updates_reliable": "Quanti aggiornamenti consecutivi sono necessari prima di considerare la posizione affidabile.",
+          "resync_silence_s": "Se tutte le entità tracciate smettono di inviare aggiornamenti GPS per questa durata, lo stato di prossimità viene congelato per evitare cambiamenti falsi mentre si attende il ritorno del segnale. Predefinito: 600 s (10 min). Intervallo: 60–3600 s.",
+          "resync_hold_s": "Per quanto tempo mantenere lo stato di prossimità congelato dopo il rilevamento del silenzio GPS. Imposta a 0 per disabilitare il congelamento (il rilevamento del silenzio continua per la contabilità del tempo). Predefinito: 60 s. Intervallo: 0–300 s."
         }
       }
     },

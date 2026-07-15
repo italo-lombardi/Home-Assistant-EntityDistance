@@ -27,7 +27,7 @@
           "zone_near_m": "Entities are 'Near' at or closer than this distance. Must be greater than Very Near. Default: 1000 m.",
           "zone_mid_m": "Entities are at 'Medium' distance at or closer than this. Must be greater than Near. Default: 5000 m.",
           "zone_far_m": "Entities are 'Far' at or closer than this distance. Must be greater than Medium. Default: 20000 m.\nBeyond this is 'Very Far'.",
-          "proximity_zone": "The 'In Proximity' sensor turns ON when entities are within this zone or closer (e.g. selecting 'Near' also triggers when entities are 'Very Near'). It turns OFF when distance exceeds that zone boundary (strict threshold).",
+          "proximity_zone": "The 'In Proximity' sensor turns ON when entities are within this zone or closer (e.g. selecting 'Near' also triggers when entities are 'Very Near'). It turns OFF when distance exceeds that zone boundary (strict threshold). To avoid rapid on/off toggling near the boundary due to GPS noise, enable 'Wait before reacting' (debounce) in Advanced Filters.",
           "show_advanced": "Turn on to configure GPS accuracy, speed, and reliability filters on the next screen. Leave off to use sensible defaults."
         }
       },
@@ -52,7 +52,7 @@
           "require_reliable": "When on, the 'In Proximity' sensor only turns ON after the location has been consistent across several consecutive updates. Reduces false positives caused by a single bad GPS fix.",
           "min_updates_reliable": "How many consecutive updates are needed before the location is considered reliable. Only applies when 'Only trigger when data is reliable' is on.",
           "resync_silence_s": "If all tracked entities stop sending GPS updates for this long, proximity state is frozen to prevent false changes. Range: 60–3600 s.",
-          "resync_hold_s": "How long to hold proximity state frozen after GPS silence is detected. Range: 0–300 s."
+          "resync_hold_s": "How long to hold proximity state frozen after GPS silence is detected. Set to 0 to disable the freeze (silence detection still runs). Range: 0–300 s."
         }
       }
     },
@@ -85,7 +85,7 @@
           "zone_near_m": "Entities are 'Near' at or closer than this distance. Must be greater than Very Near. Default: 1000 m.",
           "zone_mid_m": "Entities are at 'Medium' distance at or closer than this. Must be greater than Near. Default: 5000 m.",
           "zone_far_m": "Entities are 'Far' at or closer than this distance. Must be greater than Medium. Default: 20000 m.\nBeyond this is 'Very Far'.",
-          "proximity_zone": "The 'In Proximity' sensor turns ON when entities are within this zone or closer (e.g. selecting 'Near' also triggers when entities are 'Very Near'). It turns OFF when distance exceeds that zone boundary (strict threshold).",
+          "proximity_zone": "The 'In Proximity' sensor turns ON when entities are within this zone or closer (e.g. selecting 'Near' also triggers when entities are 'Very Near'). It turns OFF when distance exceeds that zone boundary (strict threshold). To avoid rapid on/off toggling near the boundary due to GPS noise, enable 'Wait before reacting' (debounce) in Advanced Filters.",
           "show_advanced": "Turn on to configure GPS accuracy, speed, and reliability filters on the next screen. Leave off to use sensible defaults."
         }
       },
@@ -110,7 +110,7 @@
           "require_reliable": "When on, the 'In Proximity' sensor only turns ON after the location has been consistent across several consecutive updates. Reduces false positives caused by a single bad GPS fix.",
           "min_updates_reliable": "How many consecutive updates are needed before the location is considered reliable. Only applies when 'Only trigger when data is reliable' is on.",
           "resync_silence_s": "If all tracked entities stop sending GPS updates for this long, proximity state is frozen to prevent false changes. Range: 60–3600 s.",
-          "resync_hold_s": "How long to hold proximity state frozen after GPS silence is detected. Range: 0–300 s."
+          "resync_hold_s": "How long to hold proximity state frozen after GPS silence is detected. Set to 0 to disable the freeze (silence detection still runs). Range: 0–300 s."
         }
       }
     },

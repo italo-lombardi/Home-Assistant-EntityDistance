@@ -888,8 +888,8 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 )
             else:
                 _elapsed_s = max(0.0, (now - prev_calc_time_snapshot).total_seconds())
-                if _elapsed_s < 1.0:
-                    _elapsed_s = 0.0  # double-tick guard — skip near-zero accumulation
+                if _elapsed_s < 0.1:
+                    _elapsed_s = 0.0  # double-tick guard — skip same-loop-iteration coalescing
 
         if _elapsed_s > 0:
             # Bucket time accumulates regardless of proximity — sensors report

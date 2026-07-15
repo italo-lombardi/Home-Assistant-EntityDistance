@@ -2146,8 +2146,8 @@ class TestCumulativeSensorCoordinatorFailedReturnsNone:
 
 class TestDoubleTick:
     def test_double_tick_does_not_leak_unaccounted_time(self):
-        """Calling _calc_pair twice with the same now (or now+100ms) must not
-        double-credit today_zone_seconds.  The < 1 s guard converts the second
+        """Calling _calc_pair twice with the same now (or now+50ms) must not
+        double-credit today_zone_seconds.  The < 100 ms guard converts the second
         _elapsed_s to 0.0 so the bucket accumulator is skipped entirely."""
         coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=500.0)
         state_a = _make_state("person.alice", 51.5, -0.1, 20)
@@ -2173,7 +2173,7 @@ class TestDoubleTick:
             ps = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
             after_first = ps.today_zone_seconds.get("very_near", 0.0)
 
-            # Second call — same timestamp (double-tick, elapsed ≈ 0)
+            # Second call — same timestamp (double-tick, elapsed = 0)
             ps2 = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
             after_second = ps2.today_zone_seconds.get("very_near", 0.0)
 
@@ -2181,13 +2181,13 @@ class TestDoubleTick:
         assert after_first == pytest.approx(3600.0, abs=2.0)
         assert after_second == pytest.approx(after_first, abs=0.01)
 
-        # Also verify with a 100ms gap — still under 1s threshold
+        # Also verify with a 50ms gap — still under 100ms threshold
         ps3 = coord._calc_pair(
             ps2,
             "person.alice",
             "person.bob",
-            _NOW + timedelta(milliseconds=100),
+            _NOW + timedelta(milliseconds=50),
             set(),
         )
-        after_100ms = ps3.today_zone_seconds.get("very_near", 0.0)
-        assert after_100ms == pytest.approx(after_second, abs=0.01)
+        after_50ms = ps3.today_zone_seconds.get("very_near", 0.0)
+        assert after_50ms == pytest.approx(after_second, abs=0.01)

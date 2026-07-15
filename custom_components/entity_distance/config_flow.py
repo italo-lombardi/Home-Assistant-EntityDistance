@@ -60,6 +60,7 @@ from .const import (
 ENTITY_DOMAINS = ["person", "device_tracker", "sensor", "zone"]
 _CONF_SHOW_ADVANCED = "show_advanced"
 
+# Keys persisted in options (not entry.data) — CONF_ENTITIES lives in entry.data, not here.
 _ZONE_OPTIONS_KEYS = {
     CONF_PROXIMITY_ZONE,
     CONF_DEBOUNCE_S,

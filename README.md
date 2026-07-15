@@ -256,10 +256,7 @@ Requires at least two location updates. Compares current distance to previous di
 - `Δdistance < 0` → **Approaching**
 - `Δdistance > 0` → **Diverging**
 
-The 50 m stationary threshold is fixed and not configurable. When **both** sides
-of a pair are in a zone (e.g. everyone home), there is no relative motion to
-measure, so Direction reports **Stationary** and Approach Speed `0` rather than
-unknown.
+The stationary threshold is auto-derived from the **Max GPS error radius** setting: `max(15 m, max_accuracy_m × 0.15)`. With the default 300 m accuracy filter this gives a 45 m threshold; tightening accuracy to 15 m gives a 15 m threshold. When **both** sides of a pair are in a zone (e.g. everyone home), there is no relative motion to measure, so Direction reports **Stationary** and Approach Speed `0` rather than unknown.
 
 ### Approach Speed
 
@@ -312,11 +309,12 @@ All sensors refresh on a 1-minute timer tick even when entities don't move. This
 ### Signal loss & grace window
 
 When a pair briefly loses a valid GPS fix (a blip, a tunnel, an idle phone), its
-sensors keep showing the **last known value for up to 15 minutes** instead of
-flipping straight to `unknown`. After that window, they report `unknown`. This
-prevents intermittent flicker. Staleness is still visible via the **Last Update**
-sensor and the **Reliable** binary sensor. The window is a fixed constant
-(`GRACE_WINDOW_S` in `const.py`); no proximity time is credited while a pair is
+sensors keep showing the **last known value** for the configured grace window
+(default 15 minutes, configurable 1–60 min) instead of flipping straight to
+`unknown`. After that window, they report `unknown`. This prevents intermittent
+flicker. Staleness is still visible via the **Last Update** sensor and the
+**Reliable** binary sensor. The grace window is configurable in Advanced Filters
+(`grace_window_s`, default 900 s). No proximity time is credited while a pair is
 stale. The last distance/direction/speed/ETA are also restored after a Home
 Assistant restart, so sensors show their last value immediately rather than
 waiting for the next GPS fix.
@@ -507,7 +505,7 @@ Zones (`zone.*`) are supported as either entity in a pair:
 - Person-to-zone: direction and ETA work normally
 - Zone-to-zone: distance is static; direction always stationary
 
-> Movement of less than 50 m between updates is classified as stationary.
+> Movement below the stationary threshold (auto-derived from GPS accuracy, default ~45 m) between updates is classified as stationary.
 
 ---
 

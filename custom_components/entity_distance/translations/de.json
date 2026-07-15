@@ -45,12 +45,12 @@
           "resync_hold_s": "Näherungs-Einfrierzeit (s)"
         },
         "data_description": {
-          "max_accuracy_m": "Standortaktualisierungen ignorieren, wenn der GPS-Fehler größer als dieser Wert ist. Telefone in Bewegung melden typischerweise eine Genauigkeit von 100–250 m, daher ist 300 m ein sicherer Standardwert. Ein Telefon mit „350 m Genauigkeit\" würde übersprungen. Auf 0 setzen zum Deaktivieren.",
-          "debounce_s": "Wenn ein Standortupdate eintrifft, wie lange gewartet wird, bevor neu berechnet wird. Nützlich wenn Telefone mehrere verrauschte GPS-Werte in Folge senden — die Integration wartet, bis sie sich beruhigen. 0 = sofort reagieren (Standard). Auf 5–15 s erhöhen bei jitterndem Schalten.",
+          "max_accuracy_m": "Standortaktualisierungen ignorieren, wenn der GPS-Fehler größer als dieser Wert ist. Telefone in Bewegung melden typischerweise eine Genauigkeit von 100–250 m, daher ist 300 m ein sicherer Standardwert. Ein Telefon mit „350 m Genauigkeit\" würde übersprungen. Auf 0 setzen zum Deaktivieren. Bereich: 0–1000 m.",
+          "debounce_s": "Wenn ein Standortupdate eintrifft, wie lange gewartet wird, bevor neu berechnet wird. Nützlich wenn Telefone mehrere verrauschte GPS-Werte in Folge senden — die Integration wartet, bis sie sich beruhigen. 0 = sofort reagieren (Standard). Auf 5–15 s erhöhen bei jitterndem Schalten. Bereich: 0–60 s.",
           "grace_window_s": "Wenn ein Paar kurzzeitig das GPS-Signal verliert (Ausfall, Tunnel, inaktives Telefon), zeigen Sensoren den zuletzt bekannten Wert für diese Dauer, bevor 'Unbekannt' gemeldet wird. Verhindert gelegentliches Flackern. Standard: 900 s (15 Min). Bereich: 60–3600 s.",
-          "max_speed_kmh": "Teleport-Schutz. Lehnt eine GPS-Messung ab, wenn die implizierte Bewegungsgeschwindigkeit — nach Abzug der kombinierten GPS-Genauigkeit beider Geräte — diesen Wert überschreitet. Standard: 1000 km/h — blockiert unmögliche Teleporte, erlaubt aber Flugzeuge. Auf 0 setzen zum Deaktivieren.",
+          "max_speed_kmh": "Teleport-Schutz. Lehnt eine GPS-Messung ab, wenn die implizierte Bewegungsgeschwindigkeit — nach Abzug der kombinierten GPS-Genauigkeit beider Geräte — diesen Wert überschreitet. Standard: 1000 km/h — blockiert unmögliche Teleporte, erlaubt aber Flugzeuge. Auf 0 setzen zum Deaktivieren. Bereich: 0–2000 km/h.",
           "require_reliable": "Der Sensor 'In der Nähe' schaltet sich nur EIN, wenn die Daten als zuverlässig gelten.",
-          "min_updates_reliable": "Mindestanzahl aufeinanderfolgender Standortaktualisierungen, bevor Daten als zuverlässig gelten.",
+          "min_updates_reliable": "Mindestanzahl aufeinanderfolgender Standortaktualisierungen, bevor Daten als zuverlässig gelten. Bereich: 1–20.",
           "resync_silence_s": "Wenn alle verfolgten Entitäten für diese Dauer keine GPS-Aktualisierungen senden, wird der Näherungsstatus eingefroren, um falsche Änderungen zu verhindern. Standard: 600 s (10 Min). Bereich: 60–3600 s.",
           "resync_hold_s": "Wie lange der Näherungsstatus nach erkannter GPS-Stille eingefroren bleibt. Auf 0 setzen, um das Einfrieren zu deaktivieren (die Stillerkennung läuft weiterhin für die Zeitabrechnung). Standard: 60 s. Bereich: 0–300 s."
         }
@@ -103,12 +103,12 @@
           "resync_hold_s": "Näherungs-Einfrierzeit (s)"
         },
         "data_description": {
-          "max_accuracy_m": "Standortaktualisierungen ignorieren, wenn der GPS-Fehler größer als dieser Wert ist. Telefone in Bewegung melden typischerweise eine Genauigkeit von 100–250 m, daher ist 300 m ein sicherer Standardwert. Ein Telefon mit „350 m Genauigkeit\" würde übersprungen. Auf 0 setzen zum Deaktivieren.",
-          "debounce_s": "Wenn ein Standortupdate eintrifft, wie lange gewartet wird, bevor neu berechnet wird. Nützlich wenn Telefone mehrere verrauschte GPS-Werte in Folge senden — die Integration wartet, bis sie sich beruhigen. 0 = sofort reagieren (Standard). Auf 5–15 s erhöhen bei jitterndem Schalten.",
+          "max_accuracy_m": "Standortaktualisierungen ignorieren, wenn der GPS-Fehler größer als dieser Wert ist. Telefone in Bewegung melden typischerweise eine Genauigkeit von 100–250 m, daher ist 300 m ein sicherer Standardwert. Ein Telefon mit „350 m Genauigkeit\" würde übersprungen. Auf 0 setzen zum Deaktivieren. Bereich: 0–1000 m.",
+          "debounce_s": "Wenn ein Standortupdate eintrifft, wie lange gewartet wird, bevor neu berechnet wird. Nützlich wenn Telefone mehrere verrauschte GPS-Werte in Folge senden — die Integration wartet, bis sie sich beruhigen. 0 = sofort reagieren (Standard). Auf 5–15 s erhöhen bei jitterndem Schalten. Bereich: 0–60 s.",
           "grace_window_s": "Wenn ein Paar kurzzeitig das GPS-Signal verliert (Ausfall, Tunnel, inaktives Telefon), zeigen Sensoren den zuletzt bekannten Wert für diese Dauer, bevor 'Unbekannt' gemeldet wird. Verhindert gelegentliches Flackern. Standard: 900 s (15 Min). Bereich: 60–3600 s.",
-          "max_speed_kmh": "Teleport-Schutz. Lehnt eine GPS-Messung ab, wenn die implizierte Bewegungsgeschwindigkeit — nach Abzug der kombinierten GPS-Genauigkeit beider Geräte — diesen Wert überschreitet. Standard: 1000 km/h — blockiert unmögliche Teleporte, erlaubt aber Flugzeuge. Auf 0 setzen zum Deaktivieren.",
+          "max_speed_kmh": "Teleport-Schutz. Lehnt eine GPS-Messung ab, wenn die implizierte Bewegungsgeschwindigkeit — nach Abzug der kombinierten GPS-Genauigkeit beider Geräte — diesen Wert überschreitet. Standard: 1000 km/h — blockiert unmögliche Teleporte, erlaubt aber Flugzeuge. Auf 0 setzen zum Deaktivieren. Bereich: 0–2000 km/h.",
           "require_reliable": "Der Sensor 'In der Nähe' schaltet sich nur EIN, wenn die Daten als zuverlässig gelten.",
-          "min_updates_reliable": "Wie viele aufeinanderfolgende Aktualisierungen erforderlich sind, bevor der Standort als zuverlässig gilt.",
+          "min_updates_reliable": "Wie viele aufeinanderfolgende Aktualisierungen erforderlich sind, bevor der Standort als zuverlässig gilt. Bereich: 1–20.",
           "resync_silence_s": "Wenn alle verfolgten Entitäten für diese Dauer keine GPS-Aktualisierungen senden, wird der Näherungsstatus eingefroren, um falsche Änderungen zu verhindern. Standard: 600 s (10 Min). Bereich: 60–3600 s.",
           "resync_hold_s": "Wie lange der Näherungsstatus nach erkannter GPS-Stille eingefroren bleibt. Auf 0 setzen, um das Einfrieren zu deaktivieren (die Stillerkennung läuft weiterhin für die Zeitabrechnung). Standard: 60 s. Bereich: 0–300 s."
         }

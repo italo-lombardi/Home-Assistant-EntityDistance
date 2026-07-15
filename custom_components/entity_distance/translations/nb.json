@@ -45,12 +45,12 @@
           "resync_hold_s": "Varighet for frysing av nærhet (s)"
         },
         "data_description": {
-          "max_accuracy_m": "Avvis posisjonsoppdateringer der GPS-feilen er større enn denne verdien. Telefoner i bevegelse rapporterer typisk 100–250 m nøyaktighet, så 300 m er en trygg standardverdi. En telefon som viser «350 m nøyaktighet» vil bli hoppet over. Sett til 0 for å deaktivere.",
-          "debounce_s": "Når en posisjonsoppdatering kommer, hvor lenge det ventes før beregning. Nyttig når telefoner sender flere støyende GPS-målinger på rad — integrasjonen venter til de stabiliseres. 0 = reager umiddelbart (standard). Øk til 5–15 s ved jitter.",
+          "max_accuracy_m": "Avvis posisjonsoppdateringer der GPS-feilen er større enn denne verdien. Telefoner i bevegelse rapporterer typisk 100–250 m nøyaktighet, så 300 m er en trygg standardverdi. En telefon som viser «350 m nøyaktighet» vil bli hoppet over. Sett til 0 for å deaktivere. Område: 0–1000 m.",
+          "debounce_s": "Når en posisjonsoppdatering kommer, hvor lenge det ventes før beregning. Nyttig når telefoner sender flere støyende GPS-målinger på rad — integrasjonen venter til de stabiliseres. 0 = reager umiddelbart (standard). Øk til 5–15 s ved jitter. Område: 0–60 s.",
           "grace_window_s": "Når et par kortvarig mister GPS-signal (avbrudd, tunnel, inaktiv telefon), viser sensorer siste kjente verdi i denne perioden før de rapporterer ukjent. Forhindrer midlertidig flimring. Standard: 900 s (15 min). Område: 60–3600 s.",
-          "max_speed_kmh": "Teleport-vakt. Avviser en GPS-måling hvis den underforståtte bevegelseshastigheten — etter fratrekk av kombinert GPS-nøyaktighet for begge enheter — overstiger denne verdien. Standard: 1000 km/t — blokkerer umulige teleporter, men tillater fly. Sett til 0 for å deaktivere.",
+          "max_speed_kmh": "Teleport-vakt. Avviser en GPS-måling hvis den underforståtte bevegelseshastigheten — etter fratrekk av kombinert GPS-nøyaktighet for begge enheter — overstiger denne verdien. Standard: 1000 km/t — blokkerer umulige teleporter, men tillater fly. Sett til 0 for å deaktivere. Område: 0–2000 km/t.",
           "require_reliable": "Avskyte proximity_enter-hendelse bare når data anses pålitelige.",
-          "min_updates_reliable": "Minimum antall posisjonsoppdateringer i vinduet før data anses pålitelige.",
+          "min_updates_reliable": "Minimum antall posisjonsoppdateringer i vinduet før data anses pålitelige. Område: 1–20.",
           "resync_silence_s": "Hvis alle sporede enheter slutter å sende GPS-oppdateringer i denne perioden, fryses nærhetstilstanden for å forhindre falske endringer mens signalet ventes tilbake. Standard: 600 s (10 min). Område: 60–3600 s.",
           "resync_hold_s": "Hvor lenge nærhetstilstanden holdes fryst etter at GPS-stillhet er oppdaget. Sett til 0 for å deaktivere frysing (stillhetsregistrering kjører fortsatt for tidsregnskap). Standard: 60 s. Område: 0–300 s."
         }
@@ -103,12 +103,12 @@
           "resync_hold_s": "Varighet for frysing av nærhet (s)"
         },
         "data_description": {
-          "max_accuracy_m": "Avvis posisjonsoppdateringer der GPS-feilen er større enn denne verdien. Telefoner i bevegelse rapporterer typisk 100–250 m nøyaktighet, så 300 m er en trygg standardverdi. En telefon som viser «350 m nøyaktighet» vil bli hoppet over. Sett til 0 for å deaktivere.",
-          "debounce_s": "Når en posisjonsoppdatering kommer, hvor lenge det ventes før beregning. Nyttig når telefoner sender flere støyende GPS-målinger på rad — integrasjonen venter til de stabiliseres. 0 = reager umiddelbart (standard). Øk til 5–15 s ved jitter.",
+          "max_accuracy_m": "Avvis posisjonsoppdateringer der GPS-feilen er større enn denne verdien. Telefoner i bevegelse rapporterer typisk 100–250 m nøyaktighet, så 300 m er en trygg standardverdi. En telefon som viser «350 m nøyaktighet» vil bli hoppet over. Sett til 0 for å deaktivere. Område: 0–1000 m.",
+          "debounce_s": "Når en posisjonsoppdatering kommer, hvor lenge det ventes før beregning. Nyttig når telefoner sender flere støyende GPS-målinger på rad — integrasjonen venter til de stabiliseres. 0 = reager umiddelbart (standard). Øk til 5–15 s ved jitter. Område: 0–60 s.",
           "grace_window_s": "Når et par kortvarig mister GPS-signal (avbrudd, tunnel, inaktiv telefon), viser sensorer siste kjente verdi i denne perioden før de rapporterer ukjent. Forhindrer midlertidig flimring. Standard: 900 s (15 min). Område: 60–3600 s.",
-          "max_speed_kmh": "Teleport-vakt. Avviser en GPS-måling hvis den underforståtte bevegelseshastigheten — etter fratrekk av kombinert GPS-nøyaktighet for begge enheter — overstiger denne verdien. Standard: 1000 km/t — blokkerer umulige teleporter, men tillater fly. Sett til 0 for å deaktivere.",
+          "max_speed_kmh": "Teleport-vakt. Avviser en GPS-måling hvis den underforståtte bevegelseshastigheten — etter fratrekk av kombinert GPS-nøyaktighet for begge enheter — overstiger denne verdien. Standard: 1000 km/t — blokkerer umulige teleporter, men tillater fly. Sett til 0 for å deaktivere. Område: 0–2000 km/t.",
           "require_reliable": "Når aktivert utløses en nærhendelse bare etter konsekvente oppdateringer.",
-          "min_updates_reliable": "Hvor mange konsekvente oppdateringer som kreves før posisjonen anses som pålitelig.",
+          "min_updates_reliable": "Hvor mange konsekvente oppdateringer som kreves før posisjonen anses som pålitelig. Område: 1–20.",
           "resync_silence_s": "Hvis alle sporede enheter slutter å sende GPS-oppdateringer i denne perioden, fryses nærhetstilstanden for å forhindre falske endringer mens signalet ventes tilbake. Standard: 600 s (10 min). Område: 60–3600 s.",
           "resync_hold_s": "Hvor lenge nærhetstilstanden holdes fryst etter at GPS-stillhet er oppdaget. Sett til 0 for å deaktivere frysing (stillhetsregistrering kjører fortsatt for tidsregnskap). Standard: 60 s. Område: 0–300 s."
         }

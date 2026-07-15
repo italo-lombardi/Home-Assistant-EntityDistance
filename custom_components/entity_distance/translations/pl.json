@@ -45,12 +45,12 @@
           "resync_hold_s": "Czas trwania zamrożenia bliskości (s)"
         },
         "data_description": {
-          "max_accuracy_m": "Odrzucaj aktualizacje lokalizacji, gdy błąd GPS jest większy niż ta wartość. Telefony w ruchu zazwyczaj raportują dokładność 100–250 m, więc 300 m to bezpieczna wartość domyślna. Telefon pokazujący \"dokładność 350 m\" zostanie pominięty. Ustaw na 0, aby wyłączyć.",
-          "debounce_s": "Gdy nadejdzie aktualizacja lokalizacji, ile czekać przed ponownym obliczeniem. Przydatne gdy telefony wysyłają kilka zaszumionych odczytów GPS pod rząd — integracja czeka aż się ustabilizują. 0 = reaguj natychmiast (domyślnie). Zwiększ do 5–15 s przy migotaniu wł/wył.",
+          "max_accuracy_m": "Odrzucaj aktualizacje lokalizacji, gdy błąd GPS jest większy niż ta wartość. Telefony w ruchu zazwyczaj raportują dokładność 100–250 m, więc 300 m to bezpieczna wartość domyślna. Telefon pokazujący \"dokładność 350 m\" zostanie pominięty. Ustaw na 0, aby wyłączyć. Zakres: 0–1000 m.",
+          "debounce_s": "Gdy nadejdzie aktualizacja lokalizacji, ile czekać przed ponownym obliczeniem. Przydatne gdy telefony wysyłają kilka zaszumionych odczytów GPS pod rząd — integracja czeka aż się ustabilizują. 0 = reaguj natychmiast (domyślnie). Zwiększ do 5–15 s przy migotaniu wł/wył. Zakres: 0–60 s.",
           "grace_window_s": "Gdy para krótko traci sygnał GPS (zanik, tunel, nieaktywny telefon), sensory zachowują ostatnią znana wartość przez ten czas przed zgłoszeniem nieznanego. Zapobiega sporadycznym migotaniom. Domyślnie: 900 s (15 min). Zakres: 60–3600 s.",
-          "max_speed_kmh": "Ochrona przed teleportacją. Odrzuca odczyt GPS jeśli implikowana prędkość ruchu — po odjęciu łącznej dokładności GPS obu urządzeń — przekracza tę wartość. Domyślnie: 1000 km/h — blokuje niemożliwe teleportacje, dopuszczając samoloty. Ustaw na 0, aby wyłączyć.",
+          "max_speed_kmh": "Ochrona przed teleportacją. Odrzuca odczyt GPS jeśli implikowana prędkość ruchu — po odjęciu łącznej dokładności GPS obu urządzeń — przekracza tę wartość. Domyślnie: 1000 km/h — blokuje niemożliwe teleportacje, dopuszczając samoloty. Ustaw na 0, aby wyłączyć. Zakres: 0–2000 km/h.",
           "require_reliable": "Wyzwalaj zdarzenie proximity_enter tylko gdy dane są uznawane za wiarygodne.",
-          "min_updates_reliable": "Minimalna liczba aktualizacji lokalizacji w oknie przed uznaniem danych za wiarygodne.",
+          "min_updates_reliable": "Minimalna liczba aktualizacji lokalizacji w oknie przed uznaniem danych za wiarygodne. Zakres: 1–20.",
           "resync_silence_s": "Jeśli wszystkie śledzone encje przestają wysyłać aktualizacje GPS przez ten czas, stan bliskości zostaje zamrożony, aby zapobiec fałszywym zmianom podczas oczekiwania na powrót sygnału. Domyślnie: 600 s (10 min). Zakres: 60–3600 s.",
           "resync_hold_s": "Jak długo stan bliskości pozostaje zamrożony po wykryciu ciszy GPS. Ustaw na 0, aby wyłączyć zamrożenie (wykrywanie ciszy nadal działa do celów rozliczania czasu). Domyślnie: 60 s. Zakres: 0–300 s."
         }
@@ -103,12 +103,12 @@
           "resync_hold_s": "Czas trwania zamrożenia bliskości (s)"
         },
         "data_description": {
-          "max_accuracy_m": "Odrzucaj aktualizacje lokalizacji, gdy błąd GPS jest większy niż ta wartość. Telefony w ruchu zazwyczaj raportują dokładność 100–250 m, więc 300 m to bezpieczna wartość domyślna. Telefon pokazujący \"dokładność 350 m\" zostanie pominięty. Ustaw na 0, aby wyłączyć.",
-          "debounce_s": "Gdy nadejdzie aktualizacja lokalizacji, ile czekać przed ponownym obliczeniem. Przydatne gdy telefony wysyłają kilka zaszumionych odczytów GPS pod rząd — integracja czeka aż się ustabilizują. 0 = reaguj natychmiast (domyślnie). Zwiększ do 5–15 s przy migotaniu wł/wył.",
+          "max_accuracy_m": "Odrzucaj aktualizacje lokalizacji, gdy błąd GPS jest większy niż ta wartość. Telefony w ruchu zazwyczaj raportują dokładność 100–250 m, więc 300 m to bezpieczna wartość domyślna. Telefon pokazujący \"dokładność 350 m\" zostanie pominięty. Ustaw na 0, aby wyłączyć. Zakres: 0–1000 m.",
+          "debounce_s": "Gdy nadejdzie aktualizacja lokalizacji, ile czekać przed ponownym obliczeniem. Przydatne gdy telefony wysyłają kilka zaszumionych odczytów GPS pod rząd — integracja czeka aż się ustabilizują. 0 = reaguj natychmiast (domyślnie). Zwiększ do 5–15 s przy migotaniu wł/wył. Zakres: 0–60 s.",
           "grace_window_s": "Gdy para krótko traci sygnał GPS (zanik, tunel, nieaktywny telefon), sensory zachowują ostatnią znana wartość przez ten czas przed zgłoszeniem nieznanego. Zapobiega sporadycznym migotaniom. Domyślnie: 900 s (15 min). Zakres: 60–3600 s.",
-          "max_speed_kmh": "Ochrona przed teleportacją. Odrzuca odczyt GPS jeśli implikowana prędkość ruchu — po odjęciu łącznej dokładności GPS obu urządzeń — przekracza tę wartość. Domyślnie: 1000 km/h — blokuje niemożliwe teleportacje, dopuszczając samoloty. Ustaw na 0, aby wyłączyć.",
+          "max_speed_kmh": "Ochrona przed teleportacją. Odrzuca odczyt GPS jeśli implikowana prędkość ruchu — po odjęciu łącznej dokładności GPS obu urządzeń — przekracza tę wartość. Domyślnie: 1000 km/h — blokuje niemożliwe teleportacje, dopuszczając samoloty. Ustaw na 0, aby wyłączyć. Zakres: 0–2000 km/h.",
           "require_reliable": "Gdy włączone, zdarzenie zbliżenia wyzwala się tylko po spójnych aktualizacjach.",
-          "min_updates_reliable": "Ile kolejnych aktualizacji jest wymaganych, zanim lokalizacja zostanie uznana za niezawodną.",
+          "min_updates_reliable": "Ile kolejnych aktualizacji jest wymaganych, zanim lokalizacja zostanie uznana za niezawodną. Zakres: 1–20.",
           "resync_silence_s": "Jeśli wszystkie śledzone encje przestają wysyłać aktualizacje GPS przez ten czas, stan bliskości zostaje zamrożony, aby zapobiec fałszywym zmianom podczas oczekiwania na powrót sygnału. Domyślnie: 600 s (10 min). Zakres: 60–3600 s.",
           "resync_hold_s": "Jak długo stan bliskości pozostaje zamrożony po wykryciu ciszy GPS. Ustaw na 0, aby wyłączyć zamrożenie (wykrywanie ciszy nadal działa do celów rozliczania czasu). Domyślnie: 60 s. Zakres: 0–300 s."
         }

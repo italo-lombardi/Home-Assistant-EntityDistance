@@ -12,15 +12,19 @@
   now" despite the pair being clearly outside the selected zone. Exit now equals
   entry: `in_proximity` turns OFF as soon as distance exceeds the zone boundary
   (strict, no gap).
-- **Stationary threshold masked slow movement.** The 50m hardcoded threshold
-  meant a person walking 40m/update always showed as "Stationary". Threshold now
-  auto-derives from GPS accuracy: `max(15m, max_accuracy_m × 0.15)`. Default
-  accuracy (300m) → 45m; tight accuracy (15m) → 15m floor.
+- **Stationary threshold now per-tick, noise-aware.** The hardcoded 50m threshold
+  meant a person walking 40m/update always showed as "Stationary". The threshold is
+  now computed each tick from the actual GPS accuracy of both devices:
+  `max(15m, noise_budget × 0.15)` where `noise_budget` = sum of all four accuracy
+  values (prev + current for each entity). Two phones with 10m accuracy → threshold
+  ~6m → 40m movement registers as Approaching. Two phones with 100m accuracy →
+  threshold ~60m → GPS jitter absorbed as Stationary. Scales correctly with actual
+  fix quality rather than a worst-case setting.
 - **Double-tick leaks unaccounted time.** When a GPS `state_changed` and the
   1-min clock tick fired together, the debouncer scheduled two `async_recalculate`
   calls. The second credited nothing to zone buckets but advanced `prev_calc_time`,
   leaking ~1min of `today_unaccounted_time` per GPS event (~56min over a day).
-  Fixed with a `< 1.0s elapsed` guard in `_calc_pair`.
+  Fixed with a `< 100ms elapsed` guard (`MIN_CALC_ELAPSED_S`) in `_calc_pair`.
 
 ### Added
 

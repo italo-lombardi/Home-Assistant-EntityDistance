@@ -252,11 +252,11 @@ Uses Home Assistant's built-in Vincenty formula (ellipsoidal earth model) on the
 
 Requires at least two location updates. Compares current distance to previous distance:
 
-- `|Δdistance| < 50 m` → **Stationary**
+- `|Δdistance| < noise_threshold` → **Stationary**
 - `Δdistance < 0` → **Approaching**
 - `Δdistance > 0` → **Diverging**
 
-The stationary threshold is auto-derived from the **Max GPS error radius** setting: `max(15 m, max_accuracy_m × 0.15)`. With the default 300 m accuracy filter this gives a 45 m threshold; tightening accuracy to 15 m gives a 15 m threshold. When **both** sides of a pair are in a zone (e.g. everyone home), there is no relative motion to measure, so Direction reports **Stationary** and Approach Speed `0` rather than unknown.
+The stationary threshold is computed per-tick from the actual GPS accuracy of both devices: `max(15 m, noise_budget × 0.15)` where `noise_budget` = sum of all four accuracy values (previous + current fix for each entity). Two phones with 10 m accuracy → threshold ~6 m → 40 m movement registers as Approaching. Two phones with 100 m accuracy → threshold ~60 m → GPS jitter is absorbed as Stationary. When **both** sides of a pair are in a zone (e.g. everyone home), there is no relative motion to measure, so Direction reports **Stationary** and Approach Speed `0` rather than unknown.
 
 ### Approach Speed
 
@@ -505,7 +505,7 @@ Zones (`zone.*`) are supported as either entity in a pair:
 - Person-to-zone: direction and ETA work normally
 - Zone-to-zone: distance is static; direction always stationary
 
-> Movement below the stationary threshold (auto-derived from GPS accuracy, default ~45 m) between updates is classified as stationary.
+> Movement below the per-tick noise threshold (typically 6–60 m depending on GPS accuracy) between updates is classified as stationary.
 
 ---
 

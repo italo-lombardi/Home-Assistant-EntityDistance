@@ -2393,7 +2393,7 @@ class TestGraceWindowConfig:
 # ---------------------------------------------------------------------------
 
 
-class TestDoubleTick:
+class TestDoubleTickBoundary:
     """Double-tick guard: near-zero elapsed must not inflate today_zone_seconds.
 
     The guard in _calc_pair zeros _elapsed_s when the gap between two consecutive

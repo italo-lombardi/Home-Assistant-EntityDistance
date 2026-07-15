@@ -2144,7 +2144,7 @@ class TestCumulativeSensorCoordinatorFailedReturnsNone:
 # ---------------------------------------------------------------------------
 
 
-class TestDoubleTick:
+class TestDoubleTickUnaccountedTime:
     def test_double_tick_does_not_leak_unaccounted_time(self):
         """Calling _calc_pair twice with elapsed < MIN_CALC_ELAPSED_S must not
         double-credit today_zone_seconds — guards rapid back-to-back recalculates."""

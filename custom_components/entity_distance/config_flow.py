@@ -48,6 +48,7 @@ from .const import (
     DEFAULT_ZONE_NEAR_M,
     DEFAULT_ZONE_VERY_NEAR_M,
     DOMAIN,
+    MAX_DEBOUNCE_S,
     MAX_GRACE_WINDOW_S,
     MAX_GROUP_ENTITIES,
     MAX_RESYNC_HOLD_S,
@@ -247,7 +248,7 @@ class EntityDistanceConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Required(CONF_DEBOUNCE_S, default=DEFAULT_DEBOUNCE_S): NumberSelector(
                         NumberSelectorConfig(
                             min=0,
-                            max=60,
+                            max=MAX_DEBOUNCE_S,
                             unit_of_measurement="s",
                             mode=NumberSelectorMode.BOX,
                         )
@@ -364,7 +365,7 @@ class EntityDistanceOptionsFlow(config_entries.OptionsFlow):
                     ): NumberSelector(
                         NumberSelectorConfig(
                             min=0,
-                            max=60,
+                            max=MAX_DEBOUNCE_S,
                             unit_of_measurement="s",
                             mode=NumberSelectorMode.BOX,
                         )

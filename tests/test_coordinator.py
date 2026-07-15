@@ -1403,9 +1403,16 @@ class TestCoordinatorProperties:
         assert snap["proximity_zone"] == "very_near"
         assert snap["zone_very_near_m"] == 200
         assert "emit_bus_events" not in snap
-        assert len(snap) == 17
+        # Key-presence assertions for fields added in this PR — catch regressions
+        # if a field is accidentally removed. Count check kept to catch silent additions.
+        assert "stationary_threshold_factor" in snap
+        assert "stationary_threshold_min_m" in snap
+        assert "grace_window_s" in snap
+        assert "resync_silence_s" in snap
+        assert "resync_hold_s" in snap
         assert snap["stationary_threshold_factor"] == 0.15
         assert snap["stationary_threshold_min_m"] == 15.0
+        assert len(snap) == 17  # update this if fields are intentionally added/removed
 
 
 # ---------------------------------------------------------------------------

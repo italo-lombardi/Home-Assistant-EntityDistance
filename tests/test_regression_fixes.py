@@ -34,7 +34,7 @@ _BUCKET_THRESHOLDS = {"very_near": 100, "near": 500, "mid": 2000, "far": 10000}
 
 def _make_coordinator(
     entry_threshold_m: float = 500.0,
-    exit_threshold_m: float = 700.0,
+    exit_threshold_m: float = 500.0,
     require_reliable: bool = False,
     min_updates_reliable: int = 3,
     max_speed_kmh: float = 1000.0,
@@ -338,7 +338,7 @@ class TestProximityRestartGap:
 class TestCrossMidnightFlush:
     def test_proximity_time_flushed_before_midnight_reset(self):
         """When date rolls over while in proximity, pre-midnight slice goes to proximity_duration_s."""
-        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=700.0)
+        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=500.0)
         state_a = _make_state("person.alice", 51.5, -0.1, 20)
         state_b = _make_state("person.bob", 51.501, -0.1, 20)
         coord.hass.states.get = MagicMock(
@@ -565,7 +565,7 @@ class TestTodayProximityAfterReliabilityCheck:
         """When require_reliable blocks proximity entry, today_proximity_seconds must not grow."""
         coord = _make_coordinator(
             entry_threshold_m=500.0,
-            exit_threshold_m=700.0,
+            exit_threshold_m=500.0,
             require_reliable=True,
             min_updates_reliable=5,
         )
@@ -598,7 +598,7 @@ class TestTodayProximityAfterReliabilityCheck:
         """In-proximity ticks always accumulate even with require_reliable."""
         coord = _make_coordinator(
             entry_threshold_m=500.0,
-            exit_threshold_m=700.0,
+            exit_threshold_m=500.0,
             require_reliable=True,
             min_updates_reliable=1,
         )
@@ -638,7 +638,7 @@ class TestTodayProximityAfterReliabilityCheck:
 class TestLastSeenTogetherSemantics:
     def test_stamped_on_exit_tick(self):
         """EXIT tick: was_proximity=True → last_seen_together = now."""
-        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=700.0)
+        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=500.0)
         state_a = _make_state("person.alice", 51.5, -0.1, 20)
         state_b = _make_state("person.bob", 51.510, -0.1, 20)
         coord.hass.states.get = MagicMock(
@@ -661,7 +661,7 @@ class TestLastSeenTogetherSemantics:
 
     def test_stamped_on_in_proximity_tick(self):
         """In-proximity tick: was_proximity=True → last_seen_together updated each tick."""
-        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=700.0)
+        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=500.0)
         state_a = _make_state("person.alice", 51.5, -0.1, 20)
         state_b = _make_state("person.bob", 51.501, -0.1, 20)
         coord.hass.states.get = MagicMock(
@@ -687,7 +687,7 @@ class TestLastSeenTogetherSemantics:
 
     def test_not_stamped_on_entry_tick(self):
         """ENTRY tick (was_proximity=False): last_seen_together should not be set."""
-        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=700.0)
+        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=500.0)
         state_a = _make_state("person.alice", 51.5, -0.1, 20)
         state_b = _make_state("person.bob", 51.501, -0.1, 20)
         coord.hass.states.get = MagicMock(
@@ -710,7 +710,7 @@ class TestLastSeenTogetherSemantics:
 
     def test_not_stamped_when_never_in_proximity(self):
         """Outside-proximity tick: last_seen_together stays None."""
-        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=700.0)
+        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=500.0)
         state_a = _make_state("person.alice", 51.5, -0.1, 20)
         state_b = _make_state("person.bob", 51.520, -0.1, 20)
         coord.hass.states.get = MagicMock(
@@ -1407,7 +1407,7 @@ class TestResyncHoldFlushesProximity:
         coord._max_accuracy_m = 0.0
         coord._max_speed_kmh = 0.0
         coord._entry_threshold_m = 200.0
-        coord._exit_threshold_m = 1000.0
+        coord._exit_threshold_m = 200.0
         coord._bucket_thresholds = _BUCKET_THRESHOLDS
         coord._resync_silence_s = 600.0
         coord._resync_hold_s = 60.0
@@ -1863,7 +1863,7 @@ class TestReg3CrossMidnightZoneSeconds:
 class TestReg4ExitBucketUsesProximityDistance:
     def test_exit_tick_credits_proximity_era_bucket_not_exit_distance(self):
         """REG-4: on EXIT tick, zone bucket credited is from proximity-era distance, not exit distance."""
-        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=700.0)
+        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=500.0)
         state_a = _make_state("person.alice", 51.5, -0.1, 20)
         # dist_m on exit will be 800m (far bucket), but proximity-era was 50m (very_near)
         state_b = _make_state("person.bob", 51.508, -0.1, 20)

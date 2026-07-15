@@ -22,7 +22,7 @@ Track the distance between any two or more entities — people, devices, or zone
 - **Group tracking** — select 2–5 entities; all pairwise distances are tracked under one config entry (2 entities = 1 pair, 3 = 3 pairs, 4 = 6 pairs, 5 = 10 pairs)
 - **Group sensors** — for 3+ entities: Min Distance, Any In Proximity, All In Proximity, Settings
 - **27 sensors per pair** — distance, proximity zone, proximity zone level, proximity duration, proximity rate, proximity tracking started, last seen together, today proximity time, direction, direction level, closing speed, ETA, today zone times, GPS accuracy, last update, update count, entity state, today unaccounted time (per entity where applicable)
-- **Proximity binary sensor** — ON when entities are in the selected proximity zone, OFF when they move to the next zone out (natural hysteresis, no separate entry/exit threshold settings needed)
+- **Proximity binary sensor** — ON when distance ≤ zone boundary, OFF when distance > zone boundary (strict, no hysteresis gap)
 - **Same Zone binary sensor** — ON when both entities share the same named zone, OFF otherwise (never `unknown`)
 - **Reliable binary sensor** — ON when both entities have enough recent GPS fixes to meet the reliability threshold
 - **Zone bucket binary sensors** — one per zone (Very Near, Near, Medium, Far, Very Far): ON while the pair's distance falls in that zone
@@ -85,11 +85,9 @@ For a 2-entity selection you get 1 pair. For 3 entities you get 3 pairs. For 4 e
 | Near zone limit (m) | 1000 | Entities are 'Near' at or closer than this distance |
 | Medium zone limit (m) | 5000 | Entities are at 'Medium' distance at or closer than this |
 | Far zone limit (m) | 20000 | Entities are 'Far' at or closer than this distance; beyond is 'Very Far' |
-| Proximity alert zone | Very Near | The 'In Proximity' sensor turns ON when entities are within this zone or closer, and OFF when they move to the next zone out |
+| Proximity alert zone | Very Near | The 'In Proximity' sensor turns ON when distance ≤ zone boundary, OFF when distance > zone boundary |
 
 Thresholds must be strictly increasing: Very Near < Near < Medium < Far.
-
-Note: selecting **Far** as the proximity zone uses 2× the Far boundary (40,000 m by default) as the exit distance, since there is no zone beyond Far.
 
 ![Config flow step 2 — distance settings](assets/screenshots/config_flow_step2_distance_settings.png)
 
@@ -160,7 +158,7 @@ Each configured group creates one HA device (the group) with per-pair sub-device
 
 | Entity | Description | Device Class |
 |--------|-------------|--------------|
-| In Proximity | ON when entities are within the selected proximity zone (or closer), OFF when they move to the next zone out | `presence` |
+| In Proximity | ON when entities are within the selected proximity zone (or closer), OFF when distance > zone boundary | `presence` |
 | Same Zone | ON when both entities are in the same named zone (e.g. both `home`), OFF otherwise. Never `unknown` — when either side is `not_home` / `unknown` / `unavailable`, the pair is not in the same zone so the sensor is OFF | — |
 | Reliable | ON when both entities have enough recent GPS updates to meet the reliability threshold | — |
 | Very Near | ON while the pair's current distance falls in the Very Near zone | — |
@@ -290,7 +288,7 @@ Rolling window counter. Increments by 1 on each location update for that entity.
 
 ### In Proximity (Binary Sensor)
 
-ON when `distance ≤ proximity zone boundary`. OFF when `distance > next zone boundary` (natural hysteresis). The active zone is selected at setup — choosing 'Very Near' fires at ≤ 200 m and clears at > 1000 m (Near boundary) by default.
+ON when `distance ≤ proximity zone boundary`, OFF when `distance > proximity zone boundary` (strict, no hysteresis gap). The active zone is selected at setup.
 
 ### State (Entity A / B)
 

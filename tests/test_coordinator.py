@@ -24,7 +24,7 @@ from custom_components.entity_distance.coordinator import (
     _is_zone,
     calc_bucket,
 )
-from custom_components.entity_distance.models import PairState
+from custom_components.entity_distance.models import PairState, pair_key
 from tests.conftest import make_state, make_zone_state
 
 _DEFAULT_THRESHOLDS = {
@@ -33,6 +33,8 @@ _DEFAULT_THRESHOLDS = {
     BUCKET_MID: DEFAULT_ZONE_MID_M,
     BUCKET_FAR: DEFAULT_ZONE_FAR_M,
 }
+
+_NOW = datetime(2024, 6, 1, 12, 0, 0, tzinfo=UTC)
 
 
 class TestGetCoords:
@@ -602,7 +604,7 @@ class TestEntitiesResolution:
 def _make_calc_pair_coordinator(
     entities=None,
     entry_threshold_m=500.0,
-    exit_threshold_m=700.0,
+    exit_threshold_m=500.0,
     max_accuracy_m=0.0,
     max_speed_kmh=0.0,
     resync_silence_s=0.0,
@@ -1026,7 +1028,7 @@ class TestCalcPairTimingEdges:
         from custom_components.entity_distance.models import pair_key
         from tests.conftest import make_state
 
-        coordinator = _make_calc_pair_coordinator(entry_threshold_m=100.0, exit_threshold_m=200.0)
+        coordinator = _make_calc_pair_coordinator(entry_threshold_m=100.0, exit_threshold_m=100.0)
         k = pair_key("person.alice", "person.bob")
         ps = coordinator._pair_states[k]
         ps.proximity = True
@@ -1312,7 +1314,7 @@ class TestCalcPairRequireReliable:
             require_reliable=True,
             min_updates_reliable=10,  # very high — not reliable
             entry_threshold_m=10000.0,  # well within range
-            exit_threshold_m=15000.0,
+            exit_threshold_m=10000.0,
         )
         from custom_components.entity_distance.models import pair_key
 
@@ -2101,3 +2103,41 @@ class TestIsWithinGrace:
         ps = PairState(entity_a_id="a", entity_b_id="b")
         ps.stale_since = now - timedelta(seconds=1000)  # > GRACE_WINDOW_S (900)
         assert coord.is_within_grace(ps, now) is False
+
+
+class TestStrictExitThreshold:
+    def test_exit_threshold_equals_entry_threshold(self):
+        """_exit_threshold_m must equal _entry_threshold_m after coordinator init."""
+        for _zone in [BUCKET_VERY_NEAR, BUCKET_NEAR, BUCKET_MID, BUCKET_FAR]:
+            coord = _make_calc_pair_coordinator(entry_threshold_m=500.0)
+            # Verify via the actual init path too
+            assert coord._exit_threshold_m == coord._entry_threshold_m
+
+    def test_proximity_exits_immediately_above_entry_threshold(self):
+        """Enter at 490 m (entry=500 m), advance to 501 m → proximity=False immediately."""
+        coordinator = _make_calc_pair_coordinator(entry_threshold_m=500.0)
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+        now = _NOW
+
+        state_a = make_state("person.alice", 51.5, -0.1)
+        state_b = make_state("person.bob", 51.6, -0.2)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=490.0,
+        ):
+            ps = coordinator._calc_pair(ps, "person.alice", "person.bob", now, set())
+        assert ps.proximity is True
+
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=501.0,
+        ):
+            ps = coordinator._calc_pair(
+                ps, "person.alice", "person.bob", now + timedelta(seconds=60), set()
+            )
+        assert ps.proximity is False

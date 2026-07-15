@@ -67,12 +67,7 @@ def _make_coord(
     }
     coord._proximity_zone = proximity_zone
     coord._entry_threshold_m = _zone_entry.get(proximity_zone, 200.0)
-    coord._exit_threshold_m = {
-        BUCKET_VERY_NEAR: 1000.0,
-        BUCKET_NEAR: 5000.0,
-        BUCKET_MID: 20000.0,
-        BUCKET_FAR: 40000.0,
-    }.get(proximity_zone, 1000.0)
+    coord._exit_threshold_m = coord._entry_threshold_m
     coord._resync_silence_s = resync_silence_s
     coord._resync_hold_s = resync_hold_s
     coord._min_updates_reliable = 1

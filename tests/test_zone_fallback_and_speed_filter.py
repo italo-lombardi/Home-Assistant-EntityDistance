@@ -39,7 +39,7 @@ def _make_hass(zone_states: list[State] | None = None, extra: dict[str, State] |
 def _make_coord_coordinator(
     entities=None,
     entry_threshold_m=500.0,
-    exit_threshold_m=700.0,
+    exit_threshold_m=500.0,
     max_accuracy_m=0.0,
     max_speed_kmh=0.0,
     resync_silence_s=0.0,

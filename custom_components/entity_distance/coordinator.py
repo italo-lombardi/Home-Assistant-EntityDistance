@@ -259,13 +259,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         _zone_idx = _zone_keys.index(_prox_zone) if _prox_zone in _zone_keys else 0
         self._proximity_zone: str = _zone_keys[_zone_idx]
         self._entry_threshold_m: float = self._bucket_thresholds[_zone_keys[_zone_idx]]
-        _next_idx = min(_zone_idx + 1, len(_zone_keys) - 1)
-        self._exit_threshold_m: float = (
-            self._bucket_thresholds[_zone_keys[_next_idx]]
-            if _next_idx != _zone_idx
-            else self._bucket_thresholds[_zone_keys[-1]]
-            * 2  # ponytail: no zone beyond far — 2× far boundary as exit approximation
-        )
+        self._exit_threshold_m: float = self._entry_threshold_m
 
         self._pair_states: dict[tuple[str, str], PairState] = {}
         for a, b in itertools.combinations(self._entities, 2):

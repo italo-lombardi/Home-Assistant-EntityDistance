@@ -141,7 +141,7 @@ def _make_coordinator(
     max_accuracy_m: float = 200.0,
     max_speed_kmh: float = 1000.0,
     entry_threshold_m: float = 500.0,
-    exit_threshold_m: float = 700.0,
+    exit_threshold_m: float = 500.0,
     require_reliable: bool = False,
     min_updates_reliable: int = 3,
 ):
@@ -346,7 +346,7 @@ class TestCalcPairInvalidations:
 
 class TestCalcPairProximityTransitions:
     def test_enters_proximity(self):
-        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=700.0)
+        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=500.0)
         state_a = _make_state("person.alice", 51.5, -0.1, 20)
         state_b = _make_state("person.bob", 51.501, -0.1, 20)
         coord.hass.states.get = MagicMock(
@@ -366,7 +366,7 @@ class TestCalcPairProximityTransitions:
         assert result.proximity_since == _NOW
 
     def test_exits_proximity(self):
-        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=700.0)
+        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=500.0)
         state_a = _make_state("person.alice", 51.5, -0.1, 20)
         state_b = _make_state("person.bob", 51.510, -0.1, 20)
         coord.hass.states.get = MagicMock(
@@ -376,7 +376,7 @@ class TestCalcPairProximityTransitions:
         ps.proximity = True
         ps.proximity_since = datetime(2024, 6, 1, 11, 0, 0, tzinfo=UTC)
 
-        # 800m is beyond exit_threshold_m of 700m
+        # 800m is beyond exit_threshold_m of 500m
         with patch(
             "custom_components.entity_distance.coordinator.ha_distance",
             return_value=800.0,
@@ -387,7 +387,7 @@ class TestCalcPairProximityTransitions:
         assert result.last_seen_together == _NOW
 
     def test_stays_in_proximity(self):
-        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=700.0)
+        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=500.0)
         state_a = _make_state("person.alice", 51.5, -0.1, 20)
         state_b = _make_state("person.bob", 51.501, -0.1, 20)
         coord.hass.states.get = MagicMock(
@@ -407,7 +407,7 @@ class TestCalcPairProximityTransitions:
         assert result.proximity is True
 
     def test_stays_outside(self):
-        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=700.0)
+        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=500.0)
         state_a = _make_state("person.alice", 51.5, -0.1, 20)
         state_b = _make_state("person.bob", 51.520, -0.1, 20)
         coord.hass.states.get = MagicMock(
@@ -525,7 +525,7 @@ class TestCalcPairNoEvents:
     def _setup(self, require_reliable: bool = False, min_updates: int = 1):
         coord = _make_coordinator(
             entry_threshold_m=500.0,
-            exit_threshold_m=700.0,
+            exit_threshold_m=500.0,
             require_reliable=require_reliable,
             min_updates_reliable=min_updates,
         )

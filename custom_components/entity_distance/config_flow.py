@@ -22,32 +22,46 @@ from .const import (
     BUCKET_VERY_NEAR,
     CONF_DEBOUNCE_S,
     CONF_ENTITIES,
+    CONF_GRACE_WINDOW_S,
     CONF_MAX_ACCURACY_M,
     CONF_MAX_SPEED_KMH,
     CONF_MIN_UPDATES_RELIABLE,
     CONF_PROXIMITY_ZONE,
     CONF_REQUIRE_RELIABLE,
+    CONF_RESYNC_HOLD_S,
+    CONF_RESYNC_SILENCE_S,
     CONF_ZONE_FAR_M,
     CONF_ZONE_MID_M,
     CONF_ZONE_NEAR_M,
     CONF_ZONE_VERY_NEAR_M,
     DEFAULT_DEBOUNCE_S,
+    DEFAULT_GRACE_WINDOW_S,
     DEFAULT_MAX_ACCURACY_M,
     DEFAULT_MAX_SPEED_KMH,
     DEFAULT_MIN_UPDATES_RELIABLE,
     DEFAULT_PROXIMITY_ZONE,
     DEFAULT_REQUIRE_RELIABLE,
+    DEFAULT_RESYNC_HOLD_S,
+    DEFAULT_RESYNC_SILENCE_S,
     DEFAULT_ZONE_FAR_M,
     DEFAULT_ZONE_MID_M,
     DEFAULT_ZONE_NEAR_M,
     DEFAULT_ZONE_VERY_NEAR_M,
     DOMAIN,
+    MAX_DEBOUNCE_S,
+    MAX_GRACE_WINDOW_S,
     MAX_GROUP_ENTITIES,
+    MAX_RESYNC_HOLD_S,
+    MAX_RESYNC_SILENCE_S,
+    MIN_GRACE_WINDOW_S,
+    MIN_RESYNC_HOLD_S,
+    MIN_RESYNC_SILENCE_S,
 )
 
 ENTITY_DOMAINS = ["person", "device_tracker", "sensor", "zone"]
 _CONF_SHOW_ADVANCED = "show_advanced"
 
+# Keys persisted in options (not entry.data) — CONF_ENTITIES lives in entry.data, not here.
 _ZONE_OPTIONS_KEYS = {
     CONF_PROXIMITY_ZONE,
     CONF_DEBOUNCE_S,
@@ -55,6 +69,9 @@ _ZONE_OPTIONS_KEYS = {
     CONF_MAX_SPEED_KMH,
     CONF_REQUIRE_RELIABLE,
     CONF_MIN_UPDATES_RELIABLE,
+    CONF_GRACE_WINDOW_S,
+    CONF_RESYNC_SILENCE_S,
+    CONF_RESYNC_HOLD_S,
     CONF_ZONE_VERY_NEAR_M,
     CONF_ZONE_NEAR_M,
     CONF_ZONE_MID_M,
@@ -218,14 +235,6 @@ class EntityDistanceConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="advanced",
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_DEBOUNCE_S, default=DEFAULT_DEBOUNCE_S): NumberSelector(
-                        NumberSelectorConfig(
-                            min=0,
-                            max=60,
-                            unit_of_measurement="s",
-                            mode=NumberSelectorMode.BOX,
-                        )
-                    ),
                     vol.Required(
                         CONF_MAX_ACCURACY_M, default=DEFAULT_MAX_ACCURACY_M
                     ): NumberSelector(
@@ -233,6 +242,24 @@ class EntityDistanceConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             min=0,
                             max=1000,
                             unit_of_measurement="m",
+                            mode=NumberSelectorMode.BOX,
+                        )
+                    ),
+                    vol.Required(CONF_DEBOUNCE_S, default=DEFAULT_DEBOUNCE_S): NumberSelector(
+                        NumberSelectorConfig(
+                            min=0,
+                            max=MAX_DEBOUNCE_S,
+                            unit_of_measurement="s",
+                            mode=NumberSelectorMode.BOX,
+                        )
+                    ),
+                    vol.Required(
+                        CONF_GRACE_WINDOW_S, default=DEFAULT_GRACE_WINDOW_S
+                    ): NumberSelector(
+                        NumberSelectorConfig(
+                            min=MIN_GRACE_WINDOW_S,
+                            max=MAX_GRACE_WINDOW_S,
+                            unit_of_measurement="s",
                             mode=NumberSelectorMode.BOX,
                         )
                     ),
@@ -251,6 +278,24 @@ class EntityDistanceConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         CONF_MIN_UPDATES_RELIABLE, default=DEFAULT_MIN_UPDATES_RELIABLE
                     ): NumberSelector(
                         NumberSelectorConfig(min=1, max=20, mode=NumberSelectorMode.BOX)
+                    ),
+                    vol.Required(
+                        CONF_RESYNC_SILENCE_S, default=DEFAULT_RESYNC_SILENCE_S
+                    ): NumberSelector(
+                        NumberSelectorConfig(
+                            min=MIN_RESYNC_SILENCE_S,
+                            max=MAX_RESYNC_SILENCE_S,
+                            unit_of_measurement="s",
+                            mode=NumberSelectorMode.BOX,
+                        )
+                    ),
+                    vol.Required(CONF_RESYNC_HOLD_S, default=DEFAULT_RESYNC_HOLD_S): NumberSelector(
+                        NumberSelectorConfig(
+                            min=MIN_RESYNC_HOLD_S,
+                            max=MAX_RESYNC_HOLD_S,
+                            unit_of_measurement="s",
+                            mode=NumberSelectorMode.BOX,
+                        )
                     ),
                 }
             ),
@@ -304,17 +349,6 @@ class EntityDistanceOptionsFlow(config_entries.OptionsFlow):
             data_schema=vol.Schema(
                 {
                     vol.Required(
-                        CONF_DEBOUNCE_S,
-                        default=self._data.get(CONF_DEBOUNCE_S, DEFAULT_DEBOUNCE_S),
-                    ): NumberSelector(
-                        NumberSelectorConfig(
-                            min=0,
-                            max=60,
-                            unit_of_measurement="s",
-                            mode=NumberSelectorMode.BOX,
-                        )
-                    ),
-                    vol.Required(
                         CONF_MAX_ACCURACY_M,
                         default=self._data.get(CONF_MAX_ACCURACY_M, DEFAULT_MAX_ACCURACY_M),
                     ): NumberSelector(
@@ -322,6 +356,28 @@ class EntityDistanceOptionsFlow(config_entries.OptionsFlow):
                             min=0,
                             max=1000,
                             unit_of_measurement="m",
+                            mode=NumberSelectorMode.BOX,
+                        )
+                    ),
+                    vol.Required(
+                        CONF_DEBOUNCE_S,
+                        default=self._data.get(CONF_DEBOUNCE_S, DEFAULT_DEBOUNCE_S),
+                    ): NumberSelector(
+                        NumberSelectorConfig(
+                            min=0,
+                            max=MAX_DEBOUNCE_S,
+                            unit_of_measurement="s",
+                            mode=NumberSelectorMode.BOX,
+                        )
+                    ),
+                    vol.Required(
+                        CONF_GRACE_WINDOW_S,
+                        default=self._data.get(CONF_GRACE_WINDOW_S, DEFAULT_GRACE_WINDOW_S),
+                    ): NumberSelector(
+                        NumberSelectorConfig(
+                            min=MIN_GRACE_WINDOW_S,
+                            max=MAX_GRACE_WINDOW_S,
+                            unit_of_measurement="s",
                             mode=NumberSelectorMode.BOX,
                         )
                     ),
@@ -347,6 +403,28 @@ class EntityDistanceOptionsFlow(config_entries.OptionsFlow):
                         ),
                     ): NumberSelector(
                         NumberSelectorConfig(min=1, max=20, mode=NumberSelectorMode.BOX)
+                    ),
+                    vol.Required(
+                        CONF_RESYNC_SILENCE_S,
+                        default=self._data.get(CONF_RESYNC_SILENCE_S, DEFAULT_RESYNC_SILENCE_S),
+                    ): NumberSelector(
+                        NumberSelectorConfig(
+                            min=MIN_RESYNC_SILENCE_S,
+                            max=MAX_RESYNC_SILENCE_S,
+                            unit_of_measurement="s",
+                            mode=NumberSelectorMode.BOX,
+                        )
+                    ),
+                    vol.Required(
+                        CONF_RESYNC_HOLD_S,
+                        default=self._data.get(CONF_RESYNC_HOLD_S, DEFAULT_RESYNC_HOLD_S),
+                    ): NumberSelector(
+                        NumberSelectorConfig(
+                            min=MIN_RESYNC_HOLD_S,
+                            max=MAX_RESYNC_HOLD_S,
+                            unit_of_measurement="s",
+                            mode=NumberSelectorMode.BOX,
+                        )
                     ),
                 }
             ),

@@ -27,7 +27,7 @@
           "zone_near_m": "Las entidades están 'Cerca' a esta distancia o menos. Debe ser mayor que Muy cerca. Predeterminado: 1000 m.",
           "zone_mid_m": "Las entidades están a distancia 'Media'. Debe ser mayor que Cerca. Predeterminado: 5000 m.",
           "zone_far_m": "Las entidades están 'Lejos' a esta distancia o menos. Debe ser mayor que Medio. Predeterminado: 20000 m.\nMás allá es 'Muy lejos'.",
-          "proximity_zone": "El sensor 'En proximidad' se activa cuando las entidades están dentro de esta zona o más cerca (p. ej., seleccionar 'Cerca' también activa cuando las entidades están 'Muy cerca'). Se desactiva cuando se alejan a la siguiente zona.",
+          "proximity_zone": "El sensor 'En proximidad' se activa cuando las entidades están dentro de esta zona o más cerca (p. ej., seleccionar 'Cerca' también activa cuando las entidades están 'Muy cerca'). Se desactiva cuando la distancia supera el límite de esa zona (umbral estricto). Para evitar cambios rápidos cerca del límite por ruido GPS, activa 'Esperar antes de reaccionar' (debounce) en los filtros avanzados.",
           "show_advanced": "Activar para configurar precisión GPS, velocidad y filtros de fiabilidad en la siguiente pantalla."
         }
       },
@@ -35,18 +35,24 @@
         "title": "Filtros avanzados",
         "description": "Filtros opcionales para rechazar actualizaciones de ubicación no fiables.",
         "data": {
-          "debounce_s": "Esperar antes de reaccionar (s)",
           "max_accuracy_m": "Precisión GPS máx. (m, 0 = desactivado)",
+          "debounce_s": "Esperar antes de reaccionar (s)",
+          "grace_window_s": "Ventana de gracia de visualización (s)",
           "max_speed_kmh": "Velocidad implícita máx. (km/h, 0 = desactivado)",
           "require_reliable": "Requerir datos fiables para eventos de proximidad",
-          "min_updates_reliable": "Actualizaciones mínimas para datos fiables"
+          "min_updates_reliable": "Actualizaciones mínimas para datos fiables",
+          "resync_silence_s": "Silencio GPS antes de congelar (s)",
+          "resync_hold_s": "Duración de congelación de proximidad (s)"
         },
         "data_description": {
-          "debounce_s": "Cuando llega una actualización de ubicación, cuánto esperar antes de recalcular. Útil cuando los teléfonos envían varias lecturas GPS ruidosas seguidas — la integración espera a que se estabilicen. 0 = reaccionar al instante (predeterminado). Aumenta a 5–15 s si ves cambios on/off bruscos.",
-          "max_accuracy_m": "Ignorar actualizaciones de ubicación donde el error GPS sea mayor que este valor. Los teléfonos en movimiento suelen reportar una precisión de 100–250 m, por lo que 300 m es un valor predeterminado seguro. Un teléfono con \"precisión de 350 m\" sería omitido. Establezca 0 para desactivar.",
-          "max_speed_kmh": "Guardia contra teletransporte. Rechaza una medición GPS si la velocidad de movimiento implícita — tras restar la precisión GPS combinada de ambos dispositivos — supera este valor. Predeterminado: 1000 km/h — bloquea teletransportes imposibles pero permite aviones. Establezca 0 para desactivar.",
+          "max_accuracy_m": "Ignorar actualizaciones de ubicación donde el error GPS sea mayor que este valor. Los teléfonos en movimiento suelen reportar una precisión de 100–250 m, por lo que 300 m es un valor predeterminado seguro. Un teléfono con \"precisión de 350 m\" sería omitido. Establezca 0 para desactivar. Rango: 0–1000 m.",
+          "debounce_s": "Cuando llega una actualización de ubicación, cuánto esperar antes de recalcular. Útil cuando los teléfonos envían varias lecturas GPS ruidosas seguidas — la integración espera a que se estabilicen. 0 = reaccionar al instante (predeterminado). Aumenta a 5–15 s si ves cambios on/off bruscos. Rango: 0–60 s.",
+          "grace_window_s": "Cuando un par pierde brevemente la señal GPS (fallo puntual, túnel, teléfono inactivo), los sensores mantienen el último valor conocido durante este tiempo antes de reportar desconocido. Evita parpadeos intermitentes. Predeterminado: 900 s (15 min). Rango: 60–3600 s.",
+          "max_speed_kmh": "Guardia contra teletransporte. Rechaza una medición GPS si la velocidad de movimiento implícita — tras restar la precisión GPS combinada de ambos dispositivos — supera este valor. Predeterminado: 1000 km/h — bloquea teletransportes imposibles pero permite aviones. Establezca 0 para desactivar. Rango: 0–2000 km/h.",
           "require_reliable": "Solo disparar evento proximity_enter cuando los datos se consideren fiables.",
-          "min_updates_reliable": "Número mínimo de actualizaciones de ubicación en la ventana antes de que los datos se consideren fiables."
+          "min_updates_reliable": "Número mínimo de actualizaciones de ubicación en la ventana antes de que los datos se consideren fiables. Rango: 1–20.",
+          "resync_silence_s": "Si todas las entidades rastreadas dejan de enviar actualizaciones GPS durante este tiempo, el estado de proximidad se congela para evitar cambios falsos mientras se espera que vuelva la señal. Predeterminado: 600 s (10 min). Rango: 60–3600 s.",
+          "resync_hold_s": "Cuánto tiempo mantener el estado de proximidad congelado tras detectar silencio GPS. Establezca 0 para desactivar la congelación (la detección de silencio sigue activa para la contabilidad de tiempo). Predeterminado: 60 s. Rango: 0–300 s."
         }
       }
     },
@@ -79,26 +85,32 @@
           "zone_near_m": "Las entidades están 'Cerca' a esta distancia o menos. Debe ser mayor que Muy cerca. Predeterminado: 1000 m.",
           "zone_mid_m": "Las entidades están a distancia 'Media'. Debe ser mayor que Cerca. Predeterminado: 5000 m.",
           "zone_far_m": "Las entidades están 'Lejos' a esta distancia o menos. Debe ser mayor que Medio. Predeterminado: 20000 m.\nMás allá es 'Muy lejos'.",
-          "proximity_zone": "El sensor 'En proximidad' se activa cuando las entidades están dentro de esta zona o más cerca (p. ej., seleccionar 'Cerca' también activa cuando las entidades están 'Muy cerca'). Se desactiva cuando se alejan a la siguiente zona.",
+          "proximity_zone": "El sensor 'En proximidad' se activa cuando las entidades están dentro de esta zona o más cerca (p. ej., seleccionar 'Cerca' también activa cuando las entidades están 'Muy cerca'). Se desactiva cuando la distancia supera el límite de esa zona (umbral estricto). Para evitar cambios rápidos cerca del límite por ruido GPS, activa 'Esperar antes de reaccionar' (debounce) en los filtros avanzados.",
           "show_advanced": "Activar para configurar precisión GPS, velocidad y filtros de fiabilidad en la siguiente pantalla."
         }
       },
       "advanced": {
         "title": "Filtros avanzados",
+        "description": "Estos filtros ayudan a ignorar datos GPS deficientes.",
         "data": {
-          "debounce_s": "Esperar antes de reaccionar (s)",
           "max_accuracy_m": "Precisión GPS máx. (m, 0 = desactivado)",
+          "debounce_s": "Esperar antes de reaccionar (s)",
+          "grace_window_s": "Ventana de gracia de visualización (s)",
           "max_speed_kmh": "Velocidad implícita máx. (km/h, 0 = desactivado)",
           "require_reliable": "Requerir datos fiables para eventos de proximidad",
-          "min_updates_reliable": "Actualizaciones mínimas para datos fiables"
+          "min_updates_reliable": "Actualizaciones mínimas para datos fiables",
+          "resync_silence_s": "Silencio GPS antes de congelar (s)",
+          "resync_hold_s": "Duración de congelación de proximidad (s)"
         },
-        "description": "Estos filtros ayudan a ignorar datos GPS deficientes.",
         "data_description": {
-          "debounce_s": "Cuando llega una actualización de ubicación, cuánto esperar antes de recalcular. Útil cuando los teléfonos envían varias lecturas GPS ruidosas seguidas — la integración espera a que se estabilicen. 0 = reaccionar al instante (predeterminado). Aumenta a 5–15 s si ves cambios on/off bruscos.",
-          "max_accuracy_m": "Ignorar actualizaciones de ubicación donde el error GPS sea mayor que este valor. Los teléfonos en movimiento suelen reportar una precisión de 100–250 m, por lo que 300 m es un valor predeterminado seguro. Un teléfono con \"precisión de 350 m\" sería omitido. Establezca 0 para desactivar.",
-          "max_speed_kmh": "Guardia contra teletransporte. Rechaza una medición GPS si la velocidad de movimiento implícita — tras restar la precisión GPS combinada de ambos dispositivos — supera este valor. Predeterminado: 1000 km/h — bloquea teletransportes imposibles pero permite aviones. Establezca 0 para desactivar.",
+          "max_accuracy_m": "Ignorar actualizaciones de ubicación donde el error GPS sea mayor que este valor. Los teléfonos en movimiento suelen reportar una precisión de 100–250 m, por lo que 300 m es un valor predeterminado seguro. Un teléfono con \"precisión de 350 m\" sería omitido. Establezca 0 para desactivar. Rango: 0–1000 m.",
+          "debounce_s": "Cuando llega una actualización de ubicación, cuánto esperar antes de recalcular. Útil cuando los teléfonos envían varias lecturas GPS ruidosas seguidas — la integración espera a que se estabilicen. 0 = reaccionar al instante (predeterminado). Aumenta a 5–15 s si ves cambios on/off bruscos. Rango: 0–60 s.",
+          "grace_window_s": "Cuando un par pierde brevemente la señal GPS (fallo puntual, túnel, teléfono inactivo), los sensores mantienen el último valor conocido durante este tiempo antes de reportar desconocido. Evita parpadeos intermitentes. Predeterminado: 900 s (15 min). Rango: 60–3600 s.",
+          "max_speed_kmh": "Guardia contra teletransporte. Rechaza una medición GPS si la velocidad de movimiento implícita — tras restar la precisión GPS combinada de ambos dispositivos — supera este valor. Predeterminado: 1000 km/h — bloquea teletransportes imposibles pero permite aviones. Establezca 0 para desactivar. Rango: 0–2000 km/h.",
           "require_reliable": "Cuando está activo, un evento de proximidad solo se activa tras actualizaciones consistentes.",
-          "min_updates_reliable": "Cuántas actualizaciones consecutivas se necesitan antes de considerar la ubicación fiable."
+          "min_updates_reliable": "Cuántas actualizaciones consecutivas se necesitan antes de considerar la ubicación fiable. Rango: 1–20.",
+          "resync_silence_s": "Si todas las entidades rastreadas dejan de enviar actualizaciones GPS durante este tiempo, el estado de proximidad se congela para evitar cambios falsos mientras se espera que vuelva la señal. Predeterminado: 600 s (10 min). Rango: 60–3600 s.",
+          "resync_hold_s": "Cuánto tiempo mantener el estado de proximidad congelado tras detectar silencio GPS. Establezca 0 para desactivar la congelación (la detección de silencio sigue activa para la contabilidad de tiempo). Predeterminado: 60 s. Rango: 0–300 s."
         }
       }
     },

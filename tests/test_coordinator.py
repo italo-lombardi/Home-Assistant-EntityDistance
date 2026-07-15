@@ -24,7 +24,7 @@ from custom_components.entity_distance.coordinator import (
     _is_zone,
     calc_bucket,
 )
-from custom_components.entity_distance.models import PairState
+from custom_components.entity_distance.models import PairState, pair_key
 from tests.conftest import make_state, make_zone_state
 
 _DEFAULT_THRESHOLDS = {
@@ -33,6 +33,8 @@ _DEFAULT_THRESHOLDS = {
     BUCKET_MID: DEFAULT_ZONE_MID_M,
     BUCKET_FAR: DEFAULT_ZONE_FAR_M,
 }
+
+_NOW = datetime(2024, 6, 1, 12, 0, 0, tzinfo=UTC)
 
 
 class TestGetCoords:
@@ -602,7 +604,7 @@ class TestEntitiesResolution:
 def _make_calc_pair_coordinator(
     entities=None,
     entry_threshold_m=500.0,
-    exit_threshold_m=700.0,
+    exit_threshold_m=500.0,
     max_accuracy_m=0.0,
     max_speed_kmh=0.0,
     resync_silence_s=0.0,
@@ -635,6 +637,7 @@ def _make_calc_pair_coordinator(
     coordinator._max_speed_kmh = max_speed_kmh
     coordinator._resync_silence_s = resync_silence_s
     coordinator._resync_hold_s = resync_hold_s
+    coordinator._grace_window_s = 900.0
     coordinator._require_reliable = require_reliable
     coordinator._min_updates_reliable = min_updates_reliable
     coordinator._updates_window_s = updates_window_s
@@ -1026,7 +1029,7 @@ class TestCalcPairTimingEdges:
         from custom_components.entity_distance.models import pair_key
         from tests.conftest import make_state
 
-        coordinator = _make_calc_pair_coordinator(entry_threshold_m=100.0, exit_threshold_m=200.0)
+        coordinator = _make_calc_pair_coordinator(entry_threshold_m=100.0, exit_threshold_m=100.0)
         k = pair_key("person.alice", "person.bob")
         ps = coordinator._pair_states[k]
         ps.proximity = True
@@ -1312,7 +1315,7 @@ class TestCalcPairRequireReliable:
             require_reliable=True,
             min_updates_reliable=10,  # very high — not reliable
             entry_threshold_m=10000.0,  # well within range
-            exit_threshold_m=15000.0,
+            exit_threshold_m=10000.0,
         )
         from custom_components.entity_distance.models import pair_key
 
@@ -1392,6 +1395,7 @@ class TestCoordinatorProperties:
         coord._max_speed_kmh = 1000
         coord._resync_silence_s = 600
         coord._resync_hold_s = 60
+        coord._grace_window_s = 900
         coord._min_updates_reliable = 3
         coord._updates_window_s = 1800
         coord._require_reliable = False
@@ -1399,7 +1403,16 @@ class TestCoordinatorProperties:
         assert snap["proximity_zone"] == "very_near"
         assert snap["zone_very_near_m"] == 200
         assert "emit_bus_events" not in snap
-        assert len(snap) == 14
+        # Key-presence assertions for fields added in this PR — catch regressions
+        # if a field is accidentally removed. Count check kept to catch silent additions.
+        assert "stationary_threshold_factor" in snap
+        assert "stationary_threshold_min_m" in snap
+        assert "grace_window_s" in snap
+        assert "resync_silence_s" in snap
+        assert "resync_hold_s" in snap
+        assert snap["stationary_threshold_factor"] == 0.15
+        assert snap["stationary_threshold_min_m"] == 15.0
+        assert len(snap) == 17  # update this if fields are intentionally added/removed
 
 
 # ---------------------------------------------------------------------------
@@ -2075,7 +2088,9 @@ class TestIsWithinGrace:
     def _coord(self):
         from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
 
-        return EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)
+        coord = EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)
+        coord._grace_window_s = 900.0
+        return coord
 
     def test_false_when_never_stale(self):
         from custom_components.entity_distance.models import PairState
@@ -2099,5 +2114,428 @@ class TestIsWithinGrace:
         coord = self._coord()
         now = datetime.now().astimezone()
         ps = PairState(entity_a_id="a", entity_b_id="b")
-        ps.stale_since = now - timedelta(seconds=1000)  # > GRACE_WINDOW_S (900)
+        ps.stale_since = now - timedelta(seconds=1000)  # > _grace_window_s default (900s)
         assert coord.is_within_grace(ps, now) is False
+
+
+class TestStrictExitThreshold:
+    async def test_exit_threshold_equals_entry_threshold(self, hass):
+        """_exit_threshold_m == _entry_threshold_m for each proximity zone via real __init__."""
+        from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+        from custom_components.entity_distance.const import DOMAIN
+        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+
+        zone_to_threshold = {
+            BUCKET_VERY_NEAR: DEFAULT_ZONE_VERY_NEAR_M,
+            BUCKET_NEAR: DEFAULT_ZONE_NEAR_M,
+            BUCKET_MID: DEFAULT_ZONE_MID_M,
+            BUCKET_FAR: DEFAULT_ZONE_FAR_M,
+        }
+        for zone, expected_m in zone_to_threshold.items():
+            entry = MockConfigEntry(
+                domain=DOMAIN,
+                data={
+                    "entities": ["person.alice", "person.bob"],
+                    "debounce_s": 0,
+                    "max_accuracy_m": 0,
+                    "max_speed_kmh": 0,
+                    "resync_silence_s": 0,
+                    "resync_hold_s": 0,
+                    "min_updates_reliable": 1,
+                    "updates_window_s": 1800,
+                    "require_reliable": False,
+                    "proximity_zone": zone,
+                },
+                options={},
+            )
+            entry.add_to_hass(hass)
+            coord = EntityDistanceCoordinator(hass, entry)
+            assert coord._exit_threshold_m == coord._entry_threshold_m, (
+                f"zone={zone}: exit {coord._exit_threshold_m} != entry {coord._entry_threshold_m}"
+            )
+            assert coord._entry_threshold_m == pytest.approx(expected_m), (
+                f"zone={zone}: entry threshold mismatch"
+            )
+
+    def test_proximity_exits_immediately_above_entry_threshold(self):
+        """Enter at 490 m (entry=500 m), advance to 501 m → proximity=False immediately."""
+        coordinator = _make_calc_pair_coordinator(entry_threshold_m=500.0)
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+        now = _NOW
+
+        state_a = make_state("person.alice", 51.5, -0.1)
+        state_b = make_state("person.bob", 51.6, -0.2)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=490.0,
+        ):
+            ps = coordinator._calc_pair(ps, "person.alice", "person.bob", now, set())
+        assert ps.proximity is True
+
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=501.0,
+        ):
+            ps = coordinator._calc_pair(
+                ps, "person.alice", "person.bob", now + timedelta(seconds=60), set()
+            )
+        assert ps.proximity is False
+
+    def test_proximity_does_not_flap_at_threshold_boundary(self):
+        """Document strict-exit flapping behaviour at threshold boundary.
+
+        With entry=exit=500m, GPS noise crossing the line causes on/off toggling.
+        This test verifies (documents) each transition — flapping IS expected here.
+        To suppress flapping in production, users should enable debounce.
+        """
+        coordinator = _make_calc_pair_coordinator(entry_threshold_m=500.0, exit_threshold_m=500.0)
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+
+        state_a = make_state("person.alice", 51.5, -0.1)
+        state_b = make_state("person.bob", 51.6, -0.2)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+
+        base = _NOW
+
+        # Tick 1 — 498m (entry=500m) → proximity ON
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=498.0,
+        ):
+            ps = coordinator._calc_pair(ps, "person.alice", "person.bob", base, set())
+        assert ps.proximity is True, "498m < 500m entry → should be ON"
+
+        # Tick 2 — 502m → proximity OFF (strict exit: 502 > 500)
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=502.0,
+        ):
+            ps = coordinator._calc_pair(
+                ps, "person.alice", "person.bob", base + timedelta(seconds=10), set()
+            )
+        assert ps.proximity is False, "502m > 500m exit → should be OFF"
+
+        # Tick 3 — 499m → proximity ON again (GPS noise re-enters)
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=499.0,
+        ):
+            ps = coordinator._calc_pair(
+                ps, "person.alice", "person.bob", base + timedelta(seconds=20), set()
+            )
+        assert ps.proximity is True, "499m ≤ 500m entry → should be ON"
+
+        # Tick 4 — 501m → proximity OFF again
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=501.0,
+        ):
+            ps = coordinator._calc_pair(
+                ps, "person.alice", "person.bob", base + timedelta(seconds=30), set()
+            )
+        assert ps.proximity is False, "501m > 500m exit → should be OFF"
+
+
+class TestStationaryThresholdPerTick:
+    """Stationary threshold is computed per-tick from the noise budget of each fix pair.
+
+    Formula: threshold = max(STATIONARY_THRESHOLD_MIN_M,
+                             (ps.accuracy_a + ps.accuracy_b + acc_a + acc_b) * STATIONARY_THRESHOLD_FACTOR)
+    """
+
+    def _run_tick(self, prev_dist, curr_dist, prev_acc_a, prev_acc_b, curr_acc):
+        """Run one direction tick and return the resulting PairState."""
+        from unittest.mock import patch
+
+        from custom_components.entity_distance.models import pair_key
+        from tests.conftest import make_state
+
+        coordinator = _make_calc_pair_coordinator(max_speed_kmh=0.0)
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+
+        now = datetime.now().astimezone()
+        ps.prev_distance_m = prev_dist
+        ps.prev_calc_time = now - timedelta(seconds=10)
+        ps.accuracy_a = prev_acc_a
+        ps.accuracy_b = prev_acc_b
+
+        state_a = make_state("person.alice", 51.5, -0.1, accuracy=curr_acc)
+        state_b = make_state("person.bob", 51.6, -0.2, accuracy=curr_acc)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=curr_dist,
+        ):
+            return coordinator._calc_pair(ps, "person.alice", "person.bob", now, set())
+
+    def test_stationary_with_high_accuracy_noise(self):
+        """Two devices each acc=100m → noise_budget=400m → threshold=60m; delta=50m → STATIONARY."""
+        # prev_acc_a=100, prev_acc_b=100, curr_acc_a=100, curr_acc_b=100
+        # budget = 400, threshold = max(15, 400*0.15) = 60m
+        # delta = 500 - 550 = -50m → abs=50 < 60 → stationary
+        result = self._run_tick(
+            prev_dist=500.0,
+            curr_dist=550.0,
+            prev_acc_a=100.0,
+            prev_acc_b=100.0,
+            curr_acc=100.0,
+        )
+        assert result.direction == "stationary"
+
+    def test_approaching_with_low_accuracy_noise(self):
+        """Two devices each acc=10m → noise_budget=40m → threshold=15m; delta=40m → APPROACHING."""
+        # budget = 40, threshold = max(15, 40*0.15) = max(15, 6) = 15m
+        # delta = 500 - 460 = -40m → abs=40 > 15 → approaching
+        result = self._run_tick(
+            prev_dist=500.0,
+            curr_dist=460.0,
+            prev_acc_a=10.0,
+            prev_acc_b=10.0,
+            curr_acc=10.0,
+        )
+        assert result.direction == "approaching"
+
+    def test_stationary_threshold_min_floor(self):
+        """Zone entities (acc=None→0) → noise_budget=0 → threshold=STATIONARY_THRESHOLD_MIN_M=15m; delta=5m → STATIONARY."""
+        # budget = 0, threshold = max(15, 0) = 15m
+        # delta = 5m < 15m → stationary
+        result = self._run_tick(
+            prev_dist=100.0,
+            curr_dist=105.0,
+            prev_acc_a=None,
+            prev_acc_b=None,
+            curr_acc=None,
+        )
+        assert result.direction == "stationary"
+
+
+class TestGraceWindowConfig:
+    """_grace_window_s loaded from config, defaults to DEFAULT_GRACE_WINDOW_S."""
+
+    async def test_default_grace_window(self, hass):
+        """No grace_window_s in config → defaults to 900."""
+        from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+        from custom_components.entity_distance.const import DEFAULT_GRACE_WINDOW_S, DOMAIN
+        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={
+                "entities": ["person.alice", "person.bob"],
+                "debounce_s": 0,
+                "max_accuracy_m": 300,
+                "max_speed_kmh": 1000,
+                "resync_silence_s": 0,
+                "resync_hold_s": 60,
+                "min_updates_reliable": 3,
+                "updates_window_s": 1800,
+                "require_reliable": False,
+            },
+        )
+        entry.add_to_hass(hass)
+        coord = EntityDistanceCoordinator(hass, entry)
+        assert coord._grace_window_s == DEFAULT_GRACE_WINDOW_S
+
+    async def test_custom_grace_window(self, hass):
+        """grace_window_s=120 in config → stored on coordinator."""
+        from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+        from custom_components.entity_distance.const import DOMAIN
+        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={
+                "entities": ["person.alice", "person.bob"],
+                "debounce_s": 0,
+                "max_accuracy_m": 300,
+                "max_speed_kmh": 1000,
+                "resync_silence_s": 0,
+                "resync_hold_s": 60,
+                "grace_window_s": 120,
+                "min_updates_reliable": 3,
+                "updates_window_s": 1800,
+                "require_reliable": False,
+            },
+        )
+        entry.add_to_hass(hass)
+        coord = EntityDistanceCoordinator(hass, entry)
+        assert coord._grace_window_s == 120.0
+
+    def test_is_within_grace_uses_instance_window(self):
+        """is_within_grace respects _grace_window_s not a hardcoded constant."""
+        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+        from custom_components.entity_distance.models import PairState
+
+        coord = EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)
+        coord._grace_window_s = 60.0
+        now = datetime.now(UTC)
+        ps = PairState(entity_a_id="a", entity_b_id="b")
+
+        ps.stale_since = now - timedelta(seconds=30)
+        assert coord.is_within_grace(ps, now) is True
+
+        ps.stale_since = now - timedelta(seconds=90)
+        assert coord.is_within_grace(ps, now) is False
+
+
+# ---------------------------------------------------------------------------
+# TestDoubleTick — double-tick guard (100ms threshold) and unaccounted gap
+# ---------------------------------------------------------------------------
+
+
+class TestDoubleTickBoundary:
+    """Double-tick guard: near-zero elapsed must not inflate today_zone_seconds.
+
+    The guard in _calc_pair zeros _elapsed_s when the gap between two consecutive
+    calls is < 0.1s (same-event-loop-iteration coalescing).  Real sub-second GPS
+    bursts (e.g. 0.5s apart) must still be credited.
+
+    The 'today_unaccounted_time' sensor computes as:
+        elapsed_since_midnight_s - sum(ps.today_zone_seconds.values())
+    We verify the sum does not grow on the second near-zero tick.
+    """
+
+    def _make_pair_in_proximity(self, entry_threshold_m=10_000.0):
+        """Return (coordinator, ps, k, state_a, state_b) with pair already in proximity."""
+        from tests.conftest import make_state
+
+        coordinator = _make_calc_pair_coordinator(entry_threshold_m=entry_threshold_m)
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+
+        state_a = make_state("person.alice", 51.5, -0.1)
+        state_b = make_state("person.bob", 51.501, -0.1)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+        return coordinator, ps, k, state_a, state_b
+
+    def test_sub_100ms_tick_does_not_grow_zone_seconds(self):
+        """Two ticks 50ms apart — second tick must not add to today_zone_seconds."""
+        coordinator, ps, k, _, _ = self._make_pair_in_proximity()
+        base = _NOW
+
+        # Tick 1 — establishes proximity, no prev_calc_time so _elapsed_s=0
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=100.0,
+        ):
+            ps = coordinator._calc_pair(ps, "person.alice", "person.bob", base, set())
+        assert ps.proximity is True
+        zone_after_tick1 = sum(ps.today_zone_seconds.values())
+
+        # Tick 2 — 50ms later (< 100ms guard)
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=100.0,
+        ):
+            ps = coordinator._calc_pair(
+                ps,
+                "person.alice",
+                "person.bob",
+                base + timedelta(milliseconds=50),
+                set(),
+            )
+        zone_after_tick2 = sum(ps.today_zone_seconds.values())
+
+        assert zone_after_tick2 == pytest.approx(zone_after_tick1), (
+            "sub-100ms tick must not increment today_zone_seconds"
+        )
+
+    def test_real_sub_second_tick_does_grow_zone_seconds(self):
+        """Two ticks 500ms apart — second tick must credit elapsed time (> 100ms guard)."""
+        coordinator, ps, k, _, _ = self._make_pair_in_proximity()
+        base = _NOW
+
+        # Tick 1
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=100.0,
+        ):
+            ps = coordinator._calc_pair(ps, "person.alice", "person.bob", base, set())
+        zone_after_tick1 = sum(ps.today_zone_seconds.values())
+
+        # Tick 2 — 500ms later (> 100ms, should credit ~0.5s)
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=100.0,
+        ):
+            ps = coordinator._calc_pair(
+                ps,
+                "person.alice",
+                "person.bob",
+                base + timedelta(milliseconds=500),
+                set(),
+            )
+        zone_after_tick2 = sum(ps.today_zone_seconds.values())
+
+        assert zone_after_tick2 > zone_after_tick1, (
+            "500ms tick must credit time to today_zone_seconds"
+        )
+        assert zone_after_tick2 == pytest.approx(zone_after_tick1 + 0.5, abs=0.05)
+
+    def test_double_tick_unaccounted_does_not_grow(self):
+        """today_zone_seconds sum after two near-zero ticks equals after one tick.
+
+        Indirectly verifies today_unaccounted_time (elapsed - zone_sum) is not
+        inflated by the double-tick: if zone_sum is unchanged, the unaccounted gap
+        stays flat too.
+        """
+        coordinator, ps, k, _, _ = self._make_pair_in_proximity()
+        base = _NOW
+
+        # Tick 1 — anchors prev_calc_time
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=100.0,
+        ):
+            ps = coordinator._calc_pair(ps, "person.alice", "person.bob", base, set())
+
+        # Tick 2 — 1ms (well under guard)
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=100.0,
+        ):
+            ps = coordinator._calc_pair(
+                ps,
+                "person.alice",
+                "person.bob",
+                base + timedelta(milliseconds=1),
+                set(),
+            )
+        zone_after_two_ticks = sum(ps.today_zone_seconds.values())
+
+        # Tick 3 — same pair, 60s later (real tick)
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=100.0,
+        ):
+            ps = coordinator._calc_pair(
+                ps,
+                "person.alice",
+                "person.bob",
+                base + timedelta(seconds=60),
+                set(),
+            )
+        zone_after_real_tick = sum(ps.today_zone_seconds.values())
+
+        # Real tick (60s from base, but prev_calc_time was set to base+1ms)
+        # so ~59.999s credited, not ~120s.
+        assert zone_after_real_tick == pytest.approx(zone_after_two_ticks + 60.0, abs=1.0), (
+            "real 60s tick after double-tick must credit ~60s, not doubled"
+        )

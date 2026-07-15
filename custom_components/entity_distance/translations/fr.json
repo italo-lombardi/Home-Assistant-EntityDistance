@@ -27,7 +27,7 @@
           "zone_near_m": "Les entités sont 'Proches' à cette distance ou moins. Doit être supérieur à Très proche. Défaut : 1000 m.",
           "zone_mid_m": "Les entités sont à distance 'Moyenne'. Doit être supérieur à Proche. Défaut : 5000 m.",
           "zone_far_m": "Les entités sont 'Loin' à cette distance ou moins. Doit être supérieur à Moyen. Défaut : 20000 m.\nAu-delà est 'Très loin'.",
-          "proximity_zone": "Le capteur 'En proximité' s'active quand les entités sont dans cette zone ou plus proches (ex : sélectionner 'Proche' se déclenche aussi quand elles sont 'Très proches'). Il se désactive quand elles passent à la zone suivante.",
+          "proximity_zone": "Le capteur 'En proximité' s'active quand les entités sont dans cette zone ou plus proches (ex : sélectionner 'Proche' se déclenche aussi quand elles sont 'Très proches'). Il se désactive quand la distance dépasse la limite de cette zone (seuil strict). Pour éviter les basculements rapides près de la limite dus au bruit GPS, activez 'Attendre avant de réagir' (debounce) dans les filtres avancés.",
           "show_advanced": "Activer pour configurer la précision GPS, la vitesse et les filtres de fiabilité sur l'écran suivant."
         }
       },
@@ -35,18 +35,24 @@
         "title": "Filtres avancés",
         "description": "Filtres optionnels pour rejeter les mises à jour de localisation non fiables.",
         "data": {
-          "debounce_s": "Attendre avant de réagir (s)",
           "max_accuracy_m": "Précision GPS max. (m, 0 = désactivé)",
+          "debounce_s": "Attendre avant de réagir (s)",
+          "grace_window_s": "Fenêtre de grâce d'affichage (s)",
           "max_speed_kmh": "Vitesse implicite max. (km/h, 0 = désactivé)",
           "require_reliable": "Déclencher uniquement lorsque les données sont fiables",
-          "min_updates_reliable": "Mises à jour min. pour données fiables"
+          "min_updates_reliable": "Mises à jour min. pour données fiables",
+          "resync_silence_s": "Silence GPS avant gel (s)",
+          "resync_hold_s": "Durée de gel de proximité (s)"
         },
         "data_description": {
-          "debounce_s": "Lorsqu'une mise à jour de localisation arrive, combien de temps attendre avant de recalculer. Utile quand les téléphones envoient plusieurs relevés GPS bruyants à la suite — l'intégration attend qu'ils se stabilisent. 0 = réagir instantanément (par défaut). Augmenter à 5–15 s en cas de basculements on/off intempestifs.",
-          "max_accuracy_m": "Rejeter les mises à jour de localisation où l'erreur GPS est supérieure à cette valeur. Les téléphones en mouvement rapportent généralement une précision de 100–250 m, donc 300 m est une valeur par défaut sûre. Un téléphone affichant « précision 350 m » serait ignoré. Mettre à 0 pour désactiver.",
-          "max_speed_kmh": "Garde contre les téléportations. Rejette un relevé GPS si la vitesse de déplacement implicite — après soustraction de la précision GPS combinée des deux appareils — dépasse cette valeur. Défaut : 1000 km/h — bloque les téléportations impossibles tout en autorisant les avions. Mettre à 0 pour désactiver.",
+          "max_accuracy_m": "Rejeter les mises à jour de localisation où l'erreur GPS est supérieure à cette valeur. Les téléphones en mouvement rapportent généralement une précision de 100–250 m, donc 300 m est une valeur par défaut sûre. Un téléphone affichant « précision 350 m » serait ignoré. Mettre à 0 pour désactiver. Plage : 0–1000 m.",
+          "debounce_s": "Lorsqu'une mise à jour de localisation arrive, combien de temps attendre avant de recalculer. Utile quand les téléphones envoient plusieurs relevés GPS bruyants à la suite — l'intégration attend qu'ils se stabilisent. 0 = réagir instantanément (par défaut). Augmenter à 5–15 s en cas de basculements on/off intempestifs. Plage : 0–60 s.",
+          "grace_window_s": "Quand un binôme perd brièvement le signal GPS (coupure, tunnel, téléphone inactif), les capteurs conservent la dernière valeur connue pendant cette durée avant de signaler inconnu. Évite les clignotements intermittents. Défaut : 900 s (15 min). Plage : 60–3600 s.",
+          "max_speed_kmh": "Garde contre les téléportations. Rejette un relevé GPS si la vitesse de déplacement implicite — après soustraction de la précision GPS combinée des deux appareils — dépasse cette valeur. Défaut : 1000 km/h — bloque les téléportations impossibles tout en autorisant les avions. Mettre à 0 pour désactiver. Plage : 0–2000 km/h.",
           "require_reliable": "Le capteur 'En proximité' ne s'active que lorsque les données sont considérées fiables.",
-          "min_updates_reliable": "Nombre de mises à jour consécutives nécessaires avant que la localisation soit considérée fiable."
+          "min_updates_reliable": "Nombre de mises à jour consécutives nécessaires avant que la localisation soit considérée fiable. Plage : 1–20.",
+          "resync_silence_s": "Si toutes les entités suivies cessent d'envoyer des mises à jour GPS pendant cette durée, l'état de proximité est gelé pour éviter de faux changements en attendant le retour du signal. Défaut : 600 s (10 min). Plage : 60–3600 s.",
+          "resync_hold_s": "Durée pendant laquelle l'état de proximité reste gelé après détection du silence GPS. Mettre à 0 pour désactiver le gel (la détection du silence continue pour la comptabilité du temps). Défaut : 60 s. Plage : 0–300 s."
         }
       }
     },
@@ -79,26 +85,32 @@
           "zone_near_m": "Les entités sont 'Proches' à cette distance ou moins. Doit être supérieur à Très proche. Défaut : 1000 m.",
           "zone_mid_m": "Les entités sont à distance 'Moyenne'. Doit être supérieur à Proche. Défaut : 5000 m.",
           "zone_far_m": "Les entités sont 'Loin' à cette distance ou moins. Doit être supérieur à Moyen. Défaut : 20000 m.\nAu-delà est 'Très loin'.",
-          "proximity_zone": "Le capteur 'En proximité' s'active quand les entités sont dans cette zone ou plus proches (ex : sélectionner 'Proche' se déclenche aussi quand elles sont 'Très proches'). Il se désactive quand elles passent à la zone suivante.",
+          "proximity_zone": "Le capteur 'En proximité' s'active quand les entités sont dans cette zone ou plus proches (ex : sélectionner 'Proche' se déclenche aussi quand elles sont 'Très proches'). Il se désactive quand la distance dépasse la limite de cette zone (seuil strict). Pour éviter les basculements rapides près de la limite dus au bruit GPS, activez 'Attendre avant de réagir' (debounce) dans les filtres avancés.",
           "show_advanced": "Activer pour configurer la précision GPS, la vitesse et les filtres de fiabilité sur l'écran suivant."
         }
       },
       "advanced": {
         "title": "Filtres avancés",
+        "description": "Ces filtres aident à ignorer les données GPS incorrectes.",
         "data": {
-          "debounce_s": "Attendre avant de réagir (s)",
           "max_accuracy_m": "Précision GPS max. (m, 0 = désactivé)",
+          "debounce_s": "Attendre avant de réagir (s)",
+          "grace_window_s": "Fenêtre de grâce d'affichage (s)",
           "max_speed_kmh": "Vitesse implicite max. (km/h, 0 = désactivé)",
           "require_reliable": "Déclencher uniquement lorsque les données sont fiables",
-          "min_updates_reliable": "Mises à jour min. pour données fiables"
+          "min_updates_reliable": "Mises à jour min. pour données fiables",
+          "resync_silence_s": "Silence GPS avant gel (s)",
+          "resync_hold_s": "Durée de gel de proximité (s)"
         },
-        "description": "Ces filtres aident à ignorer les données GPS incorrectes.",
         "data_description": {
-          "debounce_s": "Lorsqu'une mise à jour de localisation arrive, combien de temps attendre avant de recalculer. Utile quand les téléphones envoient plusieurs relevés GPS bruyants à la suite — l'intégration attend qu'ils se stabilisent. 0 = réagir instantanément (par défaut). Augmenter à 5–15 s en cas de basculements on/off intempestifs.",
-          "max_accuracy_m": "Rejeter les mises à jour de localisation où l'erreur GPS est supérieure à cette valeur. Les téléphones en mouvement rapportent généralement une précision de 100–250 m, donc 300 m est une valeur par défaut sûre. Un téléphone affichant « précision 350 m » serait ignoré. Mettre à 0 pour désactiver.",
-          "max_speed_kmh": "Garde contre les téléportations. Rejette un relevé GPS si la vitesse de déplacement implicite — après soustraction de la précision GPS combinée des deux appareils — dépasse cette valeur. Défaut : 1000 km/h — bloque les téléportations impossibles tout en autorisant les avions. Mettre à 0 pour désactiver.",
+          "max_accuracy_m": "Rejeter les mises à jour de localisation où l'erreur GPS est supérieure à cette valeur. Les téléphones en mouvement rapportent généralement une précision de 100–250 m, donc 300 m est une valeur par défaut sûre. Un téléphone affichant « précision 350 m » serait ignoré. Mettre à 0 pour désactiver. Plage : 0–1000 m.",
+          "debounce_s": "Lorsqu'une mise à jour de localisation arrive, combien de temps attendre avant de recalculer. Utile quand les téléphones envoient plusieurs relevés GPS bruyants à la suite — l'intégration attend qu'ils se stabilisent. 0 = réagir instantanément (par défaut). Augmenter à 5–15 s en cas de basculements on/off intempestifs. Plage : 0–60 s.",
+          "grace_window_s": "Quand un binôme perd brièvement le signal GPS (coupure, tunnel, téléphone inactif), les capteurs conservent la dernière valeur connue pendant cette durée avant de signaler inconnu. Évite les clignotements intermittents. Défaut : 900 s (15 min). Plage : 60–3600 s.",
+          "max_speed_kmh": "Garde contre les téléportations. Rejette un relevé GPS si la vitesse de déplacement implicite — après soustraction de la précision GPS combinée des deux appareils — dépasse cette valeur. Défaut : 1000 km/h — bloque les téléportations impossibles tout en autorisant les avions. Mettre à 0 pour désactiver. Plage : 0–2000 km/h.",
           "require_reliable": "Le capteur 'En proximité' ne s'active que lorsque les données sont considérées fiables.",
-          "min_updates_reliable": "Combien de mises à jour consécutives sont nécessaires avant de considérer la localisation fiable."
+          "min_updates_reliable": "Combien de mises à jour consécutives sont nécessaires avant de considérer la localisation fiable. Plage : 1–20.",
+          "resync_silence_s": "Si toutes les entités suivies cessent d'envoyer des mises à jour GPS pendant cette durée, l'état de proximité est gelé pour éviter de faux changements en attendant le retour du signal. Défaut : 600 s (10 min). Plage : 60–3600 s.",
+          "resync_hold_s": "Durée pendant laquelle l'état de proximité reste gelé après détection du silence GPS. Mettre à 0 pour désactiver le gel (la détection du silence continue pour la comptabilité du temps). Défaut : 60 s. Plage : 0–300 s."
         }
       }
     },

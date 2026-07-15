@@ -27,7 +27,7 @@
           "zone_near_m": "Enheder er 'Tæt' ved eller nærmere end denne afstand. Skal være større end Meget tæt. Standard: 1000 m.",
           "zone_mid_m": "Enheder er 'Middel' afstand. Skal være større end Tæt. Standard: 5000 m.",
           "zone_far_m": "Enheder er 'Langt' ved eller nærmere end denne afstand. Skal være større end Middel. Standard: 20000 m.\nUd over dette er 'Meget langt'.",
-          "proximity_zone": "Sensoren 'I nærheden' slås TIL, når enhederne er inden for denne zone eller tættere på (f.eks. valg af 'Tæt' udløser også, når enhederne er 'Meget tæt'). Den slås FRA, når de bevæger sig til næste zone ud.",
+          "proximity_zone": "Sensoren 'I nærheden' slås TIL, når enhederne er inden for denne zone eller tættere på (f.eks. valg af 'Tæt' udløser også, når enhederne er 'Meget tæt'). Den slås FRA, når afstanden overskrider den valgte zones grænse (streng tærskel). Brug 'Vent før reaktion' (debounce) i Avancerede filtre for at undgå hurtig skiften nær grænsen.",
           "show_advanced": "Aktivér for at konfigurere GPS-nøjagtighed, hastighed og pålidelighetsfiltre på næste skærm."
         }
       },
@@ -35,18 +35,24 @@
         "title": "Avancerede filtre",
         "description": "Valgfrie filtre til at afvise upålidelige lokationsopdateringer.",
         "data": {
-          "debounce_s": "Vent før reaktion (s)",
           "max_accuracy_m": "Maks. GPS-nøjagtighed (m, 0 = deaktiveret)",
+          "debounce_s": "Vent før reaktion (s)",
+          "grace_window_s": "Visningstolerancevindue (s)",
           "max_speed_kmh": "Maks. underforstået hastighed (km/h, 0 = deaktiveret)",
           "require_reliable": "Kræv pålidelige data til nærhedsbegivenheder",
-          "min_updates_reliable": "Min. opdateringer for pålidelige data"
+          "min_updates_reliable": "Min. opdateringer for pålidelige data",
+          "resync_silence_s": "GPS-stilhed før frysning (s)",
+          "resync_hold_s": "Nærhedsfrysningstid (s)"
         },
         "data_description": {
-          "debounce_s": "Når en lokationsopdatering kommer, hvor længe der ventes før der genberegnes. Nyttigt når telefoner sender flere støjende GPS-målinger i træk — integrationen venter til de stabiliseres. 0 = reager øjeblikkeligt (standard). Hæv til 5–15 s ved jitter.",
-          "max_accuracy_m": "Afvis lokationsopdateringer hvor GPS-fejlen er større end denne værdi. Telefoner i bevægelse rapporterer typisk 100–250 m nøjagtighed, så 300 m er en sikker standard. En telefon der viser '350 m nøjagtighed' vil blive sprunget over. Sæt til 0 for at deaktivere.",
-          "max_speed_kmh": "Teleport-bevogtning. Afviser et GPS-fix, hvis den underforståede bevægelseshastighed — efter fratrækning af den kombinerede GPS-nøjagtighed for begge enheder — overstiger denne værdi. Standard: 1000 km/t — blokerer umulige teleporter, mens fly tillades. Sæt til 0 for at deaktivere.",
+          "max_accuracy_m": "Afvis lokationsopdateringer hvor GPS-fejlen er større end denne værdi. Telefoner i bevægelse rapporterer typisk 100–250 m nøjagtighed, så 300 m er en sikker standard. En telefon der viser '350 m nøjagtighed' vil blive sprunget over. Sæt til 0 for at deaktivere. Område: 0–1000 m.",
+          "debounce_s": "Når en lokationsopdatering kommer, hvor længe der ventes før der genberegnes. Nyttigt når telefoner sender flere støjende GPS-målinger i træk — integrationen venter til de stabiliseres. 0 = reager øjeblikkeligt (standard). Hæv til 5–15 s ved jitter. Område: 0–60 s.",
+          "grace_window_s": "Når et par kortvarigt mister GPS-signal (udfald, tunnel, inaktiv telefon), viser sensorer den sidst kendteværdi i denne periode, inden de rapporterer ukendt. Forhindrer midlertidig flimren. Standard: 900 s (15 min). Interval: 60–3600 s.",
+          "max_speed_kmh": "Teleport-bevogtning. Afviser et GPS-fix, hvis den underforståede bevægelseshastighed — efter fratrækning af den kombinerede GPS-nøjagtighed for begge enheder — overstiger denne værdi. Standard: 1000 km/t — blokerer umulige teleporter, mens fly tillades. Sæt til 0 for at deaktivere. Område: 0–2000 km/t.",
           "require_reliable": "Afskyd kun proximity_enter-begivenhed, når data anses for pålidelige.",
-          "min_updates_reliable": "Mindste antal lokationsopdateringer i vinduet, før data anses for pålidelige."
+          "min_updates_reliable": "Mindste antal lokationsopdateringer i vinduet, før data anses for pålidelige. Område: 1–20.",
+          "resync_silence_s": "Hvis alle sporede enheder holder op med at sende GPS-opdateringer i denne periode, fryses nærhedstilstanden for at forhindre falske ændringer, mens signalet ventes tilbage. Standard: 600 s (10 min). Interval: 60–3600 s.",
+          "resync_hold_s": "Hvor længe nærhedstilstanden holdes frossen efter GPS-stilhed er registreret. Sæt til 0 for at deaktivere frysning (stilhedsregistrering kører stadig til tidsregnskab). Standard: 60 s. Interval: 0–300 s."
         }
       }
     },
@@ -79,26 +85,32 @@
           "zone_near_m": "Enheder er 'Tæt' ved eller nærmere end denne afstand. Skal være større end Meget tæt. Standard: 1000 m.",
           "zone_mid_m": "Enheder er 'Middel' afstand. Skal være større end Tæt. Standard: 5000 m.",
           "zone_far_m": "Enheder er 'Langt' ved eller nærmere end denne afstand. Skal være større end Middel. Standard: 20000 m.\nUd over dette er 'Meget langt'.",
-          "proximity_zone": "Sensoren 'I nærheden' slås TIL, når enhederne er inden for denne zone eller tættere på (f.eks. valg af 'Tæt' udløser også, når enhederne er 'Meget tæt'). Den slås FRA, når de bevæger sig til næste zone ud.",
+          "proximity_zone": "Sensoren 'I nærheden' slås TIL, når enhederne er inden for denne zone eller tættere på (f.eks. valg af 'Tæt' udløser også, når enhederne er 'Meget tæt'). Den slås FRA, når afstanden overskrider den valgte zones grænse (streng tærskel). Brug 'Vent før reaktion' (debounce) i Avancerede filtre for at undgå hurtig skiften nær grænsen.",
           "show_advanced": "Aktivér for at konfigurere GPS-nøjagtighed, hastighed og pålidelighetsfiltre på næste skærm."
         }
       },
       "advanced": {
         "title": "Avancerede filtre",
+        "description": "Disse filtre hjælper med at ignorere dårlige GPS-data.",
         "data": {
-          "debounce_s": "Vent før reaktion (s)",
           "max_accuracy_m": "Maks. GPS-nøjagtighed (m, 0 = deaktiveret)",
+          "debounce_s": "Vent før reaktion (s)",
+          "grace_window_s": "Visningstolerancevindue (s)",
           "max_speed_kmh": "Maks. underforstået hastighed (km/h, 0 = deaktiveret)",
           "require_reliable": "Kræv pålidelige data til nærhedsbegivenheder",
-          "min_updates_reliable": "Min. opdateringer for pålidelige data"
+          "min_updates_reliable": "Min. opdateringer for pålidelige data",
+          "resync_silence_s": "GPS-stilhed før frysning (s)",
+          "resync_hold_s": "Nærhedsfrysningstid (s)"
         },
-        "description": "Disse filtre hjælper med at ignorere dårlige GPS-data.",
         "data_description": {
-          "debounce_s": "Når en lokationsopdatering kommer, hvor længe der ventes før der genberegnes. Nyttigt når telefoner sender flere støjende GPS-målinger i træk — integrationen venter til de stabiliseres. 0 = reager øjeblikkeligt (standard). Hæv til 5–15 s ved jitter.",
-          "max_accuracy_m": "Afvis lokationsopdateringer hvor GPS-fejlen er større end denne værdi. Telefoner i bevægelse rapporterer typisk 100–250 m nøjagtighed, så 300 m er en sikker standard. En telefon der viser '350 m nøjagtighed' vil blive sprunget over. Sæt til 0 for at deaktivere.",
-          "max_speed_kmh": "Teleport-bevogtning. Afviser et GPS-fix, hvis den underforståede bevægelseshastighed — efter fratrækning af den kombinerede GPS-nøjagtighed for begge enheder — overstiger denne værdi. Standard: 1000 km/t — blokerer umulige teleporter, mens fly tillades. Sæt til 0 for at deaktivere.",
+          "max_accuracy_m": "Afvis lokationsopdateringer hvor GPS-fejlen er større end denne værdi. Telefoner i bevægelse rapporterer typisk 100–250 m nøjagtighed, så 300 m er en sikker standard. En telefon der viser '350 m nøjagtighed' vil blive sprunget over. Sæt til 0 for at deaktivere. Område: 0–1000 m.",
+          "debounce_s": "Når en lokationsopdatering kommer, hvor længe der ventes før der genberegnes. Nyttigt når telefoner sender flere støjende GPS-målinger i træk — integrationen venter til de stabiliseres. 0 = reager øjeblikkeligt (standard). Hæv til 5–15 s ved jitter. Område: 0–60 s.",
+          "grace_window_s": "Når et par kortvarigt mister GPS-signal (udfald, tunnel, inaktiv telefon), viser sensorer den sidst kendte værdi i denne periode, inden de rapporterer ukendt. Forhindrer midlertidig flimren. Standard: 900 s (15 min). Interval: 60–3600 s.",
+          "max_speed_kmh": "Teleport-bevogtning. Afviser et GPS-fix, hvis den underforståede bevægelseshastighed — efter fratrækning af den kombinerede GPS-nøjagtighed for begge enheder — overstiger denne værdi. Standard: 1000 km/t — blokerer umulige teleporter, mens fly tillades. Sæt til 0 for at deaktivere. Område: 0–2000 km/t.",
           "require_reliable": "Når aktiveret udløses en 'i nærheden'-hændelse kun efter konsistente opdateringer.",
-          "min_updates_reliable": "Hvor mange konsistente opdateringer der kræves, før lokationen betragtes som pålidelig."
+          "min_updates_reliable": "Hvor mange konsistente opdateringer der kræves, før lokationen betragtes som pålidelig. Område: 1–20.",
+          "resync_silence_s": "Hvis alle sporede enheder holder op med at sende GPS-opdateringer i denne periode, fryses nærhedstilstanden for at forhindre falske ændringer, mens signalet ventes tilbage. Standard: 600 s (10 min). Interval: 60–3600 s.",
+          "resync_hold_s": "Hvor længe nærhedstilstanden holdes frossen efter GPS-stilhed er registreret. Sæt til 0 for at deaktivere frysning (stilhedsregistrering kører stadig til tidsregnskab). Standard: 60 s. Interval: 0–300 s."
         }
       }
     },

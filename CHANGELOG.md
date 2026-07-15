@@ -2,6 +2,41 @@
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-07-15
+
+### Fixed
+
+- **Proximity stuck ON past zone boundary.** Exit threshold previously used the
+  next zone boundary (hysteresis gap). With `near=1500m` and `mid=10000m`,
+  `in_proximity` stayed ON until 10,000m — at 3,527m the sensor showed "Together
+  now" despite the pair being clearly outside the selected zone. Exit now equals
+  entry: `in_proximity` turns OFF as soon as distance exceeds the zone boundary
+  (strict, no gap).
+- **Stationary threshold now per-tick, noise-aware.** The hardcoded 50m threshold
+  meant a person walking 40m/update always showed as "Stationary". The threshold is
+  now computed each tick from the actual GPS accuracy of both devices:
+  `max(15m, noise_budget × 0.15)` where `noise_budget` = sum of all four accuracy
+  values (prev + current for each entity). Two phones with 10m accuracy → threshold
+  ~6m → 40m movement registers as Approaching. Two phones with 100m accuracy →
+  threshold ~60m → GPS jitter absorbed as Stationary. Scales correctly with actual
+  fix quality rather than a worst-case setting.
+- **Double-tick leaks unaccounted time.** When a GPS `state_changed` and the
+  1-min clock tick fired together, the debouncer scheduled two `async_recalculate`
+  calls. The second credited nothing to zone buckets but advanced `prev_calc_time`,
+  leaking ~1min of `today_unaccounted_time` per GPS event (~56min over a day).
+  Fixed with a `< 100ms elapsed` guard (`MIN_CALC_ELAPSED_S`) in `_calc_pair`.
+
+### Added
+
+- **Grace window now configurable.** Display grace window moved from hardcoded
+  900s to a user-configurable Advanced Filter (`grace_window_s`, range 60–3600s,
+  default 900s).
+- **GPS silence and freeze duration now configurable.** `resync_silence_s`
+  (default 600s, range 60–3600s) and `resync_hold_s` (default 60s, range 0–300s)
+  exposed in Advanced Filters.
+- **Advanced Filters reordered and described.** All 8 advanced fields now shown
+  in order of importance, each with a plain-English description.
+
 ## [0.4.1] - 2026-07-13
 
 ### Added

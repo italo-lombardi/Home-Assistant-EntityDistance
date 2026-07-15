@@ -25,6 +25,7 @@ from .const import (
     BUCKET_VERY_NEAR,
     CONF_DEBOUNCE_S,
     CONF_ENTITIES,
+    CONF_GRACE_WINDOW_S,
     CONF_MAX_ACCURACY_M,
     CONF_MAX_SPEED_KMH,
     CONF_MIN_UPDATES_RELIABLE,
@@ -38,6 +39,7 @@ from .const import (
     CONF_ZONE_NEAR_M,
     CONF_ZONE_VERY_NEAR_M,
     DEFAULT_DEBOUNCE_S,
+    DEFAULT_GRACE_WINDOW_S,
     DEFAULT_MAX_ACCURACY_M,
     DEFAULT_MAX_SPEED_KMH,
     DEFAULT_MIN_UPDATES_RELIABLE,
@@ -54,8 +56,9 @@ from .const import (
     DIRECTION_DIVERGING,
     DIRECTION_STATIONARY,
     DOMAIN,
-    GRACE_WINDOW_S,
-    STATIONARY_THRESHOLD_M,
+    MIN_CALC_ELAPSED_S,
+    STATIONARY_THRESHOLD_FACTOR,
+    STATIONARY_THRESHOLD_MIN_M,
 )
 from .models import GroupData, PairState, pair_key
 
@@ -236,6 +239,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         self._max_speed_kmh: float = data.get(CONF_MAX_SPEED_KMH, DEFAULT_MAX_SPEED_KMH)
         self._resync_silence_s: float = data.get(CONF_RESYNC_SILENCE_S, DEFAULT_RESYNC_SILENCE_S)
         self._resync_hold_s: float = data.get(CONF_RESYNC_HOLD_S, DEFAULT_RESYNC_HOLD_S)
+        self._grace_window_s: float = data.get(CONF_GRACE_WINDOW_S, DEFAULT_GRACE_WINDOW_S)
         self._min_updates_reliable: int = data.get(
             CONF_MIN_UPDATES_RELIABLE, DEFAULT_MIN_UPDATES_RELIABLE
         )
@@ -259,13 +263,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         _zone_idx = _zone_keys.index(_prox_zone) if _prox_zone in _zone_keys else 0
         self._proximity_zone: str = _zone_keys[_zone_idx]
         self._entry_threshold_m: float = self._bucket_thresholds[_zone_keys[_zone_idx]]
-        _next_idx = min(_zone_idx + 1, len(_zone_keys) - 1)
-        self._exit_threshold_m: float = (
-            self._bucket_thresholds[_zone_keys[_next_idx]]
-            if _next_idx != _zone_idx
-            else self._bucket_thresholds[_zone_keys[-1]]
-            * 2  # ponytail: no zone beyond far — 2× far boundary as exit approximation
-        )
+        self._exit_threshold_m: float = self._entry_threshold_m
 
         self._pair_states: dict[tuple[str, str], PairState] = {}
         for a, b in itertools.combinations(self._entities, 2):
@@ -308,9 +306,12 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             "proximity_threshold_m": self._entry_threshold_m,
             "debounce_s": self._debounce_s,
             "max_accuracy_m": self._max_accuracy_m,
+            "stationary_threshold_factor": STATIONARY_THRESHOLD_FACTOR,
+            "stationary_threshold_min_m": STATIONARY_THRESHOLD_MIN_M,
             "max_speed_kmh": self._max_speed_kmh,
             "resync_silence_s": self._resync_silence_s,
             "resync_hold_s": self._resync_hold_s,
+            "grace_window_s": self._grace_window_s,
             "min_updates_reliable": self._min_updates_reliable,
             "updates_window_s": self._updates_window_s,
             "require_reliable": self._require_reliable,
@@ -643,7 +644,23 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                     direction_teleport_rejected = True
 
             if delta_s > 0 and not direction_teleport_rejected:
-                if abs(delta_m) < STATIONARY_THRESHOLD_M:
+                # Per-tick stationary threshold: scale with the noise budget of this
+                # specific pair of fixes. Two devices with acc=10m → budget=40m →
+                # threshold=20m → 40m real movement registers. Two devices with acc=150m
+                # → budget=600m → threshold=300m → noise absorbed honestly.
+                # ps.accuracy_a/b may be stale if a resync hold just expired (hold path
+                # returns early before writing accuracy). Fall back to current acc_a/b so
+                # the first post-hold tick uses a full budget instead of old+new mix.
+                _prev_acc_a = ps.accuracy_a if ps.accuracy_a is not None else acc_a
+                _prev_acc_b = ps.accuracy_b if ps.accuracy_b is not None else acc_b
+                _tick_noise_budget = (
+                    (_prev_acc_a or 0.0) + (_prev_acc_b or 0.0) + (acc_a or 0.0) + (acc_b or 0.0)
+                )
+                _stationary_threshold = max(
+                    STATIONARY_THRESHOLD_MIN_M,
+                    _tick_noise_budget * STATIONARY_THRESHOLD_FACTOR,
+                )
+                if abs(delta_m) < _stationary_threshold:
                     direction = DIRECTION_STATIONARY
                 elif delta_m < 0:
                     direction = DIRECTION_APPROACHING
@@ -885,6 +902,8 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 )
             else:
                 _elapsed_s = max(0.0, (now - prev_calc_time_snapshot).total_seconds())
+                if _elapsed_s < MIN_CALC_ELAPSED_S:
+                    _elapsed_s = 0.0  # rapid back-to-back recalculate guard
 
         if _elapsed_s > 0:
             # Bucket time accumulates regardless of proximity — sensors report
@@ -934,10 +953,11 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         """True when a stale pair should still display its last-known values.
 
         Display-only: the pair is invalid (data_valid False) but lost signal less
-        than GRACE_WINDOW_S ago, so sensors show the last value instead of unknown.
+        than _grace_window_s ago, so sensors show the last value instead of unknown.
         """
         return (
-            ps.stale_since is not None and (now - ps.stale_since).total_seconds() < GRACE_WINDOW_S
+            ps.stale_since is not None
+            and (now - ps.stale_since).total_seconds() < self._grace_window_s
         )
 
     async def _async_save_state(self) -> None:

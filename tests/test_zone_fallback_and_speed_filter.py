@@ -39,7 +39,7 @@ def _make_hass(zone_states: list[State] | None = None, extra: dict[str, State] |
 def _make_coord_coordinator(
     entities=None,
     entry_threshold_m=500.0,
-    exit_threshold_m=700.0,
+    exit_threshold_m=500.0,
     max_accuracy_m=0.0,
     max_speed_kmh=0.0,
     resync_silence_s=0.0,
@@ -74,6 +74,7 @@ def _make_coord_coordinator(
     coord._max_speed_kmh = max_speed_kmh
     coord._resync_silence_s = resync_silence_s
     coord._resync_hold_s = resync_hold_s
+    coord._grace_window_s = 900.0
     coord._require_reliable = require_reliable
     coord._min_updates_reliable = min_updates_reliable
     coord._updates_window_s = updates_window_s

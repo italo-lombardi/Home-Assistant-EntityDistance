@@ -21,7 +21,7 @@ from custom_components.entity_distance.binary_sensor import (
     AllInProximityBinarySensor,
     AnyInProximityBinarySensor,
 )
-from custom_components.entity_distance.const import CONF_ENTITIES, DOMAIN
+from custom_components.entity_distance.const import CONF_ENTITIES, DOMAIN, MIN_CALC_ELAPSED_S
 from custom_components.entity_distance.models import GroupData, PairState, pair_key
 
 # ---------------------------------------------------------------------------
@@ -34,7 +34,7 @@ _BUCKET_THRESHOLDS = {"very_near": 100, "near": 500, "mid": 2000, "far": 10000}
 
 def _make_coordinator(
     entry_threshold_m: float = 500.0,
-    exit_threshold_m: float = 700.0,
+    exit_threshold_m: float = 500.0,
     require_reliable: bool = False,
     min_updates_reliable: int = 3,
     max_speed_kmh: float = 1000.0,
@@ -54,6 +54,7 @@ def _make_coordinator(
     coord._bucket_thresholds = _BUCKET_THRESHOLDS
     coord._resync_silence_s = 0
     coord._resync_hold_s = 60
+    coord._grace_window_s = 900.0
     coord._resync_holding = {}
     coord._resync_hold_until = {}
     coord._min_updates_reliable = min_updates_reliable
@@ -338,7 +339,7 @@ class TestProximityRestartGap:
 class TestCrossMidnightFlush:
     def test_proximity_time_flushed_before_midnight_reset(self):
         """When date rolls over while in proximity, pre-midnight slice goes to proximity_duration_s."""
-        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=700.0)
+        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=500.0)
         state_a = _make_state("person.alice", 51.5, -0.1, 20)
         state_b = _make_state("person.bob", 51.501, -0.1, 20)
         coord.hass.states.get = MagicMock(
@@ -565,7 +566,7 @@ class TestTodayProximityAfterReliabilityCheck:
         """When require_reliable blocks proximity entry, today_proximity_seconds must not grow."""
         coord = _make_coordinator(
             entry_threshold_m=500.0,
-            exit_threshold_m=700.0,
+            exit_threshold_m=500.0,
             require_reliable=True,
             min_updates_reliable=5,
         )
@@ -598,7 +599,7 @@ class TestTodayProximityAfterReliabilityCheck:
         """In-proximity ticks always accumulate even with require_reliable."""
         coord = _make_coordinator(
             entry_threshold_m=500.0,
-            exit_threshold_m=700.0,
+            exit_threshold_m=500.0,
             require_reliable=True,
             min_updates_reliable=1,
         )
@@ -638,7 +639,7 @@ class TestTodayProximityAfterReliabilityCheck:
 class TestLastSeenTogetherSemantics:
     def test_stamped_on_exit_tick(self):
         """EXIT tick: was_proximity=True → last_seen_together = now."""
-        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=700.0)
+        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=500.0)
         state_a = _make_state("person.alice", 51.5, -0.1, 20)
         state_b = _make_state("person.bob", 51.510, -0.1, 20)
         coord.hass.states.get = MagicMock(
@@ -661,7 +662,7 @@ class TestLastSeenTogetherSemantics:
 
     def test_stamped_on_in_proximity_tick(self):
         """In-proximity tick: was_proximity=True → last_seen_together updated each tick."""
-        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=700.0)
+        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=500.0)
         state_a = _make_state("person.alice", 51.5, -0.1, 20)
         state_b = _make_state("person.bob", 51.501, -0.1, 20)
         coord.hass.states.get = MagicMock(
@@ -687,7 +688,7 @@ class TestLastSeenTogetherSemantics:
 
     def test_not_stamped_on_entry_tick(self):
         """ENTRY tick (was_proximity=False): last_seen_together should not be set."""
-        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=700.0)
+        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=500.0)
         state_a = _make_state("person.alice", 51.5, -0.1, 20)
         state_b = _make_state("person.bob", 51.501, -0.1, 20)
         coord.hass.states.get = MagicMock(
@@ -710,7 +711,7 @@ class TestLastSeenTogetherSemantics:
 
     def test_not_stamped_when_never_in_proximity(self):
         """Outside-proximity tick: last_seen_together stays None."""
-        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=700.0)
+        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=500.0)
         state_a = _make_state("person.alice", 51.5, -0.1, 20)
         state_b = _make_state("person.bob", 51.520, -0.1, 20)
         coord.hass.states.get = MagicMock(
@@ -1407,10 +1408,11 @@ class TestResyncHoldFlushesProximity:
         coord._max_accuracy_m = 0.0
         coord._max_speed_kmh = 0.0
         coord._entry_threshold_m = 200.0
-        coord._exit_threshold_m = 1000.0
+        coord._exit_threshold_m = 200.0
         coord._bucket_thresholds = _BUCKET_THRESHOLDS
         coord._resync_silence_s = 600.0
         coord._resync_hold_s = 60.0
+        coord._grace_window_s = 900.0
         coord._min_updates_reliable = 1
         coord._require_reliable = False
         ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
@@ -1863,7 +1865,7 @@ class TestReg3CrossMidnightZoneSeconds:
 class TestReg4ExitBucketUsesProximityDistance:
     def test_exit_tick_credits_proximity_era_bucket_not_exit_distance(self):
         """REG-4: on EXIT tick, zone bucket credited is from proximity-era distance, not exit distance."""
-        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=700.0)
+        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=500.0)
         state_a = _make_state("person.alice", 51.5, -0.1, 20)
         # dist_m on exit will be 800m (far bucket), but proximity-era was 50m (very_near)
         state_b = _make_state("person.bob", 51.508, -0.1, 20)
@@ -2131,6 +2133,71 @@ class TestCumulativeSensorCoordinatorFailedReturnsNone:
         from custom_components.entity_distance.sensor import LastUpdateSensor
 
         s = self._make_sensor(LastUpdateSensor)
-        s._sensor_key = "last_update_a"
         s._which = "a"
         assert s.native_value is None
+
+
+# ---------------------------------------------------------------------------
+# TestDoubleTick — double-tick / unaccounted time guard
+# ---------------------------------------------------------------------------
+
+
+class TestDoubleTickUnaccountedTime:
+    def test_double_tick_does_not_leak_unaccounted_time(self):
+        """Calling _calc_pair twice with elapsed < MIN_CALC_ELAPSED_S must not
+        double-credit today_zone_seconds — guards rapid back-to-back recalculates."""
+        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=500.0)
+        state_a = _make_state("person.alice", 51.5, -0.1, 20)
+        state_b = _make_state("person.bob", 51.501, -0.1, 20)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: state_a if eid == "person.alice" else state_b
+        )
+        coord.hass.bus.fire = MagicMock()
+
+        ps = _fresh_pair()
+        ps.proximity = True
+        ps.proximity_since = datetime(2024, 6, 1, 11, 0, 0, tzinfo=UTC)
+        ps.prev_calc_time = datetime(2024, 6, 1, 11, 59, 0, tzinfo=UTC)  # 1 min ago
+        ps.today_reset_date = _NOW.date()
+        ps.today_proximity_seconds = 3540.0
+        ps.today_zone_seconds = {"very_near": 3540.0}
+
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=80.0,  # very_near
+        ):
+            # First call — normal 1-min tick
+            ps = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+            after_first = ps.today_zone_seconds.get("very_near", 0.0)
+
+            # Second call — same timestamp (elapsed = 0, guard fires)
+            ps2 = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+            after_second = ps2.today_zone_seconds.get("very_near", 0.0)
+
+        # First tick credits ~60s
+        assert after_first == pytest.approx(3600.0, abs=2.0)
+        # Second tick must credit nothing — guard fires at elapsed=0
+        assert after_second == pytest.approx(after_first, abs=0.01)
+
+        # Verify unaccounted time does not grow: accounted = sum(zone_seconds),
+        # unaccounted = elapsed_since_midnight - accounted. Since zone_seconds
+        # didn't grow on the second tick, unaccounted is unchanged.
+        elapsed_s = (
+            _NOW.astimezone(UTC)
+            - _NOW.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(UTC)
+        ).total_seconds()
+        unaccounted_after_first = elapsed_s - sum(ps.today_zone_seconds.values())
+        unaccounted_after_second = elapsed_s - sum(ps2.today_zone_seconds.values())
+        assert unaccounted_after_second == pytest.approx(unaccounted_after_first, abs=0.01)
+
+        # Also verify with a sub-threshold gap — still under MIN_CALC_ELAPSED_S
+        sub_threshold = timedelta(seconds=MIN_CALC_ELAPSED_S * 0.5)
+        ps3 = coord._calc_pair(
+            ps2,
+            "person.alice",
+            "person.bob",
+            _NOW + sub_threshold,
+            set(),
+        )
+        after_sub = ps3.today_zone_seconds.get("very_near", 0.0)
+        assert after_sub == pytest.approx(after_second, abs=0.01)

@@ -22,7 +22,7 @@ Track the distance between any two or more entities — people, devices, or zone
 - **Group tracking** — select 2–5 entities; all pairwise distances are tracked under one config entry (2 entities = 1 pair, 3 = 3 pairs, 4 = 6 pairs, 5 = 10 pairs)
 - **Group sensors** — for 3+ entities: Min Distance, Any In Proximity, All In Proximity, Settings
 - **27 sensors per pair** — distance, proximity zone, proximity zone level, proximity duration, proximity rate, proximity tracking started, last seen together, today proximity time, direction, direction level, closing speed, ETA, today zone times, GPS accuracy, last update, update count, entity state, today unaccounted time (per entity where applicable)
-- **Proximity binary sensor** — ON when entities are in the selected proximity zone, OFF when they move to the next zone out (natural hysteresis, no separate entry/exit threshold settings needed)
+- **Proximity binary sensor** — ON when distance ≤ zone boundary, OFF when distance > zone boundary (strict, no hysteresis gap)
 - **Same Zone binary sensor** — ON when both entities share the same named zone, OFF otherwise (never `unknown`)
 - **Reliable binary sensor** — ON when both entities have enough recent GPS fixes to meet the reliability threshold
 - **Zone bucket binary sensors** — one per zone (Very Near, Near, Medium, Far, Very Far): ON while the pair's distance falls in that zone
@@ -85,11 +85,9 @@ For a 2-entity selection you get 1 pair. For 3 entities you get 3 pairs. For 4 e
 | Near zone limit (m) | 1000 | Entities are 'Near' at or closer than this distance |
 | Medium zone limit (m) | 5000 | Entities are at 'Medium' distance at or closer than this |
 | Far zone limit (m) | 20000 | Entities are 'Far' at or closer than this distance; beyond is 'Very Far' |
-| Proximity alert zone | Very Near | The 'In Proximity' sensor turns ON when entities are within this zone or closer, and OFF when they move to the next zone out |
+| Proximity alert zone | Very Near | The 'In Proximity' sensor turns ON when distance ≤ zone boundary, OFF when distance > zone boundary |
 
 Thresholds must be strictly increasing: Very Near < Near < Medium < Far.
-
-Note: selecting **Far** as the proximity zone uses 2× the Far boundary (40,000 m by default) as the exit distance, since there is no zone beyond Far.
 
 ![Config flow step 2 — distance settings](assets/screenshots/config_flow_step2_distance_settings.png)
 
@@ -99,11 +97,14 @@ Only shown when "Configure advanced filters" is enabled in Step 2.
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| Wait before reacting (s) | 0 | After a location update arrives, how long to wait before recalculating. 0 = instant. Raise to 5–15 s if you see jittery on/off switching |
-| Max GPS error radius (m) | 300 | Ignore updates where GPS error exceeds this radius (0 = off) |
-| Max speed filter (km/h) | 1000 | Ignore updates implying movement faster than this — catches GPS teleports, allows flights (0 = off) |
+| Max GPS error radius (m) | 300 | Maximum GPS uncertainty radius. Updates with worse accuracy are ignored. Set to 0 to accept all updates |
+| Wait before reacting (s) | 0 | Wait this many seconds after a location update before recalculating. Reduces rapid toggling on bouncy GPS. 0 = instant |
+| Display grace window (s) | 900 | How long to show last-known sensor values after GPS signal is lost before reporting unknown. Range: 60–3600 s |
+| Max speed filter (km/h) | 1000 | Reject location updates that imply movement faster than this speed — catches GPS teleport jumps (0 = off) |
 | Only trigger when data is reliable | Off | Require several consistent updates before turning the 'In Proximity' sensor ON |
 | Consecutive updates required for reliability | 3 | Consecutive updates required before data is considered reliable |
+| GPS silence before freeze (s) | 600 | If all tracked entities stop sending GPS updates for this long, proximity state is frozen. Range: 60–3600 s |
+| Proximity freeze duration (s) | 60 | How long to hold proximity state frozen after GPS silence is detected. Range: 0–300 s |
 
 ![Config flow step 3 — advanced filters](assets/screenshots/config_flow_step3_advanced_filters.png)
 
@@ -160,7 +161,7 @@ Each configured group creates one HA device (the group) with per-pair sub-device
 
 | Entity | Description | Device Class |
 |--------|-------------|--------------|
-| In Proximity | ON when entities are within the selected proximity zone (or closer), OFF when they move to the next zone out | `presence` |
+| In Proximity | ON when entities are within the selected proximity zone (or closer), OFF when distance > zone boundary | `presence` |
 | Same Zone | ON when both entities are in the same named zone (e.g. both `home`), OFF otherwise. Never `unknown` — when either side is `not_home` / `unknown` / `unavailable`, the pair is not in the same zone so the sensor is OFF | — |
 | Reliable | ON when both entities have enough recent GPS updates to meet the reliability threshold | — |
 | Very Near | ON while the pair's current distance falls in the Very Near zone | — |
@@ -251,14 +252,11 @@ Uses Home Assistant's built-in Vincenty formula (ellipsoidal earth model) on the
 
 Requires at least two location updates. Compares current distance to previous distance:
 
-- `|Δdistance| < 50 m` → **Stationary**
+- `|Δdistance| < noise_threshold` → **Stationary**
 - `Δdistance < 0` → **Approaching**
 - `Δdistance > 0` → **Diverging**
 
-The 50 m stationary threshold is fixed and not configurable. When **both** sides
-of a pair are in a zone (e.g. everyone home), there is no relative motion to
-measure, so Direction reports **Stationary** and Approach Speed `0` rather than
-unknown.
+The stationary threshold is computed per-tick from the actual GPS accuracy of both devices: `max(15 m, noise_budget × 0.15)` where `noise_budget` = sum of all four accuracy values (previous + current fix for each entity). Two phones with 10 m accuracy → threshold ~6 m → 40 m movement registers as Approaching. Two phones with 100 m accuracy → threshold ~60 m → GPS jitter is absorbed as Stationary. When **both** sides of a pair are in a zone (e.g. everyone home), there is no relative motion to measure, so Direction reports **Stationary** and Approach Speed `0` rather than unknown.
 
 ### Approach Speed
 
@@ -290,7 +288,7 @@ Rolling window counter. Increments by 1 on each location update for that entity.
 
 ### In Proximity (Binary Sensor)
 
-ON when `distance ≤ proximity zone boundary`. OFF when `distance > next zone boundary` (natural hysteresis). The active zone is selected at setup — choosing 'Very Near' fires at ≤ 200 m and clears at > 1000 m (Near boundary) by default.
+ON when `distance ≤ proximity zone boundary`, OFF when `distance > proximity zone boundary` (strict, no hysteresis gap). The active zone is selected at setup.
 
 ### State (Entity A / B)
 
@@ -311,11 +309,12 @@ All sensors refresh on a 1-minute timer tick even when entities don't move. This
 ### Signal loss & grace window
 
 When a pair briefly loses a valid GPS fix (a blip, a tunnel, an idle phone), its
-sensors keep showing the **last known value for up to 15 minutes** instead of
-flipping straight to `unknown`. After that window, they report `unknown`. This
-prevents intermittent flicker. Staleness is still visible via the **Last Update**
-sensor and the **Reliable** binary sensor. The window is a fixed constant
-(`GRACE_WINDOW_S` in `const.py`); no proximity time is credited while a pair is
+sensors keep showing the **last known value** for the configured grace window
+(default 15 minutes, configurable 1–60 min) instead of flipping straight to
+`unknown`. After that window, they report `unknown`. This prevents intermittent
+flicker. Staleness is still visible via the **Last Update** sensor and the
+**Reliable** binary sensor. The grace window is configurable in Advanced Filters
+(`grace_window_s`, default 900 s). No proximity time is credited while a pair is
 stale. The last distance/direction/speed/ETA are also restored after a Home
 Assistant restart, so sensors show their last value immediately rather than
 waiting for the next GPS fix.
@@ -506,7 +505,7 @@ Zones (`zone.*`) are supported as either entity in a pair:
 - Person-to-zone: direction and ETA work normally
 - Zone-to-zone: distance is static; direction always stationary
 
-> Movement of less than 50 m between updates is classified as stationary.
+> Movement below the per-tick noise threshold (typically 6–60 m depending on GPS accuracy) between updates is classified as stationary.
 
 ---
 

@@ -19,7 +19,7 @@
           "zone_near_m": "Gräns zon Nära (m)",
           "zone_mid_m": "Gräns zon Medel (m)",
           "zone_far_m": "Gräns zon Långt (m)",
-          "proximity_zone": "Nährhetslarmzon",
+          "proximity_zone": "Närhetslarmzon",
           "show_advanced": "Konfigurera avancerade filter"
         },
         "data_description": {
@@ -77,7 +77,7 @@
           "zone_near_m": "Gräns zon Nära (m)",
           "zone_mid_m": "Gräns zon Medel (m)",
           "zone_far_m": "Gräns zon Långt (m)",
-          "proximity_zone": "Nährhetslarmzon",
+          "proximity_zone": "Närhetslarmzon",
           "show_advanced": "Konfigurera avancerade filter"
         },
         "data_description": {

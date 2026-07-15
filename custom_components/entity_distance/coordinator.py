@@ -648,11 +648,13 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 # specific pair of fixes. Two devices with acc=10m → budget=40m →
                 # threshold=20m → 40m real movement registers. Two devices with acc=150m
                 # → budget=600m → threshold=300m → noise absorbed honestly.
+                # ps.accuracy_a/b may be stale if a resync hold just expired (hold path
+                # returns early before writing accuracy). Fall back to current acc_a/b so
+                # the first post-hold tick uses a full budget instead of old+new mix.
+                _prev_acc_a = ps.accuracy_a if ps.accuracy_a is not None else acc_a
+                _prev_acc_b = ps.accuracy_b if ps.accuracy_b is not None else acc_b
                 _tick_noise_budget = (
-                    (ps.accuracy_a or 0.0)
-                    + (ps.accuracy_b or 0.0)
-                    + (acc_a or 0.0)
-                    + (acc_b or 0.0)
+                    (_prev_acc_a or 0.0) + (_prev_acc_b or 0.0) + (acc_a or 0.0) + (acc_b or 0.0)
                 )
                 _stationary_threshold = max(
                     STATIONARY_THRESHOLD_MIN_M,

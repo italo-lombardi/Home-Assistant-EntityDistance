@@ -25,6 +25,7 @@ from .const import (
     BUCKET_VERY_NEAR,
     CONF_DEBOUNCE_S,
     CONF_ENTITIES,
+    CONF_GRACE_WINDOW_S,
     CONF_MAX_ACCURACY_M,
     CONF_MAX_SPEED_KMH,
     CONF_MIN_UPDATES_RELIABLE,
@@ -38,6 +39,7 @@ from .const import (
     CONF_ZONE_NEAR_M,
     CONF_ZONE_VERY_NEAR_M,
     DEFAULT_DEBOUNCE_S,
+    DEFAULT_GRACE_WINDOW_S,
     DEFAULT_MAX_ACCURACY_M,
     DEFAULT_MAX_SPEED_KMH,
     DEFAULT_MIN_UPDATES_RELIABLE,
@@ -54,8 +56,8 @@ from .const import (
     DIRECTION_DIVERGING,
     DIRECTION_STATIONARY,
     DOMAIN,
-    GRACE_WINDOW_S,
-    STATIONARY_THRESHOLD_M,
+    STATIONARY_THRESHOLD_FACTOR,
+    STATIONARY_THRESHOLD_MIN_M,
 )
 from .models import GroupData, PairState, pair_key
 
@@ -233,9 +235,14 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         self._entities: list[str] = list(data.get(CONF_ENTITIES, []))
         self._debounce_s: float = data.get(CONF_DEBOUNCE_S, DEFAULT_DEBOUNCE_S)
         self._max_accuracy_m: float = data.get(CONF_MAX_ACCURACY_M, DEFAULT_MAX_ACCURACY_M)
+        self._stationary_threshold_m: float = max(
+            STATIONARY_THRESHOLD_MIN_M,
+            self._max_accuracy_m * STATIONARY_THRESHOLD_FACTOR,
+        )
         self._max_speed_kmh: float = data.get(CONF_MAX_SPEED_KMH, DEFAULT_MAX_SPEED_KMH)
         self._resync_silence_s: float = data.get(CONF_RESYNC_SILENCE_S, DEFAULT_RESYNC_SILENCE_S)
         self._resync_hold_s: float = data.get(CONF_RESYNC_HOLD_S, DEFAULT_RESYNC_HOLD_S)
+        self._grace_window_s: float = data.get(CONF_GRACE_WINDOW_S, DEFAULT_GRACE_WINDOW_S)
         self._min_updates_reliable: int = data.get(
             CONF_MIN_UPDATES_RELIABLE, DEFAULT_MIN_UPDATES_RELIABLE
         )
@@ -302,9 +309,11 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             "proximity_threshold_m": self._entry_threshold_m,
             "debounce_s": self._debounce_s,
             "max_accuracy_m": self._max_accuracy_m,
+            "stationary_threshold_m": self._stationary_threshold_m,
             "max_speed_kmh": self._max_speed_kmh,
             "resync_silence_s": self._resync_silence_s,
             "resync_hold_s": self._resync_hold_s,
+            "grace_window_s": self._grace_window_s,
             "min_updates_reliable": self._min_updates_reliable,
             "updates_window_s": self._updates_window_s,
             "require_reliable": self._require_reliable,
@@ -637,7 +646,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                     direction_teleport_rejected = True
 
             if delta_s > 0 and not direction_teleport_rejected:
-                if abs(delta_m) < STATIONARY_THRESHOLD_M:
+                if abs(delta_m) < self._stationary_threshold_m:
                     direction = DIRECTION_STATIONARY
                 elif delta_m < 0:
                     direction = DIRECTION_APPROACHING
@@ -928,10 +937,11 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         """True when a stale pair should still display its last-known values.
 
         Display-only: the pair is invalid (data_valid False) but lost signal less
-        than GRACE_WINDOW_S ago, so sensors show the last value instead of unknown.
+        than _grace_window_s ago, so sensors show the last value instead of unknown.
         """
         return (
-            ps.stale_since is not None and (now - ps.stale_since).total_seconds() < GRACE_WINDOW_S
+            ps.stale_since is not None
+            and (now - ps.stale_since).total_seconds() < self._grace_window_s
         )
 
     async def _async_save_state(self) -> None:

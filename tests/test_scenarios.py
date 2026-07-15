@@ -56,6 +56,7 @@ def _make_coord(
     )
     coord._entities = entities
     coord._max_accuracy_m = max_accuracy_m
+    coord._stationary_threshold_m = max(15.0, max_accuracy_m * 0.15)
     coord._max_speed_kmh = max_speed_kmh
     coord._bucket_thresholds = _BUCKET_THRESHOLDS
     # Derive entry/exit from proximity zone

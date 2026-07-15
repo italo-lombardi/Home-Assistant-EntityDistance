@@ -97,11 +97,14 @@ Only shown when "Configure advanced filters" is enabled in Step 2.
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| Wait before reacting (s) | 0 | After a location update arrives, how long to wait before recalculating. 0 = instant. Raise to 5–15 s if you see jittery on/off switching |
-| Max GPS error radius (m) | 300 | Ignore updates where GPS error exceeds this radius (0 = off) |
-| Max speed filter (km/h) | 1000 | Ignore updates implying movement faster than this — catches GPS teleports, allows flights (0 = off) |
+| Max GPS error radius (m) | 300 | Maximum GPS uncertainty radius. Updates with worse accuracy are ignored. Set to 0 to accept all updates |
+| Wait before reacting (s) | 0 | Wait this many seconds after a location update before recalculating. Reduces rapid toggling on bouncy GPS. 0 = instant |
+| Display grace window (s) | 900 | How long to show last-known sensor values after GPS signal is lost before reporting unknown. Range: 60–3600 s |
+| Max speed filter (km/h) | 1000 | Reject location updates that imply movement faster than this speed — catches GPS teleport jumps (0 = off) |
 | Only trigger when data is reliable | Off | Require several consistent updates before turning the 'In Proximity' sensor ON |
 | Consecutive updates required for reliability | 3 | Consecutive updates required before data is considered reliable |
+| GPS silence before freeze (s) | 600 | If all tracked entities stop sending GPS updates for this long, proximity state is frozen. Range: 60–3600 s |
+| Proximity freeze duration (s) | 60 | How long to hold proximity state frozen after GPS silence is detected. Range: 0–300 s |
 
 ![Config flow step 3 — advanced filters](assets/screenshots/config_flow_step3_advanced_filters.png)
 

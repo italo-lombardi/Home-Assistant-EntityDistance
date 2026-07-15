@@ -35,18 +35,24 @@
         "title": "Advanced Filters",
         "description": "These filters help ignore bad GPS data. The defaults work well for most users — only change these if you're seeing false triggers.",
         "data": {
-          "debounce_s": "Wait before reacting (s)",
           "max_accuracy_m": "Max GPS error radius (m, 0 = off)",
+          "debounce_s": "Wait before reacting (s)",
+          "grace_window_s": "Display grace window (s)",
           "max_speed_kmh": "Max plausible speed (km/h, 0 = off)",
           "require_reliable": "Only trigger when data is reliable",
-          "min_updates_reliable": "Consecutive updates required for reliability"
+          "min_updates_reliable": "Consecutive updates required for reliability",
+          "resync_silence_s": "GPS silence before freeze (s)",
+          "resync_hold_s": "Proximity freeze duration (s)"
         },
         "data_description": {
-          "debounce_s": "After a location update arrives, how long to wait before recalculating. Useful when phones send several noisy GPS fixes in a row — the integration waits for them to settle. 0 = react instantly (default). Raise to 5–15 s if you see jittery on/off switching.",
-          "max_accuracy_m": "Ignore location updates where the GPS error is larger than this. Phones in motion typically report 100–250 m accuracy, so 300 m is a safe default. A phone showing '350 m accuracy' would be skipped. Set to 0 to turn this off.",
-          "max_speed_kmh": "Teleport guard. Rejects a GPS fix if the implied movement speed — after subtracting the combined GPS accuracy of both devices — exceeds this value. With 150 m accuracy on each phone, a jump must imply movement beyond this speed above the noise to be filtered. Default: 1000 km/h — blocks impossible teleports while allowing planes. Set to 0 to disable.",
-          "require_reliable": "When on, the 'In Proximity' sensor only turns ON after the location has been consistent across several consecutive updates. Reduces false positives caused by a single bad GPS fix. Note: if updates are infrequent (e.g. every 3 min), this can add several minutes of delay.",
-          "min_updates_reliable": "How many consecutive updates are needed before the location is considered reliable. Only applies when 'Only trigger when data is reliable' is on. Example: 3 updates at 3-minute intervals = up to 9 minutes before the sensor turns ON."
+          "max_accuracy_m": "Maximum GPS uncertainty radius. Updates with worse accuracy are ignored. Set to 0 to accept all updates.",
+          "debounce_s": "Wait this many seconds after a location update before recalculating. Reduces rapid toggling on bouncy GPS. 0 = react instantly.",
+          "grace_window_s": "How long to show last-known sensor values after GPS signal is lost before reporting unknown. Range: 60–3600 s.",
+          "max_speed_kmh": "Reject location updates that imply movement faster than this speed. Filters GPS teleport jumps. Set to 0 to disable.",
+          "require_reliable": "When on, the 'In Proximity' sensor only turns ON after the location has been consistent across several consecutive updates. Reduces false positives caused by a single bad GPS fix.",
+          "min_updates_reliable": "How many consecutive updates are needed before the location is considered reliable. Only applies when 'Only trigger when data is reliable' is on.",
+          "resync_silence_s": "If all tracked entities stop sending GPS updates for this long, proximity state is frozen to prevent false changes. Range: 60–3600 s.",
+          "resync_hold_s": "How long to hold proximity state frozen after GPS silence is detected. Range: 0–300 s."
         }
       }
     },

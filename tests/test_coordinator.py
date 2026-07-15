@@ -634,9 +634,11 @@ def _make_calc_pair_coordinator(
     coordinator._entry_threshold_m = entry_threshold_m
     coordinator._exit_threshold_m = exit_threshold_m
     coordinator._max_accuracy_m = max_accuracy_m
+    coordinator._stationary_threshold_m = max(15.0, max_accuracy_m * 0.15)
     coordinator._max_speed_kmh = max_speed_kmh
     coordinator._resync_silence_s = resync_silence_s
     coordinator._resync_hold_s = resync_hold_s
+    coordinator._grace_window_s = 900.0
     coordinator._require_reliable = require_reliable
     coordinator._min_updates_reliable = min_updates_reliable
     coordinator._updates_window_s = updates_window_s
@@ -1391,9 +1393,11 @@ class TestCoordinatorProperties:
         coord._entry_threshold_m = 200.0
         coord._debounce_s = 10
         coord._max_accuracy_m = 150
+        coord._stationary_threshold_m = max(15.0, 150 * 0.15)
         coord._max_speed_kmh = 1000
         coord._resync_silence_s = 600
         coord._resync_hold_s = 60
+        coord._grace_window_s = 900
         coord._min_updates_reliable = 3
         coord._updates_window_s = 1800
         coord._require_reliable = False
@@ -1401,7 +1405,7 @@ class TestCoordinatorProperties:
         assert snap["proximity_zone"] == "very_near"
         assert snap["zone_very_near_m"] == 200
         assert "emit_bus_events" not in snap
-        assert len(snap) == 14
+        assert len(snap) == 16
 
 
 # ---------------------------------------------------------------------------
@@ -2077,7 +2081,9 @@ class TestIsWithinGrace:
     def _coord(self):
         from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
 
-        return EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)
+        coord = EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)
+        coord._grace_window_s = 900.0
+        return coord
 
     def test_false_when_never_stale(self):
         from custom_components.entity_distance.models import PairState
@@ -2141,3 +2147,153 @@ class TestStrictExitThreshold:
                 ps, "person.alice", "person.bob", now + timedelta(seconds=60), set()
             )
         assert ps.proximity is False
+
+
+class TestStationaryThresholdDerivation:
+    """_stationary_threshold_m = max(15.0, max_accuracy_m * 0.15) in __init__."""
+
+    async def test_default_accuracy_derives_threshold(self, hass):
+        """max_accuracy_m=300 → threshold = max(15, 300*0.15) = 45.0."""
+        from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+        from custom_components.entity_distance.const import DOMAIN
+        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={
+                "entities": ["person.alice", "person.bob"],
+                "debounce_s": 0,
+                "max_accuracy_m": 300,
+                "max_speed_kmh": 1000,
+                "resync_silence_s": 0,
+                "resync_hold_s": 60,
+                "min_updates_reliable": 3,
+                "updates_window_s": 1800,
+                "require_reliable": False,
+            },
+        )
+        entry.add_to_hass(hass)
+        coord = EntityDistanceCoordinator(hass, entry)
+        assert coord._stationary_threshold_m == pytest.approx(45.0)
+
+    async def test_low_accuracy_clamps_to_minimum(self, hass):
+        """max_accuracy_m=50 → 50*0.15=7.5 < 15 → clamped to 15.0."""
+        from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+        from custom_components.entity_distance.const import DOMAIN
+        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={
+                "entities": ["person.alice", "person.bob"],
+                "debounce_s": 0,
+                "max_accuracy_m": 50,
+                "max_speed_kmh": 1000,
+                "resync_silence_s": 0,
+                "resync_hold_s": 60,
+                "min_updates_reliable": 3,
+                "updates_window_s": 1800,
+                "require_reliable": False,
+            },
+        )
+        entry.add_to_hass(hass)
+        coord = EntityDistanceCoordinator(hass, entry)
+        assert coord._stationary_threshold_m == 15.0
+
+    async def test_zero_accuracy_clamps_to_minimum(self, hass):
+        """max_accuracy_m=0 (filter off) → clamped to 15.0."""
+        from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+        from custom_components.entity_distance.const import DOMAIN
+        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={
+                "entities": ["person.alice", "person.bob"],
+                "debounce_s": 0,
+                "max_accuracy_m": 0,
+                "max_speed_kmh": 1000,
+                "resync_silence_s": 0,
+                "resync_hold_s": 60,
+                "min_updates_reliable": 3,
+                "updates_window_s": 1800,
+                "require_reliable": False,
+            },
+        )
+        entry.add_to_hass(hass)
+        coord = EntityDistanceCoordinator(hass, entry)
+        assert coord._stationary_threshold_m == 15.0
+
+
+class TestGraceWindowConfig:
+    """_grace_window_s loaded from config, defaults to DEFAULT_GRACE_WINDOW_S."""
+
+    async def test_default_grace_window(self, hass):
+        """No grace_window_s in config → defaults to 900."""
+        from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+        from custom_components.entity_distance.const import DEFAULT_GRACE_WINDOW_S, DOMAIN
+        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={
+                "entities": ["person.alice", "person.bob"],
+                "debounce_s": 0,
+                "max_accuracy_m": 300,
+                "max_speed_kmh": 1000,
+                "resync_silence_s": 0,
+                "resync_hold_s": 60,
+                "min_updates_reliable": 3,
+                "updates_window_s": 1800,
+                "require_reliable": False,
+            },
+        )
+        entry.add_to_hass(hass)
+        coord = EntityDistanceCoordinator(hass, entry)
+        assert coord._grace_window_s == DEFAULT_GRACE_WINDOW_S
+
+    async def test_custom_grace_window(self, hass):
+        """grace_window_s=120 in config → stored on coordinator."""
+        from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+        from custom_components.entity_distance.const import DOMAIN
+        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={
+                "entities": ["person.alice", "person.bob"],
+                "debounce_s": 0,
+                "max_accuracy_m": 300,
+                "max_speed_kmh": 1000,
+                "resync_silence_s": 0,
+                "resync_hold_s": 60,
+                "grace_window_s": 120,
+                "min_updates_reliable": 3,
+                "updates_window_s": 1800,
+                "require_reliable": False,
+            },
+        )
+        entry.add_to_hass(hass)
+        coord = EntityDistanceCoordinator(hass, entry)
+        assert coord._grace_window_s == 120.0
+
+    def test_is_within_grace_uses_instance_window(self):
+        """is_within_grace respects _grace_window_s not a hardcoded constant."""
+        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+        from custom_components.entity_distance.models import PairState
+
+        coord = EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)
+        coord._grace_window_s = 60.0
+        now = datetime.now(UTC)
+        ps = PairState(entity_a_id="a", entity_b_id="b")
+
+        ps.stale_since = now - timedelta(seconds=30)
+        assert coord.is_within_grace(ps, now) is True
+
+        ps.stale_since = now - timedelta(seconds=90)
+        assert coord.is_within_grace(ps, now) is False

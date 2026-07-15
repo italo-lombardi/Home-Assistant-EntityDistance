@@ -2135,6 +2135,59 @@ class TestCumulativeSensorCoordinatorFailedReturnsNone:
         from custom_components.entity_distance.sensor import LastUpdateSensor
 
         s = self._make_sensor(LastUpdateSensor)
-        s._sensor_key = "last_update_a"
         s._which = "a"
         assert s.native_value is None
+
+
+# ---------------------------------------------------------------------------
+# TestDoubleTick — double-tick / unaccounted time guard
+# ---------------------------------------------------------------------------
+
+
+class TestDoubleTick:
+    def test_double_tick_does_not_leak_unaccounted_time(self):
+        """Calling _calc_pair twice with the same now (or now+100ms) must not
+        double-credit today_zone_seconds.  The < 1 s guard converts the second
+        _elapsed_s to 0.0 so the bucket accumulator is skipped entirely."""
+        coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=500.0)
+        state_a = _make_state("person.alice", 51.5, -0.1, 20)
+        state_b = _make_state("person.bob", 51.501, -0.1, 20)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: state_a if eid == "person.alice" else state_b
+        )
+        coord.hass.bus.fire = MagicMock()
+
+        ps = _fresh_pair()
+        ps.proximity = True
+        ps.proximity_since = datetime(2024, 6, 1, 11, 0, 0, tzinfo=UTC)
+        ps.prev_calc_time = datetime(2024, 6, 1, 11, 59, 0, tzinfo=UTC)  # 1 min ago
+        ps.today_reset_date = _NOW.date()
+        ps.today_proximity_seconds = 3540.0
+        ps.today_zone_seconds = {"very_near": 3540.0}
+
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=80.0,  # very_near
+        ):
+            # First call — normal 1-min tick
+            ps = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+            after_first = ps.today_zone_seconds.get("very_near", 0.0)
+
+            # Second call — same timestamp (double-tick, elapsed ≈ 0)
+            ps2 = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+            after_second = ps2.today_zone_seconds.get("very_near", 0.0)
+
+        # First tick credits ~60s; second tick must credit nothing (guard fires)
+        assert after_first == pytest.approx(3600.0, abs=2.0)
+        assert after_second == pytest.approx(after_first, abs=0.01)
+
+        # Also verify with a 100ms gap — still under 1s threshold
+        ps3 = coord._calc_pair(
+            ps2,
+            "person.alice",
+            "person.bob",
+            _NOW + timedelta(milliseconds=100),
+            set(),
+        )
+        after_100ms = ps3.today_zone_seconds.get("very_near", 0.0)
+        assert after_100ms == pytest.approx(after_second, abs=0.01)

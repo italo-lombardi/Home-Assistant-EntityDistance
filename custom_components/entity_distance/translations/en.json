@@ -27,7 +27,7 @@
           "zone_near_m": "Entities are 'Near' at or closer than this distance. Must be greater than Very Near. Default: 1000 m.",
           "zone_mid_m": "Entities are at 'Medium' distance at or closer than this. Must be greater than Near. Default: 5000 m.",
           "zone_far_m": "Entities are 'Far' at or closer than this distance. Must be greater than Medium. Default: 20000 m.\nBeyond this is 'Very Far'.",
-          "proximity_zone": "The 'In Proximity' sensor turns ON when entities are within this zone or closer (e.g. selecting 'Near' also triggers when entities are 'Very Near'). It turns OFF when they move to the next zone out.",
+          "proximity_zone": "The 'In Proximity' sensor turns ON when entities are within this zone or closer (e.g. selecting 'Near' also triggers when entities are 'Very Near'). It turns OFF when distance exceeds that zone boundary (strict threshold).",
           "show_advanced": "Turn on to configure GPS accuracy, speed, and reliability filters on the next screen. Leave off to use sensible defaults."
         }
       },
@@ -85,7 +85,7 @@
           "zone_near_m": "Entities are 'Near' at or closer than this distance. Must be greater than Very Near. Default: 1000 m.",
           "zone_mid_m": "Entities are at 'Medium' distance at or closer than this. Must be greater than Near. Default: 5000 m.",
           "zone_far_m": "Entities are 'Far' at or closer than this distance. Must be greater than Medium. Default: 20000 m.\nBeyond this is 'Very Far'.",
-          "proximity_zone": "The 'In Proximity' sensor turns ON when entities are within this zone or closer (e.g. selecting 'Near' also triggers when entities are 'Very Near'). It turns OFF when they move to the next zone out.",
+          "proximity_zone": "The 'In Proximity' sensor turns ON when entities are within this zone or closer (e.g. selecting 'Near' also triggers when entities are 'Very Near'). It turns OFF when distance exceeds that zone boundary (strict threshold).",
           "show_advanced": "Turn on to configure GPS accuracy, speed, and reliability filters on the next screen. Leave off to use sensible defaults."
         }
       },

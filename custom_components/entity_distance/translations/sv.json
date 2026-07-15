@@ -8,12 +8,12 @@
           "entities": "Enheter"
         },
         "data_description": {
-          "entities": "Välj 2–5 enheter att spåra. Varje par får sitt eget set av avstånds- och nährhetssensorer."
+          "entities": "Välj 2–5 enheter att spåra. Varje par får sitt eget set av avstånds- och närhetssensorer."
         }
       },
       "distances": {
         "title": "Avståndsinställningar",
-        "description": "Ange zongränser och välj vilken zon som utlöser nährhetslarm.",
+        "description": "Ange zongränser och välj vilken zon som utlöser närhetslarm.",
         "data": {
           "zone_very_near_m": "Gräns zon Mycket nära (m)",
           "zone_near_m": "Gräns zon Nära (m)",
@@ -51,8 +51,8 @@
           "max_speed_kmh": "Teleport-skydd. Avvisar en GPS-mätning om den implicerade rörelsehastigheten — efter avdrag för kombinerad GPS-noggrannhet för båda enheter — överstiger detta värde. Standard: 1000 km/h — blockerar omöjliga teleporter men tillåter flygplan. Ange 0 för att inaktivera.",
           "require_reliable": "Utlösa proximity_enter-event bara när data anses tillförlitliga.",
           "min_updates_reliable": "Minsta antal platsuppdateringar i fönstret innan data anses tillförlitliga.",
-          "resync_silence_s": "Om alla spårade entiteter slutar skicka GPS-uppdateringar under denna tid fryses nährhetstillståndet för att förhindra falska ändringar medan signalen inväntas. Standard: 600 s (10 min). Område: 60–3600 s.",
-          "resync_hold_s": "Hur länge nährhetstillståndet hålls fryst efter att GPS-tystnad har detekterats. Ange 0 för att inaktivera frysning (tystnadsdetektion körs fortfarande för tidsredovisning). Standard: 60 s. Område: 0–300 s."
+          "resync_silence_s": "Om alla spårade entiteter slutar skicka GPS-uppdateringar under denna tid fryses närhetstillståndet för att förhindra falska ändringar medan signalen inväntas. Standard: 600 s (10 min). Område: 60–3600 s.",
+          "resync_hold_s": "Hur länge närhetstillståndet hålls fryst efter att GPS-tystnad har detekterats. Ange 0 för att inaktivera frysning (tystnadsdetektion körs fortfarande för tidsredovisning). Standard: 60 s. Område: 0–300 s."
         }
       }
     },
@@ -71,7 +71,7 @@
     "step": {
       "distances": {
         "title": "Avståndsinställningar",
-        "description": "Ange zongränser och välj vilken zon som utlöser nährhetslarm.",
+        "description": "Ange zongränser och välj vilken zon som utlöser närhetslarm.",
         "data": {
           "zone_very_near_m": "Gräns zon Mycket nära (m)",
           "zone_near_m": "Gräns zon Nära (m)",
@@ -109,8 +109,8 @@
           "max_speed_kmh": "Teleport-skydd. Avvisar en GPS-mätning om den implicerade rörelsehastigheten — efter avdrag för kombinerad GPS-noggrannhet för båda enheter — överstiger detta värde. Standard: 1000 km/h — blockerar omöjliga teleporter men tillåter flygplan. Ange 0 för att inaktivera.",
           "require_reliable": "När aktiverat utlöses en nähets-händelse bara efter konsekventa uppdateringar.",
           "min_updates_reliable": "Hur många konsekventa uppdateringar som krävs innan platsen anses tillförlitlig.",
-          "resync_silence_s": "Om alla spårade entiteter slutar skicka GPS-uppdateringar under denna tid fryses nährhetstillståndet för att förhindra falska ändringar medan signalen inväntas. Standard: 600 s (10 min). Område: 60–3600 s.",
-          "resync_hold_s": "Hur länge nährhetstillståndet hålls fryst efter att GPS-tystnad har detekterats. Ange 0 för att inaktivera frysning (tystnadsdetektion körs fortfarande för tidsredovisning). Standard: 60 s. Område: 0–300 s."
+          "resync_silence_s": "Om alla spårade entiteter slutar skicka GPS-uppdateringar under denna tid fryses närhetstillståndet för att förhindra falska ändringar medan signalen inväntas. Standard: 600 s (10 min). Område: 60–3600 s.",
+          "resync_hold_s": "Hur länge närhetstillståndet hålls fryst efter att GPS-tystnad har detekterats. Ange 0 för att inaktivera frysning (tystnadsdetektion körs fortfarande för tidsredovisning). Standard: 60 s. Område: 0–300 s."
         }
       }
     },

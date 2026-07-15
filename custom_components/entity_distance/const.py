@@ -44,6 +44,11 @@ MAX_RESYNC_HOLD_S = 300
 STATIONARY_THRESHOLD_FACTOR = 0.15
 STATIONARY_THRESHOLD_MIN_M = 15.0
 
+# Minimum elapsed seconds between _calc_pair calls to credit zone/proximity buckets.
+# Guards against rapid-fire recalculates (real GPS bursts or debounce=0 back-to-back
+# events) where near-zero _elapsed_s would silently leak time into today_unaccounted.
+MIN_CALC_ELAPSED_S = 0.1
+
 DIRECTION_APPROACHING = "approaching"
 DIRECTION_DIVERGING = "diverging"
 DIRECTION_STATIONARY = "stationary"

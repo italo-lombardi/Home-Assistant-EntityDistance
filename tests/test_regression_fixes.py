@@ -21,7 +21,7 @@ from custom_components.entity_distance.binary_sensor import (
     AllInProximityBinarySensor,
     AnyInProximityBinarySensor,
 )
-from custom_components.entity_distance.const import CONF_ENTITIES, DOMAIN
+from custom_components.entity_distance.const import CONF_ENTITIES, DOMAIN, MIN_CALC_ELAPSED_S
 from custom_components.entity_distance.models import GroupData, PairState, pair_key
 
 # ---------------------------------------------------------------------------
@@ -2146,9 +2146,8 @@ class TestCumulativeSensorCoordinatorFailedReturnsNone:
 
 class TestDoubleTick:
     def test_double_tick_does_not_leak_unaccounted_time(self):
-        """Calling _calc_pair twice with the same now (or now+50ms) must not
-        double-credit today_zone_seconds.  The < 100 ms guard converts the second
-        _elapsed_s to 0.0 so the bucket accumulator is skipped entirely."""
+        """Calling _calc_pair twice with elapsed < MIN_CALC_ELAPSED_S must not
+        double-credit today_zone_seconds — guards rapid back-to-back recalculates."""
         coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=500.0)
         state_a = _make_state("person.alice", 51.5, -0.1, 20)
         state_b = _make_state("person.bob", 51.501, -0.1, 20)
@@ -2173,21 +2172,34 @@ class TestDoubleTick:
             ps = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
             after_first = ps.today_zone_seconds.get("very_near", 0.0)
 
-            # Second call — same timestamp (double-tick, elapsed = 0)
+            # Second call — same timestamp (elapsed = 0, guard fires)
             ps2 = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
             after_second = ps2.today_zone_seconds.get("very_near", 0.0)
 
-        # First tick credits ~60s; second tick must credit nothing (guard fires)
+        # First tick credits ~60s
         assert after_first == pytest.approx(3600.0, abs=2.0)
+        # Second tick must credit nothing — guard fires at elapsed=0
         assert after_second == pytest.approx(after_first, abs=0.01)
 
-        # Also verify with a 50ms gap — still under 100ms threshold
+        # Verify unaccounted time does not grow: accounted = sum(zone_seconds),
+        # unaccounted = elapsed_since_midnight - accounted. Since zone_seconds
+        # didn't grow on the second tick, unaccounted is unchanged.
+        elapsed_s = (
+            _NOW.astimezone(UTC)
+            - _NOW.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(UTC)
+        ).total_seconds()
+        unaccounted_after_first = elapsed_s - sum(ps.today_zone_seconds.values())
+        unaccounted_after_second = elapsed_s - sum(ps2.today_zone_seconds.values())
+        assert unaccounted_after_second == pytest.approx(unaccounted_after_first, abs=0.01)
+
+        # Also verify with a sub-threshold gap — still under MIN_CALC_ELAPSED_S
+        sub_threshold = timedelta(seconds=MIN_CALC_ELAPSED_S * 0.5)
         ps3 = coord._calc_pair(
             ps2,
             "person.alice",
             "person.bob",
-            _NOW + timedelta(milliseconds=50),
+            _NOW + sub_threshold,
             set(),
         )
-        after_50ms = ps3.today_zone_seconds.get("very_near", 0.0)
-        assert after_50ms == pytest.approx(after_second, abs=0.01)
+        after_sub = ps3.today_zone_seconds.get("very_near", 0.0)
+        assert after_sub == pytest.approx(after_second, abs=0.01)

@@ -56,6 +56,7 @@ from .const import (
     DIRECTION_DIVERGING,
     DIRECTION_STATIONARY,
     DOMAIN,
+    MIN_CALC_ELAPSED_S,
     STATIONARY_THRESHOLD_FACTOR,
     STATIONARY_THRESHOLD_MIN_M,
 )
@@ -888,8 +889,8 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 )
             else:
                 _elapsed_s = max(0.0, (now - prev_calc_time_snapshot).total_seconds())
-                if _elapsed_s < 0.1:
-                    _elapsed_s = 0.0  # double-tick guard — skip same-loop-iteration coalescing
+                if _elapsed_s < MIN_CALC_ELAPSED_S:
+                    _elapsed_s = 0.0  # rapid back-to-back recalculate guard
 
         if _elapsed_s > 0:
             # Bucket time accumulates regardless of proximity — sensors report

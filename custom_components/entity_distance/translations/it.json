@@ -222,6 +222,9 @@
       },
       "altitude_delta": {
         "name": "Differenza di altitudine"
+      },
+      "altitude": {
+        "name": "Altitudine ({name})"
       }
     },
     "binary_sensor": {

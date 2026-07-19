@@ -629,12 +629,13 @@ class TodayUnaccountedTimeSensor(EntityDistanceSensorBase):
 class AltitudeSensor(EntityDistanceSensorBase):
     _attr_native_unit_of_measurement = UnitOfLength.METERS
     _attr_icon = "mdi:elevation-rise"
+    _attr_translation_key = "altitude"
 
     def __init__(self, coordinator, entry, device_info, k, a_name, b_name, which: str):
         super().__init__(coordinator, entry, device_info, k, f"altitude_{which}")
         self._which = which
         name = a_name if which == "a" else b_name
-        self._attr_name = f"Altitude ({name})"
+        self._attr_translation_placeholders = {"name": name}
 
     @property
     def native_value(self) -> float | None:

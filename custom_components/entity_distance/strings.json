@@ -220,6 +220,9 @@
       "settings": {
         "name": "Settings"
       },
+      "altitude": {
+        "name": "Altitude ({name})"
+      },
       "altitude_delta": {
         "name": "Elevation Difference"
       }

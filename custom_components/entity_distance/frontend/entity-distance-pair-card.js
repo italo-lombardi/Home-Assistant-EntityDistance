@@ -579,8 +579,8 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         `binary_sensor.${slug}_in_proximity`,
         `${p}_distance`, `${p}_direction`, `${p}_direction_level`, `${p}_proximity_zone`,
         `${p}_approach_speed`, `${p}_estimated_arrival_time`,
-        `${p}_altitude_a`, `${p}_altitude_b`, `${p}_altitude_delta`,
-        `binary_sensor.${slug}_altitude_aligned`,
+        `${p}_elevation_difference`,
+        `binary_sensor.${slug}_same_altitude`,
         `${p}_proximity_duration`, `${p}_proximity_tracking_started`,
         `${p}_proximity_rate`, `${p}_today_proximity_time`,
         `${p}_today_unaccounted_time`, `${p}_last_seen_together`,
@@ -592,7 +592,8 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       const dynamic = Object.keys(this.hass?.states || {}).filter(id =>
         id.startsWith(`${p}_gps_accuracy_`) ||
         id.startsWith(`${p}_last_update_`) ||
-        id.startsWith(`${p}_update_count_`)
+        id.startsWith(`${p}_update_count_`) ||
+        id.startsWith(`${p}_altitude_`)
       );
       const distState = this.hass?.states[`${p}_distance`];
       const entityA = distState?.attributes?.entity_a;
@@ -631,10 +632,16 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       const bucket = _val(this.hass, slug, "proximity_zone");
       const speedKmh = _num(this.hass, slug, "approach_speed");
       const etaMin = _num(this.hass, slug, "estimated_arrival_time");
-      const altA = _num(this.hass, slug, "altitude_a");
-      const altB = _num(this.hass, slug, "altitude_b");
-      const altDelta = _num(this.hass, slug, "altitude_delta");
-      const altAligned = this.hass.states[`binary_sensor.${slug}_altitude_aligned`]?.state;
+
+      // Altitude: read all values from elevation_difference sensor attributes.
+      // This avoids constructing entity IDs from entity names (fragile with renames).
+      const _elevState = this.hass.states[`sensor.${slug}_elevation_difference`];
+      const _elevAttrs = _elevState?.attributes || {};
+      const altA = _elevAttrs.altitude_a_m ?? null;
+      const altB = _elevAttrs.altitude_b_m ?? null;
+      const altDelta = _elevState && _elevState.state !== "unknown" && _elevState.state !== "unavailable"
+        ? parseFloat(_elevState.state) : null;
+      const altAligned = this.hass.states[`binary_sensor.${slug}_same_altitude`]?.state;
       const proxDurMin = _num(this.hass, slug, "proximity_duration");
       const proxTrackingStarted = _val(this.hass, slug, "proximity_tracking_started");
       const proxRate = _num(this.hass, slug, "proximity_rate");

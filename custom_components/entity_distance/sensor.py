@@ -671,6 +671,8 @@ class AltitudeDeltaSensor(EntityDistanceSensorBase):
             "entity_a": self._pair.entity_a_id,
             "entity_b": self._pair.entity_b_id,
             "altitude_threshold_m": self.coordinator.altitude_aligned_threshold_m,
+            "altitude_a_m": self._pair.altitude_a_m,
+            "altitude_b_m": self._pair.altitude_b_m,
         }
 
 

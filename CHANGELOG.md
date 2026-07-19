@@ -11,7 +11,7 @@
   higher than A). Altitude is read from the `altitude` attribute (metres, WGS-84)
   provided by mobile app device trackers. Person entities and zone entities always
   show `unknown` — HA does not propagate altitude through those domains.
-- **Same Altitude binary sensor.** `binary_sensor.<pair>_altitude_aligned` turns
+- **Same Altitude binary sensor.** `binary_sensor.<pair>_same_altitude` turns
   `ON` when `|altitude_delta| ≤ 5 m` — useful for "are they on the same floor?"
   automations. Shows `unknown` when either entity lacks altitude data.
 - **Configurable altitude threshold.** `altitude_aligned_threshold_m` (default 5 m,

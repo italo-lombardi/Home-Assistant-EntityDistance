@@ -1610,11 +1610,13 @@ class TestAltitudeSensor:
 
 
 class TestAltitudeDeltaSensor:
-    def _make(self, delta=None, data_valid=True):
+    def _make(self, delta=None, alt_a=None, alt_b=None, data_valid=True):
         from custom_components.entity_distance.sensor import AltitudeDeltaSensor
 
         ps = PairState(entity_a_id="person.alice", entity_b_id="person.bob")
         ps.altitude_delta_m = delta
+        ps.altitude_a_m = alt_a
+        ps.altitude_b_m = alt_b
         ps.data_valid = data_valid
         return _make_sensor(AltitudeDeltaSensor, ps)
 
@@ -1643,3 +1645,20 @@ class TestAltitudeDeltaSensor:
 
         attrs = self._make(delta=8.0).extra_state_attributes
         assert attrs["altitude_threshold_m"] == DEFAULT_ALTITUDE_ALIGNED_THRESHOLD_M
+
+    def test_extra_attrs_altitude_a_b_when_show_value(self):
+        attrs = self._make(delta=8.0, alt_a=42.0, alt_b=50.0).extra_state_attributes
+        assert attrs["altitude_a_m"] == pytest.approx(42.0)
+        assert attrs["altitude_b_m"] == pytest.approx(50.0)
+
+    def test_extra_attrs_altitude_a_b_none_when_not_show_value(self):
+        attrs = self._make(
+            delta=8.0, alt_a=42.0, alt_b=50.0, data_valid=False
+        ).extra_state_attributes
+        assert "altitude_a_m" not in attrs
+        assert "altitude_b_m" not in attrs
+
+    def test_extra_attrs_altitude_a_b_none_values(self):
+        attrs = self._make(delta=None, alt_a=None, alt_b=None).extra_state_attributes
+        assert attrs["altitude_a_m"] is None
+        assert attrs["altitude_b_m"] is None

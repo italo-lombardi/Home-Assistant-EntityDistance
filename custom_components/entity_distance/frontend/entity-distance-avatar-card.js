@@ -603,8 +603,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       const _elevAttrs = _elevState?.attributes || {};
       const altA = _elevAttrs.altitude_a_m ?? null;
       const altB = _elevAttrs.altitude_b_m ?? null;
-      const altDelta = _elevState && _elevState.state !== "unknown" && _elevState.state !== "unavailable"
-        ? parseFloat(_elevState.state) : null;
+      const altDelta = _num(this.hass, slug, "elevation_difference");
       const altAligned = this.hass.states[`binary_sensor.${slug}_same_altitude`]?.state;
       const proxDurMin = _num(this.hass, slug, "proximity_duration");
       const proxTrackingStarted = _val(this.hass, slug, "proximity_tracking_started");

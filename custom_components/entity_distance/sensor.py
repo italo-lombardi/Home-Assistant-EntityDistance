@@ -667,13 +667,15 @@ class AltitudeDeltaSensor(EntityDistanceSensorBase):
 
     @property
     def extra_state_attributes(self) -> dict:
-        return {
+        base = {
             "entity_a": self._pair.entity_a_id,
             "entity_b": self._pair.entity_b_id,
             "altitude_threshold_m": self.coordinator.altitude_aligned_threshold_m,
-            "altitude_a_m": self._pair.altitude_a_m,
-            "altitude_b_m": self._pair.altitude_b_m,
         }
+        if self._show_value:
+            base["altitude_a_m"] = self._pair.altitude_a_m
+            base["altitude_b_m"] = self._pair.altitude_b_m
+        return base
 
 
 class MinDistanceSensor(CoordinatorEntity[EntityDistanceCoordinator], SensorEntity):

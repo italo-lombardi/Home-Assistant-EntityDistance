@@ -26,7 +26,6 @@ from .const import (
     BUCKET_VERY_FAR,
     BUCKET_VERY_NEAR,
     BUCKETS,
-    DEFAULT_ALTITUDE_ALIGNED_THRESHOLD_M,
     DIRECTION_APPROACHING,
     DIRECTION_DIVERGING,
     DIRECTION_STATIONARY,
@@ -670,7 +669,7 @@ class AltitudeDeltaSensor(EntityDistanceSensorBase):
         return {
             "entity_a": self._pair.entity_a_id,
             "entity_b": self._pair.entity_b_id,
-            "altitude_threshold_m": DEFAULT_ALTITUDE_ALIGNED_THRESHOLD_M,
+            "altitude_threshold_m": self.coordinator.altitude_aligned_threshold_m,
         }
 
 

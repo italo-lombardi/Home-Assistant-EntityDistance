@@ -42,7 +42,8 @@
           "require_reliable": "Krev pålitelige data for nærhetshendelser",
           "min_updates_reliable": "Min. oppdateringer for pålitelige data",
           "resync_silence_s": "GPS-stillhet før frysing (s)",
-          "resync_hold_s": "Varighet for frysing av nærhet (s)"
+          "resync_hold_s": "Varighet for frysing av nærhet (s)",
+          "altitude_aligned_threshold_m": "Same altitude threshold (m)"
         },
         "data_description": {
           "max_accuracy_m": "Avvis posisjonsoppdateringer der GPS-feilen er større enn denne verdien. Telefoner i bevegelse rapporterer typisk 100–250 m nøyaktighet, så 300 m er en trygg standardverdi. En telefon som viser «350 m nøyaktighet» vil bli hoppet over. Sett til 0 for å deaktivere. Område: 0–1000 m.",
@@ -52,7 +53,8 @@
           "require_reliable": "Avskyte proximity_enter-hendelse bare når data anses pålitelige.",
           "min_updates_reliable": "Minimum antall posisjonsoppdateringer i vinduet før data anses pålitelige. Område: 1–20.",
           "resync_silence_s": "Hvis alle sporede enheter slutter å sende GPS-oppdateringer i denne perioden, fryses nærhetstilstanden for å forhindre falske endringer mens signalet ventes tilbake. Standard: 600 s (10 min). Område: 60–3600 s.",
-          "resync_hold_s": "Hvor lenge nærhetstilstanden holdes fryst etter at GPS-stillhet er oppdaget. Sett til 0 for å deaktivere frysing (stillhetsregistrering kjører fortsatt for tidsregnskap). Standard: 60 s. Område: 0–300 s."
+          "resync_hold_s": "Hvor lenge nærhetstilstanden holdes fryst etter at GPS-stillhet er oppdaget. Sett til 0 for å deaktivere frysing (stillhetsregistrering kjører fortsatt for tidsregnskap). Standard: 60 s. Område: 0–300 s.",
+          "altitude_aligned_threshold_m": "Maximum altitude difference (in metres) for the 'Same Altitude' binary sensor to turn ON. 0 = exact same altitude only. Default: 5 m. Range: 0–100 m."
         }
       }
     },
@@ -100,7 +102,8 @@
           "require_reliable": "Krev pålitelige data for nærhetshendelser",
           "min_updates_reliable": "Min. oppdateringer for pålitelige data",
           "resync_silence_s": "GPS-stillhet før frysing (s)",
-          "resync_hold_s": "Varighet for frysing av nærhet (s)"
+          "resync_hold_s": "Varighet for frysing av nærhet (s)",
+          "altitude_aligned_threshold_m": "Same altitude threshold (m)"
         },
         "data_description": {
           "max_accuracy_m": "Avvis posisjonsoppdateringer der GPS-feilen er større enn denne verdien. Telefoner i bevegelse rapporterer typisk 100–250 m nøyaktighet, så 300 m er en trygg standardverdi. En telefon som viser «350 m nøyaktighet» vil bli hoppet over. Sett til 0 for å deaktivere. Område: 0–1000 m.",
@@ -110,7 +113,8 @@
           "require_reliable": "Når aktivert utløses en nærhendelse bare etter konsekvente oppdateringer.",
           "min_updates_reliable": "Hvor mange konsekvente oppdateringer som kreves før posisjonen anses som pålitelig. Område: 1–20.",
           "resync_silence_s": "Hvis alle sporede enheter slutter å sende GPS-oppdateringer i denne perioden, fryses nærhetstilstanden for å forhindre falske endringer mens signalet ventes tilbake. Standard: 600 s (10 min). Område: 60–3600 s.",
-          "resync_hold_s": "Hvor lenge nærhetstilstanden holdes fryst etter at GPS-stillhet er oppdaget. Sett til 0 for å deaktivere frysing (stillhetsregistrering kjører fortsatt for tidsregnskap). Standard: 60 s. Område: 0–300 s."
+          "resync_hold_s": "Hvor lenge nærhetstilstanden holdes fryst etter at GPS-stillhet er oppdaget. Sett til 0 for å deaktivere frysing (stillhetsregistrering kjører fortsatt for tidsregnskap). Standard: 60 s. Område: 0–300 s.",
+          "altitude_aligned_threshold_m": "Maximum altitude difference (in metres) for the 'Same Altitude' binary sensor to turn ON. 0 = exact same altitude only. Default: 5 m. Range: 0–100 m."
         }
       }
     },

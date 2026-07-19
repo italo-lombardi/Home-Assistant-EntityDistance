@@ -51,6 +51,7 @@ def _make_sensor(cls, pair_state: PairState):
     """Build a sensor instance with a minimal coordinator/entry mock."""
     coordinator = MagicMock()
     coordinator.is_within_grace.return_value = False
+    coordinator.altitude_aligned_threshold_m = 5.0
     k = pair_key(pair_state.entity_a_id, pair_state.entity_b_id)
     coordinator.data = GroupData(pairs={k: pair_state})
     coordinator.bucket_thresholds = _DEFAULT_THRESHOLDS

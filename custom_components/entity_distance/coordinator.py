@@ -25,6 +25,7 @@ from .const import (
     BUCKET_NEAR,
     BUCKET_VERY_FAR,
     BUCKET_VERY_NEAR,
+    CONF_ALTITUDE_ALIGNED_THRESHOLD_M,
     CONF_DEBOUNCE_S,
     CONF_ENTITIES,
     CONF_GRACE_WINDOW_S,
@@ -40,6 +41,7 @@ from .const import (
     CONF_ZONE_MID_M,
     CONF_ZONE_NEAR_M,
     CONF_ZONE_VERY_NEAR_M,
+    DEFAULT_ALTITUDE_ALIGNED_THRESHOLD_M,
     DEFAULT_DEBOUNCE_S,
     DEFAULT_GRACE_WINDOW_S,
     DEFAULT_MAX_ACCURACY_M,
@@ -262,6 +264,9 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         )
         self._updates_window_s: float = data.get(CONF_UPDATES_WINDOW_S, DEFAULT_UPDATES_WINDOW_S)
         self._require_reliable: bool = data.get(CONF_REQUIRE_RELIABLE, DEFAULT_REQUIRE_RELIABLE)
+        self._altitude_aligned_threshold_m: float = data.get(
+            CONF_ALTITUDE_ALIGNED_THRESHOLD_M, DEFAULT_ALTITUDE_ALIGNED_THRESHOLD_M
+        )
         self._bucket_thresholds: dict[str, float] = {
             BUCKET_VERY_NEAR: data.get(CONF_ZONE_VERY_NEAR_M, DEFAULT_ZONE_VERY_NEAR_M),
             BUCKET_NEAR: data.get(CONF_ZONE_NEAR_M, DEFAULT_ZONE_NEAR_M),
@@ -315,6 +320,10 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         return self._updates_window_s
 
     @property
+    def altitude_aligned_threshold_m(self) -> float:
+        return self._altitude_aligned_threshold_m
+
+    @property
     def settings_snapshot(self) -> dict[str, float | int | bool]:
         """All proximity / filter settings the coordinator was constructed with.
         Exposed so a diagnostic sensor can present them on the device card."""
@@ -336,6 +345,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             "zone_near_m": self._bucket_thresholds[BUCKET_NEAR],
             "zone_mid_m": self._bucket_thresholds[BUCKET_MID],
             "zone_far_m": self._bucket_thresholds[BUCKET_FAR],
+            "altitude_aligned_threshold_m": self._altitude_aligned_threshold_m,
         }
 
     async def async_setup(self) -> None:

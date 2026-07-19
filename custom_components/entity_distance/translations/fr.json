@@ -42,7 +42,8 @@
           "require_reliable": "Déclencher uniquement lorsque les données sont fiables",
           "min_updates_reliable": "Mises à jour min. pour données fiables",
           "resync_silence_s": "Silence GPS avant gel (s)",
-          "resync_hold_s": "Durée de gel de proximité (s)"
+          "resync_hold_s": "Durée de gel de proximité (s)",
+          "altitude_aligned_threshold_m": "Same altitude threshold (m)"
         },
         "data_description": {
           "max_accuracy_m": "Rejeter les mises à jour de localisation où l'erreur GPS est supérieure à cette valeur. Les téléphones en mouvement rapportent généralement une précision de 100–250 m, donc 300 m est une valeur par défaut sûre. Un téléphone affichant « précision 350 m » serait ignoré. Mettre à 0 pour désactiver. Plage : 0–1000 m.",
@@ -52,7 +53,8 @@
           "require_reliable": "Le capteur 'En proximité' ne s'active que lorsque les données sont considérées fiables.",
           "min_updates_reliable": "Nombre de mises à jour consécutives nécessaires avant que la localisation soit considérée fiable. Plage : 1–20.",
           "resync_silence_s": "Si toutes les entités suivies cessent d'envoyer des mises à jour GPS pendant cette durée, l'état de proximité est gelé pour éviter de faux changements en attendant le retour du signal. Défaut : 600 s (10 min). Plage : 60–3600 s.",
-          "resync_hold_s": "Durée pendant laquelle l'état de proximité reste gelé après détection du silence GPS. Mettre à 0 pour désactiver le gel (la détection du silence continue pour la comptabilité du temps). Défaut : 60 s. Plage : 0–300 s."
+          "resync_hold_s": "Durée pendant laquelle l'état de proximité reste gelé après détection du silence GPS. Mettre à 0 pour désactiver le gel (la détection du silence continue pour la comptabilité du temps). Défaut : 60 s. Plage : 0–300 s.",
+          "altitude_aligned_threshold_m": "Maximum altitude difference (in metres) for the 'Same Altitude' binary sensor to turn ON. 0 = exact same altitude only. Default: 5 m. Range: 0–100 m."
         }
       }
     },
@@ -100,7 +102,8 @@
           "require_reliable": "Déclencher uniquement lorsque les données sont fiables",
           "min_updates_reliable": "Mises à jour min. pour données fiables",
           "resync_silence_s": "Silence GPS avant gel (s)",
-          "resync_hold_s": "Durée de gel de proximité (s)"
+          "resync_hold_s": "Durée de gel de proximité (s)",
+          "altitude_aligned_threshold_m": "Same altitude threshold (m)"
         },
         "data_description": {
           "max_accuracy_m": "Rejeter les mises à jour de localisation où l'erreur GPS est supérieure à cette valeur. Les téléphones en mouvement rapportent généralement une précision de 100–250 m, donc 300 m est une valeur par défaut sûre. Un téléphone affichant « précision 350 m » serait ignoré. Mettre à 0 pour désactiver. Plage : 0–1000 m.",
@@ -110,7 +113,8 @@
           "require_reliable": "Le capteur 'En proximité' ne s'active que lorsque les données sont considérées fiables.",
           "min_updates_reliable": "Combien de mises à jour consécutives sont nécessaires avant de considérer la localisation fiable. Plage : 1–20.",
           "resync_silence_s": "Si toutes les entités suivies cessent d'envoyer des mises à jour GPS pendant cette durée, l'état de proximité est gelé pour éviter de faux changements en attendant le retour du signal. Défaut : 600 s (10 min). Plage : 60–3600 s.",
-          "resync_hold_s": "Durée pendant laquelle l'état de proximité reste gelé après détection du silence GPS. Mettre à 0 pour désactiver le gel (la détection du silence continue pour la comptabilité du temps). Défaut : 60 s. Plage : 0–300 s."
+          "resync_hold_s": "Durée pendant laquelle l'état de proximité reste gelé après détection du silence GPS. Mettre à 0 pour désactiver le gel (la détection du silence continue pour la comptabilité du temps). Défaut : 60 s. Plage : 0–300 s.",
+          "altitude_aligned_threshold_m": "Maximum altitude difference (in metres) for the 'Same Altitude' binary sensor to turn ON. 0 = exact same altitude only. Default: 5 m. Range: 0–100 m."
         }
       }
     },

@@ -20,6 +20,7 @@ from .const import (
     BUCKET_MID,
     BUCKET_NEAR,
     BUCKET_VERY_NEAR,
+    CONF_ALTITUDE_ALIGNED_THRESHOLD_M,
     CONF_DEBOUNCE_S,
     CONF_ENTITIES,
     CONF_GRACE_WINDOW_S,
@@ -34,6 +35,7 @@ from .const import (
     CONF_ZONE_MID_M,
     CONF_ZONE_NEAR_M,
     CONF_ZONE_VERY_NEAR_M,
+    DEFAULT_ALTITUDE_ALIGNED_THRESHOLD_M,
     DEFAULT_DEBOUNCE_S,
     DEFAULT_GRACE_WINDOW_S,
     DEFAULT_MAX_ACCURACY_M,
@@ -48,11 +50,13 @@ from .const import (
     DEFAULT_ZONE_NEAR_M,
     DEFAULT_ZONE_VERY_NEAR_M,
     DOMAIN,
+    MAX_ALTITUDE_ALIGNED_THRESHOLD_M,
     MAX_DEBOUNCE_S,
     MAX_GRACE_WINDOW_S,
     MAX_GROUP_ENTITIES,
     MAX_RESYNC_HOLD_S,
     MAX_RESYNC_SILENCE_S,
+    MIN_ALTITUDE_ALIGNED_THRESHOLD_M,
     MIN_GRACE_WINDOW_S,
     MIN_RESYNC_HOLD_S,
     MIN_RESYNC_SILENCE_S,
@@ -76,6 +80,7 @@ _ZONE_OPTIONS_KEYS = {
     CONF_ZONE_NEAR_M,
     CONF_ZONE_MID_M,
     CONF_ZONE_FAR_M,
+    CONF_ALTITUDE_ALIGNED_THRESHOLD_M,
 }
 
 _PROXIMITY_ZONE_OPTIONS = [
@@ -297,6 +302,17 @@ class EntityDistanceConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             mode=NumberSelectorMode.BOX,
                         )
                     ),
+                    vol.Required(
+                        CONF_ALTITUDE_ALIGNED_THRESHOLD_M,
+                        default=DEFAULT_ALTITUDE_ALIGNED_THRESHOLD_M,
+                    ): NumberSelector(
+                        NumberSelectorConfig(
+                            min=MIN_ALTITUDE_ALIGNED_THRESHOLD_M,
+                            max=MAX_ALTITUDE_ALIGNED_THRESHOLD_M,
+                            unit_of_measurement="m",
+                            mode=NumberSelectorMode.BOX,
+                        )
+                    ),
                 }
             ),
         )
@@ -423,6 +439,20 @@ class EntityDistanceOptionsFlow(config_entries.OptionsFlow):
                             min=MIN_RESYNC_HOLD_S,
                             max=MAX_RESYNC_HOLD_S,
                             unit_of_measurement="s",
+                            mode=NumberSelectorMode.BOX,
+                        )
+                    ),
+                    vol.Required(
+                        CONF_ALTITUDE_ALIGNED_THRESHOLD_M,
+                        default=self._data.get(
+                            CONF_ALTITUDE_ALIGNED_THRESHOLD_M,
+                            DEFAULT_ALTITUDE_ALIGNED_THRESHOLD_M,
+                        ),
+                    ): NumberSelector(
+                        NumberSelectorConfig(
+                            min=MIN_ALTITUDE_ALIGNED_THRESHOLD_M,
+                            max=MAX_ALTITUDE_ALIGNED_THRESHOLD_M,
+                            unit_of_measurement="m",
                             mode=NumberSelectorMode.BOX,
                         )
                     ),

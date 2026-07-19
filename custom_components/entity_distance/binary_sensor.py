@@ -15,7 +15,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
-from .const import BUCKETS, DEFAULT_ALTITUDE_ALIGNED_THRESHOLD_M, DOMAIN
+from .const import BUCKETS, DOMAIN
 from .coordinator import EntityDistanceCoordinator, calc_bucket
 from .models import PairState, friendly_name, pair_key
 
@@ -342,8 +342,8 @@ class AltitudeAlignedBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], 
         ps = self._pair
         if ps.altitude_delta_m is None:
             return None
-        return abs(ps.altitude_delta_m) <= DEFAULT_ALTITUDE_ALIGNED_THRESHOLD_M
+        return abs(ps.altitude_delta_m) <= self.coordinator.altitude_aligned_threshold_m
 
     @property
     def extra_state_attributes(self) -> dict:
-        return {"threshold_m": DEFAULT_ALTITUDE_ALIGNED_THRESHOLD_M}
+        return {"threshold_m": self.coordinator.altitude_aligned_threshold_m}

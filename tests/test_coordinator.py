@@ -641,6 +641,7 @@ def _make_calc_pair_coordinator(
     coordinator._require_reliable = require_reliable
     coordinator._min_updates_reliable = min_updates_reliable
     coordinator._updates_window_s = updates_window_s
+    coordinator._altitude_aligned_threshold_m = 5.0
     coordinator._bucket_thresholds = {
         BUCKET_VERY_NEAR: DEFAULT_ZONE_VERY_NEAR_M,
         BUCKET_NEAR: DEFAULT_ZONE_NEAR_M,
@@ -1386,6 +1387,11 @@ class TestCoordinatorProperties:
         coord = self._make()
         assert BUCKET_VERY_NEAR in coord.bucket_thresholds
 
+    def test_altitude_aligned_threshold_property(self):
+        coord = self._make()
+        coord._altitude_aligned_threshold_m = 10.0
+        assert coord.altitude_aligned_threshold_m == 10.0
+
     def test_settings_snapshot(self):
         coord = self._make()
         coord._proximity_zone = "very_near"
@@ -1399,6 +1405,7 @@ class TestCoordinatorProperties:
         coord._min_updates_reliable = 3
         coord._updates_window_s = 1800
         coord._require_reliable = False
+        coord._altitude_aligned_threshold_m = 5.0
         snap = coord.settings_snapshot
         assert snap["proximity_zone"] == "very_near"
         assert snap["zone_very_near_m"] == 200
@@ -1410,9 +1417,10 @@ class TestCoordinatorProperties:
         assert "grace_window_s" in snap
         assert "resync_silence_s" in snap
         assert "resync_hold_s" in snap
+        assert "altitude_aligned_threshold_m" in snap
         assert snap["stationary_threshold_factor"] == 0.15
         assert snap["stationary_threshold_min_m"] == 15.0
-        assert len(snap) == 17  # update this if fields are intentionally added/removed
+        assert len(snap) == 18  # update this if fields are intentionally added/removed
 
 
 # ---------------------------------------------------------------------------

@@ -698,12 +698,14 @@ class TestReliableBinarySensor:
 def _make_altitude_aligned_sensor(
     pair_key_val: tuple[str, str],
     ps: PairState,
+    threshold_m: float = 5.0,
 ):
     from custom_components.entity_distance.binary_sensor import AltitudeAlignedBinarySensor
 
     coordinator = MagicMock()
     coordinator.data = MagicMock()
     coordinator.data.pairs = {pair_key_val: ps}
+    coordinator.altitude_aligned_threshold_m = threshold_m
     entry = MagicMock()
     entry.entry_id = "test_entry"
     sensor = AltitudeAlignedBinarySensor.__new__(AltitudeAlignedBinarySensor)

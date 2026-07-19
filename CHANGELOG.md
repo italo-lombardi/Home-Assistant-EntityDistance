@@ -14,10 +14,20 @@
 - **Same Altitude binary sensor.** `binary_sensor.<pair>_altitude_aligned` turns
   `ON` when `|altitude_delta| ≤ 5 m` — useful for "are they on the same floor?"
   automations. Shows `unknown` when either entity lacks altitude data.
-- **Altitude row in pair card.** The Lovelace pair card shows a new "⛰ Altitude"
-  stat box when at least one entity has altitude data. Format: `42m (+8m) / 50m`
-  (A / signed delta / B). Displays "same floor" or "different floor" hint from the
-  binary sensor. Controlled by the `show_altitude` card option (default: on).
+- **Configurable altitude threshold.** `altitude_aligned_threshold_m` (default 5 m,
+  range 0–100 m) exposed in Advanced Filters. Set to 0 for exact-same-altitude only.
+- **Altitude row in pair card and avatar card.** Both Lovelace cards show a new
+  "⛰ Altitude" stat row when `show_altitude: true`. Format: `42m (+8m) / 50m`
+  (A / signed delta / B). Shows "same floor" or "different floor" hint from the
+  binary sensor. Controlled by the `show_altitude` card option (**default: false**
+  — opt-in, no surprise on update).
+
+### Fixed
+
+- **`_hasMovementStats()` regression on zone pairs with `show_altitude`.** The
+  altitude row check incorrectly caused an empty Movement section to render on
+  zone-to-zone pairs when `show_altitude` was enabled. Fixed by tightening the
+  movement-section guard.
 
 ### Notes
 

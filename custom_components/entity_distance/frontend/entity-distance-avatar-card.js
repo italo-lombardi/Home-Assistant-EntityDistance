@@ -467,6 +467,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         show_proximity_badge: true,
         show_speed: true,
         show_eta: true,
+        show_altitude: false,
         show_today_time: true,
         show_proximity_duration: false,
         show_last_seen: false,
@@ -489,6 +490,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         show_proximity_badge: true,
         show_speed: true,
         show_eta: true,
+        show_altitude: false,
         show_today_time: true,
         show_proximity_duration: false,
         show_last_seen: false,
@@ -520,6 +522,8 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         `binary_sensor.${slug}_in_proximity`,
         `${p}_distance`, `${p}_direction`, `${p}_proximity_zone`,
         `${p}_approach_speed`, `${p}_estimated_arrival_time`,
+        `${p}_altitude_a`, `${p}_altitude_b`, `${p}_altitude_delta`,
+        `binary_sensor.${slug}_altitude_aligned`,
         `${p}_proximity_duration`, `${p}_proximity_tracking_started`,
         `${p}_proximity_rate`, `${p}_today_proximity_time`,
         `${p}_today_unaccounted_time`, `${p}_last_seen_together`,
@@ -594,6 +598,10 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       const bucket = _val(this.hass, slug, "proximity_zone");
       const speedKmh = _num(this.hass, slug, "approach_speed");
       const etaMin = _num(this.hass, slug, "estimated_arrival_time");
+      const altA = _num(this.hass, slug, "altitude_a");
+      const altB = _num(this.hass, slug, "altitude_b");
+      const altDelta = _num(this.hass, slug, "altitude_delta");
+      const altAligned = this.hass.states[`binary_sensor.${slug}_altitude_aligned`]?.state;
       const proxDurMin = _num(this.hass, slug, "proximity_duration");
       const proxTrackingStarted = _val(this.hass, slug, "proximity_tracking_started");
       const proxRate = _num(this.hass, slug, "proximity_rate");
@@ -626,10 +634,11 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       const showToday = c.show_today_time && todayMin !== null;
       const showSpeed = c.show_speed && speedKmh !== null;
       const showEta = c.show_eta && direction === "approaching" && etaMin !== null;
+      const showAlt = c.show_altitude && (altA !== null || altB !== null);
       const showLast = c.show_last_seen;
       const showUnaccounted = c.show_unaccounted_time && unaccountedMin !== null && unaccountedMin > 0;
       const showSettings = c.show_settings && settings;
-      const hasStats = showDur || showRate || showToday || showSpeed || showEta || showLast || showUnaccounted || showSettings;
+      const hasStats = showDur || showRate || showToday || showSpeed || showEta || showAlt || showLast || showUnaccounted || showSettings;
 
       return html`
         <ha-card class="${compactClass}">
@@ -727,6 +736,15 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
                   style="background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.25)">
                   <span class="stat-box-label">⏱ ETA</span>
                   <span class="stat-box-value" style="color:#9333ea">${_formatMinutes(etaMin)}</span>
+                </div>` : nothing}
+              ${showAlt ? html`
+                <div class="stat-box full-width" style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.25)">
+                  <span class="stat-box-label">⛰ Altitude${altAligned === "on" ? " · same floor" : altAligned === "off" ? " · different floor" : ""}</span>
+                  <span class="stat-box-value" style="color:#16a34a">
+                    ${altA !== null ? altA.toFixed(0) : "?"}m
+                    ${altDelta !== null ? html`<span style="font-size:0.8em;opacity:0.7">(${altDelta > 0 ? "+" : ""}${altDelta.toFixed(0)}m)</span>` : nothing}
+                    / ${altB !== null ? altB.toFixed(0) : "?"}m
+                  </span>
                 </div>` : nothing}
               ${showUnaccounted ? html`
                 <div class="stat-box full-width"
@@ -909,6 +927,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
           <div class="section-title">Movement</div>
           ${this._checkRow("show_speed", "Show approach speed (km/h)")}
           ${this._checkRow("show_eta", "Show ETA (only when approaching)")}
+          ${this._checkRow("show_altitude", "Show altitude (A / delta / B) — requires mobile app GPS")}
 
           <div class="section-title">Time Together</div>
           ${this._checkRow("show_today_time", "Show time together today")}

@@ -518,7 +518,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         show_proximity_badge: true,
         show_speed: true,
         show_eta: true,
-        show_altitude: true,
+        show_altitude: false,
         show_proximity_duration: false,
         show_today_time: true,
         show_last_seen: false,
@@ -543,7 +543,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         show_proximity_badge: true,
         show_speed: true,
         show_eta: true,
-        show_altitude: true,
+        show_altitude: false,
         show_proximity_duration: false,
         show_today_time: true,
         show_last_seen: false,
@@ -708,7 +708,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
           ` : nothing}
 
           <!-- movement stat boxes -->
-          ${this._hasMovementStats() ? html`
+          ${this._hasMovementStats(speedKmh, etaMin, direction, altA, altB) ? html`
             <div class="stat-boxes">
               ${c.show_speed && speedKmh !== null ? html`
                 <div class="stat-box" style="background:rgba(14,165,233,0.1);border:1px solid rgba(14,165,233,0.25)">
@@ -912,9 +912,12 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         </div>`;
     }
 
-    _hasMovementStats() {
+    _hasMovementStats(speedKmh, etaMin, direction, altA, altB) {
       const c = this._config;
-      return c.show_speed || c.show_eta || c.show_altitude;
+      const hasSpeed = c.show_speed && speedKmh !== null;
+      const hasEta = c.show_eta && direction === "approaching" && etaMin !== null;
+      const hasAlt = c.show_altitude && (altA !== null || altB !== null);
+      return hasSpeed || hasEta || hasAlt;
     }
 
     _hasTimeStats() {

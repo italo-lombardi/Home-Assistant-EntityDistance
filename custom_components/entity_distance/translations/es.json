@@ -43,7 +43,7 @@
           "min_updates_reliable": "Actualizaciones mínimas para datos fiables",
           "resync_silence_s": "Silencio GPS antes de congelar (s)",
           "resync_hold_s": "Duración de congelación de proximidad (s)",
-          "altitude_aligned_threshold_m": "Same altitude threshold (m)"
+          "altitude_aligned_threshold_m": "Umbral de misma altitud (m)"
         },
         "data_description": {
           "max_accuracy_m": "Ignorar actualizaciones de ubicación donde el error GPS sea mayor que este valor. Los teléfonos en movimiento suelen reportar una precisión de 100–250 m, por lo que 300 m es un valor predeterminado seguro. Un teléfono con \"precisión de 350 m\" sería omitido. Establezca 0 para desactivar. Rango: 0–1000 m.",
@@ -54,7 +54,7 @@
           "min_updates_reliable": "Número mínimo de actualizaciones de ubicación en la ventana antes de que los datos se consideren fiables. Rango: 1–20.",
           "resync_silence_s": "Si todas las entidades rastreadas dejan de enviar actualizaciones GPS durante este tiempo, el estado de proximidad se congela para evitar cambios falsos mientras se espera que vuelva la señal. Predeterminado: 600 s (10 min). Rango: 60–3600 s.",
           "resync_hold_s": "Cuánto tiempo mantener el estado de proximidad congelado tras detectar silencio GPS. Establezca 0 para desactivar la congelación (la detección de silencio sigue activa para la contabilidad de tiempo). Predeterminado: 60 s. Rango: 0–300 s.",
-          "altitude_aligned_threshold_m": "Maximum altitude difference (in metres) for the 'Same Altitude' binary sensor to turn ON. 0 = exact same altitude only. Default: 5 m. Range: 0–100 m."
+          "altitude_aligned_threshold_m": "Diferencia máxima de altitud (en metros) para que el sensor binario «Misma altitud» se active. 0 = solo altitud exactamente igual. Predeterminado: 5 m. Intervalo: 0-100 m."
         }
       }
     },
@@ -103,7 +103,7 @@
           "min_updates_reliable": "Actualizaciones mínimas para datos fiables",
           "resync_silence_s": "Silencio GPS antes de congelar (s)",
           "resync_hold_s": "Duración de congelación de proximidad (s)",
-          "altitude_aligned_threshold_m": "Same altitude threshold (m)"
+          "altitude_aligned_threshold_m": "Umbral de misma altitud (m)"
         },
         "data_description": {
           "max_accuracy_m": "Ignorar actualizaciones de ubicación donde el error GPS sea mayor que este valor. Los teléfonos en movimiento suelen reportar una precisión de 100–250 m, por lo que 300 m es un valor predeterminado seguro. Un teléfono con \"precisión de 350 m\" sería omitido. Establezca 0 para desactivar. Rango: 0–1000 m.",
@@ -114,7 +114,7 @@
           "min_updates_reliable": "Cuántas actualizaciones consecutivas se necesitan antes de considerar la ubicación fiable. Rango: 1–20.",
           "resync_silence_s": "Si todas las entidades rastreadas dejan de enviar actualizaciones GPS durante este tiempo, el estado de proximidad se congela para evitar cambios falsos mientras se espera que vuelva la señal. Predeterminado: 600 s (10 min). Rango: 60–3600 s.",
           "resync_hold_s": "Cuánto tiempo mantener el estado de proximidad congelado tras detectar silencio GPS. Establezca 0 para desactivar la congelación (la detección de silencio sigue activa para la contabilidad de tiempo). Predeterminado: 60 s. Rango: 0–300 s.",
-          "altitude_aligned_threshold_m": "Maximum altitude difference (in metres) for the 'Same Altitude' binary sensor to turn ON. 0 = exact same altitude only. Default: 5 m. Range: 0–100 m."
+          "altitude_aligned_threshold_m": "Diferencia máxima de altitud (en metros) para que el sensor binario «Misma altitud» se active. 0 = solo altitud exactamente igual. Predeterminado: 5 m. Intervalo: 0-100 m."
         }
       }
     },
@@ -221,7 +221,7 @@
         "name": "Configuración"
       },
       "altitude_delta": {
-        "name": "Elevation Difference"
+        "name": "Diferencia de altitud"
       }
     },
     "binary_sensor": {
@@ -256,7 +256,7 @@
         "name": "Fiable"
       },
       "altitude_aligned": {
-        "name": "Same Altitude"
+        "name": "Misma altitud"
       }
     },
     "button": {

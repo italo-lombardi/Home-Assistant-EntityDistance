@@ -43,7 +43,7 @@
           "min_updates_reliable": "Min. uppdateringar för tillförlitliga data",
           "resync_silence_s": "GPS-tystnad före frysning (s)",
           "resync_hold_s": "Frysvaraktighet för närhet (s)",
-          "altitude_aligned_threshold_m": "Same altitude threshold (m)"
+          "altitude_aligned_threshold_m": "Tröskel för samma höjd (m)"
         },
         "data_description": {
           "max_accuracy_m": "Ignorera platsuppdateringar där GPS-felet är större än detta. Telefoner i rörelse rapporterar vanligtvis 100–250 m noggrannhet, så 300 m är ett säkert standardvärde. En telefon som visar \"350 m noggrannhet\" skulle hoppas över. Ange 0 för att inaktivera. Intervall: 0–1000 m.",
@@ -54,7 +54,7 @@
           "min_updates_reliable": "Minsta antal platsuppdateringar i fönstret innan data anses tillförlitliga. Intervall: 1–20.",
           "resync_silence_s": "Om alla spårade entiteter slutar skicka GPS-uppdateringar under denna tid fryses närhetstillståndet för att förhindra falska ändringar medan signalen inväntas. Standard: 600 s (10 min). Område: 60–3600 s.",
           "resync_hold_s": "Hur länge närhetstillståndet hålls fryst efter att GPS-tystnad har detekterats. Ange 0 för att inaktivera frysning (tystnadsdetektion körs fortfarande för tidsredovisning). Standard: 60 s. Område: 0–300 s.",
-          "altitude_aligned_threshold_m": "Maximum altitude difference (in metres) for the 'Same Altitude' binary sensor to turn ON. 0 = exact same altitude only. Default: 5 m. Range: 0–100 m."
+          "altitude_aligned_threshold_m": "Maximal höjdskillnad (i meter) för att binärsensorn 'Samma höjd' ska slås PÅ. 0 = endast exakt samma höjd. Standard: 5 m. Intervall: 0–100 m."
         }
       }
     },
@@ -103,7 +103,7 @@
           "min_updates_reliable": "Min. uppdateringar för tillförlitliga data",
           "resync_silence_s": "GPS-tystnad före frysning (s)",
           "resync_hold_s": "Frysvaraktighet för närhet (s)",
-          "altitude_aligned_threshold_m": "Same altitude threshold (m)"
+          "altitude_aligned_threshold_m": "Tröskel för samma höjd (m)"
         },
         "data_description": {
           "max_accuracy_m": "Ignorera platsuppdateringar där GPS-felet är större än detta. Telefoner i rörelse rapporterar vanligtvis 100–250 m noggrannhet, så 300 m är ett säkert standardvärde. En telefon som visar \"350 m noggrannhet\" skulle hoppas över. Ange 0 för att inaktivera. Intervall: 0–1000 m.",
@@ -114,7 +114,7 @@
           "min_updates_reliable": "Hur många konsekventa uppdateringar som krävs innan platsen anses tillförlitlig. Intervall: 1–20.",
           "resync_silence_s": "Om alla spårade entiteter slutar skicka GPS-uppdateringar under denna tid fryses närhetstillståndet för att förhindra falska ändringar medan signalen inväntas. Standard: 600 s (10 min). Område: 60–3600 s.",
           "resync_hold_s": "Hur länge närhetstillståndet hålls fryst efter att GPS-tystnad har detekterats. Ange 0 för att inaktivera frysning (tystnadsdetektion körs fortfarande för tidsredovisning). Standard: 60 s. Område: 0–300 s.",
-          "altitude_aligned_threshold_m": "Maximum altitude difference (in metres) for the 'Same Altitude' binary sensor to turn ON. 0 = exact same altitude only. Default: 5 m. Range: 0–100 m."
+          "altitude_aligned_threshold_m": "Maximal höjdskillnad (i meter) för att binärsensorn 'Samma höjd' ska slås PÅ. 0 = endast exakt samma höjd. Standard: 5 m. Intervall: 0–100 m."
         }
       }
     },
@@ -221,7 +221,7 @@
         "name": "Inställningar"
       },
       "altitude_delta": {
-        "name": "Elevation Difference"
+        "name": "Höjdskillnad"
       }
     },
     "binary_sensor": {
@@ -256,7 +256,7 @@
         "name": "Tillförlitlig"
       },
       "altitude_aligned": {
-        "name": "Same Altitude"
+        "name": "Samma höjd"
       }
     },
     "button": {

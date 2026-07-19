@@ -43,7 +43,7 @@
           "min_updates_reliable": "Atualizações mínimas para dados confiáveis",
           "resync_silence_s": "Silêncio GPS antes de congelar (s)",
           "resync_hold_s": "Duração do congelamento de proximidade (s)",
-          "altitude_aligned_threshold_m": "Same altitude threshold (m)"
+          "altitude_aligned_threshold_m": "Limite de mesma altitude (m)"
         },
         "data_description": {
           "max_accuracy_m": "Rejeitar atualizações de localização onde o erro GPS seja maior que este valor. Telefones em movimento geralmente reportam precisão de 100–250 m, portanto 300 m é um padrão seguro. Um telefone com 'precisão de 350 m' seria ignorado. Defina como 0 para desativar. Intervalo: 0–1000 m.",
@@ -54,7 +54,7 @@
           "min_updates_reliable": "Número mínimo de atualizações de localização na janela antes de os dados serem considerados confiáveis. Intervalo: 1–20.",
           "resync_silence_s": "Se todas as entidades rastreadas pararem de enviar atualizações GPS por este tempo, o estado de proximidade é congelado para evitar mudanças falsas enquanto aguarda o retorno do sinal. Padrão: 600 s (10 min). Intervalo: 60–3600 s.",
           "resync_hold_s": "Por quanto tempo manter o estado de proximidade congelado após a detecção de silêncio GPS. Defina como 0 para desativar o congelamento (a detecção de silêncio continua para contabilidade de tempo). Padrão: 60 s. Intervalo: 0–300 s.",
-          "altitude_aligned_threshold_m": "Maximum altitude difference (in metres) for the 'Same Altitude' binary sensor to turn ON. 0 = exact same altitude only. Default: 5 m. Range: 0–100 m."
+          "altitude_aligned_threshold_m": "Diferença máxima de altitude (em metros) para o sensor binário «Mesma altitude» ser ativado (LIGADO). 0 = apenas exatamente a mesma altitude. Padrão: 5 m. Intervalo: 0–100 m."
         }
       }
     },
@@ -103,7 +103,7 @@
           "min_updates_reliable": "Atualizações mínimas para dados confiáveis",
           "resync_silence_s": "Silêncio GPS antes de congelar (s)",
           "resync_hold_s": "Duração do congelamento de proximidade (s)",
-          "altitude_aligned_threshold_m": "Same altitude threshold (m)"
+          "altitude_aligned_threshold_m": "Limite de mesma altitude (m)"
         },
         "data_description": {
           "max_accuracy_m": "Rejeitar atualizações de localização onde o erro GPS seja maior que este valor. Telefones em movimento geralmente reportam precisão de 100–250 m, portanto 300 m é um padrão seguro. Um telefone com 'precisão de 350 m' seria ignorado. Defina como 0 para desativar. Intervalo: 0–1000 m.",
@@ -114,7 +114,7 @@
           "min_updates_reliable": "Quantas atualizações consecutivas são necessárias antes de considerar a localização confiável. Intervalo: 1–20.",
           "resync_silence_s": "Se todas as entidades rastreadas pararem de enviar atualizações GPS por este tempo, o estado de proximidade é congelado para evitar mudanças falsas enquanto aguarda o retorno do sinal. Padrão: 600 s (10 min). Intervalo: 60–3600 s.",
           "resync_hold_s": "Por quanto tempo manter o estado de proximidade congelado após a detecção de silêncio GPS. Defina como 0 para desativar o congelamento (a detecção de silêncio continua para contabilidade de tempo). Padrão: 60 s. Intervalo: 0–300 s.",
-          "altitude_aligned_threshold_m": "Maximum altitude difference (in metres) for the 'Same Altitude' binary sensor to turn ON. 0 = exact same altitude only. Default: 5 m. Range: 0–100 m."
+          "altitude_aligned_threshold_m": "Diferença máxima de altitude (em metros) para o sensor binário «Mesma altitude» ser ativado (LIGADO). 0 = apenas exatamente a mesma altitude. Padrão: 5 m. Intervalo: 0–100 m."
         }
       }
     },
@@ -221,7 +221,7 @@
         "name": "Configurações"
       },
       "altitude_delta": {
-        "name": "Elevation Difference"
+        "name": "Diferença de altitude"
       }
     },
     "binary_sensor": {
@@ -256,7 +256,7 @@
         "name": "Confiável"
       },
       "altitude_aligned": {
-        "name": "Same Altitude"
+        "name": "Mesma altitude"
       }
     },
     "button": {

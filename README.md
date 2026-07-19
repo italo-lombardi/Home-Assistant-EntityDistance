@@ -151,7 +151,7 @@ Each configured group creates one HA device (the group) with per-pair sub-device
 | GPS Accuracy (Name B) | GPS fix accuracy of entity B in meters | `distance` |
 | Altitude (Name A) | Altitude of entity A in metres. Unknown when entity has no GPS altitude — person and zone entities always show unknown; only mobile app device trackers provide altitude | — |
 | Altitude (Name B) | Altitude of entity B in metres. Unknown when entity has no GPS altitude | — |
-| Elevation Difference | Signed altitude difference B−A in metres. Positive = B is higher. Includes `altitude_threshold_m` attribute | — |
+| Elevation Difference | Signed altitude difference B−A in metres. Positive = B is higher. Includes `altitude_a_m`, `altitude_b_m`, and `altitude_threshold_m` attributes | — |
 | Last Update (Name A) | Timestamp of last location change for entity A | `timestamp` |
 | Last Update (Name B) | Timestamp of last location change for entity B | `timestamp` |
 | Update Count (Name A) | Location updates in the last 30 minutes for entity A | — |
@@ -261,7 +261,7 @@ Uses Home Assistant's built-in Vincenty formula (ellipsoidal earth model) on the
 
 Reads the `altitude` attribute (metres, WGS-84) directly from each entity. Values are bounds-checked to −500–15 000 m; out-of-range readings are treated as `unknown`. Altitude is only available from `device_tracker` entities reporting via the HA mobile app with GPS. Person entities and zone entities always show `unknown` — HA does not propagate altitude through those domains.
 
-**Elevation Difference** is computed as B−A (positive = B is higher). **Same Altitude** turns ON when `|altitude_delta| ≤ threshold` (default 5 m, configurable 0–100 m in Advanced Filters).
+**Elevation Difference** is computed as B−A (positive = B is higher). **Same Altitude** turns ON when `|elevation difference| ≤ threshold` (default 5 m, configurable 0–100 m in Advanced Filters).
 
 > **GPS vertical accuracy caveat.** Vertical GPS accuracy is typically ±10–30 m — 3–5× worse than horizontal. Two people on the same floor can show 5–20 m altitude difference. Use thresholds ≥ 30 m in automations to avoid false triggers. The 2D haversine/Vincenty distance calculation is unchanged — altitude is separate data only.
 

@@ -12,7 +12,7 @@
   provided by mobile app device trackers. Person entities and zone entities always
   show `unknown` — HA does not propagate altitude through those domains.
 - **Same Altitude binary sensor.** `binary_sensor.<pair>_same_altitude` turns
-  `ON` when `|altitude_delta| ≤ 5 m` — useful for "are they on the same floor?"
+  `ON` when `|elevation difference| ≤ 5 m` — useful for "are they on the same floor?"
   automations. Shows `unknown` when either entity lacks altitude data.
 - **Configurable altitude threshold.** `altitude_aligned_threshold_m` (default 5 m,
   range 0–100 m) exposed in Advanced Filters. Set to 0 for exact-same-altitude only.

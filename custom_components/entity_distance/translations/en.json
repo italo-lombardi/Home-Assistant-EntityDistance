@@ -215,6 +215,9 @@
       },
       "settings": {
         "name": "Settings"
+      },
+      "altitude_delta": {
+        "name": "Elevation Difference"
       }
     },
     "binary_sensor": {
@@ -247,6 +250,9 @@
       },
       "reliable": {
         "name": "Reliable"
+      },
+      "altitude_aligned": {
+        "name": "Same Altitude"
       }
     },
     "button": {

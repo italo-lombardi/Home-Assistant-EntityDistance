@@ -2,6 +2,29 @@
 
 ## [Unreleased]
 
+## [0.4.3] - 2026-07-19
+
+### Added
+
+- **Altitude sensors.** Three new first-class sensors per pair: **Altitude (A)**,
+  **Altitude (B)**, and **Elevation Difference** (signed delta: positive = B is
+  higher than A). Altitude is read from the `altitude` attribute (metres, WGS-84)
+  provided by mobile app device trackers. Person entities and zone entities always
+  show `unknown` — HA does not propagate altitude through those domains.
+- **Same Altitude binary sensor.** `binary_sensor.<pair>_altitude_aligned` turns
+  `ON` when `|altitude_delta| ≤ 5 m` — useful for "are they on the same floor?"
+  automations. Shows `unknown` when either entity lacks altitude data.
+- **Altitude row in pair card.** The Lovelace pair card shows a new "⛰ Altitude"
+  stat box when at least one entity has altitude data. Format: `42m (+8m) / 50m`
+  (A / signed delta / B). Displays "same floor" or "different floor" hint from the
+  binary sensor. Controlled by the `show_altitude` card option (default: on).
+
+### Notes
+
+- GPS vertical accuracy is typically ±10–30 m — 3–5× worse than horizontal. Two
+  people on the same floor may show 5–20 m altitude difference. Use thresholds
+  ≥ 30 m in automations to avoid false triggers.
+
 ## [0.4.2] - 2026-07-15
 
 ### Fixed

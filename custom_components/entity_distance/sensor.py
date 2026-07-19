@@ -26,6 +26,7 @@ from .const import (
     BUCKET_VERY_FAR,
     BUCKET_VERY_NEAR,
     BUCKETS,
+    DEFAULT_ALTITUDE_ALIGNED_THRESHOLD_M,
     DIRECTION_APPROACHING,
     DIRECTION_DIVERGING,
     DIRECTION_STATIONARY,
@@ -120,6 +121,9 @@ async def async_setup_entry(
                     DistanceSensor(coordinator, entry, pair_dev, k),
                     BucketSensor(coordinator, entry, pair_dev, k),
                     BucketLevelSensor(coordinator, entry, pair_dev, k),
+                    AltitudeSensor(coordinator, entry, pair_dev, k, a_name, b_name, "a"),
+                    AltitudeSensor(coordinator, entry, pair_dev, k, a_name, b_name, "b"),
+                    AltitudeDeltaSensor(coordinator, entry, pair_dev, k),
                     SettingsSensor(coordinator, entry, pair_dev, k),
                 ]
             )
@@ -152,6 +156,9 @@ async def async_setup_entry(
                     LastUpdateSensor(coordinator, entry, pair_dev, k, a_name, b_name, "b"),
                     UpdateCountSensor(coordinator, entry, pair_dev, k, a_name, b_name, "a"),
                     UpdateCountSensor(coordinator, entry, pair_dev, k, a_name, b_name, "b"),
+                    AltitudeSensor(coordinator, entry, pair_dev, k, a_name, b_name, "a"),
+                    AltitudeSensor(coordinator, entry, pair_dev, k, a_name, b_name, "b"),
+                    AltitudeDeltaSensor(coordinator, entry, pair_dev, k),
                     SettingsSensor(coordinator, entry, pair_dev, k),
                 ]
             )
@@ -618,6 +625,53 @@ class TodayUnaccountedTimeSensor(EntityDistanceSensorBase):
         if ps.proximity_tracking_started is not None:
             attrs["tracking_started"] = ps.proximity_tracking_started.isoformat()
         return attrs
+
+
+class AltitudeSensor(EntityDistanceSensorBase):
+    _attr_native_unit_of_measurement = UnitOfLength.METERS
+    _attr_icon = "mdi:elevation-rise"
+
+    def __init__(self, coordinator, entry, device_info, k, a_name, b_name, which: str):
+        super().__init__(coordinator, entry, device_info, k, f"altitude_{which}")
+        self._which = which
+        name = a_name if which == "a" else b_name
+        self._attr_name = f"Altitude ({name})"
+
+    @property
+    def native_value(self) -> float | None:
+        if not self._show_value:
+            return None
+        return self._pair.altitude_a_m if self._which == "a" else self._pair.altitude_b_m
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        return {
+            "entity_a": self._pair.entity_a_id,
+            "entity_b": self._pair.entity_b_id,
+        }
+
+
+class AltitudeDeltaSensor(EntityDistanceSensorBase):
+    _attr_native_unit_of_measurement = UnitOfLength.METERS
+    _attr_icon = "mdi:arrow-up-down"
+    _attr_translation_key = "altitude_delta"
+
+    def __init__(self, coordinator, entry, device_info, k):
+        super().__init__(coordinator, entry, device_info, k, "altitude_delta")
+
+    @property
+    def native_value(self) -> float | None:
+        if not self._show_value:
+            return None
+        return self._pair.altitude_delta_m
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        return {
+            "entity_a": self._pair.entity_a_id,
+            "entity_b": self._pair.entity_b_id,
+            "altitude_threshold_m": DEFAULT_ALTITUDE_ALIGNED_THRESHOLD_M,
+        }
 
 
 class MinDistanceSensor(CoordinatorEntity[EntityDistanceCoordinator], SensorEntity):

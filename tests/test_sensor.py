@@ -1445,15 +1445,17 @@ class TestAsyncSetupEntrySensor:
         await async_setup_entry(hass, entry, mock_add)
 
         types = [type(e).__name__ for e in added]
-        # Zone-zone pair: 4 per-pair sensors (Distance/Bucket/BucketLevel/Settings)
-        # plus 1 group-level Settings → 5 total, 2 of them SettingsSensor.
+        # Zone-zone pair: 7 per-pair sensors (Distance/Bucket/BucketLevel/AltitudeSensor×2/AltitudeDeltaSensor/Settings)
+        # plus 1 group-level Settings → 8 total, 2 of them SettingsSensor.
         assert set(types) == {
             "DistanceSensor",
             "BucketSensor",
             "BucketLevelSensor",
+            "AltitudeSensor",
+            "AltitudeDeltaSensor",
             "SettingsSensor",
         }
-        assert len(added) == 5
+        assert len(added) == 8
         assert sum(1 for t in types if t == "SettingsSensor") == 2
 
     @pytest.mark.asyncio
@@ -1482,6 +1484,8 @@ class TestAsyncSetupEntrySensor:
         assert "EntityStateSensor" in types
         assert "ClosingSpeedSensor" in types
         assert "TodayZoneTimeSensor" in types
+        assert "AltitudeSensor" in types
+        assert "AltitudeDeltaSensor" in types
 
     @pytest.mark.asyncio
     async def test_three_entities_get_group_sensor(self):
@@ -1558,3 +1562,83 @@ class TestAsyncSetupEntrySensor:
         added = []
         await async_setup_entry(hass, entry, lambda entities: added.extend(entities))
         assert len(added) > 0
+
+
+class TestAltitudeSensor:
+    def _make(self, which: str, alt_a=None, alt_b=None, data_valid=True):
+        from custom_components.entity_distance.sensor import AltitudeSensor
+
+        ps = PairState(entity_a_id="person.alice", entity_b_id="person.bob")
+        ps.altitude_a_m = alt_a
+        ps.altitude_b_m = alt_b
+        ps.data_valid = data_valid
+        sensor = _make_sensor(AltitudeSensor, ps)
+        sensor._which = which
+        sensor._attr_name = f"Altitude ({which})"
+        return sensor
+
+    def test_native_value_a(self):
+        sensor = self._make("a", alt_a=42.5)
+        assert sensor.native_value == pytest.approx(42.5)
+
+    def test_native_value_b(self):
+        sensor = self._make("b", alt_b=100.0)
+        assert sensor.native_value == pytest.approx(100.0)
+
+    def test_none_when_altitude_missing(self):
+        sensor = self._make("a", alt_a=None)
+        assert sensor.native_value is None
+
+    def test_none_when_not_show_value(self):
+        sensor = self._make("a", alt_a=42.5, data_valid=False)
+        assert sensor.native_value is None
+
+    def test_zero_altitude_is_valid(self):
+        sensor = self._make("a", alt_a=0.0)
+        assert sensor.native_value == pytest.approx(0.0)
+
+    def test_negative_altitude(self):
+        sensor = self._make("a", alt_a=-28.5)
+        assert sensor.native_value == pytest.approx(-28.5)
+
+    def test_extra_attrs_has_entities(self):
+        sensor = self._make("a", alt_a=42.5)
+        attrs = sensor.extra_state_attributes
+        assert attrs["entity_a"] == "person.alice"
+        assert attrs["entity_b"] == "person.bob"
+
+
+class TestAltitudeDeltaSensor:
+    def _make(self, delta=None, data_valid=True):
+        from custom_components.entity_distance.sensor import AltitudeDeltaSensor
+
+        ps = PairState(entity_a_id="person.alice", entity_b_id="person.bob")
+        ps.altitude_delta_m = delta
+        ps.data_valid = data_valid
+        return _make_sensor(AltitudeDeltaSensor, ps)
+
+    def test_positive_delta(self):
+        assert self._make(delta=8.0).native_value == pytest.approx(8.0)
+
+    def test_negative_delta(self):
+        assert self._make(delta=-8.0).native_value == pytest.approx(-8.0)
+
+    def test_zero_delta(self):
+        assert self._make(delta=0.0).native_value == pytest.approx(0.0)
+
+    def test_none_when_delta_none(self):
+        assert self._make(delta=None).native_value is None
+
+    def test_none_when_not_show_value(self):
+        assert self._make(delta=8.0, data_valid=False).native_value is None
+
+    def test_extra_attrs_has_entities(self):
+        attrs = self._make(delta=8.0).extra_state_attributes
+        assert attrs["entity_a"] == "person.alice"
+        assert attrs["entity_b"] == "person.bob"
+
+    def test_extra_attrs_has_threshold(self):
+        from custom_components.entity_distance.const import DEFAULT_ALTITUDE_ALIGNED_THRESHOLD_M
+
+        attrs = self._make(delta=8.0).extra_state_attributes
+        assert attrs["altitude_threshold_m"] == DEFAULT_ALTITUDE_ALIGNED_THRESHOLD_M

@@ -693,3 +693,111 @@ class TestReliableBinarySensor:
         sensor._attr_unique_id = "test_reliable_missing"
         sensor._attr_device_info = {}
         assert sensor.is_on is None
+
+
+def _make_altitude_aligned_sensor(
+    pair_key_val: tuple[str, str],
+    ps: PairState,
+):
+    from custom_components.entity_distance.binary_sensor import AltitudeAlignedBinarySensor
+
+    coordinator = MagicMock()
+    coordinator.data = MagicMock()
+    coordinator.data.pairs = {pair_key_val: ps}
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    sensor = AltitudeAlignedBinarySensor.__new__(AltitudeAlignedBinarySensor)
+    sensor.coordinator = coordinator
+    sensor._entry = entry
+    sensor._pair_key = pair_key_val
+    sensor._attr_unique_id = f"test_{pair_key_val[0]}__{pair_key_val[1]}_altitude_aligned"
+    sensor._attr_device_info = {}
+    return sensor
+
+
+class TestAltitudeAlignedBinarySensor:
+    def test_on_when_delta_within_threshold(self):
+        k = pair_key("person.alice", "person.bob")
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.altitude_delta_m = 3.0
+        sensor = _make_altitude_aligned_sensor(k, ps)
+        assert sensor.is_on is True
+
+    def test_on_when_delta_exactly_threshold(self):
+        k = pair_key("person.alice", "person.bob")
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.altitude_delta_m = 5.0
+        sensor = _make_altitude_aligned_sensor(k, ps)
+        assert sensor.is_on is True
+
+    def test_off_when_delta_exceeds_threshold(self):
+        k = pair_key("person.alice", "person.bob")
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.altitude_delta_m = 6.0
+        sensor = _make_altitude_aligned_sensor(k, ps)
+        assert sensor.is_on is False
+
+    def test_on_when_negative_delta_within_threshold(self):
+        k = pair_key("person.alice", "person.bob")
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.altitude_delta_m = -4.0
+        sensor = _make_altitude_aligned_sensor(k, ps)
+        assert sensor.is_on is True
+
+    def test_off_when_negative_delta_exceeds_threshold(self):
+        k = pair_key("person.alice", "person.bob")
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.altitude_delta_m = -8.0
+        sensor = _make_altitude_aligned_sensor(k, ps)
+        assert sensor.is_on is False
+
+    def test_none_when_altitude_delta_none(self):
+        k = pair_key("person.alice", "person.bob")
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.altitude_delta_m = None
+        sensor = _make_altitude_aligned_sensor(k, ps)
+        assert sensor.is_on is None
+
+    def test_on_when_delta_zero(self):
+        k = pair_key("person.alice", "person.bob")
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.altitude_delta_m = 0.0
+        sensor = _make_altitude_aligned_sensor(k, ps)
+        assert sensor.is_on is True
+
+    def test_extra_state_attributes_has_threshold(self):
+        from custom_components.entity_distance.const import DEFAULT_ALTITUDE_ALIGNED_THRESHOLD_M
+
+        k = pair_key("person.alice", "person.bob")
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.altitude_delta_m = 3.0
+        sensor = _make_altitude_aligned_sensor(k, ps)
+        attrs = sensor.extra_state_attributes
+        assert attrs["threshold_m"] == DEFAULT_ALTITUDE_ALIGNED_THRESHOLD_M
+
+    def test_registered_in_setup_entry(self):
+        import asyncio
+        from unittest.mock import MagicMock
+
+        from custom_components.entity_distance.binary_sensor import async_setup_entry
+        from custom_components.entity_distance.const import DOMAIN
+
+        coordinator = MagicMock()
+        coordinator.is_within_grace.return_value = False
+        coordinator.entities = ["person.alice", "person.bob"]
+        coordinator.data = MagicMock()
+
+        entry = MagicMock()
+        entry.entry_id = "test_entry"
+
+        hass = MagicMock()
+        hass.states.get.return_value = None
+        hass.data = {DOMAIN: {"test_entry": coordinator}}
+
+        added = []
+        mock_add = MagicMock(side_effect=lambda entities: added.extend(entities))
+
+        asyncio.get_event_loop().run_until_complete(async_setup_entry(hass, entry, mock_add))
+
+        types = [type(e).__name__ for e in added]
+        assert "AltitudeAlignedBinarySensor" in types

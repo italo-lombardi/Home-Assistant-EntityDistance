@@ -155,6 +155,94 @@ automation:
 
 ---
 
+## 8. Alert when two people are on different floors
+
+Fires when the elevation difference exceeds 30 m (safe GPS noise margin)
+and they are close horizontally. Requires mobile app GPS on both devices.
+
+```yaml
+automation:
+  - alias: "Alice and Bob on different floors"
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.alice_bob_same_altitude
+        to: "off"
+        for:
+          seconds: 30
+    condition:
+      - condition: numeric_state
+        entity_id: sensor.alice_bob_distance
+        below: 100          # close horizontally
+      - condition: template
+        value_template: >
+          {{ state_attr('sensor.alice_bob_elevation_difference', 'altitude_a_m') is not none
+             and state_attr('sensor.alice_bob_elevation_difference', 'altitude_b_m') is not none }}
+    action:
+      - service: notify.mobile_app_alice
+        data:
+          message: >
+            Bob is {{ states('sensor.alice_bob_elevation_difference') | float | abs | round(0) }} m
+            {{ 'above' if states('sensor.alice_bob_elevation_difference') | float < 0 else 'below' }} you.
+```
+
+## 9. Notify when two people reach the same floor
+
+```yaml
+automation:
+  - alias: "Alice and Bob reunited on same floor"
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.alice_bob_same_altitude
+        to: "on"
+        for:
+          seconds: 10
+    condition:
+      - condition: state
+        entity_id: binary_sensor.alice_bob_in_proximity
+        state: "on"
+    action:
+      - service: notify.mobile_app_alice
+        data:
+          message: "Bob is on your floor (within 5 m altitude)."
+```
+
+## 10. Gate an automation on altitude data being available
+
+Not all entities provide altitude. Check before acting on altitude sensors.
+
+```yaml
+automation:
+  - alias: "Floor-aware meeting reminder"
+    trigger:
+      - platform: time
+        at: "09:00:00"
+    condition:
+      # Only run if both entities have valid altitude data
+      - condition: not
+        conditions:
+          - condition: state
+            entity_id: sensor.alice_bob_elevation_difference
+            state: "unknown"
+      - condition: state
+        entity_id: binary_sensor.alice_bob_same_altitude
+        state: "off"
+    action:
+      - service: notify.mobile_app_alice
+        data:
+          message: >
+            Good morning! Alice is
+            {{ (states('sensor.alice_bob_elevation_difference') | float | abs | round(0)) }} m
+            {{ 'above' if states('sensor.alice_bob_elevation_difference') | float < 0 else 'below' }}
+            Bob. Head to floor {{ 'B' if states('sensor.alice_bob_elevation_difference') | float < 0 else 'above' }}.
+```
+
+> **GPS vertical accuracy:** Consumer GPS altitude is ±10–30 m. Use thresholds ≥ 30 m
+> in automations to avoid false triggers. The `Same Altitude` binary sensor defaults to
+> a 5 m threshold — increase via **Configure → Advanced Filters → Same altitude threshold**
+> if you see false positives.
+
+---
+
 **Tip:** because sensors keep their last value for a short grace window during
 brief GPS gaps, prefer `for:` durations on triggers where a momentary blip
 shouldn't fire the automation — and gate on `binary_sensor.<pair>_reliable`

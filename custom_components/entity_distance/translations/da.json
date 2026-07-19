@@ -42,7 +42,8 @@
           "require_reliable": "Kræv pålidelige data til nærhedsbegivenheder",
           "min_updates_reliable": "Min. opdateringer for pålidelige data",
           "resync_silence_s": "GPS-stilhed før frysning (s)",
-          "resync_hold_s": "Nærhedsfrysningstid (s)"
+          "resync_hold_s": "Nærhedsfrysningstid (s)",
+          "altitude_aligned_threshold_m": "Tærskel for samme højde (m)"
         },
         "data_description": {
           "max_accuracy_m": "Afvis lokationsopdateringer hvor GPS-fejlen er større end denne værdi. Telefoner i bevægelse rapporterer typisk 100–250 m nøjagtighed, så 300 m er en sikker standard. En telefon der viser '350 m nøjagtighed' vil blive sprunget over. Sæt til 0 for at deaktivere. Område: 0–1000 m.",
@@ -52,7 +53,8 @@
           "require_reliable": "Afskyd kun proximity_enter-begivenhed, når data anses for pålidelige.",
           "min_updates_reliable": "Mindste antal lokationsopdateringer i vinduet, før data anses for pålidelige. Område: 1–20.",
           "resync_silence_s": "Hvis alle sporede enheder holder op med at sende GPS-opdateringer i denne periode, fryses nærhedstilstanden for at forhindre falske ændringer, mens signalet ventes tilbage. Standard: 600 s (10 min). Interval: 60–3600 s.",
-          "resync_hold_s": "Hvor længe nærhedstilstanden holdes frossen efter GPS-stilhed er registreret. Sæt til 0 for at deaktivere frysning (stilhedsregistrering kører stadig til tidsregnskab). Standard: 60 s. Interval: 0–300 s."
+          "resync_hold_s": "Hvor længe nærhedstilstanden holdes frossen efter GPS-stilhed er registreret. Sæt til 0 for at deaktivere frysning (stilhedsregistrering kører stadig til tidsregnskab). Standard: 60 s. Interval: 0–300 s.",
+          "altitude_aligned_threshold_m": "Maksimal højdeforskel (i meter) for at den binære sensor 'Samme højde' slår TIL. 0 = kun præcis samme højde. Standard: 5 m. Interval: 0–100 m."
         }
       }
     },
@@ -100,7 +102,8 @@
           "require_reliable": "Kræv pålidelige data til nærhedsbegivenheder",
           "min_updates_reliable": "Min. opdateringer for pålidelige data",
           "resync_silence_s": "GPS-stilhed før frysning (s)",
-          "resync_hold_s": "Nærhedsfrysningstid (s)"
+          "resync_hold_s": "Nærhedsfrysningstid (s)",
+          "altitude_aligned_threshold_m": "Tærskel for samme højde (m)"
         },
         "data_description": {
           "max_accuracy_m": "Afvis lokationsopdateringer hvor GPS-fejlen er større end denne værdi. Telefoner i bevægelse rapporterer typisk 100–250 m nøjagtighed, så 300 m er en sikker standard. En telefon der viser '350 m nøjagtighed' vil blive sprunget over. Sæt til 0 for at deaktivere. Område: 0–1000 m.",
@@ -110,7 +113,8 @@
           "require_reliable": "Når aktiveret udløses en 'i nærheden'-hændelse kun efter konsistente opdateringer.",
           "min_updates_reliable": "Hvor mange konsistente opdateringer der kræves, før lokationen betragtes som pålidelig. Område: 1–20.",
           "resync_silence_s": "Hvis alle sporede enheder holder op med at sende GPS-opdateringer i denne periode, fryses nærhedstilstanden for at forhindre falske ændringer, mens signalet ventes tilbage. Standard: 600 s (10 min). Interval: 60–3600 s.",
-          "resync_hold_s": "Hvor længe nærhedstilstanden holdes frossen efter GPS-stilhed er registreret. Sæt til 0 for at deaktivere frysning (stilhedsregistrering kører stadig til tidsregnskab). Standard: 60 s. Interval: 0–300 s."
+          "resync_hold_s": "Hvor længe nærhedstilstanden holdes frossen efter GPS-stilhed er registreret. Sæt til 0 for at deaktivere frysning (stilhedsregistrering kører stadig til tidsregnskab). Standard: 60 s. Interval: 0–300 s.",
+          "altitude_aligned_threshold_m": "Maksimal højdeforskel (i meter) for at den binære sensor 'Samme højde' slår TIL. 0 = kun præcis samme højde. Standard: 5 m. Interval: 0–100 m."
         }
       }
     },
@@ -215,6 +219,12 @@
       },
       "settings": {
         "name": "Indstillinger"
+      },
+      "altitude_delta": {
+        "name": "Højdeforskel"
+      },
+      "altitude": {
+        "name": "Højde ({name})"
       }
     },
     "binary_sensor": {
@@ -247,6 +257,9 @@
       },
       "reliable": {
         "name": "Pålidelig"
+      },
+      "altitude_aligned": {
+        "name": "Samme højde"
       }
     },
     "button": {

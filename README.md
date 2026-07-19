@@ -21,9 +21,10 @@ Track the distance between any two or more entities — people, devices, or zone
 - **Person-to-person, person-to-zone, device-to-zone, zone-to-zone** — any combination of `person`, `device_tracker`, `sensor`, or `zone` entities
 - **Group tracking** — select 2–5 entities; all pairwise distances are tracked under one config entry (2 entities = 1 pair, 3 = 3 pairs, 4 = 6 pairs, 5 = 10 pairs)
 - **Group sensors** — for 3+ entities: Min Distance, Any In Proximity, All In Proximity, Settings
-- **27 sensors per pair** — distance, proximity zone, proximity zone level, proximity duration, proximity rate, proximity tracking started, last seen together, today proximity time, direction, direction level, closing speed, ETA, today zone times, GPS accuracy, last update, update count, entity state, today unaccounted time (per entity where applicable)
+- **30 sensors per pair** — distance, proximity zone, proximity zone level, proximity duration, proximity rate, proximity tracking started, last seen together, today proximity time, direction, direction level, closing speed, ETA, today zone times, GPS accuracy, last update, update count, entity state, today unaccounted time, altitude (per entity where applicable)
 - **Proximity binary sensor** — ON when distance ≤ zone boundary, OFF when distance > zone boundary (strict, no hysteresis gap)
 - **Same Zone binary sensor** — ON when both entities share the same named zone, OFF otherwise (never `unknown`)
+- **Same Altitude binary sensor** — ON when absolute altitude difference ≤ threshold (default 5 m), `unknown` when either entity lacks altitude data
 - **Reliable binary sensor** — ON when both entities have enough recent GPS fixes to meet the reliability threshold
 - **Zone bucket binary sensors** — one per zone (Very Near, Near, Medium, Far, Very Far): ON while the pair's distance falls in that zone
 - **Direction of travel** — approaching, diverging, or stationary
@@ -39,6 +40,7 @@ Track the distance between any two or more entities — people, devices, or zone
 - **Diagnostic sensors** — GPS accuracy, last update, update count (last 30 min) per tracked entity
 - **Refresh button** — force immediate mobile app location update
 - **Multiple pairs** — each pair gets its own HA device; add as many as needed
+- **Configurable altitude threshold** — set the maximum altitude difference for "Same Altitude" in Advanced Filters (default 5 m, range 0–100 m)
 - **Vincenty distance** — uses HA's built-in ellipsoidal distance calculation, more accurate than Haversine
 - **Live sensor updates** — all sensors refresh every minute even when entities don't move; duration and gap sensors stay accurate
 - **State persistence** — today proximity time, zone times, and proximity duration survive HA restarts
@@ -105,6 +107,7 @@ Only shown when "Configure advanced filters" is enabled in Step 2.
 | Consecutive updates required for reliability | 3 | Consecutive updates required before data is considered reliable |
 | GPS silence before freeze (s) | 600 | If all tracked entities stop sending GPS updates for this long, proximity state is frozen. Range: 60–3600 s |
 | Proximity freeze duration (s) | 60 | How long to hold proximity state frozen after GPS silence is detected. Range: 0–300 s |
+| Same altitude threshold (m) | 5 | Maximum altitude difference for the Same Altitude binary sensor to turn ON. 0 = exact same altitude only. Range: 0–100 m |
 
 ![Config flow step 3 — advanced filters](assets/screenshots/config_flow_step3_advanced_filters.png)
 
@@ -114,14 +117,14 @@ All settings can be changed after setup via **Configure** on the integration car
 
 ## Entities
 
-Each configured group creates one HA device (the group) with per-pair sub-devices. A 2-entity group creates 36 entities (27 sensors + 8 binary sensors + 1 button). A 3-entity group creates 108 pair entities + 4 group sensors.
+Each configured group creates one HA device (the group) with per-pair sub-devices. A 2-entity group creates 40 entities (30 sensors + 9 binary sensors + 1 button). A 3-entity group creates 120 pair entities + 4 group sensors.
 
 | Group size | Pairs | Total entities (approx) |
 |-----------|-------|------------------------|
-| 2 | 1 | 36 |
-| 3 | 3 | 108 + 4 group |
-| 4 | 6 | 216 + 4 group |
-| 5 | 10 | 360 + 4 group |
+| 2 | 1 | 40 |
+| 3 | 3 | 120 + 4 group |
+| 4 | 6 | 240 + 4 group |
+| 5 | 10 | 400 + 4 group |
 
 ### Pair Sensors
 
@@ -146,6 +149,9 @@ Each configured group creates one HA device (the group) with per-pair sub-device
 | Estimated Arrival Time | Minutes until together (only when approaching) | `duration` |
 | GPS Accuracy (Name A) | GPS fix accuracy of entity A in meters | `distance` |
 | GPS Accuracy (Name B) | GPS fix accuracy of entity B in meters | `distance` |
+| Altitude (Name A) | Altitude of entity A in metres. Unknown when entity has no GPS altitude — person and zone entities always show unknown; only mobile app device trackers provide altitude | — |
+| Altitude (Name B) | Altitude of entity B in metres. Unknown when entity has no GPS altitude | — |
+| Elevation Difference | Signed altitude difference B−A in metres. Positive = B is higher. Includes `altitude_a_m`, `altitude_b_m`, and `altitude_threshold_m` attributes | — |
 | Last Update (Name A) | Timestamp of last location change for entity A | `timestamp` |
 | Last Update (Name B) | Timestamp of last location change for entity B | `timestamp` |
 | Update Count (Name A) | Location updates in the last 30 minutes for entity A | — |
@@ -164,6 +170,7 @@ Each configured group creates one HA device (the group) with per-pair sub-device
 | In Proximity | ON when entities are within the selected proximity zone (or closer), OFF when distance > zone boundary | `presence` |
 | Same Zone | ON when both entities are in the same named zone (e.g. both `home`), OFF otherwise. Never `unknown` — when either side is `not_home` / `unknown` / `unavailable`, the pair is not in the same zone so the sensor is OFF | — |
 | Reliable | ON when both entities have enough recent GPS updates to meet the reliability threshold | — |
+| Same Altitude | ON when absolute altitude difference ≤ threshold (default 5 m). Unknown when either entity lacks altitude data. Registered for all pair types including zone pairs | — |
 | Very Near | ON while the pair's current distance falls in the Very Near zone | — |
 | Near | ON while the pair's current distance falls in the Near zone | — |
 | Medium | ON while the pair's current distance falls in the Medium zone | — |
@@ -171,6 +178,8 @@ Each configured group creates one HA device (the group) with per-pair sub-device
 | Very Far | ON while the pair's current distance falls in the Very Far zone | — |
 
 > `Same Zone` is not created for zone-zone pairs (always trivially true).
+
+> Altitude sensors and `Same Altitude` show `unknown` for person and zone entities — only mobile app `device_tracker` entities provide altitude via GPS.
 
 ### Group Sensors (3+ entities only)
 
@@ -247,6 +256,14 @@ How each computed sensor value is derived:
 ### Distance
 
 Uses Home Assistant's built-in Vincenty formula (ellipsoidal earth model) on the `latitude` and `longitude` attributes of both entities. More accurate than Haversine for long distances.
+
+### Altitude
+
+Reads the `altitude` attribute (metres, WGS-84) directly from each entity. Values are bounds-checked to −500–15 000 m; out-of-range readings are treated as `unknown`. Altitude is only available from `device_tracker` entities reporting via the HA mobile app with GPS. Person entities and zone entities always show `unknown` — HA does not propagate altitude through those domains.
+
+**Elevation Difference** is computed as B−A (positive = B is higher). **Same Altitude** turns ON when `|elevation difference| ≤ threshold` (default 5 m, configurable 0–100 m in Advanced Filters).
+
+> **GPS vertical accuracy caveat.** Vertical GPS accuracy is typically ±10–30 m — 3–5× worse than horizontal. Two people on the same floor can show 5–20 m altitude difference. Use thresholds ≥ 30 m in automations to avoid false triggers. The 2D haversine/Vincenty distance calculation is unchanged — altitude is separate data only.
 
 ### Direction
 
@@ -386,6 +403,7 @@ show_zone: true               # proximity zone label
 show_proximity_badge: true    # In Proximity / Not in Proximity badge
 show_speed: true              # approach speed
 show_eta: true                # ETA (only when approaching)
+show_altitude: false          # altitude row (opt-in; requires device_tracker GPS)
 show_proximity_duration: false
 show_today_time: true         # time together today
 show_last_seen: false
@@ -422,6 +440,7 @@ show_zone: true
 show_proximity_badge: true
 show_speed: true
 show_eta: true
+show_altitude: false          # altitude row (opt-in; requires device_tracker GPS)
 show_today_time: true
 show_proximity_duration: false
 show_last_seen: false
@@ -483,11 +502,11 @@ If auto-registration fails (e.g. YAML-only Lovelace mode), add manually:
 
 ```yaml
 resources:
-  - url: /entity_distance/entity-distance-pair-card.js?0.4.0
+  - url: /entity_distance/entity-distance-pair-card.js?0.4.3
     type: module
-  - url: /entity_distance/entity-distance-avatar-card.js?0.4.0
+  - url: /entity_distance/entity-distance-avatar-card.js?0.4.3
     type: module
-  - url: /entity_distance/entity-distance-group-card.js?0.4.0
+  - url: /entity_distance/entity-distance-group-card.js?0.4.3
     type: module
 ```
 

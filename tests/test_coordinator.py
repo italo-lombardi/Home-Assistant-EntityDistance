@@ -641,6 +641,7 @@ def _make_calc_pair_coordinator(
     coordinator._require_reliable = require_reliable
     coordinator._min_updates_reliable = min_updates_reliable
     coordinator._updates_window_s = updates_window_s
+    coordinator._altitude_aligned_threshold_m = 5.0
     coordinator._bucket_thresholds = {
         BUCKET_VERY_NEAR: DEFAULT_ZONE_VERY_NEAR_M,
         BUCKET_NEAR: DEFAULT_ZONE_NEAR_M,
@@ -1386,6 +1387,11 @@ class TestCoordinatorProperties:
         coord = self._make()
         assert BUCKET_VERY_NEAR in coord.bucket_thresholds
 
+    def test_altitude_aligned_threshold_property(self):
+        coord = self._make()
+        coord._altitude_aligned_threshold_m = 10.0
+        assert coord.altitude_aligned_threshold_m == 10.0
+
     def test_settings_snapshot(self):
         coord = self._make()
         coord._proximity_zone = "very_near"
@@ -1399,6 +1405,7 @@ class TestCoordinatorProperties:
         coord._min_updates_reliable = 3
         coord._updates_window_s = 1800
         coord._require_reliable = False
+        coord._altitude_aligned_threshold_m = 5.0
         snap = coord.settings_snapshot
         assert snap["proximity_zone"] == "very_near"
         assert snap["zone_very_near_m"] == 200
@@ -1410,9 +1417,10 @@ class TestCoordinatorProperties:
         assert "grace_window_s" in snap
         assert "resync_silence_s" in snap
         assert "resync_hold_s" in snap
+        assert "altitude_aligned_threshold_m" in snap
         assert snap["stationary_threshold_factor"] == 0.15
         assert snap["stationary_threshold_min_m"] == 15.0
-        assert len(snap) == 17  # update this if fields are intentionally added/removed
+        assert len(snap) == 18  # update this if fields are intentionally added/removed
 
 
 # ---------------------------------------------------------------------------
@@ -2539,3 +2547,157 @@ class TestDoubleTickBoundary:
         assert zone_after_real_tick == pytest.approx(zone_after_two_ticks + 60.0, abs=1.0), (
             "real 60s tick after double-tick must credit ~60s, not doubled"
         )
+
+
+class TestExtractAltitude:
+    """Tests for _extract_altitude."""
+
+    def _state(self, entity_id, attrs):
+        from homeassistant.core import State
+
+        return State(entity_id, "home", attrs)
+
+    def test_valid_altitude(self):
+        from custom_components.entity_distance.coordinator import _extract_altitude
+
+        s = self._state("device_tracker.phone", {"altitude": 42.5})
+        assert _extract_altitude(s) == pytest.approx(42.5)
+
+    def test_altitude_zero_is_valid(self):
+        from custom_components.entity_distance.coordinator import _extract_altitude
+
+        s = self._state("device_tracker.phone", {"altitude": 0.0})
+        assert _extract_altitude(s) == pytest.approx(0.0)
+
+    def test_altitude_integer_coerced(self):
+        from custom_components.entity_distance.coordinator import _extract_altitude
+
+        s = self._state("device_tracker.phone", {"altitude": 100})
+        assert _extract_altitude(s) == pytest.approx(100.0)
+
+    def test_altitude_negative(self):
+        from custom_components.entity_distance.coordinator import _extract_altitude
+
+        s = self._state("device_tracker.phone", {"altitude": -28.5})
+        assert _extract_altitude(s) == pytest.approx(-28.5)
+
+    def test_altitude_missing_key(self):
+        from custom_components.entity_distance.coordinator import _extract_altitude
+
+        s = self._state("device_tracker.phone", {"latitude": 51.5})
+        assert _extract_altitude(s) is None
+
+    def test_altitude_none_value(self):
+        from custom_components.entity_distance.coordinator import _extract_altitude
+
+        s = self._state("device_tracker.phone", {"altitude": None})
+        assert _extract_altitude(s) is None
+
+    def test_altitude_string_invalid(self):
+        from custom_components.entity_distance.coordinator import _extract_altitude
+
+        s = self._state("device_tracker.phone", {"altitude": "not_a_number"})
+        assert _extract_altitude(s) is None
+
+    def test_altitude_dict_invalid(self):
+        from custom_components.entity_distance.coordinator import _extract_altitude
+
+        s = self._state("device_tracker.phone", {"altitude": {"value": 100, "unit": "m"}})
+        assert _extract_altitude(s) is None
+
+    def test_altitude_too_high(self):
+        from custom_components.entity_distance.coordinator import _extract_altitude
+
+        s = self._state("device_tracker.phone", {"altitude": 15001.0})
+        assert _extract_altitude(s) is None
+
+    def test_altitude_too_low(self):
+        from custom_components.entity_distance.coordinator import _extract_altitude
+
+        s = self._state("device_tracker.phone", {"altitude": -501.0})
+        assert _extract_altitude(s) is None
+
+    def test_altitude_at_max_boundary(self):
+        from custom_components.entity_distance.coordinator import _extract_altitude
+
+        s = self._state("device_tracker.phone", {"altitude": 15000.0})
+        assert _extract_altitude(s) == pytest.approx(15000.0)
+
+    def test_altitude_at_min_boundary(self):
+        from custom_components.entity_distance.coordinator import _extract_altitude
+
+        s = self._state("device_tracker.phone", {"altitude": -500.0})
+        assert _extract_altitude(s) == pytest.approx(-500.0)
+
+
+class TestCalcPairAltitude:
+    """Tests for altitude_a_m / altitude_b_m / altitude_delta_m in _calc_pair."""
+
+    def _run(self, alt_a, alt_b):
+        from unittest.mock import patch
+
+        from custom_components.entity_distance.models import pair_key
+        from tests.conftest import make_state
+
+        coordinator = _make_calc_pair_coordinator()
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+
+        state_a = make_state("person.alice", 51.5, -0.1, altitude=alt_a)
+        state_b = make_state("person.bob", 51.6, -0.2, altitude=alt_b)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=500.0,
+        ):
+            return coordinator._calc_pair(
+                ps, "person.alice", "person.bob", datetime.now().astimezone(), set()
+            )
+
+    def test_both_altitude_set(self):
+        ps = self._run(10.0, 18.0)
+        assert ps.altitude_a_m == pytest.approx(10.0)
+        assert ps.altitude_b_m == pytest.approx(18.0)
+        assert ps.altitude_delta_m == pytest.approx(8.0)
+
+    def test_delta_negative_when_b_lower(self):
+        ps = self._run(50.0, 42.0)
+        assert ps.altitude_delta_m == pytest.approx(-8.0)
+
+    def test_delta_zero_same_floor(self):
+        ps = self._run(30.0, 30.0)
+        assert ps.altitude_delta_m == pytest.approx(0.0)
+
+    def test_altitude_a_missing(self):
+        ps = self._run(None, 18.0)
+        assert ps.altitude_a_m is None
+        assert ps.altitude_b_m == pytest.approx(18.0)
+        assert ps.altitude_delta_m is None
+
+    def test_altitude_b_missing(self):
+        ps = self._run(10.0, None)
+        assert ps.altitude_a_m == pytest.approx(10.0)
+        assert ps.altitude_b_m is None
+        assert ps.altitude_delta_m is None
+
+    def test_both_missing(self):
+        ps = self._run(None, None)
+        assert ps.altitude_a_m is None
+        assert ps.altitude_b_m is None
+        assert ps.altitude_delta_m is None
+
+    def test_altitude_zero_is_valid(self):
+        ps = self._run(0.0, 0.0)
+        assert ps.altitude_a_m == pytest.approx(0.0)
+        assert ps.altitude_b_m == pytest.approx(0.0)
+        assert ps.altitude_delta_m == pytest.approx(0.0)
+
+    def test_negative_altitude(self):
+        ps = self._run(-28.0, 100.0)
+        assert ps.altitude_delta_m == pytest.approx(128.0)
+
+    def test_altitude_does_not_affect_distance(self):
+        ps = self._run(10.0, 500.0)
+        assert ps.distance_m == pytest.approx(500.0)

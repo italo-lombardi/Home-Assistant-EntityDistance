@@ -18,11 +18,14 @@ from homeassistant.util import dt as dt_util
 from homeassistant.util.location import distance as ha_distance
 
 from .const import (
+    ALTITUDE_MAX_M,
+    ALTITUDE_MIN_M,
     BUCKET_FAR,
     BUCKET_MID,
     BUCKET_NEAR,
     BUCKET_VERY_FAR,
     BUCKET_VERY_NEAR,
+    CONF_ALTITUDE_ALIGNED_THRESHOLD_M,
     CONF_DEBOUNCE_S,
     CONF_ENTITIES,
     CONF_GRACE_WINDOW_S,
@@ -38,6 +41,7 @@ from .const import (
     CONF_ZONE_MID_M,
     CONF_ZONE_NEAR_M,
     CONF_ZONE_VERY_NEAR_M,
+    DEFAULT_ALTITUDE_ALIGNED_THRESHOLD_M,
     DEFAULT_DEBOUNCE_S,
     DEFAULT_GRACE_WINDOW_S,
     DEFAULT_MAX_ACCURACY_M,
@@ -210,6 +214,21 @@ def _get_coords(state: State) -> tuple[float, float, float | None] | None:
     return lat, lon, accuracy
 
 
+def _extract_altitude(state: State) -> float | None:
+    try:
+        alt = float(state.attributes["altitude"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    if not (ALTITUDE_MIN_M <= alt <= ALTITUDE_MAX_M):
+        _LOGGER.debug(
+            "entity_distance: altitude out of bounds for %s: %s",
+            state.entity_id,
+            alt,
+        )
+        return None
+    return alt
+
+
 def calc_bucket(distance_m: float, thresholds: dict[str, float]) -> str:
     for bucket, threshold in thresholds.items():
         if distance_m <= threshold:
@@ -245,6 +264,9 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         )
         self._updates_window_s: float = data.get(CONF_UPDATES_WINDOW_S, DEFAULT_UPDATES_WINDOW_S)
         self._require_reliable: bool = data.get(CONF_REQUIRE_RELIABLE, DEFAULT_REQUIRE_RELIABLE)
+        self._altitude_aligned_threshold_m: float = data.get(
+            CONF_ALTITUDE_ALIGNED_THRESHOLD_M, DEFAULT_ALTITUDE_ALIGNED_THRESHOLD_M
+        )
         self._bucket_thresholds: dict[str, float] = {
             BUCKET_VERY_NEAR: data.get(CONF_ZONE_VERY_NEAR_M, DEFAULT_ZONE_VERY_NEAR_M),
             BUCKET_NEAR: data.get(CONF_ZONE_NEAR_M, DEFAULT_ZONE_NEAR_M),
@@ -298,6 +320,10 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         return self._updates_window_s
 
     @property
+    def altitude_aligned_threshold_m(self) -> float:
+        return self._altitude_aligned_threshold_m
+
+    @property
     def settings_snapshot(self) -> dict[str, float | int | bool]:
         """All proximity / filter settings the coordinator was constructed with.
         Exposed so a diagnostic sensor can present them on the device card."""
@@ -319,6 +345,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             "zone_near_m": self._bucket_thresholds[BUCKET_NEAR],
             "zone_mid_m": self._bucket_thresholds[BUCKET_MID],
             "zone_far_m": self._bucket_thresholds[BUCKET_FAR],
+            "altitude_aligned_threshold_m": self._altitude_aligned_threshold_m,
         }
 
     async def async_setup(self) -> None:
@@ -708,6 +735,13 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         ps.last_error = None
         ps.stale_since = None  # valid tick — exit any display grace window
 
+        # Altitude — extracted directly from entity state, independent of coord path.
+        alt_a = _extract_altitude(state_a)
+        alt_b = _extract_altitude(state_b)
+        ps.altitude_a_m = alt_a
+        ps.altitude_b_m = alt_b
+        ps.altitude_delta_m = (alt_b - alt_a) if (alt_a is not None and alt_b is not None) else None
+
         reliable = self.is_reliable(ps)
 
         # Resync silence — check before proximity transitions so hold returns early
@@ -987,6 +1021,9 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 "closing_speed_kmh": ps.closing_speed_kmh,
                 "eta_minutes": ps.eta_minutes,
                 "last_proximity": ps.last_proximity,
+                "altitude_a_m": ps.altitude_a_m,
+                "altitude_b_m": ps.altitude_b_m,
+                "altitude_delta_m": ps.altitude_delta_m,
                 "last_bucket": (
                     calc_bucket(ps.distance_m, self._bucket_thresholds)
                     if ps.distance_m is not None
@@ -1080,6 +1117,12 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                     ps.eta_minutes = float(eta) if eta is not None else None
                     ps.last_proximity = bool(blob.get("last_proximity", False))
                     ps.stale_since = now_load
+                    alt_a_raw = blob.get("altitude_a_m")
+                    ps.altitude_a_m = float(alt_a_raw) if alt_a_raw is not None else None
+                    alt_b_raw = blob.get("altitude_b_m")
+                    ps.altitude_b_m = float(alt_b_raw) if alt_b_raw is not None else None
+                    alt_d_raw = blob.get("altitude_delta_m")
+                    ps.altitude_delta_m = float(alt_d_raw) if alt_d_raw is not None else None
             except Exception:  # noqa: BLE001
                 _LOGGER.warning(
                     "entity_distance: failed to restore persisted state for pair %s, starting fresh",

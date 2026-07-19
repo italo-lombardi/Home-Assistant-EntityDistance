@@ -52,6 +52,10 @@ class PairState:
     today_reset_date: date | None = None
     today_zone_seconds: dict[str, float] = field(default_factory=dict)
 
+    altitude_a_m: float | None = None
+    altitude_b_m: float | None = None
+    altitude_delta_m: float | None = None
+
     accuracy_a: float | None = None
     accuracy_b: float | None = None
     last_update_a: datetime | None = None

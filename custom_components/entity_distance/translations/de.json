@@ -42,7 +42,8 @@
           "require_reliable": "Nur auslösen, wenn Daten zuverlässig sind",
           "min_updates_reliable": "Min. Aktualisierungen für zuverlässige Daten",
           "resync_silence_s": "GPS-Stille vor Einfrieren (s)",
-          "resync_hold_s": "Näherungs-Einfrierzeit (s)"
+          "resync_hold_s": "Näherungs-Einfrierzeit (s)",
+          "altitude_aligned_threshold_m": "Schwelle für gleiche Höhe (m)"
         },
         "data_description": {
           "max_accuracy_m": "Standortaktualisierungen ignorieren, wenn der GPS-Fehler größer als dieser Wert ist. Telefone in Bewegung melden typischerweise eine Genauigkeit von 100–250 m, daher ist 300 m ein sicherer Standardwert. Ein Telefon mit „350 m Genauigkeit\" würde übersprungen. Auf 0 setzen zum Deaktivieren. Bereich: 0–1000 m.",
@@ -52,7 +53,8 @@
           "require_reliable": "Der Sensor 'In der Nähe' schaltet sich nur EIN, wenn die Daten als zuverlässig gelten.",
           "min_updates_reliable": "Mindestanzahl aufeinanderfolgender Standortaktualisierungen, bevor Daten als zuverlässig gelten. Bereich: 1–20.",
           "resync_silence_s": "Wenn alle verfolgten Entitäten für diese Dauer keine GPS-Aktualisierungen senden, wird der Näherungsstatus eingefroren, um falsche Änderungen zu verhindern. Standard: 600 s (10 Min). Bereich: 60–3600 s.",
-          "resync_hold_s": "Wie lange der Näherungsstatus nach erkannter GPS-Stille eingefroren bleibt. Auf 0 setzen, um das Einfrieren zu deaktivieren (die Stillerkennung läuft weiterhin für die Zeitabrechnung). Standard: 60 s. Bereich: 0–300 s."
+          "resync_hold_s": "Wie lange der Näherungsstatus nach erkannter GPS-Stille eingefroren bleibt. Auf 0 setzen, um das Einfrieren zu deaktivieren (die Stillerkennung läuft weiterhin für die Zeitabrechnung). Standard: 60 s. Bereich: 0–300 s.",
+          "altitude_aligned_threshold_m": "Maximaler Höhenunterschied (in Metern), bei dem der Binärsensor 'Gleiche Höhe' EIN schaltet. 0 = nur exakt gleiche Höhe. Standard: 5 m. Bereich: 0–100 m."
         }
       }
     },
@@ -100,7 +102,8 @@
           "require_reliable": "Nur auslösen, wenn Daten zuverlässig sind",
           "min_updates_reliable": "Min. Aktualisierungen für zuverlässige Daten",
           "resync_silence_s": "GPS-Stille vor Einfrieren (s)",
-          "resync_hold_s": "Näherungs-Einfrierzeit (s)"
+          "resync_hold_s": "Näherungs-Einfrierzeit (s)",
+          "altitude_aligned_threshold_m": "Schwelle für gleiche Höhe (m)"
         },
         "data_description": {
           "max_accuracy_m": "Standortaktualisierungen ignorieren, wenn der GPS-Fehler größer als dieser Wert ist. Telefone in Bewegung melden typischerweise eine Genauigkeit von 100–250 m, daher ist 300 m ein sicherer Standardwert. Ein Telefon mit „350 m Genauigkeit\" würde übersprungen. Auf 0 setzen zum Deaktivieren. Bereich: 0–1000 m.",
@@ -110,7 +113,8 @@
           "require_reliable": "Der Sensor 'In der Nähe' schaltet sich nur EIN, wenn die Daten als zuverlässig gelten.",
           "min_updates_reliable": "Wie viele aufeinanderfolgende Aktualisierungen erforderlich sind, bevor der Standort als zuverlässig gilt. Bereich: 1–20.",
           "resync_silence_s": "Wenn alle verfolgten Entitäten für diese Dauer keine GPS-Aktualisierungen senden, wird der Näherungsstatus eingefroren, um falsche Änderungen zu verhindern. Standard: 600 s (10 Min). Bereich: 60–3600 s.",
-          "resync_hold_s": "Wie lange der Näherungsstatus nach erkannter GPS-Stille eingefroren bleibt. Auf 0 setzen, um das Einfrieren zu deaktivieren (die Stillerkennung läuft weiterhin für die Zeitabrechnung). Standard: 60 s. Bereich: 0–300 s."
+          "resync_hold_s": "Wie lange der Näherungsstatus nach erkannter GPS-Stille eingefroren bleibt. Auf 0 setzen, um das Einfrieren zu deaktivieren (die Stillerkennung läuft weiterhin für die Zeitabrechnung). Standard: 60 s. Bereich: 0–300 s.",
+          "altitude_aligned_threshold_m": "Maximaler Höhenunterschied (in Metern), bei dem der Binärsensor 'Gleiche Höhe' EIN schaltet. 0 = nur exakt gleiche Höhe. Standard: 5 m. Bereich: 0–100 m."
         }
       }
     },
@@ -215,6 +219,12 @@
       },
       "settings": {
         "name": "Einstellungen"
+      },
+      "altitude_delta": {
+        "name": "Höhenunterschied"
+      },
+      "altitude": {
+        "name": "Höhe ({name})"
       }
     },
     "binary_sensor": {
@@ -247,6 +257,9 @@
       },
       "reliable": {
         "name": "Zuverlässig"
+      },
+      "altitude_aligned": {
+        "name": "Gleiche Höhe"
       }
     },
     "button": {

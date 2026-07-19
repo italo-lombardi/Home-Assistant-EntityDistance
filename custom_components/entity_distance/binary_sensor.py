@@ -85,6 +85,7 @@ async def async_setup_entry(
         is_zone_pair = k[0].startswith("zone.") and k[1].startswith("zone.")
         sensors.append(ProximityBinarySensor(coordinator, entry, pair_dev, k, a_name, b_name))
         sensors.append(ReliableBinarySensor(coordinator, entry, pair_dev, k))
+        sensors.append(AltitudeAlignedBinarySensor(coordinator, entry, pair_dev, k))
         if not is_zone_pair:
             sensors.append(SameZoneBinarySensor(coordinator, entry, pair_dev, k))
         for bucket in BUCKETS:
@@ -308,3 +309,41 @@ class ReliableBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], BinaryS
         if not _show(self.coordinator, ps):
             return None
         return self.coordinator.is_reliable(ps)
+
+
+class AltitudeAlignedBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], BinarySensorEntity):
+    """On when both entities are at the same altitude (within threshold)."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "altitude_aligned"
+
+    def __init__(
+        self,
+        coordinator: EntityDistanceCoordinator,
+        entry: ConfigEntry,
+        device_info: DeviceInfo,
+        pair_key_val: tuple[str, str],
+    ) -> None:
+        super().__init__(coordinator)
+        self._entry = entry
+        self._pair_key = pair_key_val
+        key_str = f"{pair_key_val[0]}__{pair_key_val[1]}"
+        self._attr_unique_id = f"{entry.entry_id}_{key_str}_altitude_aligned"
+        self._attr_device_info = device_info
+
+    @property
+    def _pair(self) -> PairState:
+        return self.coordinator.data.pairs.get(self._pair_key) or PairState(
+            entity_a_id=self._pair_key[0], entity_b_id=self._pair_key[1]
+        )
+
+    @property
+    def is_on(self) -> bool | None:
+        ps = self._pair
+        if ps.altitude_delta_m is None:
+            return None
+        return abs(ps.altitude_delta_m) <= self.coordinator.altitude_aligned_threshold_m
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        return {"threshold_m": self.coordinator.altitude_aligned_threshold_m}

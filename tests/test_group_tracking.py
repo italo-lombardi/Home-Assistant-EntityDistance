@@ -165,6 +165,8 @@ def _make_coordinator(
     coord._resync_hold_until = {}
     coord._min_updates_reliable = min_updates_reliable
     coord._require_reliable = require_reliable
+    coord._altitude_aligned_threshold_m = 5.0
+    coord._max_vertical_accuracy_m = 0.0
     return coord
 
 

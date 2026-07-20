@@ -15,7 +15,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
-from .const import BUCKETS, DOMAIN
+from .const import BUCKETS, DIRECTION_APPROACHING, DOMAIN
 from .coordinator import EntityDistanceCoordinator, calc_bucket
 from .models import PairState, friendly_name, pair_key
 
@@ -92,6 +92,7 @@ async def async_setup_entry(
         sensors.append(AltitudeAlignedBinarySensor(coordinator, entry, pair_dev, k))
         if not is_zone_pair:
             sensors.append(SameZoneBinarySensor(coordinator, entry, pair_dev, k))
+            sensors.append(ApproachingBinarySensor(coordinator, entry, pair_dev, k))
         for bucket in BUCKETS:
             sensors.append(BucketBinarySensor(coordinator, entry, pair_dev, k, bucket))
 
@@ -351,3 +352,37 @@ class AltitudeAlignedBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], 
     @property
     def extra_state_attributes(self) -> dict:
         return {"threshold_m": self.coordinator.altitude_aligned_threshold_m}
+
+
+class ApproachingBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], BinarySensorEntity):
+    """On while the pair is actively approaching each other."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "approaching"
+
+    def __init__(
+        self,
+        coordinator: EntityDistanceCoordinator,
+        entry: ConfigEntry,
+        device_info: DeviceInfo,
+        pair_key_val: tuple[str, str],
+    ) -> None:
+        super().__init__(coordinator)
+        self._entry = entry
+        self._pair_key = pair_key_val
+        key_str = f"{pair_key_val[0]}__{pair_key_val[1]}"
+        self._attr_unique_id = f"{entry.entry_id}_{key_str}_approaching"
+        self._attr_device_info = device_info
+
+    @property
+    def _pair(self) -> PairState:
+        return self.coordinator.data.pairs.get(self._pair_key) or PairState(
+            entity_a_id=self._pair_key[0], entity_b_id=self._pair_key[1]
+        )
+
+    @property
+    def is_on(self) -> bool | None:
+        ps = self._pair
+        if not _show(self.coordinator, ps) or ps.direction is None:
+            return None
+        return ps.direction == DIRECTION_APPROACHING

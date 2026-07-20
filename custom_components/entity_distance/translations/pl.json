@@ -43,7 +43,8 @@
           "min_updates_reliable": "Min. aktualizacje dla wiarygodnych danych",
           "resync_silence_s": "Cisza GPS przed zamrożeniem (s)",
           "resync_hold_s": "Czas trwania zamrożenia bliskości (s)",
-          "altitude_aligned_threshold_m": "Próg tej samej wysokości (m)"
+          "altitude_aligned_threshold_m": "Próg tej samej wysokości (m)",
+          "max_vertical_accuracy_m": "Maks. błąd pionowy GPS (m, 0 = wyłącz)"
         },
         "data_description": {
           "max_accuracy_m": "Odrzucaj aktualizacje lokalizacji, gdy błąd GPS jest większy niż ta wartość. Telefony w ruchu zazwyczaj raportują dokładność 100–250 m, więc 300 m to bezpieczna wartość domyślna. Telefon pokazujący \"dokładność 350 m\" zostanie pominięty. Ustaw na 0, aby wyłączyć. Zakres: 0–1000 m.",
@@ -54,7 +55,8 @@
           "min_updates_reliable": "Minimalna liczba aktualizacji lokalizacji w oknie przed uznaniem danych za wiarygodne. Zakres: 1–20.",
           "resync_silence_s": "Jeśli wszystkie śledzone encje przestają wysyłać aktualizacje GPS przez ten czas, stan bliskości zostaje zamrożony, aby zapobiec fałszywym zmianom podczas oczekiwania na powrót sygnału. Domyślnie: 600 s (10 min). Zakres: 60–3600 s.",
           "resync_hold_s": "Jak długo stan bliskości pozostaje zamrożony po wykryciu ciszy GPS. Ustaw na 0, aby wyłączyć zamrożenie (wykrywanie ciszy nadal działa do celów rozliczania czasu). Domyślnie: 60 s. Zakres: 0–300 s.",
-          "altitude_aligned_threshold_m": "Maksymalna różnica wysokości (w metrach), przy której czujnik binarny 'Ta sama wysokość' włącza się (WŁ.). 0 = tylko dokładnie ta sama wysokość. Domyślnie: 5 m. Zakres: 0–100 m."
+          "altitude_aligned_threshold_m": "Maksymalna różnica wysokości (w metrach), przy której czujnik binarny 'Ta sama wysokość' włącza się (WŁ.). 0 = tylko dokładnie ta sama wysokość. Domyślnie: 5 m. Zakres: 0–100 m.",
+          "max_vertical_accuracy_m": "Jeśli powyżej 0, sensory wysokości zwracają 'nieznany' gdy błąd pionowy GPS przekroczy tę wartość. Domyślnie: 0 (wyłączone)."
         }
       }
     },
@@ -103,7 +105,8 @@
           "min_updates_reliable": "Min. aktualizacje dla wiarygodnych danych",
           "resync_silence_s": "Cisza GPS przed zamrożeniem (s)",
           "resync_hold_s": "Czas trwania zamrożenia bliskości (s)",
-          "altitude_aligned_threshold_m": "Próg tej samej wysokości (m)"
+          "altitude_aligned_threshold_m": "Próg tej samej wysokości (m)",
+          "max_vertical_accuracy_m": "Maks. błąd pionowy GPS (m, 0 = wyłącz)"
         },
         "data_description": {
           "max_accuracy_m": "Odrzucaj aktualizacje lokalizacji, gdy błąd GPS jest większy niż ta wartość. Telefony w ruchu zazwyczaj raportują dokładność 100–250 m, więc 300 m to bezpieczna wartość domyślna. Telefon pokazujący \"dokładność 350 m\" zostanie pominięty. Ustaw na 0, aby wyłączyć. Zakres: 0–1000 m.",
@@ -114,7 +117,8 @@
           "min_updates_reliable": "Ile kolejnych aktualizacji jest wymaganych, zanim lokalizacja zostanie uznana za niezawodną. Zakres: 1–20.",
           "resync_silence_s": "Jeśli wszystkie śledzone encje przestają wysyłać aktualizacje GPS przez ten czas, stan bliskości zostaje zamrożony, aby zapobiec fałszywym zmianom podczas oczekiwania na powrót sygnału. Domyślnie: 600 s (10 min). Zakres: 60–3600 s.",
           "resync_hold_s": "Jak długo stan bliskości pozostaje zamrożony po wykryciu ciszy GPS. Ustaw na 0, aby wyłączyć zamrożenie (wykrywanie ciszy nadal działa do celów rozliczania czasu). Domyślnie: 60 s. Zakres: 0–300 s.",
-          "altitude_aligned_threshold_m": "Maksymalna różnica wysokości (w metrach), przy której czujnik binarny 'Ta sama wysokość' włącza się (WŁ.). 0 = tylko dokładnie ta sama wysokość. Domyślnie: 5 m. Zakres: 0–100 m."
+          "altitude_aligned_threshold_m": "Maksymalna różnica wysokości (w metrach), przy której czujnik binarny 'Ta sama wysokość' włącza się (WŁ.). 0 = tylko dokładnie ta sama wysokość. Domyślnie: 5 m. Zakres: 0–100 m.",
+          "max_vertical_accuracy_m": "Jeśli powyżej 0, sensory wysokości zwracają 'nieznany' gdy błąd pionowy GPS przekroczy tę wartość. Domyślnie: 0 (wyłączone)."
         }
       }
     },
@@ -260,6 +264,9 @@
       },
       "altitude_aligned": {
         "name": "Ta sama wysokość"
+      },
+      "approaching": {
+        "name": "Zbliżający się"
       }
     },
     "button": {

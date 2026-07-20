@@ -31,6 +31,7 @@ from .const import (
     CONF_GRACE_WINDOW_S,
     CONF_MAX_ACCURACY_M,
     CONF_MAX_SPEED_KMH,
+    CONF_MAX_VERTICAL_ACCURACY_M,
     CONF_MIN_UPDATES_RELIABLE,
     CONF_PROXIMITY_ZONE,
     CONF_REQUIRE_RELIABLE,
@@ -46,6 +47,7 @@ from .const import (
     DEFAULT_GRACE_WINDOW_S,
     DEFAULT_MAX_ACCURACY_M,
     DEFAULT_MAX_SPEED_KMH,
+    DEFAULT_MAX_VERTICAL_ACCURACY_M,
     DEFAULT_MIN_UPDATES_RELIABLE,
     DEFAULT_PROXIMITY_ZONE,
     DEFAULT_REQUIRE_RELIABLE,
@@ -323,6 +325,9 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         self._altitude_aligned_threshold_m: float = data.get(
             CONF_ALTITUDE_ALIGNED_THRESHOLD_M, DEFAULT_ALTITUDE_ALIGNED_THRESHOLD_M
         )
+        self._max_vertical_accuracy_m: float = data.get(
+            CONF_MAX_VERTICAL_ACCURACY_M, DEFAULT_MAX_VERTICAL_ACCURACY_M
+        )
         self._bucket_thresholds: dict[str, float] = {
             BUCKET_VERY_NEAR: data.get(CONF_ZONE_VERY_NEAR_M, DEFAULT_ZONE_VERY_NEAR_M),
             BUCKET_NEAR: data.get(CONF_ZONE_NEAR_M, DEFAULT_ZONE_NEAR_M),
@@ -402,6 +407,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             "zone_mid_m": self._bucket_thresholds[BUCKET_MID],
             "zone_far_m": self._bucket_thresholds[BUCKET_FAR],
             "altitude_aligned_threshold_m": self._altitude_aligned_threshold_m,
+            "max_vertical_accuracy_m": self._max_vertical_accuracy_m,
         }
 
     async def async_setup(self) -> None:
@@ -803,6 +809,13 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
 
         alt_a = _extract_altitude(src_a)
         alt_b = _extract_altitude(src_b)
+        vacc_a = _extract_vertical_accuracy(src_a)
+        vacc_b = _extract_vertical_accuracy(src_b)
+        if self._max_vertical_accuracy_m > 0:
+            if vacc_a is not None and vacc_a > self._max_vertical_accuracy_m:
+                alt_a = None
+            if vacc_b is not None and vacc_b > self._max_vertical_accuracy_m:
+                alt_b = None
         ps.altitude_a_m = alt_a
         ps.altitude_b_m = alt_b
         ps.altitude_delta_m = (alt_b - alt_a) if (alt_a is not None and alt_b is not None) else None
@@ -811,8 +824,8 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         ps.speed_b_kmh = _extract_speed(src_b)
         ps.heading_a_deg = _extract_heading(src_a)
         ps.heading_b_deg = _extract_heading(src_b)
-        ps.vertical_accuracy_a_m = _extract_vertical_accuracy(src_a)
-        ps.vertical_accuracy_b_m = _extract_vertical_accuracy(src_b)
+        ps.vertical_accuracy_a_m = vacc_a
+        ps.vertical_accuracy_b_m = vacc_b
 
         reliable = self.is_reliable(ps)
 

@@ -43,7 +43,8 @@
           "min_updates_reliable": "Min. oppdateringer for pålitelige data",
           "resync_silence_s": "GPS-stillhet før frysing (s)",
           "resync_hold_s": "Varighet for frysing av nærhet (s)",
-          "altitude_aligned_threshold_m": "Terskel for samme høyde (m)"
+          "altitude_aligned_threshold_m": "Terskel for samme høyde (m)",
+          "max_vertical_accuracy_m": "Maks. vertikal GPS-feil (m, 0 = av)"
         },
         "data_description": {
           "max_accuracy_m": "Avvis posisjonsoppdateringer der GPS-feilen er større enn denne verdien. Telefoner i bevegelse rapporterer typisk 100–250 m nøyaktighet, så 300 m er en trygg standardverdi. En telefon som viser «350 m nøyaktighet» vil bli hoppet over. Sett til 0 for å deaktivere. Område: 0–1000 m.",
@@ -54,7 +55,8 @@
           "min_updates_reliable": "Minimum antall posisjonsoppdateringer i vinduet før data anses pålitelige. Område: 1–20.",
           "resync_silence_s": "Hvis alle sporede enheter slutter å sende GPS-oppdateringer i denne perioden, fryses nærhetstilstanden for å forhindre falske endringer mens signalet ventes tilbake. Standard: 600 s (10 min). Område: 60–3600 s.",
           "resync_hold_s": "Hvor lenge nærhetstilstanden holdes fryst etter at GPS-stillhet er oppdaget. Sett til 0 for å deaktivere frysing (stillhetsregistrering kjører fortsatt for tidsregnskap). Standard: 60 s. Område: 0–300 s.",
-          "altitude_aligned_threshold_m": "Maksimal høydeforskjell (i meter) for at binærsensoren «Samme høyde» skal slå seg PÅ. 0 = kun nøyaktig samme høyde. Standard: 5 m. Område: 0–100 m."
+          "altitude_aligned_threshold_m": "Maksimal høydeforskjell (i meter) for at binærsensoren «Samme høyde» skal slå seg PÅ. 0 = kun nøyaktig samme høyde. Standard: 5 m. Område: 0–100 m.",
+          "max_vertical_accuracy_m": "Hvis over 0 returnerer høydesensorer 'ukjent' når den vertikale GPS-feilen overstiger denne verdien. Standard: 0 (av)."
         }
       }
     },
@@ -103,7 +105,8 @@
           "min_updates_reliable": "Min. oppdateringer for pålitelige data",
           "resync_silence_s": "GPS-stillhet før frysing (s)",
           "resync_hold_s": "Varighet for frysing av nærhet (s)",
-          "altitude_aligned_threshold_m": "Terskel for samme høyde (m)"
+          "altitude_aligned_threshold_m": "Terskel for samme høyde (m)",
+          "max_vertical_accuracy_m": "Maks. vertikal GPS-feil (m, 0 = av)"
         },
         "data_description": {
           "max_accuracy_m": "Avvis posisjonsoppdateringer der GPS-feilen er større enn denne verdien. Telefoner i bevegelse rapporterer typisk 100–250 m nøyaktighet, så 300 m er en trygg standardverdi. En telefon som viser «350 m nøyaktighet» vil bli hoppet over. Sett til 0 for å deaktivere. Område: 0–1000 m.",
@@ -114,7 +117,8 @@
           "min_updates_reliable": "Hvor mange konsekvente oppdateringer som kreves før posisjonen anses som pålitelig. Område: 1–20.",
           "resync_silence_s": "Hvis alle sporede enheter slutter å sende GPS-oppdateringer i denne perioden, fryses nærhetstilstanden for å forhindre falske endringer mens signalet ventes tilbake. Standard: 600 s (10 min). Område: 60–3600 s.",
           "resync_hold_s": "Hvor lenge nærhetstilstanden holdes fryst etter at GPS-stillhet er oppdaget. Sett til 0 for å deaktivere frysing (stillhetsregistrering kjører fortsatt for tidsregnskap). Standard: 60 s. Område: 0–300 s.",
-          "altitude_aligned_threshold_m": "Maksimal høydeforskjell (i meter) for at binærsensoren «Samme høyde» skal slå seg PÅ. 0 = kun nøyaktig samme høyde. Standard: 5 m. Område: 0–100 m."
+          "altitude_aligned_threshold_m": "Maksimal høydeforskjell (i meter) for at binærsensoren «Samme høyde» skal slå seg PÅ. 0 = kun nøyaktig samme høyde. Standard: 5 m. Område: 0–100 m.",
+          "max_vertical_accuracy_m": "Hvis over 0 returnerer høydesensorer 'ukjent' når den vertikale GPS-feilen overstiger denne verdien. Standard: 0 (av)."
         }
       }
     },
@@ -260,6 +264,9 @@
       },
       "altitude_aligned": {
         "name": "Samme høyde"
+      },
+      "approaching": {
+        "name": "Nærmer seg"
       }
     },
     "button": {

@@ -73,6 +73,8 @@ def _make_coord(
     coord._min_updates_reliable = 1
     coord._require_reliable = False
     coord._updates_window_s = 1800.0
+    coord._altitude_aligned_threshold_m = 5.0
+    coord._max_vertical_accuracy_m = 0.0
 
     import itertools
 

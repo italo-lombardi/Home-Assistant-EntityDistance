@@ -43,7 +43,8 @@
           "min_updates_reliable": "Consecutive updates required for reliability",
           "resync_silence_s": "GPS silence before freeze (s)",
           "resync_hold_s": "Proximity freeze duration (s)",
-          "altitude_aligned_threshold_m": "Same altitude threshold (m)"
+          "altitude_aligned_threshold_m": "Same altitude threshold (m)",
+          "max_vertical_accuracy_m": "Max vertical GPS error (m, 0 = off)"
         },
         "data_description": {
           "max_accuracy_m": "Ignore location updates where the GPS error is larger than this. Phones in motion typically report 100–250 m accuracy, so 300 m is a safe default. A phone showing '350 m accuracy' would be skipped. Set to 0 to turn this off. Range: 0–1000 m.",
@@ -54,7 +55,8 @@
           "min_updates_reliable": "How many consecutive updates are needed before the location is considered reliable. Only applies when 'Only trigger when data is reliable' is on. Example: 3 updates at 3-minute intervals = up to 9 minutes before the sensor turns ON. Range: 1–20.",
           "resync_silence_s": "If all tracked entities stop sending GPS updates for this long, proximity state is frozen to prevent false changes while waiting for signal to return. Default: 600 s (10 min). Range: 60–3600 s.",
           "resync_hold_s": "How long to hold proximity state frozen after GPS silence is detected. Set to 0 to disable the freeze (silence detection still runs for time accounting). Default: 60 s. Range: 0–300 s.",
-          "altitude_aligned_threshold_m": "Maximum altitude difference (in metres) for the 'Same Altitude' binary sensor to turn ON. 0 = exact same altitude only. Default: 5 m. Range: 0–100 m."
+          "altitude_aligned_threshold_m": "Maximum altitude difference (in metres) for the 'Same Altitude' binary sensor to turn ON. 0 = exact same altitude only. Default: 5 m. Range: 0–100 m.",
+          "max_vertical_accuracy_m": "When set above 0, altitude sensors return unknown if the device's vertical GPS error exceeds this value. Prevents unreliable altitude readings from triggering altitude-based automations. 0 = off (default). Consumer GPS vertical error is typically 10–30 m. Range: 0–500 m."
         }
       }
     },
@@ -103,7 +105,8 @@
           "min_updates_reliable": "Consecutive updates required for reliability",
           "resync_silence_s": "GPS silence before freeze (s)",
           "resync_hold_s": "Proximity freeze duration (s)",
-          "altitude_aligned_threshold_m": "Same altitude threshold (m)"
+          "altitude_aligned_threshold_m": "Same altitude threshold (m)",
+          "max_vertical_accuracy_m": "Max vertical GPS error (m, 0 = off)"
         },
         "data_description": {
           "max_accuracy_m": "Ignore location updates where the GPS error is larger than this. Phones in motion typically report 100–250 m accuracy, so 300 m is a safe default. A phone showing '350 m accuracy' would be skipped. Set to 0 to turn this off. Range: 0–1000 m.",
@@ -114,7 +117,8 @@
           "min_updates_reliable": "How many consecutive updates are needed before the location is considered reliable. Only applies when 'Only trigger when data is reliable' is on. Example: 3 updates at 3-minute intervals = up to 9 minutes before the sensor turns ON. Range: 1–20.",
           "resync_silence_s": "If all tracked entities stop sending GPS updates for this long, proximity state is frozen to prevent false changes while waiting for signal to return. Default: 600 s (10 min). Range: 60–3600 s.",
           "resync_hold_s": "How long to hold proximity state frozen after GPS silence is detected. Set to 0 to disable the freeze (silence detection still runs for time accounting). Default: 60 s. Range: 0–300 s.",
-          "altitude_aligned_threshold_m": "Maximum altitude difference (in metres) for the 'Same Altitude' binary sensor to turn ON. 0 = exact same altitude only. Default: 5 m. Range: 0–100 m."
+          "altitude_aligned_threshold_m": "Maximum altitude difference (in metres) for the 'Same Altitude' binary sensor to turn ON. 0 = exact same altitude only. Default: 5 m. Range: 0–100 m.",
+          "max_vertical_accuracy_m": "When set above 0, altitude sensors return unknown if the device's vertical GPS error exceeds this value. Prevents unreliable altitude readings from triggering altitude-based automations. 0 = off (default). Consumer GPS vertical error is typically 10–30 m. Range: 0–500 m."
         }
       }
     },
@@ -260,6 +264,9 @@
       },
       "altitude_aligned": {
         "name": "Same Altitude"
+      },
+      "approaching": {
+        "name": "Approaching"
       }
     },
     "button": {

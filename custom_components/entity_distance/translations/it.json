@@ -43,7 +43,8 @@
           "min_updates_reliable": "Aggiornamenti minimi per dati affidabili",
           "resync_silence_s": "Silenzio GPS prima del congelamento (s)",
           "resync_hold_s": "Durata congelamento prossimità (s)",
-          "altitude_aligned_threshold_m": "Soglia stessa altitudine (m)"
+          "altitude_aligned_threshold_m": "Soglia stessa altitudine (m)",
+          "max_vertical_accuracy_m": "Errore GPS verticale max. (m, 0 = disattivato)"
         },
         "data_description": {
           "max_accuracy_m": "Ignora aggiornamenti di posizione con errore GPS superiore a questo valore. I telefoni in movimento riportano tipicamente una precisione di 100–250 m, quindi 300 m è un valore predefinito sicuro. Un telefono con \"precisione 350 m\" verrebbe ignorato. Imposta a 0 per disabilitare. Intervallo: 0–1000 m.",
@@ -54,7 +55,8 @@
           "min_updates_reliable": "Numero minimo di aggiornamenti di posizione nella finestra prima che i dati siano considerati affidabili. Intervallo: 1–20.",
           "resync_silence_s": "Se tutte le entità tracciate smettono di inviare aggiornamenti GPS per questa durata, lo stato di prossimità viene congelato per evitare cambiamenti falsi mentre si attende il ritorno del segnale. Predefinito: 600 s (10 min). Intervallo: 60–3600 s.",
           "resync_hold_s": "Per quanto tempo mantenere lo stato di prossimità congelato dopo il rilevamento del silenzio GPS. Imposta a 0 per disabilitare il congelamento (il rilevamento del silenzio continua per la contabilità del tempo). Predefinito: 60 s. Intervallo: 0–300 s.",
-          "altitude_aligned_threshold_m": "Differenza massima di altitudine (in metri) per l'attivazione del sensore binario «Stessa altitudine». 0 = solo altitudine esattamente identica. Predefinito: 5 m. Intervallo: 0-100 m."
+          "altitude_aligned_threshold_m": "Differenza massima di altitudine (in metri) per l'attivazione del sensore binario «Stessa altitudine». 0 = solo altitudine esattamente identica. Predefinito: 5 m. Intervallo: 0-100 m.",
+          "max_vertical_accuracy_m": "Se superiore a 0, i sensori di altitudine restituiscono 'sconosciuto' quando l'errore GPS verticale supera questo valore. Predefinito: 0 (disattivato)."
         }
       }
     },
@@ -103,7 +105,8 @@
           "min_updates_reliable": "Aggiornamenti minimi per dati affidabili",
           "resync_silence_s": "Silenzio GPS prima del congelamento (s)",
           "resync_hold_s": "Durata congelamento prossimità (s)",
-          "altitude_aligned_threshold_m": "Soglia stessa altitudine (m)"
+          "altitude_aligned_threshold_m": "Soglia stessa altitudine (m)",
+          "max_vertical_accuracy_m": "Errore GPS verticale max. (m, 0 = disattivato)"
         },
         "data_description": {
           "max_accuracy_m": "Ignora aggiornamenti di posizione con errore GPS superiore a questo valore. I telefoni in movimento riportano tipicamente una precisione di 100–250 m, quindi 300 m è un valore predefinito sicuro. Un telefono con \"precisione 350 m\" verrebbe ignorato. Imposta a 0 per disabilitare. Intervallo: 0–1000 m.",
@@ -114,7 +117,8 @@
           "min_updates_reliable": "Quanti aggiornamenti consecutivi sono necessari prima di considerare la posizione affidabile. Intervallo: 1–20.",
           "resync_silence_s": "Se tutte le entità tracciate smettono di inviare aggiornamenti GPS per questa durata, lo stato di prossimità viene congelato per evitare cambiamenti falsi mentre si attende il ritorno del segnale. Predefinito: 600 s (10 min). Intervallo: 60–3600 s.",
           "resync_hold_s": "Per quanto tempo mantenere lo stato di prossimità congelato dopo il rilevamento del silenzio GPS. Imposta a 0 per disabilitare il congelamento (il rilevamento del silenzio continua per la contabilità del tempo). Predefinito: 60 s. Intervallo: 0–300 s.",
-          "altitude_aligned_threshold_m": "Differenza massima di altitudine (in metri) per l'attivazione del sensore binario «Stessa altitudine». 0 = solo altitudine esattamente identica. Predefinito: 5 m. Intervallo: 0-100 m."
+          "altitude_aligned_threshold_m": "Differenza massima di altitudine (in metri) per l'attivazione del sensore binario «Stessa altitudine». 0 = solo altitudine esattamente identica. Predefinito: 5 m. Intervallo: 0-100 m.",
+          "max_vertical_accuracy_m": "Se superiore a 0, i sensori di altitudine restituiscono 'sconosciuto' quando l'errore GPS verticale supera questo valore. Predefinito: 0 (disattivato)."
         }
       }
     },
@@ -260,6 +264,9 @@
       },
       "altitude_aligned": {
         "name": "Stessa altitudine"
+      },
+      "approaching": {
+        "name": "In avvicinamento"
       }
     },
     "button": {

@@ -803,3 +803,90 @@ class TestAltitudeAlignedBinarySensor:
 
         types = [type(e).__name__ for e in added]
         assert "AltitudeAlignedBinarySensor" in types
+        assert "ApproachingBinarySensor" in types
+
+
+def _make_approaching_sensor(pair_key_val, ps: PairState, data_valid: bool = True):
+    from custom_components.entity_distance.binary_sensor import ApproachingBinarySensor
+
+    coordinator = MagicMock()
+    coordinator.data = MagicMock()
+    coordinator.data.pairs = {pair_key_val: ps}
+    coordinator.is_within_grace.return_value = data_valid
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    sensor = ApproachingBinarySensor.__new__(ApproachingBinarySensor)
+    sensor.coordinator = coordinator
+    sensor._entry = entry
+    sensor._pair_key = pair_key_val
+    sensor._attr_unique_id = f"test_{pair_key_val[0]}__{pair_key_val[1]}_approaching"
+    sensor._attr_device_info = {}
+    return sensor
+
+
+class TestApproachingBinarySensor:
+    def test_on_when_approaching(self):
+        from custom_components.entity_distance.const import DIRECTION_APPROACHING
+
+        k = pair_key("person.alice", "person.bob")
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.data_valid = True
+        ps.direction = DIRECTION_APPROACHING
+        sensor = _make_approaching_sensor(k, ps)
+        assert sensor.is_on is True
+
+    def test_off_when_diverging(self):
+        from custom_components.entity_distance.const import DIRECTION_DIVERGING
+
+        k = pair_key("person.alice", "person.bob")
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.data_valid = True
+        ps.direction = DIRECTION_DIVERGING
+        sensor = _make_approaching_sensor(k, ps)
+        assert sensor.is_on is False
+
+    def test_off_when_stationary(self):
+        from custom_components.entity_distance.const import DIRECTION_STATIONARY
+
+        k = pair_key("person.alice", "person.bob")
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.data_valid = True
+        ps.direction = DIRECTION_STATIONARY
+        sensor = _make_approaching_sensor(k, ps)
+        assert sensor.is_on is False
+
+    def test_none_when_direction_none(self):
+        k = pair_key("person.alice", "person.bob")
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.data_valid = True
+        ps.direction = None
+        sensor = _make_approaching_sensor(k, ps)
+        assert sensor.is_on is None
+
+    def test_none_when_not_show(self):
+        from custom_components.entity_distance.const import DIRECTION_APPROACHING
+
+        k = pair_key("person.alice", "person.bob")
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.data_valid = False
+        ps.direction = DIRECTION_APPROACHING
+        sensor = _make_approaching_sensor(k, ps, data_valid=False)
+        assert sensor.is_on is None
+
+    def test_pair_fallback_when_missing(self):
+        k = pair_key("person.alice", "person.bob")
+        coordinator = MagicMock()
+        coordinator.data = MagicMock()
+        coordinator.data.pairs = {}  # key absent → fallback PairState
+        coordinator.is_within_grace.return_value = False
+        entry = MagicMock()
+        entry.entry_id = "test_entry"
+        from custom_components.entity_distance.binary_sensor import ApproachingBinarySensor
+
+        sensor = ApproachingBinarySensor.__new__(ApproachingBinarySensor)
+        sensor.coordinator = coordinator
+        sensor._entry = entry
+        sensor._pair_key = k
+        sensor._attr_unique_id = "test_approaching_fallback"
+        sensor._attr_device_info = {}
+        assert sensor.is_on is None  # fallback PairState has direction=None

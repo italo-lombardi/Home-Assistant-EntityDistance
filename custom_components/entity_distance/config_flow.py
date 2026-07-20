@@ -26,6 +26,7 @@ from .const import (
     CONF_GRACE_WINDOW_S,
     CONF_MAX_ACCURACY_M,
     CONF_MAX_SPEED_KMH,
+    CONF_MAX_VERTICAL_ACCURACY_M,
     CONF_MIN_UPDATES_RELIABLE,
     CONF_PROXIMITY_ZONE,
     CONF_REQUIRE_RELIABLE,
@@ -40,6 +41,7 @@ from .const import (
     DEFAULT_GRACE_WINDOW_S,
     DEFAULT_MAX_ACCURACY_M,
     DEFAULT_MAX_SPEED_KMH,
+    DEFAULT_MAX_VERTICAL_ACCURACY_M,
     DEFAULT_MIN_UPDATES_RELIABLE,
     DEFAULT_PROXIMITY_ZONE,
     DEFAULT_REQUIRE_RELIABLE,
@@ -81,6 +83,7 @@ _ZONE_OPTIONS_KEYS = {
     CONF_ZONE_MID_M,
     CONF_ZONE_FAR_M,
     CONF_ALTITUDE_ALIGNED_THRESHOLD_M,
+    CONF_MAX_VERTICAL_ACCURACY_M,
 }
 
 _PROXIMITY_ZONE_OPTIONS = [
@@ -183,6 +186,17 @@ def _advanced_schema(defaults: dict) -> vol.Schema:
                 NumberSelectorConfig(
                     min=MIN_ALTITUDE_ALIGNED_THRESHOLD_M,
                     max=MAX_ALTITUDE_ALIGNED_THRESHOLD_M,
+                    unit_of_measurement="m",
+                    mode=NumberSelectorMode.BOX,
+                )
+            ),
+            vol.Required(
+                CONF_MAX_VERTICAL_ACCURACY_M,
+                default=defaults.get(CONF_MAX_VERTICAL_ACCURACY_M, DEFAULT_MAX_VERTICAL_ACCURACY_M),
+            ): NumberSelector(
+                NumberSelectorConfig(
+                    min=0,
+                    max=500,
                     unit_of_measurement="m",
                     mode=NumberSelectorMode.BOX,
                 )

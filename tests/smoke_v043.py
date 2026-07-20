@@ -421,6 +421,66 @@ def summary():
     return len(failed) == 0
 
 
+def test_approaching_binary_sensor():
+    section("Approaching binary sensor")
+    # Two injects: first establishes prev_state, second moves Alice closer to Bob.
+    # Alice starts north of Bob; second inject moves Alice slightly south (toward Bob).
+    inject("device_tracker.test_alice", 53.3600, -6.2603)  # same lat as Bob
+    inject("device_tracker.test_bob", 53.3500, -6.2603)
+    time.sleep(2)
+    inject("device_tracker.test_alice", 53.3550, -6.2603)  # moved south, closer to Bob
+    inject("device_tracker.test_bob", 53.3500, -6.2603)
+    time.sleep(4)
+
+    s = state(f"binary_sensor.{SLUG}_approaching")
+    check("Approaching binary sensor exists", s is not None)
+    if s:
+        check(
+            "Approaching = on (Alice moving toward Bob)",
+            s["state"] == "on",
+            s["state"],
+        )
+
+    # Now move Alice away from Bob
+    inject("device_tracker.test_alice", 53.3550, -6.2603)
+    inject("device_tracker.test_bob", 53.3500, -6.2603)
+    time.sleep(2)
+    inject("device_tracker.test_alice", 53.3600, -6.2603)  # moved north, away from Bob
+    inject("device_tracker.test_bob", 53.3500, -6.2603)
+    time.sleep(4)
+
+    s = state(f"binary_sensor.{SLUG}_approaching")
+    if s:
+        check(
+            "Approaching = off (Alice moving away from Bob)",
+            s["state"] == "off",
+            s["state"],
+        )
+
+
+def test_vertical_accuracy_filter():
+    section("Vertical accuracy filter — altitude suppressed when vacc exceeds threshold")
+    # Default config has max_vertical_accuracy_m = 0 (disabled), so inject with high vacc
+    # and confirm altitude still shows (filter off).
+    inject("device_tracker.test_alice", 53.3498, -6.2603, altitude=80.0, vertical_accuracy=100.0)
+    inject("device_tracker.test_bob", 53.3600, -6.2603, altitude=85.0, vertical_accuracy=5.0)
+    time.sleep(3)
+
+    s = state(f"sensor.{SLUG}_altitude_test_alice")
+    if s and s["state"] not in ("unknown", "unavailable"):
+        check(
+            "Altitude shown when filter disabled (max_vacc=0)",
+            abs(float(s["state"]) - 80.0) < 0.5,
+            s["state"],
+        )
+    else:
+        check("Altitude shown when filter disabled (max_vacc=0)", False, s["state"] if s else "missing")
+
+    # Note: enabling filter requires reconfiguring the integration via UI.
+    # This test only verifies the default-disabled path (filter=0 → altitude always shown).
+    print("  (filter=enabled path requires UI reconfigure — verified via unit tests)")
+
+
 if __name__ == "__main__":
     print("\nEntity Distance v0.4.3 Smoke Tests")
     print(f"HA: {HA}  slug: {SLUG}\n")
@@ -435,6 +495,8 @@ if __name__ == "__main__":
     test_person_source_fallback()
     test_out_of_range_rejection()
     test_diagnostic_category()
+    test_approaching_binary_sensor()
+    test_vertical_accuracy_filter()
 
     ok = summary()
     sys.exit(0 if ok else 1)

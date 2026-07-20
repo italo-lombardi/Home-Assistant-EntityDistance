@@ -813,8 +813,20 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         vacc_b = _extract_vertical_accuracy(src_b)
         if self._max_vertical_accuracy_m > 0:
             if vacc_a is not None and vacc_a > self._max_vertical_accuracy_m:
+                _LOGGER.debug(
+                    "entity_distance: suppressing altitude for %s — vacc %.1f m > limit %.1f m",
+                    entity_a,
+                    vacc_a,
+                    self._max_vertical_accuracy_m,
+                )
                 alt_a = None
             if vacc_b is not None and vacc_b > self._max_vertical_accuracy_m:
+                _LOGGER.debug(
+                    "entity_distance: suppressing altitude for %s — vacc %.1f m > limit %.1f m",
+                    entity_b,
+                    vacc_b,
+                    self._max_vertical_accuracy_m,
+                )
                 alt_b = None
         ps.altitude_a_m = alt_a
         ps.altitude_b_m = alt_b

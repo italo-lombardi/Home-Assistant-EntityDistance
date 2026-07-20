@@ -56,7 +56,7 @@
           "resync_silence_s": "Si toutes les entités suivies cessent d'envoyer des mises à jour GPS pendant cette durée, l'état de proximité est gelé pour éviter de faux changements en attendant le retour du signal. Défaut : 600 s (10 min). Plage : 60–3600 s.",
           "resync_hold_s": "Durée pendant laquelle l'état de proximité reste gelé après détection du silence GPS. Mettre à 0 pour désactiver le gel (la détection du silence continue pour la comptabilité du temps). Défaut : 60 s. Plage : 0–300 s.",
           "altitude_aligned_threshold_m": "Différence d'altitude maximale (en mètres) pour que le capteur binaire « Même altitude » s'active. 0 = altitude strictement identique uniquement. Par défaut : 5 m. Plage : 0-100 m.",
-          "max_vertical_accuracy_m": "Si supérieur à 0, les capteurs d'altitude renvoient 'inconnu' si l'erreur GPS verticale dépasse cette valeur. Par défaut : 0 (désactivé)."
+          "max_vertical_accuracy_m": "Si supérieur à 0, les capteurs d'altitude renvoient 'inconnue' si l'erreur GPS verticale dépasse cette valeur. Par défaut : 0 (désactivé)."
         }
       }
     },
@@ -118,7 +118,7 @@
           "resync_silence_s": "Si toutes les entités suivies cessent d'envoyer des mises à jour GPS pendant cette durée, l'état de proximité est gelé pour éviter de faux changements en attendant le retour du signal. Défaut : 600 s (10 min). Plage : 60–3600 s.",
           "resync_hold_s": "Durée pendant laquelle l'état de proximité reste gelé après détection du silence GPS. Mettre à 0 pour désactiver le gel (la détection du silence continue pour la comptabilité du temps). Défaut : 60 s. Plage : 0–300 s.",
           "altitude_aligned_threshold_m": "Différence d'altitude maximale (en mètres) pour que le capteur binaire « Même altitude » s'active. 0 = altitude strictement identique uniquement. Par défaut : 5 m. Plage : 0-100 m.",
-          "max_vertical_accuracy_m": "Si supérieur à 0, les capteurs d'altitude renvoient 'inconnu' si l'erreur GPS verticale dépasse cette valeur. Par défaut : 0 (désactivé)."
+          "max_vertical_accuracy_m": "Si supérieur à 0, les capteurs d'altitude renvoient 'inconnue' si l'erreur GPS verticale dépasse cette valeur. Par défaut : 0 (désactivé)."
         }
       }
     },

@@ -56,7 +56,7 @@
           "resync_silence_s": "Jeśli wszystkie śledzone encje przestają wysyłać aktualizacje GPS przez ten czas, stan bliskości zostaje zamrożony, aby zapobiec fałszywym zmianom podczas oczekiwania na powrót sygnału. Domyślnie: 600 s (10 min). Zakres: 60–3600 s.",
           "resync_hold_s": "Jak długo stan bliskości pozostaje zamrożony po wykryciu ciszy GPS. Ustaw na 0, aby wyłączyć zamrożenie (wykrywanie ciszy nadal działa do celów rozliczania czasu). Domyślnie: 60 s. Zakres: 0–300 s.",
           "altitude_aligned_threshold_m": "Maksymalna różnica wysokości (w metrach), przy której czujnik binarny 'Ta sama wysokość' włącza się (WŁ.). 0 = tylko dokładnie ta sama wysokość. Domyślnie: 5 m. Zakres: 0–100 m.",
-          "max_vertical_accuracy_m": "Jeśli powyżej 0, sensory wysokości zwracają 'nieznana' gdy błąd pionowy GPS przekroczy tę wartość. Domyślnie: 0 (wyłączone)."
+          "max_vertical_accuracy_m": "Jeśli powyżej 0, sensory wysokości zwracają 'nieznane' gdy błąd pionowy GPS przekroczy tę wartość. Domyślnie: 0 (wyłączone)."
         }
       }
     },
@@ -118,7 +118,7 @@
           "resync_silence_s": "Jeśli wszystkie śledzone encje przestają wysyłać aktualizacje GPS przez ten czas, stan bliskości zostaje zamrożony, aby zapobiec fałszywym zmianom podczas oczekiwania na powrót sygnału. Domyślnie: 600 s (10 min). Zakres: 60–3600 s.",
           "resync_hold_s": "Jak długo stan bliskości pozostaje zamrożony po wykryciu ciszy GPS. Ustaw na 0, aby wyłączyć zamrożenie (wykrywanie ciszy nadal działa do celów rozliczania czasu). Domyślnie: 60 s. Zakres: 0–300 s.",
           "altitude_aligned_threshold_m": "Maksymalna różnica wysokości (w metrach), przy której czujnik binarny 'Ta sama wysokość' włącza się (WŁ.). 0 = tylko dokładnie ta sama wysokość. Domyślnie: 5 m. Zakres: 0–100 m.",
-          "max_vertical_accuracy_m": "Jeśli powyżej 0, sensory wysokości zwracają 'nieznana' gdy błąd pionowy GPS przekroczy tę wartość. Domyślnie: 0 (wyłączone)."
+          "max_vertical_accuracy_m": "Jeśli powyżej 0, sensory wysokości zwracają 'nieznane' gdy błąd pionowy GPS przekroczy tę wartość. Domyślnie: 0 (wyłączone)."
         }
       }
     },

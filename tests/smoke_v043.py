@@ -474,7 +474,11 @@ def test_vertical_accuracy_filter():
             s["state"],
         )
     else:
-        check("Altitude shown when filter disabled (max_vacc=0)", False, s["state"] if s else "missing")
+        check(
+            "Altitude shown when filter disabled (max_vacc=0)",
+            False,
+            s["state"] if s else "missing",
+        )
 
     # Note: enabling filter requires reconfiguring the integration via UI.
     # This test only verifies the default-disabled path (filter=0 → altitude always shown).

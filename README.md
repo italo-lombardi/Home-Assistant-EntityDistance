@@ -590,8 +590,11 @@ Inspired by [HA-Member-Adjacency](https://github.com/1bobby-git/HA-Member-Adjace
 ## Sibling integrations
 
 - [Entity Availability](https://github.com/italo-lombardi/Home-Assistant-EntityAvailability) — track offline entities, availability history, and degraded states with a custom dashboard card.
-- [Entity Guard](https://github.com/italo-lombardi/Home-Assistant-EntityGuard) — guard entities against unintended state changes; alert and revert when configured rules are violated.
-- [Fuel Compare](https://github.com/italo-lombardi/Home-Assistant-FuelCompare) — live fuel prices and station data for Irish petrol stations from fuelcompare.ie.
+- [Entity Guard](https://github.com/italo-lombardi/Home-Assistant-EntityGuard) — enforce entity state via declarative rules; replaces hand-written auto-off / auto-lock / kill-switch automations.
+- [Fuel Compare](https://github.com/italo-lombardi/Home-Assistant-FuelCompare) — live fuel prices from 36 providers across 30 countries.
+- [WashWise](https://github.com/italo-lombardi/Home-Assistant-WashWise) — decide whether to wash your car, bike, or solar panels based on the weather forecast; verdict, score, and per-day breakdown.
+- [DashSnap](https://github.com/italo-lombardi/DashSnap) — record or screenshot any web page via headless Chromium (HA dashboards, Grafana, public pages); HA Add-on or Docker.
+- [DashSnap Integration](https://github.com/italo-lombardi/DashSnap-Integration) — trigger DashSnap recordings and screenshots from HA automations and scripts.
 
 ---
 

@@ -33,7 +33,7 @@ from .const import (
     DOMAIN,
 )
 from .coordinator import EntityDistanceCoordinator, calc_bucket
-from .models import PairState, friendly_name, pair_key
+from .models import PairState, _zone_match_value, friendly_name, pair_key
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -374,8 +374,9 @@ class TodayZoneTimeSensor(EntityDistanceSensorBase):
         idx = buckets.index(self._bucket) if self._bucket in buckets else -1
         lower = thresholds[buckets[idx - 1]] if idx > 0 else 0
         attrs: dict = {}
-        if idx >= 0:
-            attrs["range_from_m"] = lower
+        # idx == -1 means very_far (not a threshold key): lower bound is the far
+        # threshold; upper is unbounded so range_to_m stays absent.
+        attrs["range_from_m"] = thresholds[buckets[-1]] if idx < 0 else lower
         if upper is not None:
             attrs["range_to_m"] = upper
         return attrs
@@ -586,7 +587,7 @@ class UpdateCountSensor(EntityDistanceSensorBase):
         if window_start is None:
             return count
         now = dt_util.now()
-        if (now - window_start).total_seconds() > self.coordinator.updates_window_s:
+        if (now - window_start).total_seconds() >= self.coordinator.updates_window_s:
             return 0
         return count
 
@@ -618,7 +619,7 @@ class EntityStateSensor(EntityDistanceSensorBase):
         state = self.hass.states.get(self._tracked_entity_id)
         if state is None:
             return None
-        return state.state
+        return _zone_match_value(self._tracked_entity_id, state)
 
 
 class ProximityTrackingStartedSensor(EntityDistanceSensorBase):

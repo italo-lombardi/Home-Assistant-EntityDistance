@@ -570,12 +570,13 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                     pre_inv = max(0.0, (midnight_utc - prox_since_utc).total_seconds())
                     post_inv = max(0.0, elapsed - pre_inv)
                     ps.today_proximity_seconds += post_inv
-                    if ps.distance_m is not None and post_inv > 0:
-                        inv_bucket = calc_bucket(ps.distance_m, self._bucket_thresholds)
-                        ps.today_zone_seconds[inv_bucket] = (
-                            ps.today_zone_seconds.get(inv_bucket, 0.0) + post_inv
+                    if ps.last_bucket is not None and post_inv > 0:
+                        ps.today_zone_seconds[ps.last_bucket] = (
+                            ps.today_zone_seconds.get(ps.last_bucket, 0.0) + post_inv
                         )
                 # same day: today counters already reflect prior ticks via _elapsed_s
+            if ps.proximity:
+                ps.last_seen_together = now
             ps.proximity = False
             ps.proximity_since = None
             ps.data_valid = False
@@ -760,8 +761,8 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 else:
                     direction = DIRECTION_DIVERGING
 
-                closing_speed_kmh = implied_speed_kmh
-                if direction == DIRECTION_APPROACHING and closing_speed_kmh > 0:
+                closing_speed_kmh = 0.0 if direction == DIRECTION_STATIONARY else implied_speed_kmh
+                if direction == DIRECTION_APPROACHING:
                     closing_speed_m_per_s = closing_speed_kmh / 3.6
                     eta_minutes = dist_m / closing_speed_m_per_s / 60
                     eta_minutes = min(eta_minutes, 1440.0)
@@ -782,6 +783,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         prev_calc_time_snapshot = ps.prev_calc_time
 
         ps.distance_m = dist_m
+        ps.last_bucket = calc_bucket(dist_m, self._bucket_thresholds)
         ps.prev_distance_m = dist_m
         ps.prev_calc_time = now
         ps.direction = direction
@@ -839,7 +841,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         ps.vertical_accuracy_a_m = vacc_a
         ps.vertical_accuracy_b_m = vacc_b
 
-        reliable = self.is_reliable(ps)
+        reliable = self.is_reliable(ps, now)
 
         # Resync silence — check before proximity transitions so hold returns early
         # without mutating ps.proximity, keeping the entry transition deferred to a
@@ -965,10 +967,6 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             if ps.proximity_since:
                 ps.proximity_duration_s += (now - ps.proximity_since).total_seconds()
             ps.proximity_since = None
-
-        # Stamp last_seen_together on every in-proximity tick and on EXIT so it
-        # always reflects the last confirmed time they were within the exit threshold.
-        if was_proximity:
             ps.last_seen_together = now
 
         if (
@@ -1076,12 +1074,27 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             return 1, now
         return count + 1, window_start
 
-    def is_reliable(self, ps: PairState) -> bool:
-        """True when both sides have ≥ min_updates_reliable fixes in the rolling window."""
-        return (
-            ps.update_count_a >= self._min_updates_reliable
-            and ps.update_count_b >= self._min_updates_reliable
-        )
+    def is_reliable(self, ps: PairState, now: datetime | None = None) -> bool:
+        """True when both sides have ≥ min_updates_reliable fixes in the rolling window.
+
+        Zone entities never emit state_changed (no update counter advances), so a
+        zone side is treated as always passing. For non-zone sides, an elapsed
+        window means the stored count is stale → 0, matching UpdateCountSensor.
+        """
+        now = now or dt_util.utcnow()
+
+        def _effective_count(entity_id: str, count: int, window_start: datetime | None) -> int:
+            if entity_id.startswith("zone."):
+                return self._min_updates_reliable  # zone never updates; treat as passing
+            if window_start is None:
+                return 0
+            if (now - window_start).total_seconds() >= self._updates_window_s:
+                return 0
+            return count
+
+        count_a = _effective_count(ps.entity_a_id, ps.update_count_a, ps.update_window_start_a)
+        count_b = _effective_count(ps.entity_b_id, ps.update_count_b, ps.update_window_start_b)
+        return count_a >= self._min_updates_reliable and count_b >= self._min_updates_reliable
 
     def is_within_grace(self, ps: PairState, now: datetime) -> bool:
         """True when a stale pair should still display its last-known values.
@@ -1210,6 +1223,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 stored_distance = blob.get("distance_m")
                 if stored_distance is not None:
                     ps.distance_m = float(stored_distance)
+                    ps.last_bucket = blob.get("last_bucket")
                     ps.direction = blob.get("direction")
                     csk = blob.get("closing_speed_kmh")
                     ps.closing_speed_kmh = float(csk) if csk is not None else None

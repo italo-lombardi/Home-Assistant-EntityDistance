@@ -17,11 +17,9 @@ from homeassistant.util import dt as dt_util
 
 from .const import BUCKETS, DIRECTION_APPROACHING, DOMAIN
 from .coordinator import EntityDistanceCoordinator, calc_bucket
-from .models import PairState, friendly_name, pair_key
+from .models import PairState, _zone_match_value, friendly_name, pair_key
 
 _LOGGER = logging.getLogger(__name__)
-
-_HOME_ZONE_ENTITY_ID = "zone.home"
 
 
 def _show(coordinator: EntityDistanceCoordinator, ps: PairState) -> bool:
@@ -32,26 +30,6 @@ def _show(coordinator: EntityDistanceCoordinator, ps: PairState) -> bool:
     last on/off instead of flapping to unknown).
     """
     return ps.data_valid or coordinator.is_within_grace(ps, dt_util.now())
-
-
-def _zone_match_value(entity_id: str, state) -> str:
-    """Value to compare against the other side's tracker state for same-zone matching.
-
-    Mirrors the logic in HA's device_tracker.entity (see
-    homeassistant/components/device_tracker/legacy.py – async_update_listeners /
-    _async_update_zone_state in core; search for STATE_HOME and zone.name handling).
-    If HA changes how tracker states are derived from zone names, update here too.
-
-      - zone.home → literal "home" (STATE_HOME)
-      - any other zone → State.name (friendly_name, falls back to object_id)
-      - non-zone entity → its raw state
-    """
-    if not entity_id.startswith("zone."):
-        return state.state
-    if entity_id == _HOME_ZONE_ENTITY_ID:
-        return "home"
-    # State.name returns the configured friendly_name, or object_id if unset.
-    return state.name
 
 
 async def async_setup_entry(
@@ -345,6 +323,8 @@ class AltitudeAlignedBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], 
     @property
     def is_on(self) -> bool | None:
         ps = self._pair
+        if not _show(self.coordinator, ps):
+            return None
         if ps.altitude_delta_m is None:
             return None
         return abs(ps.altitude_delta_m) <= self.coordinator.altitude_aligned_threshold_m

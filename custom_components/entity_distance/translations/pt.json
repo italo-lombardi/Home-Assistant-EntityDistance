@@ -159,7 +159,7 @@
       "direction": {
         "name": "Direção",
         "state": {
-          "approaching": "Aproximando",
+          "approaching": "Aproximando-se",
           "diverging": "Afastando",
           "stationary": "Estacionário"
         }
@@ -266,7 +266,7 @@
         "name": "Mesma altitude"
       },
       "approaching": {
-        "name": "Aproximando"
+        "name": "Aproximando-se"
       }
     },
     "button": {

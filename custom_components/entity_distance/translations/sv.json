@@ -44,7 +44,7 @@
           "resync_silence_s": "GPS-tystnad före frysning (s)",
           "resync_hold_s": "Frysvaraktighet för närhet (s)",
           "altitude_aligned_threshold_m": "Tröskel för samma höjd (m)",
-          "max_vertical_accuracy_m": "Max. vertikal GPS-fel (m, 0 = av)"
+          "max_vertical_accuracy_m": "Max. vertikalt GPS-fel (m, 0 = av)"
         },
         "data_description": {
           "max_accuracy_m": "Ignorera platsuppdateringar där GPS-felet är större än detta. Telefoner i rörelse rapporterar vanligtvis 100–250 m noggrannhet, så 300 m är ett säkert standardvärde. En telefon som visar \"350 m noggrannhet\" skulle hoppas över. Ange 0 för att inaktivera. Intervall: 0–1000 m.",
@@ -106,7 +106,7 @@
           "resync_silence_s": "GPS-tystnad före frysning (s)",
           "resync_hold_s": "Frysvaraktighet för närhet (s)",
           "altitude_aligned_threshold_m": "Tröskel för samma höjd (m)",
-          "max_vertical_accuracy_m": "Max. vertikal GPS-fel (m, 0 = av)"
+          "max_vertical_accuracy_m": "Max. vertikalt GPS-fel (m, 0 = av)"
         },
         "data_description": {
           "max_accuracy_m": "Ignorera platsuppdateringar där GPS-felet är större än detta. Telefoner i rörelse rapporterar vanligtvis 100–250 m noggrannhet, så 300 m är ett säkert standardvärde. En telefon som visar \"350 m noggrannhet\" skulle hoppas över. Ange 0 för att inaktivera. Intervall: 0–1000 m.",

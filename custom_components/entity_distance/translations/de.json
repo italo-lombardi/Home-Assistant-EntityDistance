@@ -159,7 +159,7 @@
       "direction": {
         "name": "Richtung",
         "state": {
-          "approaching": "Nähert sich",
+          "approaching": "Nähert sich an",
           "diverging": "Entfernt sich",
           "stationary": "Stationär"
         }
@@ -266,7 +266,7 @@
         "name": "Gleiche Höhe"
       },
       "approaching": {
-        "name": "Nähert sich"
+        "name": "Nähert sich an"
       }
     },
     "button": {

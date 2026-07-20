@@ -873,6 +873,31 @@ class TestApproachingBinarySensor:
         sensor = _make_approaching_sensor(k, ps, data_valid=False)
         assert sensor.is_on is None
 
+    def test_on_within_grace_window(self):
+        # data_valid=False but is_within_grace=True — grace window holds last value
+        from custom_components.entity_distance.binary_sensor import ApproachingBinarySensor
+        from custom_components.entity_distance.const import DIRECTION_APPROACHING
+
+        k = pair_key("person.alice", "person.bob")
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.data_valid = False
+        ps.direction = DIRECTION_APPROACHING
+
+        coordinator = MagicMock()
+        coordinator.data = MagicMock()
+        coordinator.data.pairs = {k: ps}
+        coordinator.is_within_grace.return_value = True  # grace window active
+
+        entry = MagicMock()
+        entry.entry_id = "test_entry"
+        sensor = ApproachingBinarySensor.__new__(ApproachingBinarySensor)
+        sensor.coordinator = coordinator
+        sensor._entry = entry
+        sensor._pair_key = k
+        sensor._attr_unique_id = "test_approaching_grace"
+        sensor._attr_device_info = {}
+        assert sensor.is_on is True  # grace holds approaching state
+
     def test_pair_fallback_when_missing(self):
         k = pair_key("person.alice", "person.bob")
         coordinator = MagicMock()

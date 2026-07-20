@@ -7,7 +7,7 @@ Covers:
 - W3  _CARD_INSTALLED_KEY cleared on last-entry unload
 - W4  AnyInProximity / AllInProximity return None when all pairs invalid
 - W5  today_proximity_seconds only accumulates after reliability check
-- W6  last_seen_together stamped ONLY on EXIT and on _invalidate-while-in-proximity (no per-tick stamp)
+- W6  last_seen_together stamped on every in-proximity tick (after reliability guard) and on _invalidate-while-in-proximity
 """
 
 from __future__ import annotations
@@ -737,9 +737,33 @@ class TestLastSeenTogetherSemantics:
         assert result.proximity is False
         assert result.last_seen_together is None
 
+    def test_not_stamped_when_reliability_blocks_entry(self):
+        """Reliability guard vetoes entry → last_seen_together must not be stamped."""
+        coord = _make_coordinator(
+            entry_threshold_m=500.0, exit_threshold_m=500.0, require_reliable=True,
+            min_updates_reliable=5,
+        )
+        state_a = _make_state("person.alice", 51.5, -0.1, 20)
+        state_b = _make_state("person.bob", 51.501, -0.1, 20)
+        coord.hass.states.get = MagicMock(
+            side_effect=lambda eid: state_a if eid == "person.alice" else state_b
+        )
+        coord.hass.bus.fire = MagicMock()
 
-# ---------------------------------------------------------------------------
-# New guards added in review pass
+        ps = _fresh_pair()
+        ps.proximity = False
+        ps.last_seen_together = None
+        # update_count = 0 → not reliable (need >= 5) → guard blocks entry
+
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=100.0,
+        ):
+            result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+
+        # Reliability guard blocks entry → proximity stays False → LST not stamped.
+        assert result.proximity is False
+        assert result.last_seen_together is None
 # ---------------------------------------------------------------------------
 
 

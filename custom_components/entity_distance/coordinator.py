@@ -968,9 +968,6 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 ps.proximity_duration_s += (now - ps.proximity_since).total_seconds()
             ps.proximity_since = None
 
-        if ps.proximity:
-            ps.last_seen_together = now
-
         if (
             self._require_reliable
             and not reliable
@@ -990,6 +987,9 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         # binary sensors can hold it (instead of the _invalidate-forced False)
         # during a later signal blip.
         ps.last_proximity = ps.proximity
+
+        if ps.proximity:
+            ps.last_seen_together = now
 
         # Daily reset with cross-midnight flush.
         # Zero daily counters first, then write the pre-midnight slice, so the

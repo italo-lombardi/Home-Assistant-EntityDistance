@@ -378,6 +378,8 @@ class TestCalcPairProximityTransitions:
         ps = _fresh_pair()
         ps.proximity = True
         ps.proximity_since = datetime(2024, 6, 1, 11, 0, 0, tzinfo=UTC)
+        prior_lts = datetime(2024, 6, 1, 11, 59, 0, tzinfo=UTC)
+        ps.last_seen_together = prior_lts
 
         # 800m is beyond exit_threshold_m of 500m
         with patch(
@@ -387,7 +389,8 @@ class TestCalcPairProximityTransitions:
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
         assert result.proximity is False
-        assert result.last_seen_together == _NOW
+        # last_seen_together holds the last in-proximity stamp, not cleared on exit
+        assert result.last_seen_together == prior_lts
 
     def test_stays_in_proximity(self):
         coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=500.0)

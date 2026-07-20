@@ -967,6 +967,8 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             if ps.proximity_since:
                 ps.proximity_duration_s += (now - ps.proximity_since).total_seconds()
             ps.proximity_since = None
+
+        if ps.proximity:
             ps.last_seen_together = now
 
         if (

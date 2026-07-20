@@ -634,13 +634,13 @@ class TestTodayProximityAfterReliabilityCheck:
 
 
 # ---------------------------------------------------------------------------
-# W6 — last_seen_together stamped ONLY on EXIT / _invalidate (not per-tick)
+# W6 — last_seen_together stamped on every in-proximity tick (and on _invalidate-while-in-proximity)
 # ---------------------------------------------------------------------------
 
 
 class TestLastSeenTogetherSemantics:
     def test_stamped_on_exit_tick(self):
-        """EXIT tick: was_proximity=True → last_seen_together = now."""
+        """EXIT tick: last_seen_together already set from prior in-proximity ticks."""
         coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=500.0)
         state_a = _make_state("person.alice", 51.5, -0.1, 20)
         state_b = _make_state("person.bob", 51.510, -0.1, 20)
@@ -652,6 +652,8 @@ class TestLastSeenTogetherSemantics:
         ps = _fresh_pair()
         ps.proximity = True
         ps.proximity_since = datetime(2024, 6, 1, 11, 0, 0, tzinfo=UTC)
+        prior_lts = datetime(2024, 6, 1, 11, 59, 0, tzinfo=UTC)
+        ps.last_seen_together = prior_lts
 
         with patch(
             "custom_components.entity_distance.coordinator.ha_distance",
@@ -660,14 +662,11 @@ class TestLastSeenTogetherSemantics:
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
         assert result.proximity is False
-        assert result.last_seen_together == _NOW
+        # last_seen_together holds the last in-proximity stamp, preserved on exit
+        assert result.last_seen_together == prior_lts
 
     def test_stamped_on_in_proximity_tick(self):
-        """In-proximity tick: last_seen_together is NOT stamped per-tick (only on EXIT).
-
-        LST-1/LST-2: stamping every in-proximity tick produced ~1440 recorder rows/day
-        for co-located pairs. last_seen_together now stamps only on EXIT / _invalidate.
-        """
+        """In-proximity tick: last_seen_together updated to now on every tick."""
         coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=500.0)
         state_a = _make_state("person.alice", 51.5, -0.1, 20)
         state_b = _make_state("person.bob", 51.501, -0.1, 20)
@@ -689,11 +688,11 @@ class TestLastSeenTogetherSemantics:
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
         assert result.proximity is True
-        # Still in proximity → no EXIT → last_seen_together unchanged.
-        assert result.last_seen_together == old_lts
+        # Still in proximity → last_seen_together updated to now.
+        assert result.last_seen_together == _NOW
 
-    def test_not_stamped_on_entry_tick(self):
-        """ENTRY tick (was_proximity=False): last_seen_together should not be set."""
+    def test_stamped_on_entry_tick(self):
+        """ENTRY tick (was_proximity=False → True): last_seen_together stamped immediately."""
         coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=500.0)
         state_a = _make_state("person.alice", 51.5, -0.1, 20)
         state_b = _make_state("person.bob", 51.501, -0.1, 20)
@@ -713,7 +712,7 @@ class TestLastSeenTogetherSemantics:
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
         assert result.proximity is True
-        assert result.last_seen_together is None
+        assert result.last_seen_together == _NOW
 
     def test_not_stamped_when_never_in_proximity(self):
         """Outside-proximity tick: last_seen_together stays None."""

@@ -14,7 +14,7 @@
 
 ### Changed
 
-- **`last_seen_together` EXIT-only** — stamped only when proximity ends (separation or signal loss while together), never on every in-proximity tick; eliminates ~1,440 recorder rows/day per pair. Avatar Card shows "Together now" while in proximity, matching Pair Card.
+- **`last_seen_together` live stamp** — updated on every in-proximity tick so the sensor reflects the most recent moment the pair was together; holds the last proximity timestamp after separation. Pair and Avatar cards continue to show "Together now" while in proximity.
 - **Zone entities always reliable** — `zone.*` exempt from update-count gate; `binary_sensor.<pair>_reliable` now correctly turns ON for zone-vs-person pairs.
 - **`closing_speed` zeroed when stationary** — forced to `0.0` when `direction = stationary`.
 - **`last_bucket` persisted** — stored alongside `distance_m`; used by `_invalidate()` for correct cross-midnight zone-time credit.

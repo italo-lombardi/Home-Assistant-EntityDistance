@@ -214,6 +214,29 @@ def _get_coords(state: State) -> tuple[float, float, float | None] | None:
     return lat, lon, accuracy
 
 
+def _resolve_gps_source(state: State, hass: HomeAssistant) -> State:
+    """For person entities, return the active source device tracker state.
+
+    HA's person entity only copies lat/lon/gps_accuracy from the source device
+    tracker — altitude, speed, course, vertical_accuracy are stripped. Reading
+    them requires going to the source device tracker directly.
+
+    Note: _resolve_coords (the coordinate path) reads lat/lon from the person
+    entity directly — that's correct because HA does propagate lat/lon to person.
+    Only GPS extras (altitude, speed, heading, vacc) need source resolution.
+
+    Falls back to the original state if: not a person entity, no source
+    attribute, source is not a string, or the source entity doesn't exist.
+    """
+    if state.domain != "person":
+        return state
+    source = state.attributes.get("source")
+    if not isinstance(source, str):
+        return state
+    source_state = hass.states.get(source)
+    return source_state if source_state is not None else state
+
+
 def _extract_altitude(state: State) -> float | None:
     try:
         alt = float(state.attributes["altitude"])
@@ -227,6 +250,39 @@ def _extract_altitude(state: State) -> float | None:
         )
         return None
     return alt
+
+
+def _extract_speed(state: State) -> float | None:
+    try:
+        val = float(state.attributes["speed"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    # Reject negatives (iOS -1 sentinel is blocked by HA schema, but defensive).
+    # Upper bound 1000 km/h covers any realistic tracked object.
+    if not (0.0 <= val <= 1000.0):
+        return None
+    return val
+
+
+def _extract_heading(state: State) -> float | None:
+    """Return GPS course in degrees (0–360, clockwise from North)."""
+    try:
+        val = float(state.attributes["course"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    if not (0.0 <= val <= 360.0):
+        return None
+    return val
+
+
+def _extract_vertical_accuracy(state: State) -> float | None:
+    try:
+        val = float(state.attributes["vertical_accuracy"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    if not (0.0 <= val <= 10000.0):
+        return None
+    return val
 
 
 def calc_bucket(distance_m: float, thresholds: dict[str, float]) -> str:
@@ -661,6 +717,10 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
 
             if delta_s > 0:
                 implied_speed_kmh = abs(delta_m / delta_s) * 3.6
+                # ponytail: closing_speed uses distance-delta, not GPS speed+heading
+                # vector projection. Vector approach needs tick-1 GPS speed/heading
+                # (absent when stationary or missing on many trackers) plus fallback
+                # to delta anyway — net complexity increase for marginal gain.
                 # Use configured limit when set; fall back to DEFAULT_MAX_SPEED_KMH so
                 # disabling the speed filter (max_speed_kmh=0) still rejects teleports
                 # for direction computation on zone-vs-person pairs.
@@ -735,12 +795,24 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         ps.last_error = None
         ps.stale_since = None  # valid tick — exit any display grace window
 
-        # Altitude — extracted directly from entity state, independent of coord path.
-        alt_a = _extract_altitude(state_a)
-        alt_b = _extract_altitude(state_b)
+        # GPS attributes — resolve person entities to their source device tracker so
+        # altitude/speed/heading/vertical_accuracy are read from the tracker, not the
+        # person entity (which strips these fields).
+        src_a = _resolve_gps_source(state_a, self.hass)
+        src_b = _resolve_gps_source(state_b, self.hass)
+
+        alt_a = _extract_altitude(src_a)
+        alt_b = _extract_altitude(src_b)
         ps.altitude_a_m = alt_a
         ps.altitude_b_m = alt_b
         ps.altitude_delta_m = (alt_b - alt_a) if (alt_a is not None and alt_b is not None) else None
+
+        ps.speed_a_kmh = _extract_speed(src_a)
+        ps.speed_b_kmh = _extract_speed(src_b)
+        ps.heading_a_deg = _extract_heading(src_a)
+        ps.heading_b_deg = _extract_heading(src_b)
+        ps.vertical_accuracy_a_m = _extract_vertical_accuracy(src_a)
+        ps.vertical_accuracy_b_m = _extract_vertical_accuracy(src_b)
 
         reliable = self.is_reliable(ps)
 
@@ -937,7 +1009,10 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             else:
                 _elapsed_s = max(0.0, (now - prev_calc_time_snapshot).total_seconds())
                 if _elapsed_s < MIN_CALC_ELAPSED_S:
-                    _elapsed_s = 0.0  # rapid back-to-back recalculate guard
+                    # ponytail: sub-0.1s slice dropped intentionally — prevents junk
+                    # speed/direction from near-zero delta_s; today_proximity accuracy
+                    # loss is negligible (<few seconds/day in normal operation).
+                    _elapsed_s = 0.0
 
         if _elapsed_s > 0:
             # Bucket time accumulates regardless of proximity — sensors report

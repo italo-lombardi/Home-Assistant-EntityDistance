@@ -9,10 +9,9 @@
 - **Altitude sensors.** Three new first-class sensors per pair: **Altitude (A)**,
   **Altitude (B)**, and **Elevation Difference** (signed delta: positive = B is
   higher than A). Altitude is read from the `altitude` attribute (metres, WGS-84)
-  provided by mobile app device trackers. Person entities and zone entities always
-  show `unknown` — HA does not propagate altitude through those domains.
+  provided by mobile app device trackers.
 - **Same Altitude binary sensor.** `binary_sensor.<pair>_same_altitude` turns
-  `ON` when `|elevation difference| ≤ 5 m` — useful for "are they on the same floor?"
+  `ON` when `|elevation difference| ≤ threshold` — useful for "are they on the same floor?"
   automations. Shows `unknown` when either entity lacks altitude data.
 - **Configurable altitude threshold.** `altitude_aligned_threshold_m` (default 5 m,
   range 0–100 m) exposed in Advanced Filters. Set to 0 for exact-same-altitude only.
@@ -21,6 +20,17 @@
   (A / signed delta / B). Shows "same floor" or "different floor" hint from the
   binary sensor. Controlled by the `show_altitude` card option (**default: false**
   — opt-in, no surprise on update).
+- **GPS Speed, GPS Heading, GPS Vertical Accuracy sensors.** Three new DIAGNOSTIC
+  sensors per tracked entity (×2 per pair): GPS Speed (km/h), GPS Heading (0–360°),
+  GPS Vertical Accuracy (m). Hidden by default in HA UI. Use vertical accuracy to
+  qualify altitude readings — elevation difference is only meaningful when vertical
+  accuracy is low on both devices.
+- **Person → device tracker source fallback.** For `person.*` entities, altitude,
+  GPS speed, heading, and vertical accuracy are now automatically read from the active
+  source device tracker (`person.attributes.source`). Previously these sensors always
+  showed `unknown` for person entities.
+- **Config flow deduplication.** Advanced settings schema extracted to `_advanced_schema()`
+  helper — eliminates ~100 lines of duplicated schema between ConfigFlow and OptionsFlow.
 
 ### Fixed
 
@@ -28,12 +38,20 @@
   altitude row check incorrectly caused an empty Movement section to render on
   zone-to-zone pairs when `show_altitude` was enabled. Fixed by tightening the
   movement-section guard.
+- **Person domain check.** `_resolve_gps_source` now uses `state.domain` instead of
+  `entity_id.startswith("person.")` — prevents false match on device trackers named
+  `person.*`.
 
 ### Notes
 
 - GPS vertical accuracy is typically ±10–30 m — 3–5× worse than horizontal. Two
   people on the same floor may show 5–20 m altitude difference. Use thresholds
   ≥ 30 m in automations to avoid false triggers.
+- GPS Speed and Heading sensors show `unknown` when stationary or when the device
+  tracker doesn't report these attributes (common on Android for vertical accuracy).
+- **Upgrade note:** GPS diagnostic sensors for `person.*` entities that previously
+  always returned `unknown` will now return real values. If you have automations
+  checking `state == 'unknown'` on those sensors, review them.
 
 ## [0.4.2] - 2026-07-15
 

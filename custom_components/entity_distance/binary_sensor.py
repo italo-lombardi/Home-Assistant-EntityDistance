@@ -37,7 +37,11 @@ def _show(coordinator: EntityDistanceCoordinator, ps: PairState) -> bool:
 def _zone_match_value(entity_id: str, state) -> str:
     """Value to compare against the other side's tracker state for same-zone matching.
 
-    Mirrors the logic in HA's device_tracker.entity:
+    Mirrors the logic in HA's device_tracker.entity (see
+    homeassistant/components/device_tracker/legacy.py – async_update_listeners /
+    _async_update_zone_state in core; search for STATE_HOME and zone.name handling).
+    If HA changes how tracker states are derived from zone names, update here too.
+
       - zone.home → literal "home" (STATE_HOME)
       - any other zone → State.name (friendly_name, falls back to object_id)
       - non-zone entity → its raw state

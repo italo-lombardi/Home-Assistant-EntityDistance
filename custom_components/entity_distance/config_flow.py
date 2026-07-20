@@ -96,6 +96,101 @@ def _entry_title(entities: list[str]) -> str:
     return " & ".join(names)
 
 
+def _advanced_schema(defaults: dict) -> vol.Schema:
+    return vol.Schema(
+        {
+            vol.Required(
+                CONF_MAX_ACCURACY_M,
+                default=defaults.get(CONF_MAX_ACCURACY_M, DEFAULT_MAX_ACCURACY_M),
+            ): NumberSelector(
+                NumberSelectorConfig(
+                    min=0,
+                    max=1000,
+                    unit_of_measurement="m",
+                    mode=NumberSelectorMode.BOX,
+                )
+            ),
+            vol.Required(
+                CONF_DEBOUNCE_S,
+                default=defaults.get(CONF_DEBOUNCE_S, DEFAULT_DEBOUNCE_S),
+            ): NumberSelector(
+                NumberSelectorConfig(
+                    min=0,
+                    max=MAX_DEBOUNCE_S,
+                    unit_of_measurement="s",
+                    mode=NumberSelectorMode.BOX,
+                )
+            ),
+            vol.Required(
+                CONF_GRACE_WINDOW_S,
+                default=defaults.get(CONF_GRACE_WINDOW_S, DEFAULT_GRACE_WINDOW_S),
+            ): NumberSelector(
+                NumberSelectorConfig(
+                    min=MIN_GRACE_WINDOW_S,
+                    max=MAX_GRACE_WINDOW_S,
+                    unit_of_measurement="s",
+                    mode=NumberSelectorMode.BOX,
+                )
+            ),
+            vol.Required(
+                CONF_MAX_SPEED_KMH,
+                default=defaults.get(CONF_MAX_SPEED_KMH, DEFAULT_MAX_SPEED_KMH),
+            ): NumberSelector(
+                NumberSelectorConfig(
+                    min=0,
+                    max=2000,
+                    unit_of_measurement="km/h",
+                    mode=NumberSelectorMode.BOX,
+                )
+            ),
+            vol.Required(
+                CONF_REQUIRE_RELIABLE,
+                default=defaults.get(CONF_REQUIRE_RELIABLE, DEFAULT_REQUIRE_RELIABLE),
+            ): BooleanSelector(),
+            vol.Required(
+                CONF_MIN_UPDATES_RELIABLE,
+                default=defaults.get(CONF_MIN_UPDATES_RELIABLE, DEFAULT_MIN_UPDATES_RELIABLE),
+            ): NumberSelector(NumberSelectorConfig(min=1, max=20, mode=NumberSelectorMode.BOX)),
+            vol.Required(
+                CONF_RESYNC_SILENCE_S,
+                default=defaults.get(CONF_RESYNC_SILENCE_S, DEFAULT_RESYNC_SILENCE_S),
+            ): NumberSelector(
+                NumberSelectorConfig(
+                    min=MIN_RESYNC_SILENCE_S,
+                    max=MAX_RESYNC_SILENCE_S,
+                    unit_of_measurement="s",
+                    mode=NumberSelectorMode.BOX,
+                )
+            ),
+            vol.Required(
+                CONF_RESYNC_HOLD_S,
+                default=defaults.get(CONF_RESYNC_HOLD_S, DEFAULT_RESYNC_HOLD_S),
+            ): NumberSelector(
+                NumberSelectorConfig(
+                    min=MIN_RESYNC_HOLD_S,
+                    max=MAX_RESYNC_HOLD_S,
+                    unit_of_measurement="s",
+                    mode=NumberSelectorMode.BOX,
+                )
+            ),
+            vol.Required(
+                CONF_ALTITUDE_ALIGNED_THRESHOLD_M,
+                default=defaults.get(
+                    CONF_ALTITUDE_ALIGNED_THRESHOLD_M,
+                    DEFAULT_ALTITUDE_ALIGNED_THRESHOLD_M,
+                ),
+            ): NumberSelector(
+                NumberSelectorConfig(
+                    min=MIN_ALTITUDE_ALIGNED_THRESHOLD_M,
+                    max=MAX_ALTITUDE_ALIGNED_THRESHOLD_M,
+                    unit_of_measurement="m",
+                    mode=NumberSelectorMode.BOX,
+                )
+            ),
+        }
+    )
+
+
 def _distances_schema(defaults: dict) -> vol.Schema:
     return vol.Schema(
         {
@@ -238,83 +333,7 @@ class EntityDistanceConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="advanced",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(
-                        CONF_MAX_ACCURACY_M, default=DEFAULT_MAX_ACCURACY_M
-                    ): NumberSelector(
-                        NumberSelectorConfig(
-                            min=0,
-                            max=1000,
-                            unit_of_measurement="m",
-                            mode=NumberSelectorMode.BOX,
-                        )
-                    ),
-                    vol.Required(CONF_DEBOUNCE_S, default=DEFAULT_DEBOUNCE_S): NumberSelector(
-                        NumberSelectorConfig(
-                            min=0,
-                            max=MAX_DEBOUNCE_S,
-                            unit_of_measurement="s",
-                            mode=NumberSelectorMode.BOX,
-                        )
-                    ),
-                    vol.Required(
-                        CONF_GRACE_WINDOW_S, default=DEFAULT_GRACE_WINDOW_S
-                    ): NumberSelector(
-                        NumberSelectorConfig(
-                            min=MIN_GRACE_WINDOW_S,
-                            max=MAX_GRACE_WINDOW_S,
-                            unit_of_measurement="s",
-                            mode=NumberSelectorMode.BOX,
-                        )
-                    ),
-                    vol.Required(CONF_MAX_SPEED_KMH, default=DEFAULT_MAX_SPEED_KMH): NumberSelector(
-                        NumberSelectorConfig(
-                            min=0,
-                            max=2000,
-                            unit_of_measurement="km/h",
-                            mode=NumberSelectorMode.BOX,
-                        )
-                    ),
-                    vol.Required(
-                        CONF_REQUIRE_RELIABLE, default=DEFAULT_REQUIRE_RELIABLE
-                    ): BooleanSelector(),
-                    vol.Required(
-                        CONF_MIN_UPDATES_RELIABLE, default=DEFAULT_MIN_UPDATES_RELIABLE
-                    ): NumberSelector(
-                        NumberSelectorConfig(min=1, max=20, mode=NumberSelectorMode.BOX)
-                    ),
-                    vol.Required(
-                        CONF_RESYNC_SILENCE_S, default=DEFAULT_RESYNC_SILENCE_S
-                    ): NumberSelector(
-                        NumberSelectorConfig(
-                            min=MIN_RESYNC_SILENCE_S,
-                            max=MAX_RESYNC_SILENCE_S,
-                            unit_of_measurement="s",
-                            mode=NumberSelectorMode.BOX,
-                        )
-                    ),
-                    vol.Required(CONF_RESYNC_HOLD_S, default=DEFAULT_RESYNC_HOLD_S): NumberSelector(
-                        NumberSelectorConfig(
-                            min=MIN_RESYNC_HOLD_S,
-                            max=MAX_RESYNC_HOLD_S,
-                            unit_of_measurement="s",
-                            mode=NumberSelectorMode.BOX,
-                        )
-                    ),
-                    vol.Required(
-                        CONF_ALTITUDE_ALIGNED_THRESHOLD_M,
-                        default=DEFAULT_ALTITUDE_ALIGNED_THRESHOLD_M,
-                    ): NumberSelector(
-                        NumberSelectorConfig(
-                            min=MIN_ALTITUDE_ALIGNED_THRESHOLD_M,
-                            max=MAX_ALTITUDE_ALIGNED_THRESHOLD_M,
-                            unit_of_measurement="m",
-                            mode=NumberSelectorMode.BOX,
-                        )
-                    ),
-                }
-            ),
+            data_schema=_advanced_schema(self._data),
         )
 
     @staticmethod
@@ -362,100 +381,5 @@ class EntityDistanceOptionsFlow(config_entries.OptionsFlow):
 
         return self.async_show_form(
             step_id="advanced",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(
-                        CONF_MAX_ACCURACY_M,
-                        default=self._data.get(CONF_MAX_ACCURACY_M, DEFAULT_MAX_ACCURACY_M),
-                    ): NumberSelector(
-                        NumberSelectorConfig(
-                            min=0,
-                            max=1000,
-                            unit_of_measurement="m",
-                            mode=NumberSelectorMode.BOX,
-                        )
-                    ),
-                    vol.Required(
-                        CONF_DEBOUNCE_S,
-                        default=self._data.get(CONF_DEBOUNCE_S, DEFAULT_DEBOUNCE_S),
-                    ): NumberSelector(
-                        NumberSelectorConfig(
-                            min=0,
-                            max=MAX_DEBOUNCE_S,
-                            unit_of_measurement="s",
-                            mode=NumberSelectorMode.BOX,
-                        )
-                    ),
-                    vol.Required(
-                        CONF_GRACE_WINDOW_S,
-                        default=self._data.get(CONF_GRACE_WINDOW_S, DEFAULT_GRACE_WINDOW_S),
-                    ): NumberSelector(
-                        NumberSelectorConfig(
-                            min=MIN_GRACE_WINDOW_S,
-                            max=MAX_GRACE_WINDOW_S,
-                            unit_of_measurement="s",
-                            mode=NumberSelectorMode.BOX,
-                        )
-                    ),
-                    vol.Required(
-                        CONF_MAX_SPEED_KMH,
-                        default=self._data.get(CONF_MAX_SPEED_KMH, DEFAULT_MAX_SPEED_KMH),
-                    ): NumberSelector(
-                        NumberSelectorConfig(
-                            min=0,
-                            max=2000,
-                            unit_of_measurement="km/h",
-                            mode=NumberSelectorMode.BOX,
-                        )
-                    ),
-                    vol.Required(
-                        CONF_REQUIRE_RELIABLE,
-                        default=self._data.get(CONF_REQUIRE_RELIABLE, DEFAULT_REQUIRE_RELIABLE),
-                    ): BooleanSelector(),
-                    vol.Required(
-                        CONF_MIN_UPDATES_RELIABLE,
-                        default=self._data.get(
-                            CONF_MIN_UPDATES_RELIABLE, DEFAULT_MIN_UPDATES_RELIABLE
-                        ),
-                    ): NumberSelector(
-                        NumberSelectorConfig(min=1, max=20, mode=NumberSelectorMode.BOX)
-                    ),
-                    vol.Required(
-                        CONF_RESYNC_SILENCE_S,
-                        default=self._data.get(CONF_RESYNC_SILENCE_S, DEFAULT_RESYNC_SILENCE_S),
-                    ): NumberSelector(
-                        NumberSelectorConfig(
-                            min=MIN_RESYNC_SILENCE_S,
-                            max=MAX_RESYNC_SILENCE_S,
-                            unit_of_measurement="s",
-                            mode=NumberSelectorMode.BOX,
-                        )
-                    ),
-                    vol.Required(
-                        CONF_RESYNC_HOLD_S,
-                        default=self._data.get(CONF_RESYNC_HOLD_S, DEFAULT_RESYNC_HOLD_S),
-                    ): NumberSelector(
-                        NumberSelectorConfig(
-                            min=MIN_RESYNC_HOLD_S,
-                            max=MAX_RESYNC_HOLD_S,
-                            unit_of_measurement="s",
-                            mode=NumberSelectorMode.BOX,
-                        )
-                    ),
-                    vol.Required(
-                        CONF_ALTITUDE_ALIGNED_THRESHOLD_M,
-                        default=self._data.get(
-                            CONF_ALTITUDE_ALIGNED_THRESHOLD_M,
-                            DEFAULT_ALTITUDE_ALIGNED_THRESHOLD_M,
-                        ),
-                    ): NumberSelector(
-                        NumberSelectorConfig(
-                            min=MIN_ALTITUDE_ALIGNED_THRESHOLD_M,
-                            max=MAX_ALTITUDE_ALIGNED_THRESHOLD_M,
-                            unit_of_measurement="m",
-                            mode=NumberSelectorMode.BOX,
-                        )
-                    ),
-                }
-            ),
+            data_schema=_advanced_schema(self._data),
         )

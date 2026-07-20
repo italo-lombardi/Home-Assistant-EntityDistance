@@ -1662,3 +1662,99 @@ class TestAltitudeDeltaSensor:
         attrs = self._make(delta=None, alt_a=None, alt_b=None).extra_state_attributes
         assert attrs["altitude_a_m"] is None
         assert attrs["altitude_b_m"] is None
+
+
+class TestGpsSpeedSensor:
+    def _make(self, which: str, speed_a=None, speed_b=None, data_valid=True):
+        from custom_components.entity_distance.sensor import GpsSpeedSensor
+
+        ps = PairState(entity_a_id="person.alice", entity_b_id="person.bob")
+        ps.speed_a_kmh = speed_a
+        ps.speed_b_kmh = speed_b
+        ps.data_valid = data_valid
+        sensor = _make_sensor(GpsSpeedSensor, ps)
+        sensor._which = which
+        sensor._attr_name = f"GPS Speed ({which})"
+        return sensor
+
+    def test_native_value_a(self):
+        assert self._make("a", speed_a=50.0).native_value == pytest.approx(50.0)
+
+    def test_native_value_b(self):
+        assert self._make("b", speed_b=30.0).native_value == pytest.approx(30.0)
+
+    def test_none_when_not_available(self):
+        assert self._make("a", speed_a=50.0, data_valid=False).native_value is None
+
+    def test_none_when_speed_absent(self):
+        assert self._make("a", speed_a=None).native_value is None
+
+    def test_entity_category_diagnostic(self):
+        from homeassistant.const import EntityCategory
+
+        sensor = self._make("a", speed_a=5.0)
+        assert sensor.entity_category == EntityCategory.DIAGNOSTIC
+
+
+class TestGpsHeadingSensor:
+    def _make(self, which: str, heading_a=None, heading_b=None, data_valid=True):
+        from custom_components.entity_distance.sensor import GpsHeadingSensor
+
+        ps = PairState(entity_a_id="person.alice", entity_b_id="person.bob")
+        ps.heading_a_deg = heading_a
+        ps.heading_b_deg = heading_b
+        ps.data_valid = data_valid
+        sensor = _make_sensor(GpsHeadingSensor, ps)
+        sensor._which = which
+        sensor._attr_name = f"GPS Heading ({which})"
+        return sensor
+
+    def test_native_value_a(self):
+        assert self._make("a", heading_a=270.0).native_value == pytest.approx(270.0)
+
+    def test_native_value_b(self):
+        assert self._make("b", heading_b=90.0).native_value == pytest.approx(90.0)
+
+    def test_none_when_not_available(self):
+        assert self._make("a", heading_a=270.0, data_valid=False).native_value is None
+
+    def test_none_when_heading_absent(self):
+        assert self._make("a", heading_a=None).native_value is None
+
+    def test_entity_category_diagnostic(self):
+        from homeassistant.const import EntityCategory
+
+        sensor = self._make("a", heading_a=270.0)
+        assert sensor.entity_category == EntityCategory.DIAGNOSTIC
+
+
+class TestGpsVerticalAccuracySensor:
+    def _make(self, which: str, vacc_a=None, vacc_b=None, data_valid=True):
+        from custom_components.entity_distance.sensor import GpsVerticalAccuracySensor
+
+        ps = PairState(entity_a_id="person.alice", entity_b_id="person.bob")
+        ps.vertical_accuracy_a_m = vacc_a
+        ps.vertical_accuracy_b_m = vacc_b
+        ps.data_valid = data_valid
+        sensor = _make_sensor(GpsVerticalAccuracySensor, ps)
+        sensor._which = which
+        sensor._attr_name = f"GPS Vertical Accuracy ({which})"
+        return sensor
+
+    def test_native_value_a(self):
+        assert self._make("a", vacc_a=8.0).native_value == pytest.approx(8.0)
+
+    def test_native_value_b(self):
+        assert self._make("b", vacc_b=12.0).native_value == pytest.approx(12.0)
+
+    def test_none_when_not_available(self):
+        assert self._make("a", vacc_a=8.0, data_valid=False).native_value is None
+
+    def test_none_when_vacc_absent(self):
+        assert self._make("a", vacc_a=None).native_value is None
+
+    def test_entity_category_diagnostic(self):
+        from homeassistant.const import EntityCategory
+
+        sensor = self._make("a", vacc_a=8.0)
+        assert sensor.entity_category == EntityCategory.DIAGNOSTIC

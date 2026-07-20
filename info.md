@@ -7,17 +7,19 @@ Track the distance between any two or more entities — people, devices, or zone
 - Person-to-person, person-to-zone, device-to-zone, and zone-to-zone distance tracking
 - **Group tracking** — select 2–5 entities; all pairwise distances are tracked under one config entry
 - **Group sensors** — for 3+ entities: Min Distance, Any In Proximity, All In Proximity
-- 26 sensors per pair: distance, proximity zone, proximity zone level, proximity duration, proximity rate, proximity tracking started, last seen together, today proximity time, today zone times, direction, direction level, closing speed, ETA, GPS accuracy, last update, update count, entity state, today unaccounted time
+- 36 sensors per pair: distance, proximity zone, proximity zone level, proximity duration, proximity rate, proximity tracking started, last seen together, today proximity time, today zone times, direction, direction level, closing speed, ETA, GPS accuracy, GPS speed, GPS heading, GPS vertical accuracy, last update, update count, entity state, today unaccounted time, altitude (per entity)
+- **Same Altitude** binary sensor — ON when altitude difference ≤ threshold (default 5 m), configurable 0–100 m
 - **Same Zone** binary sensor per pair — ON when both entities share the same named zone, OFF otherwise (never `unknown`)
-- Proximity binary sensor driven by zone boundaries — select which zone triggers "In Proximity"; exit is automatically the next zone out (natural hysteresis, no redundant threshold settings)
+- Proximity binary sensor driven by zone boundaries — select which zone triggers "In Proximity"
 - Direction of travel — approaching, diverging, or stationary (GPS jitter filtered)
 - ETA sensor — estimated minutes until together (only when approaching)
 - Closing speed sensor — convergence rate in km/h
 - Today proximity time — total minutes together today, resets at midnight
 - GPS accuracy and implied speed filters — reject unreliable location updates
+- **Person source fallback** — altitude, speed, heading, and vertical accuracy automatically read from active source device tracker for `person.*` entities
 - **HA 2026.7 compatible** — sensors stay valid when a person is home via WiFi/BT scanner (zone coordinate fallback)
 - Reliability tracking — min update count in rolling window before proximity events fire
-- Diagnostic sensors — GPS accuracy, last update, update count per entity
+- Diagnostic sensors — GPS accuracy, GPS speed, GPS heading, GPS vertical accuracy, last update, update count per entity
 - Refresh button — triggers mobile app location update for all entities in the group
 - Event-driven updates, no polling
 - State persistence — proximity duration, today times, and last seen together survive HA restarts
@@ -26,8 +28,8 @@ Track the distance between any two or more entities — people, devices, or zone
 
 Three custom cards are auto-registered on startup — no manual resource setup needed.
 
-- **Pair Card** (`entity-distance-pair-card`) — data-focused card: distance, direction, zone, speed, ETA, proximity stats
-- **Avatar Card** (`entity-distance-avatar-card`) — people-focused card with entity avatars side-by-side
+- **Pair Card** (`entity-distance-pair-card`) — data-focused card: distance, direction, zone, speed, ETA, proximity stats, altitude (opt-in)
+- **Avatar Card** (`entity-distance-avatar-card`) — people-focused card with entity avatars side-by-side, altitude row opt-in
 - **Group Card** (`entity-distance-group-card`) — force-directed SVG graph showing all group entities as circles connected by labeled, color-coded lines; lines glow when a pair is in proximity; per-node label position and visibility configurable in the editor
 
 ## Setup

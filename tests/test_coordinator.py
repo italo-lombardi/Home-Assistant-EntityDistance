@@ -2701,3 +2701,303 @@ class TestCalcPairAltitude:
     def test_altitude_does_not_affect_distance(self):
         ps = self._run(10.0, 500.0)
         assert ps.distance_m == pytest.approx(500.0)
+
+
+class TestResolveGpsSource:
+    """Tests for _resolve_gps_source."""
+
+    def _state(self, entity_id, attrs, state_val="home"):
+        from homeassistant.core import State
+
+        return State(entity_id, state_val, attrs)
+
+    def test_non_person_returns_original(self):
+        from unittest.mock import MagicMock
+
+        from custom_components.entity_distance.coordinator import _resolve_gps_source
+
+        s = self._state("device_tracker.phone", {"latitude": 51.5})
+        hass = MagicMock()
+        assert _resolve_gps_source(s, hass) is s
+
+    def test_person_with_valid_source_returns_tracker(self):
+        from unittest.mock import MagicMock
+
+        from custom_components.entity_distance.coordinator import _resolve_gps_source
+
+        tracker = self._state("device_tracker.phone", {"latitude": 51.5, "altitude": 42.0})
+        person = self._state("person.alice", {"source": "device_tracker.phone"})
+        hass = MagicMock()
+        hass.states.get.return_value = tracker
+        result = _resolve_gps_source(person, hass)
+        assert result is tracker
+        hass.states.get.assert_called_once_with("device_tracker.phone")
+
+    def test_person_missing_source_returns_person(self):
+        from unittest.mock import MagicMock
+
+        from custom_components.entity_distance.coordinator import _resolve_gps_source
+
+        person = self._state("person.alice", {"latitude": 51.5})
+        hass = MagicMock()
+        assert _resolve_gps_source(person, hass) is person
+
+    def test_person_non_string_source_returns_person(self):
+        from unittest.mock import MagicMock
+
+        from custom_components.entity_distance.coordinator import _resolve_gps_source
+
+        person = self._state("person.alice", {"source": 12345})
+        hass = MagicMock()
+        assert _resolve_gps_source(person, hass) is person
+
+    def test_person_source_not_found_returns_person(self):
+        from unittest.mock import MagicMock
+
+        from custom_components.entity_distance.coordinator import _resolve_gps_source
+
+        person = self._state("person.alice", {"source": "device_tracker.missing"})
+        hass = MagicMock()
+        hass.states.get.return_value = None
+        assert _resolve_gps_source(person, hass) is person
+
+
+class TestExtractSpeed:
+    """Tests for _extract_speed."""
+
+    def _state(self, attrs):
+        from homeassistant.core import State
+
+        return State("device_tracker.phone", "home", attrs)
+
+    def test_valid_speed(self):
+        from custom_components.entity_distance.coordinator import _extract_speed
+
+        assert _extract_speed(self._state({"speed": 50.0})) == pytest.approx(50.0)
+
+    def test_zero_speed(self):
+        from custom_components.entity_distance.coordinator import _extract_speed
+
+        assert _extract_speed(self._state({"speed": 0.0})) == pytest.approx(0.0)
+
+    def test_missing_key(self):
+        from custom_components.entity_distance.coordinator import _extract_speed
+
+        assert _extract_speed(self._state({})) is None
+
+    def test_malformed(self):
+        from custom_components.entity_distance.coordinator import _extract_speed
+
+        assert _extract_speed(self._state({"speed": "fast"})) is None
+
+    def test_negative_rejected(self):
+        from custom_components.entity_distance.coordinator import _extract_speed
+
+        assert _extract_speed(self._state({"speed": -1.0})) is None
+
+    def test_over_max_rejected(self):
+        from custom_components.entity_distance.coordinator import _extract_speed
+
+        assert _extract_speed(self._state({"speed": 1001.0})) is None
+
+    def test_at_max_boundary(self):
+        from custom_components.entity_distance.coordinator import _extract_speed
+
+        assert _extract_speed(self._state({"speed": 1000.0})) == pytest.approx(1000.0)
+
+
+class TestExtractHeading:
+    """Tests for _extract_heading."""
+
+    def _state(self, attrs):
+        from homeassistant.core import State
+
+        return State("device_tracker.phone", "home", attrs)
+
+    def test_valid_heading(self):
+        from custom_components.entity_distance.coordinator import _extract_heading
+
+        assert _extract_heading(self._state({"course": 270.0})) == pytest.approx(270.0)
+
+    def test_zero_heading(self):
+        from custom_components.entity_distance.coordinator import _extract_heading
+
+        assert _extract_heading(self._state({"course": 0.0})) == pytest.approx(0.0)
+
+    def test_360_is_valid(self):
+        from custom_components.entity_distance.coordinator import _extract_heading
+
+        assert _extract_heading(self._state({"course": 360.0})) == pytest.approx(360.0)
+
+    def test_missing_key(self):
+        from custom_components.entity_distance.coordinator import _extract_heading
+
+        assert _extract_heading(self._state({})) is None
+
+    def test_malformed(self):
+        from custom_components.entity_distance.coordinator import _extract_heading
+
+        assert _extract_heading(self._state({"course": "north"})) is None
+
+    def test_negative_rejected(self):
+        from custom_components.entity_distance.coordinator import _extract_heading
+
+        assert _extract_heading(self._state({"course": -1.0})) is None
+
+    def test_over_360_rejected(self):
+        from custom_components.entity_distance.coordinator import _extract_heading
+
+        assert _extract_heading(self._state({"course": 361.0})) is None
+
+
+class TestExtractVerticalAccuracy:
+    """Tests for _extract_vertical_accuracy."""
+
+    def _state(self, attrs):
+        from homeassistant.core import State
+
+        return State("device_tracker.phone", "home", attrs)
+
+    def test_valid(self):
+        from custom_components.entity_distance.coordinator import _extract_vertical_accuracy
+
+        assert _extract_vertical_accuracy(self._state({"vertical_accuracy": 8.0})) == pytest.approx(
+            8.0
+        )
+
+    def test_zero(self):
+        from custom_components.entity_distance.coordinator import _extract_vertical_accuracy
+
+        assert _extract_vertical_accuracy(self._state({"vertical_accuracy": 0.0})) == pytest.approx(
+            0.0
+        )
+
+    def test_missing_key(self):
+        from custom_components.entity_distance.coordinator import _extract_vertical_accuracy
+
+        assert _extract_vertical_accuracy(self._state({})) is None
+
+    def test_malformed(self):
+        from custom_components.entity_distance.coordinator import _extract_vertical_accuracy
+
+        assert _extract_vertical_accuracy(self._state({"vertical_accuracy": "high"})) is None
+
+    def test_negative_rejected(self):
+        from custom_components.entity_distance.coordinator import _extract_vertical_accuracy
+
+        assert _extract_vertical_accuracy(self._state({"vertical_accuracy": -1.0})) is None
+
+    def test_over_max_rejected(self):
+        from custom_components.entity_distance.coordinator import _extract_vertical_accuracy
+
+        assert _extract_vertical_accuracy(self._state({"vertical_accuracy": 10001.0})) is None
+
+    def test_at_max_boundary(self):
+        from custom_components.entity_distance.coordinator import _extract_vertical_accuracy
+
+        assert _extract_vertical_accuracy(
+            self._state({"vertical_accuracy": 10000.0})
+        ) == pytest.approx(10000.0)
+
+
+class TestCalcPairGpsAttributes:
+    """Integration tests for speed/heading/vacc in _calc_pair + person source fallback."""
+
+    def _run(
+        self, attrs_a, attrs_b, entity_a="device_tracker.alice", entity_b="device_tracker.bob"
+    ):
+        from unittest.mock import patch
+
+        from homeassistant.core import State
+
+        from custom_components.entity_distance.models import pair_key
+
+        coordinator = _make_calc_pair_coordinator(entities=[entity_a, entity_b])
+        k = pair_key(entity_a, entity_b)
+        ps = coordinator._pair_states[k]
+
+        state_a = State(entity_a, "home", {**{"latitude": 51.5, "longitude": -0.1}, **attrs_a})
+        state_b = State(entity_b, "home", {**{"latitude": 51.6, "longitude": -0.2}, **attrs_b})
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == entity_a else state_b
+        )
+        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=500.0):
+            return coordinator._calc_pair(
+                ps, entity_a, entity_b, datetime.now().astimezone(), set()
+            )
+
+    def test_speed_populated(self):
+        ps = self._run({"speed": 50.0}, {"speed": 30.0})
+        assert ps.speed_a_kmh == pytest.approx(50.0)
+        assert ps.speed_b_kmh == pytest.approx(30.0)
+
+    def test_heading_populated(self):
+        ps = self._run({"course": 270.0}, {"course": 90.0})
+        assert ps.heading_a_deg == pytest.approx(270.0)
+        assert ps.heading_b_deg == pytest.approx(90.0)
+
+    def test_vertical_accuracy_populated(self):
+        ps = self._run({"vertical_accuracy": 8.0}, {"vertical_accuracy": 12.0})
+        assert ps.vertical_accuracy_a_m == pytest.approx(8.0)
+        assert ps.vertical_accuracy_b_m == pytest.approx(12.0)
+
+    def test_none_when_missing(self):
+        ps = self._run({}, {})
+        assert ps.speed_a_kmh is None
+        assert ps.speed_b_kmh is None
+        assert ps.heading_a_deg is None
+        assert ps.heading_b_deg is None
+        assert ps.vertical_accuracy_a_m is None
+        assert ps.vertical_accuracy_b_m is None
+
+    def test_person_source_fallback_for_altitude(self):
+        """Person entities use source device tracker for altitude via _resolve_gps_source."""
+        from unittest.mock import patch
+
+        from homeassistant.core import State
+
+        from custom_components.entity_distance.models import pair_key
+
+        coordinator = _make_calc_pair_coordinator(entities=["person.alice", "person.bob"])
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+
+        tracker_alice = State(
+            "device_tracker.iphone_alice",
+            "home",
+            {"latitude": 51.5, "longitude": -0.1, "altitude": 42.0, "speed": 5.0},
+        )
+        tracker_bob = State(
+            "device_tracker.iphone_bob",
+            "home",
+            {"latitude": 51.6, "longitude": -0.2, "altitude": 50.0, "speed": 0.0},
+        )
+        person_alice = State(
+            "person.alice",
+            "home",
+            {"latitude": 51.5, "longitude": -0.1, "source": "device_tracker.iphone_alice"},
+        )
+        person_bob = State(
+            "person.bob",
+            "home",
+            {"latitude": 51.6, "longitude": -0.2, "source": "device_tracker.iphone_bob"},
+        )
+
+        states = {
+            "person.alice": person_alice,
+            "person.bob": person_bob,
+            "device_tracker.iphone_alice": tracker_alice,
+            "device_tracker.iphone_bob": tracker_bob,
+        }
+        coordinator.hass.states.get.side_effect = states.get
+
+        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=500.0):
+            ps = coordinator._calc_pair(
+                ps, "person.alice", "person.bob", datetime.now().astimezone(), set()
+            )
+
+        assert ps.altitude_a_m == pytest.approx(42.0)
+        assert ps.altitude_b_m == pytest.approx(50.0)
+        assert ps.altitude_delta_m == pytest.approx(8.0)
+        assert ps.speed_a_kmh == pytest.approx(5.0)
+        assert ps.speed_b_kmh == pytest.approx(0.0)

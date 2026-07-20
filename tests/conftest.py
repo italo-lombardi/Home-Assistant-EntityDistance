@@ -73,6 +73,9 @@ def make_state(
     accuracy: float | None = None,
     domain: str = "person",
     altitude: float | None = None,
+    speed: float | None = None,
+    course: float | None = None,
+    vertical_accuracy: float | None = None,
 ):
     from homeassistant.core import State
 
@@ -81,6 +84,12 @@ def make_state(
         attrs["gps_accuracy"] = accuracy
     if altitude is not None:
         attrs["altitude"] = altitude
+    if speed is not None:
+        attrs["speed"] = speed
+    if course is not None:
+        attrs["course"] = course
+    if vertical_accuracy is not None:
+        attrs["vertical_accuracy"] = vertical_accuracy
     return State(entity_id, "home", attrs)
 
 

@@ -21,7 +21,7 @@ Track the distance between any two or more entities — people, devices, or zone
 - **Person-to-person, person-to-zone, device-to-zone, zone-to-zone** — any combination of `person`, `device_tracker`, `sensor`, or `zone` entities
 - **Group tracking** — select 2–5 entities; all pairwise distances are tracked under one config entry (2 entities = 1 pair, 3 = 3 pairs, 4 = 6 pairs, 5 = 10 pairs)
 - **Group sensors** — for 3+ entities: Min Distance, Any In Proximity, All In Proximity, Settings
-- **30 sensors per pair** — distance, proximity zone, proximity zone level, proximity duration, proximity rate, proximity tracking started, last seen together, today proximity time, direction, direction level, closing speed, ETA, today zone times, GPS accuracy, last update, update count, entity state, today unaccounted time, altitude (per entity where applicable)
+- **36 sensors per pair** — distance, proximity zone, proximity zone level, proximity duration, proximity rate, proximity tracking started, last seen together, today proximity time, direction, direction level, closing speed, ETA, today zone times, GPS accuracy, GPS speed, GPS heading, GPS vertical accuracy, last update, update count, entity state, today unaccounted time, altitude (per entity where applicable)
 - **Proximity binary sensor** — ON when distance ≤ zone boundary, OFF when distance > zone boundary (strict, no hysteresis gap)
 - **Same Zone binary sensor** — ON when both entities share the same named zone, OFF otherwise (never `unknown`)
 - **Same Altitude binary sensor** — ON when absolute altitude difference ≤ threshold (default 5 m), `unknown` when either entity lacks altitude data
@@ -117,14 +117,14 @@ All settings can be changed after setup via **Configure** on the integration car
 
 ## Entities
 
-Each configured group creates one HA device (the group) with per-pair sub-devices. A 2-entity group creates 40 entities (30 sensors + 9 binary sensors + 1 button). A 3-entity group creates 120 pair entities + 4 group sensors.
+Each configured group creates one HA device (the group) with per-pair sub-devices. A 2-entity group creates 46 entities (36 sensors + 9 binary sensors + 1 button). A 3-entity group creates 138 pair entities + 4 group sensors.
 
 | Group size | Pairs | Total entities (approx) |
 |-----------|-------|------------------------|
-| 2 | 1 | 40 |
-| 3 | 3 | 120 + 4 group |
-| 4 | 6 | 240 + 4 group |
-| 5 | 10 | 400 + 4 group |
+| 2 | 1 | 46 |
+| 3 | 3 | 138 + 4 group |
+| 4 | 6 | 276 + 4 group |
+| 5 | 10 | 460 + 4 group |
 
 ### Pair Sensors
 
@@ -149,8 +149,14 @@ Each configured group creates one HA device (the group) with per-pair sub-device
 | Estimated Arrival Time | Minutes until together (only when approaching) | `duration` |
 | GPS Accuracy (Name A) | GPS fix accuracy of entity A in meters | `distance` |
 | GPS Accuracy (Name B) | GPS fix accuracy of entity B in meters | `distance` |
-| Altitude (Name A) | Altitude of entity A in metres. Unknown when entity has no GPS altitude — person and zone entities always show unknown; only mobile app device trackers provide altitude | — |
-| Altitude (Name B) | Altitude of entity B in metres. Unknown when entity has no GPS altitude | — |
+| GPS Speed (Name A) | GPS-reported ground speed of entity A in km/h. `unknown` when stationary or not provided by device | `speed` |
+| GPS Speed (Name B) | GPS-reported ground speed of entity B in km/h | `speed` |
+| GPS Heading (Name A) | GPS compass bearing of entity A (0–360°, clockwise from North). `unknown` when stationary or not provided | — |
+| GPS Heading (Name B) | GPS compass bearing of entity B | — |
+| GPS Vertical Accuracy (Name A) | Vertical GPS accuracy of entity A in meters. Qualifies altitude readings — typical consumer GPS ±10–30 m | `distance` |
+| GPS Vertical Accuracy (Name B) | Vertical GPS accuracy of entity B in meters | `distance` |
+| Altitude (Name A) | Altitude of entity A in metres. Read from source device tracker for `person.*` entities | — |
+| Altitude (Name B) | Altitude of entity B in metres | — |
 | Elevation Difference | Signed altitude difference B−A in metres. Positive = B is higher. Includes `altitude_a_m`, `altitude_b_m`, and `altitude_threshold_m` attributes | — |
 | Last Update (Name A) | Timestamp of last location change for entity A | `timestamp` |
 | Last Update (Name B) | Timestamp of last location change for entity B | `timestamp` |
@@ -161,7 +167,7 @@ Each configured group creates one HA device (the group) with per-pair sub-device
 | Today Unaccounted Time | Today's elapsed minutes minus sum of bucket times — captures HA-down windows, invalid GPS, and pre-setup time on install day | `duration` |
 | Settings | Diagnostic snapshot: proximity threshold, zone boundaries, debounce. State: `proximity ≤ Xm (zone) · zones vn/n/m/f · debounce Xs`. Full config in attributes | — |
 
-> GPS Accuracy, Last Update, and Update Count are diagnostic sensors — collapsed by default in the HA UI.
+> GPS Accuracy, GPS Speed, GPS Heading, GPS Vertical Accuracy, Last Update, and Update Count are diagnostic sensors — collapsed by default in the HA UI.
 
 ### Binary Sensors (per pair)
 
@@ -179,7 +185,7 @@ Each configured group creates one HA device (the group) with per-pair sub-device
 
 > `Same Zone` is not created for zone-zone pairs (always trivially true).
 
-> Altitude sensors and `Same Altitude` show `unknown` for person and zone entities — only mobile app `device_tracker` entities provide altitude via GPS.
+> Altitude sensors and `Same Altitude` show `unknown` when GPS altitude is unavailable. For `person.*` entities, altitude and GPS speed/heading/vertical accuracy are automatically read from the active source device tracker — these sensors now work correctly for person entities without any extra config.
 
 ### Group Sensors (3+ entities only)
 
@@ -259,11 +265,25 @@ Uses Home Assistant's built-in Vincenty formula (ellipsoidal earth model) on the
 
 ### Altitude
 
-Reads the `altitude` attribute (metres, WGS-84) directly from each entity. Values are bounds-checked to −500–15 000 m; out-of-range readings are treated as `unknown`. Altitude is only available from `device_tracker` entities reporting via the HA mobile app with GPS. Person entities and zone entities always show `unknown` — HA does not propagate altitude through those domains.
+Reads the `altitude` attribute (metres, WGS-84) directly from each entity's source. For `person.*` entities, the integration automatically reads from the active source device tracker (`person.attributes.source`) — altitude and all GPS attributes now work correctly for person entities without extra config. Values are bounds-checked to −500–15 000 m; out-of-range readings are treated as `unknown`.
 
 **Elevation Difference** is computed as B−A (positive = B is higher). **Same Altitude** turns ON when `|elevation difference| ≤ threshold` (default 5 m, configurable 0–100 m in Advanced Filters).
 
-> **GPS vertical accuracy caveat.** Vertical GPS accuracy is typically ±10–30 m — 3–5× worse than horizontal. Two people on the same floor can show 5–20 m altitude difference. Use thresholds ≥ 30 m in automations to avoid false triggers. The 2D haversine/Vincenty distance calculation is unchanged — altitude is separate data only.
+> **GPS vertical accuracy caveat.** Vertical GPS accuracy is typically ±10–30 m — 3–5× worse than horizontal. Two people on the same floor can show 5–20 m altitude difference. Use thresholds ≥ 30 m in automations to avoid false triggers. The 2D Vincenty distance calculation is unchanged — altitude is separate data only.
+
+### GPS Speed, Heading & Vertical Accuracy
+
+These are **diagnostic sensors** (hidden by default in HA UI). They expose raw GPS telemetry from each entity's device tracker:
+
+- **GPS Speed** — ground speed in km/h from the `speed` attribute. `unknown` when stationary or not reported.
+- **GPS Heading** — compass bearing 0–360° (clockwise from North) from the `course` attribute. `unknown` when stationary or not reported.
+- **GPS Vertical Accuracy** — vertical GPS fix quality in metres from the `vertical_accuracy` attribute. Use this to qualify altitude readings: an elevation difference is only meaningful when both vertical accuracies are low.
+
+**Platform availability:** iOS Companion App reports speed, course, and vertical_accuracy on every GPS update. Android Companion App reports speed and course; vertical_accuracy may be absent on some devices. `unknown` on these sensors is normal and expected.
+
+**Person source fallback:** For `person.*` entities, all GPS attributes are automatically read from the active source device tracker. Previously these sensors always showed `unknown` for person entities.
+
+> No `state_class` — these are diagnostic, not charted in energy/history dashboards.
 
 ### Direction
 

@@ -243,6 +243,86 @@ automation:
 
 ---
 
+## 11. Notify when someone starts moving (speed threshold)
+
+Uses GPS Speed to detect when a tracked person starts traveling — more reliable than
+zone exit alone (catches movement before a zone boundary is crossed).
+
+```yaml
+automation:
+  - alias: "Alice started moving"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.alice_bob_gps_speed_alice
+        above: 5          # km/h — walking threshold
+        for:
+          seconds: 30     # debounce: sustained movement, not a GPS blip
+    action:
+      - service: notify.mobile_app_bob
+        data:
+          message: "Alice is on the move ({{ states('sensor.alice_bob_gps_speed_alice') | round(0) }} km/h)."
+```
+
+## 12. Detect vehicle vs. on-foot travel
+
+GPS Speed bands: walking ≤ 7 km/h, cycling ≤ 25 km/h, driving > 25 km/h.
+
+```yaml
+automation:
+  - alias: "Alice is driving home"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.alice_bob_gps_speed_alice
+        above: 25
+        for:
+          seconds: 60
+    condition:
+      - condition: numeric_state
+        entity_id: sensor.alice_bob_distance
+        below: 10000      # within 10 km of home
+      - condition: state
+        entity_id: binary_sensor.alice_bob_in_proximity
+        state: "off"
+    action:
+      - service: notify.mobile_app_bob
+        data:
+          message: "Alice is driving — ETA {{ states('sensor.alice_bob_eta') | round(0) }} min."
+```
+
+## 13. Alert when GPS fix quality is poor before acting on altitude
+
+Gate altitude-based automations on vertical accuracy to avoid false triggers.
+
+```yaml
+automation:
+  - alias: "Floor-aware meeting — only when GPS is accurate"
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.alice_bob_same_altitude
+        to: "off"
+        for:
+          seconds: 20
+    condition:
+      # Both devices have good vertical fix
+      - condition: numeric_state
+        entity_id: sensor.alice_bob_gps_vertical_accuracy_alice
+        below: 20         # metres
+      - condition: numeric_state
+        entity_id: sensor.alice_bob_gps_vertical_accuracy_bob
+        below: 20
+      - condition: state
+        entity_id: binary_sensor.alice_bob_in_proximity
+        state: "on"
+    action:
+      - service: notify.mobile_app_alice
+        data:
+          message: >
+            You and Bob are on different floors
+            ({{ states('sensor.alice_bob_elevation_difference') | float | abs | round(0) }} m apart vertically).
+```
+
+---
+
 **Tip:** because sensors keep their last value for a short grace window during
 brief GPS gaps, prefer `for:` durations on triggers where a momentary blip
 shouldn't fire the automation — and gate on `binary_sensor.<pair>_reliable`

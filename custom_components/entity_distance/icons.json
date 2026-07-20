@@ -58,6 +58,24 @@
       "gps_accuracy_b": {
         "default": "mdi:crosshairs-gps"
       },
+      "gps_speed_a": {
+        "default": "mdi:speedometer"
+      },
+      "gps_speed_b": {
+        "default": "mdi:speedometer"
+      },
+      "gps_heading_a": {
+        "default": "mdi:compass"
+      },
+      "gps_heading_b": {
+        "default": "mdi:compass"
+      },
+      "gps_vertical_accuracy_a": {
+        "default": "mdi:crosshairs"
+      },
+      "gps_vertical_accuracy_b": {
+        "default": "mdi:crosshairs"
+      },
       "last_update_a": {
         "default": "mdi:update"
       },

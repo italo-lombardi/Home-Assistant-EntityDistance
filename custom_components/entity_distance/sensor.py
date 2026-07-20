@@ -114,6 +114,7 @@ async def async_setup_entry(
         b_name = _friendly_name(k[1])
         pair_dev = _pair_device_info(entry, k, a_name, b_name)
         is_zone_pair = k[0].startswith("zone.") and k[1].startswith("zone.")
+        has_zone = k[0].startswith("zone.") or k[1].startswith("zone.")
         if is_zone_pair:
             all_sensors.extend(
                 [
@@ -151,6 +152,22 @@ async def async_setup_entry(
                     EtaSensor(coordinator, entry, pair_dev, k),
                     GpsAccuracySensor(coordinator, entry, pair_dev, k, a_name, b_name, "a"),
                     GpsAccuracySensor(coordinator, entry, pair_dev, k, a_name, b_name, "b"),
+                    *(
+                        [
+                            GpsSpeedSensor(coordinator, entry, pair_dev, k, a_name, b_name, "a"),
+                            GpsSpeedSensor(coordinator, entry, pair_dev, k, a_name, b_name, "b"),
+                            GpsHeadingSensor(coordinator, entry, pair_dev, k, a_name, b_name, "a"),
+                            GpsHeadingSensor(coordinator, entry, pair_dev, k, a_name, b_name, "b"),
+                            GpsVerticalAccuracySensor(
+                                coordinator, entry, pair_dev, k, a_name, b_name, "a"
+                            ),
+                            GpsVerticalAccuracySensor(
+                                coordinator, entry, pair_dev, k, a_name, b_name, "b"
+                            ),
+                        ]
+                        if not has_zone
+                        else []
+                    ),
                     LastUpdateSensor(coordinator, entry, pair_dev, k, a_name, b_name, "a"),
                     LastUpdateSensor(coordinator, entry, pair_dev, k, a_name, b_name, "b"),
                     UpdateCountSensor(coordinator, entry, pair_dev, k, a_name, b_name, "a"),
@@ -456,6 +473,63 @@ class GpsAccuracySensor(EntityDistanceSensorBase):
         if not self.available:
             return None
         return self._pair.accuracy_a if self._which == "a" else self._pair.accuracy_b
+
+
+class GpsSpeedSensor(EntityDistanceSensorBase):
+    _attr_device_class = SensorDeviceClass.SPEED
+    _attr_native_unit_of_measurement = UnitOfSpeed.KILOMETERS_PER_HOUR
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, coordinator, entry, device_info, k, a_name, b_name, which: str):
+        super().__init__(coordinator, entry, device_info, k, f"gps_speed_{which}")
+        self._which = which
+        name = a_name if which == "a" else b_name
+        self._attr_name = f"GPS Speed ({name})"
+
+    @property
+    def native_value(self) -> float | None:
+        if not self.available:
+            return None
+        return self._pair.speed_a_kmh if self._which == "a" else self._pair.speed_b_kmh
+
+
+class GpsHeadingSensor(EntityDistanceSensorBase):
+    _attr_native_unit_of_measurement = "°"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, coordinator, entry, device_info, k, a_name, b_name, which: str):
+        super().__init__(coordinator, entry, device_info, k, f"gps_heading_{which}")
+        self._which = which
+        name = a_name if which == "a" else b_name
+        self._attr_name = f"GPS Heading ({name})"
+
+    @property
+    def native_value(self) -> float | None:
+        if not self.available:
+            return None
+        return self._pair.heading_a_deg if self._which == "a" else self._pair.heading_b_deg
+
+
+class GpsVerticalAccuracySensor(EntityDistanceSensorBase):
+    _attr_device_class = SensorDeviceClass.DISTANCE
+    _attr_native_unit_of_measurement = UnitOfLength.METERS
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, coordinator, entry, device_info, k, a_name, b_name, which: str):
+        super().__init__(coordinator, entry, device_info, k, f"gps_vertical_accuracy_{which}")
+        self._which = which
+        name = a_name if which == "a" else b_name
+        self._attr_name = f"GPS Vertical Accuracy ({name})"
+
+    @property
+    def native_value(self) -> float | None:
+        if not self.available:
+            return None
+        return (
+            self._pair.vertical_accuracy_a_m
+            if self._which == "a"
+            else self._pair.vertical_accuracy_b_m
+        )
 
 
 class LastUpdateSensor(EntityDistanceSensorBase):

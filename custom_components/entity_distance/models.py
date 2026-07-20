@@ -55,6 +55,14 @@ class PairState:
     altitude_a_m: float | None = None
     altitude_b_m: float | None = None
     altitude_delta_m: float | None = None
+    # GPS attributes read directly from device tracker (via person source fallback for person entities).
+    # Not persisted — ephemeral readings with no meaningful grace-window value.
+    speed_a_kmh: float | None = None
+    speed_b_kmh: float | None = None
+    heading_a_deg: float | None = None
+    heading_b_deg: float | None = None
+    vertical_accuracy_a_m: float | None = None
+    vertical_accuracy_b_m: float | None = None
 
     accuracy_a: float | None = None
     accuracy_b: float | None = None

@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added
+
+- **Approaching binary sensor.** `binary_sensor.<pair>_approaching` — ON while the pair is actively approaching, None when direction is unknown or no prior state. Cleaner trigger surface for arrival automations than the direction enum sensor. Skipped for zone-zone pairs.
+- **Altitude confidence filter.** New Advanced Filter option `max_vertical_accuracy_m` (default 0 = disabled). When set above 0, an entity's altitude sensor returns unknown if its vertical GPS error exceeds the threshold — the other side is unaffected. `Elevation Difference` and `Same Altitude` go unknown when either altitude is suppressed. Consumer GPS vertical error is typically 10–30 m.
+
 ### Changed
 
 - **Sensor precision.** GPS-derived sensor values are now rounded in `native_value` to reduce state-change churn from GPS float noise. Rounding happens only at the sensor output layer — all internal calculations read raw `PairState` values unchanged.
@@ -11,9 +16,6 @@
   - GPS Heading: `round(v) % 360` → integer degrees, 360° normalized to 0°
   - GPS Vertical Accuracy: `round(v, 1)` → e.g. `84.0 m`
   - GPS Accuracy: `round(v, 1)` → e.g. `3.9 m` (preserves sub-metre distinction)
-
- `binary_sensor.<pair>_approaching` — ON while the pair is actively approaching, None when direction is unknown or no prior state. Cleaner trigger surface for arrival automations than the direction enum sensor. Skipped for zone-zone pairs.
-- **Altitude confidence filter.** New Advanced Filter option `max_vertical_accuracy_m` (default 0 = disabled). When set above 0, an entity's altitude sensor returns unknown if its vertical GPS error exceeds the threshold — the other side is unaffected. `Elevation Difference` and `Same Altitude` go unknown when either altitude is suppressed. Consumer GPS vertical error is typically 10–30 m.
 
 ## [0.4.3] - 2026-07-19
 

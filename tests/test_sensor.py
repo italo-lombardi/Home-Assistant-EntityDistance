@@ -1285,6 +1285,15 @@ class TestGpsAccuracySensorExtra:
         sensor = _make_extra_sensor(GpsAccuracySensor, ps, _which="a")
         assert sensor.native_value is None
 
+    def test_rounds_to_one_decimal(self):
+        from custom_components.entity_distance.sensor import GpsAccuracySensor
+
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.data_valid = True
+        ps.accuracy_a = 3.9049
+        sensor = _make_extra_sensor(GpsAccuracySensor, ps, _which="a")
+        assert sensor.native_value == pytest.approx(3.9)
+
 
 class TestLastUpdateSensorExtra:
     def test_returns_last_update_a(self):

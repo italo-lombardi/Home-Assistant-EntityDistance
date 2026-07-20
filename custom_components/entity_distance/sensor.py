@@ -472,7 +472,8 @@ class GpsAccuracySensor(EntityDistanceSensorBase):
     def native_value(self) -> float | None:
         if not self.available:
             return None
-        return self._pair.accuracy_a if self._which == "a" else self._pair.accuracy_b
+        v = self._pair.accuracy_a if self._which == "a" else self._pair.accuracy_b
+        return round(v, 1) if v is not None else None
 
 
 class GpsSpeedSensor(EntityDistanceSensorBase):
@@ -490,7 +491,8 @@ class GpsSpeedSensor(EntityDistanceSensorBase):
     def native_value(self) -> float | None:
         if not self.available:
             return None
-        return self._pair.speed_a_kmh if self._which == "a" else self._pair.speed_b_kmh
+        v = self._pair.speed_a_kmh if self._which == "a" else self._pair.speed_b_kmh
+        return round(v, 1) if v is not None else None
 
 
 class GpsHeadingSensor(EntityDistanceSensorBase):
@@ -504,10 +506,11 @@ class GpsHeadingSensor(EntityDistanceSensorBase):
         self._attr_name = f"GPS Heading ({name})"
 
     @property
-    def native_value(self) -> float | None:
+    def native_value(self) -> int | None:
         if not self.available:
             return None
-        return self._pair.heading_a_deg if self._which == "a" else self._pair.heading_b_deg
+        v = self._pair.heading_a_deg if self._which == "a" else self._pair.heading_b_deg
+        return round(v) % 360 if v is not None else None
 
 
 class GpsVerticalAccuracySensor(EntityDistanceSensorBase):
@@ -525,11 +528,12 @@ class GpsVerticalAccuracySensor(EntityDistanceSensorBase):
     def native_value(self) -> float | None:
         if not self.available:
             return None
-        return (
+        v = (
             self._pair.vertical_accuracy_a_m
             if self._which == "a"
             else self._pair.vertical_accuracy_b_m
         )
+        return round(v, 1) if v is not None else None
 
 
 class LastUpdateSensor(EntityDistanceSensorBase):
@@ -715,7 +719,8 @@ class AltitudeSensor(EntityDistanceSensorBase):
     def native_value(self) -> float | None:
         if not self._show_value:
             return None
-        return self._pair.altitude_a_m if self._which == "a" else self._pair.altitude_b_m
+        v = self._pair.altitude_a_m if self._which == "a" else self._pair.altitude_b_m
+        return round(v, 1) if v is not None else None
 
     @property
     def extra_state_attributes(self) -> dict:
@@ -737,7 +742,8 @@ class AltitudeDeltaSensor(EntityDistanceSensorBase):
     def native_value(self) -> float | None:
         if not self._show_value:
             return None
-        return self._pair.altitude_delta_m
+        v = self._pair.altitude_delta_m
+        return round(v, 1) if v is not None else None
 
     @property
     def extra_state_attributes(self) -> dict:

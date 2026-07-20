@@ -820,7 +820,7 @@ class TestGpsAccuracySensor:
         ps.accuracy_a = 15.0
         ps.accuracy_b = 30.0
         sensor = _make_gps_sensor("a", ps)
-        assert sensor.native_value == 15.0
+        assert sensor.native_value == pytest.approx(15.0)
 
     def test_returns_accuracy_b(self):
         ps = PairState(entity_a_id="person.alice", entity_b_id="person.bob")
@@ -828,7 +828,14 @@ class TestGpsAccuracySensor:
         ps.accuracy_a = 15.0
         ps.accuracy_b = 30.0
         sensor = _make_gps_sensor("b", ps)
-        assert sensor.native_value == 30.0
+        assert sensor.native_value == pytest.approx(30.0)
+
+    def test_rounds_to_one_decimal(self):
+        ps = PairState(entity_a_id="person.alice", entity_b_id="person.bob")
+        ps.data_valid = True
+        ps.accuracy_a = 3.9049
+        sensor = _make_gps_sensor("a", ps)
+        assert sensor.native_value == pytest.approx(3.9)
 
     def test_returns_none_when_no_accuracy(self):
         ps = PairState(entity_a_id="person.alice", entity_b_id="person.bob")
@@ -1257,7 +1264,7 @@ class TestGpsAccuracySensorExtra:
         ps.accuracy_a = 12.5
         ps.accuracy_b = 30.0
         sensor = _make_extra_sensor(GpsAccuracySensor, ps, _which="a")
-        assert sensor.native_value == 12.5
+        assert sensor.native_value == pytest.approx(12.5)
 
     def test_returns_accuracy_b(self):
         from custom_components.entity_distance.sensor import GpsAccuracySensor
@@ -1267,7 +1274,7 @@ class TestGpsAccuracySensorExtra:
         ps.accuracy_a = 12.5
         ps.accuracy_b = 30.0
         sensor = _make_extra_sensor(GpsAccuracySensor, ps, _which="b")
-        assert sensor.native_value == 30.0
+        assert sensor.native_value == pytest.approx(30.0)
 
     def test_returns_none_when_accuracy_missing(self):
         from custom_components.entity_distance.sensor import GpsAccuracySensor
@@ -1586,6 +1593,10 @@ class TestAltitudeSensor:
         sensor = self._make("b", alt_b=100.0)
         assert sensor.native_value == pytest.approx(100.0)
 
+    def test_rounds_to_one_decimal(self):
+        sensor = self._make("a", alt_a=36.0101038187096)
+        assert sensor.native_value == pytest.approx(36.0)
+
     def test_none_when_altitude_missing(self):
         sensor = self._make("a", alt_a=None)
         assert sensor.native_value is None
@@ -1628,6 +1639,9 @@ class TestAltitudeDeltaSensor:
 
     def test_zero_delta(self):
         assert self._make(delta=0.0).native_value == pytest.approx(0.0)
+
+    def test_rounds_to_one_decimal(self):
+        assert self._make(delta=-28.9898961812904).native_value == pytest.approx(-29.0)
 
     def test_none_when_delta_none(self):
         assert self._make(delta=None).native_value is None
@@ -1683,6 +1697,9 @@ class TestGpsSpeedSensor:
     def test_native_value_b(self):
         assert self._make("b", speed_b=30.0).native_value == pytest.approx(30.0)
 
+    def test_rounds_to_one_decimal(self):
+        assert self._make("a", speed_a=12.345).native_value == pytest.approx(12.3)
+
     def test_none_when_not_available(self):
         assert self._make("a", speed_a=50.0, data_valid=False).native_value is None
 
@@ -1710,10 +1727,16 @@ class TestGpsHeadingSensor:
         return sensor
 
     def test_native_value_a(self):
-        assert self._make("a", heading_a=270.0).native_value == pytest.approx(270.0)
+        assert self._make("a", heading_a=270.0).native_value == 270
 
     def test_native_value_b(self):
-        assert self._make("b", heading_b=90.0).native_value == pytest.approx(90.0)
+        assert self._make("b", heading_b=90.0).native_value == 90
+
+    def test_rounds_to_integer(self):
+        assert self._make("a", heading_a=237.6).native_value == 238
+
+    def test_360_normalizes_to_0(self):
+        assert self._make("a", heading_a=359.6).native_value == 0
 
     def test_none_when_not_available(self):
         assert self._make("a", heading_a=270.0, data_valid=False).native_value is None
@@ -1746,6 +1769,9 @@ class TestGpsVerticalAccuracySensor:
 
     def test_native_value_b(self):
         assert self._make("b", vacc_b=12.0).native_value == pytest.approx(12.0)
+
+    def test_rounds_to_one_decimal(self):
+        assert self._make("a", vacc_a=84.049).native_value == pytest.approx(84.0)
 
     def test_none_when_not_available(self):
         assert self._make("a", vacc_a=8.0, data_valid=False).native_value is None

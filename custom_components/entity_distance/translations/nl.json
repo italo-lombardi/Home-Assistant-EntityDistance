@@ -56,7 +56,7 @@
           "resync_silence_s": "Als alle gevolgde entiteiten gedurende deze tijd geen GPS-updates sturen, wordt de nabijheidsstatus bevroren om valse wijzigingen te voorkomen terwijl op het signaal gewacht wordt. Standaard: 600 s (10 min). Bereik: 60–3600 s.",
           "resync_hold_s": "Hoe lang de nabijheidsstatus bevroren blijft nadat GPS-stilte is gedetecteerd. Stel in op 0 om bevriezing uit te schakelen (stiltedetectie blijft actief voor tijdsboekhouding). Standaard: 60 s. Bereik: 0–300 s.",
           "altitude_aligned_threshold_m": "Maximaal hoogteverschil (in meter) waarbij de binaire sensor 'Zelfde hoogte' AAN gaat. 0 = alleen exact dezelfde hoogte. Standaard: 5 m. Bereik: 0–100 m.",
-          "max_vertical_accuracy_m": "Als hoger dan 0 geven hoogtesensoren 'onbekend' terug als de verticale GPS-fout deze waarde overschrijdt. Standaard: 0 (uit)."
+          "max_vertical_accuracy_m": "Als de waarde hoger dan 0 is, geven hoogtesensoren 'onbekend' terug als de verticale GPS-fout deze waarde overschrijdt. Standaard: 0 (uit)."
         }
       }
     },
@@ -118,7 +118,7 @@
           "resync_silence_s": "Als alle gevolgde entiteiten gedurende deze tijd geen GPS-updates sturen, wordt de nabijheidsstatus bevroren om valse wijzigingen te voorkomen terwijl op het signaal gewacht wordt. Standaard: 600 s (10 min). Bereik: 60–3600 s.",
           "resync_hold_s": "Hoe lang de nabijheidsstatus bevroren blijft nadat GPS-stilte is gedetecteerd. Stel in op 0 om bevriezing uit te schakelen (stiltedetectie blijft actief voor tijdsboekhouding). Standaard: 60 s. Bereik: 0–300 s.",
           "altitude_aligned_threshold_m": "Maximaal hoogteverschil (in meter) waarbij de binaire sensor 'Zelfde hoogte' AAN gaat. 0 = alleen exact dezelfde hoogte. Standaard: 5 m. Bereik: 0–100 m.",
-          "max_vertical_accuracy_m": "Als hoger dan 0 geven hoogtesensoren 'onbekend' terug als de verticale GPS-fout deze waarde overschrijdt. Standaard: 0 (uit)."
+          "max_vertical_accuracy_m": "Als de waarde hoger dan 0 is, geven hoogtesensoren 'onbekend' terug als de verticale GPS-fout deze waarde overschrijdt. Standaard: 0 (uit)."
         }
       }
     },

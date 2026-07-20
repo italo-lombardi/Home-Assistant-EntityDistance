@@ -740,7 +740,9 @@ class TestLastSeenTogetherSemantics:
     def test_not_stamped_when_reliability_blocks_entry(self):
         """Reliability guard vetoes entry → last_seen_together must not be stamped."""
         coord = _make_coordinator(
-            entry_threshold_m=500.0, exit_threshold_m=500.0, require_reliable=True,
+            entry_threshold_m=500.0,
+            exit_threshold_m=500.0,
+            require_reliable=True,
             min_updates_reliable=5,
         )
         state_a = _make_state("person.alice", 51.5, -0.1, 20)
@@ -764,6 +766,8 @@ class TestLastSeenTogetherSemantics:
         # Reliability guard blocks entry → proximity stays False → LST not stamped.
         assert result.proximity is False
         assert result.last_seen_together is None
+
+
 # ---------------------------------------------------------------------------
 
 

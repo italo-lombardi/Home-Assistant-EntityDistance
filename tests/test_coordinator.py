@@ -498,13 +498,24 @@ class TestIsReliable:
 
         coordinator = EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)
         coordinator._min_updates_reliable = min_updates
+        coordinator._updates_window_s = 600.0
         return coordinator
+
+    def _fresh_window(self, ps):
+        # Non-zero counts only count while the window is live. Anchor both sides'
+        # window at now so is_reliable() reads the stored count, not a stale 0.
+        from homeassistant.util import dt as dt_util
+
+        now = dt_util.utcnow()
+        ps.update_window_start_a = now
+        ps.update_window_start_b = now
 
     def test_reliable_when_both_counts_meet_threshold(self):
         coordinator = self._make_coordinator(3)
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.update_count_a = 3
         ps.update_count_b = 3
+        self._fresh_window(ps)
         assert coordinator.is_reliable(ps) is True
 
     def test_reliable_when_counts_exceed_threshold(self):
@@ -512,6 +523,7 @@ class TestIsReliable:
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.update_count_a = 10
         ps.update_count_b = 5
+        self._fresh_window(ps)
         assert coordinator.is_reliable(ps) is True
 
     def test_not_reliable_when_a_below_threshold(self):
@@ -519,6 +531,7 @@ class TestIsReliable:
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.update_count_a = 2
         ps.update_count_b = 5
+        self._fresh_window(ps)
         assert coordinator.is_reliable(ps) is False
 
     def test_not_reliable_when_b_below_threshold(self):
@@ -526,6 +539,7 @@ class TestIsReliable:
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.update_count_a = 5
         ps.update_count_b = 1
+        self._fresh_window(ps)
         assert coordinator.is_reliable(ps) is False
 
     def test_not_reliable_when_both_zero(self):
@@ -533,6 +547,7 @@ class TestIsReliable:
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.update_count_a = 0
         ps.update_count_b = 0
+        self._fresh_window(ps)
         assert coordinator.is_reliable(ps) is False
 
     def test_reliable_with_min_1(self):
@@ -540,6 +555,7 @@ class TestIsReliable:
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.update_count_a = 1
         ps.update_count_b = 1
+        self._fresh_window(ps)
         assert coordinator.is_reliable(ps) is True
 
     def test_not_reliable_with_min_1_when_zero(self):
@@ -547,6 +563,44 @@ class TestIsReliable:
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.update_count_a = 0
         ps.update_count_b = 1
+        self._fresh_window(ps)
+        assert coordinator.is_reliable(ps) is False
+
+    def test_zone_side_always_passes(self):
+        # RELIABLE-ZONE-1: a zone.* side never emits state_changed so its update
+        # counter never advances — treat it as passing regardless of count/window.
+        coordinator = self._make_coordinator(3)
+        ps = PairState(entity_a_id="zone.home", entity_b_id="person.b")
+        ps.update_count_a = 0
+        ps.update_window_start_a = None
+        ps.update_count_b = 3
+        self._fresh_window(ps)
+        ps.update_window_start_a = None  # zone side genuinely never anchored
+        assert coordinator.is_reliable(ps) is True
+
+    def test_not_reliable_when_window_none(self):
+        # B1: non-zone side with no window anchor → stale count treated as 0.
+        coordinator = self._make_coordinator(3)
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.update_count_a = 5
+        ps.update_count_b = 5
+        ps.update_window_start_a = None
+        ps.update_window_start_b = None
+        assert coordinator.is_reliable(ps) is False
+
+    def test_not_reliable_when_window_elapsed(self):
+        # B1: window older than _updates_window_s → count is stale → 0.
+        from datetime import timedelta
+
+        from homeassistant.util import dt as dt_util
+
+        coordinator = self._make_coordinator(3)
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.update_count_a = 5
+        ps.update_count_b = 5
+        stale = dt_util.utcnow() - timedelta(seconds=coordinator._updates_window_s + 10)
+        ps.update_window_start_a = stale
+        ps.update_window_start_b = stale
         assert coordinator.is_reliable(ps) is False
 
 

@@ -1026,15 +1026,29 @@ class TestTodayZoneTimeSensorAttributes:
         assert "range_from_m" in attrs
         assert "range_to_m" in attrs
 
+    def test_very_far_has_range_from_far_threshold(self):
+        # NEW-2: very_far is not a threshold key (idx == -1). Its lower bound is the
+        # far threshold; range_to_m is absent (unbounded tail).
+        ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
+        ps.data_valid = True
+        ps.today_zone_seconds = {}
+        sensor = _make_zone_sensor(BUCKET_VERY_FAR, ps)
+        thresholds = sensor.coordinator.bucket_thresholds
+        far_threshold = thresholds[list(thresholds.keys())[-1]]
+        attrs = sensor.extra_state_attributes
+        assert attrs["range_from_m"] == far_threshold
+        assert "range_to_m" not in attrs
+
     def test_unknown_bucket_omits_range_from(self):
         # Bucket not present in coordinator.bucket_thresholds — idx falls to -1,
-        # so range_from_m is omitted but range_to_m stays as None-safe absence.
+        # which is the very_far case: range_from_m is the far threshold (lower bound
+        # of the unbounded tail), range_to_m stays absent (no upper bound).
         ps = PairState(entity_a_id="person.a", entity_b_id="person.b")
         ps.data_valid = True
         ps.today_zone_seconds = {}
         sensor = _make_zone_sensor("nonexistent_bucket", ps)
         attrs = sensor.extra_state_attributes
-        assert "range_from_m" not in attrs
+        assert attrs["range_from_m"] == 20000
         assert "range_to_m" not in attrs
 
     def test_bucket_with_none_upper_omits_range_to(self):

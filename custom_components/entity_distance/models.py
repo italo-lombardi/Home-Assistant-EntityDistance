@@ -5,7 +5,31 @@ from datetime import date, datetime
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover
-    from homeassistant.core import HomeAssistant
+    from homeassistant.core import HomeAssistant, State
+
+_HOME_ZONE_ENTITY_ID = "zone.home"
+
+
+def _zone_match_value(entity_id: str, state: State) -> str:
+    """Value to compare against the other side's tracker state for same-zone matching.
+
+    Mirrors the logic in HA's device_tracker.entity (see
+    homeassistant/components/device_tracker/legacy.py – async_update_listeners /
+    _async_update_zone_state in core; search for STATE_HOME and zone.name handling).
+    If HA changes how tracker states are derived from zone names, update here too.
+
+      - zone.home → literal "home" (STATE_HOME)
+      - any other zone → State.name (friendly_name, falls back to object_id)
+      - non-zone entity → its raw state
+    """
+    if not entity_id.startswith("zone."):
+        return state.state
+    if entity_id == _HOME_ZONE_ENTITY_ID:
+        return "home"
+    # State.name returns the configured friendly_name, or object_id if unset.
+    return state.name
+
+
 _DOMAIN_PRIORITY: dict[str, int] = {
     "person": 0,
     "device_tracker": 1,
@@ -33,6 +57,9 @@ class PairState:
     distance_m: float | None = None
     prev_distance_m: float | None = None
     prev_calc_time: datetime | None = None
+    # Bucket of the last valid distance. Persisted so a cross-midnight _invalidate()
+    # credits the correct zone even after distance_m may have been superseded.
+    last_bucket: str | None = None
 
     direction: str | None = None
     closing_speed_kmh: float | None = None

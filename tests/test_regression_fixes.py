@@ -7,7 +7,7 @@ Covers:
 - W3  _CARD_INSTALLED_KEY cleared on last-entry unload
 - W4  AnyInProximity / AllInProximity return None when all pairs invalid
 - W5  today_proximity_seconds only accumulates after reliability check
-- W6  last_seen_together stamped on was_proximity (in-prox ticks + EXIT)
+- W6  last_seen_together stamped ONLY on EXIT and on _invalidate-while-in-proximity (no per-tick stamp)
 """
 
 from __future__ import annotations
@@ -634,7 +634,7 @@ class TestTodayProximityAfterReliabilityCheck:
 
 
 # ---------------------------------------------------------------------------
-# W6 — last_seen_together stamped on was_proximity ticks
+# W6 — last_seen_together stamped ONLY on EXIT / _invalidate (not per-tick)
 # ---------------------------------------------------------------------------
 
 
@@ -663,7 +663,11 @@ class TestLastSeenTogetherSemantics:
         assert result.last_seen_together == _NOW
 
     def test_stamped_on_in_proximity_tick(self):
-        """In-proximity tick: was_proximity=True → last_seen_together updated each tick."""
+        """In-proximity tick: last_seen_together is NOT stamped per-tick (only on EXIT).
+
+        LST-1/LST-2: stamping every in-proximity tick produced ~1440 recorder rows/day
+        for co-located pairs. last_seen_together now stamps only on EXIT / _invalidate.
+        """
         coord = _make_coordinator(entry_threshold_m=500.0, exit_threshold_m=500.0)
         state_a = _make_state("person.alice", 51.5, -0.1, 20)
         state_b = _make_state("person.bob", 51.501, -0.1, 20)
@@ -685,8 +689,8 @@ class TestLastSeenTogetherSemantics:
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
 
         assert result.proximity is True
-        assert result.last_seen_together == _NOW
-        assert result.last_seen_together != old_lts
+        # Still in proximity → no EXIT → last_seen_together unchanged.
+        assert result.last_seen_together == old_lts
 
     def test_not_stamped_on_entry_tick(self):
         """ENTRY tick (was_proximity=False): last_seen_together should not be set."""
@@ -1030,6 +1034,7 @@ class TestInvalidateCreditsZoneBucket:
         ps.today_proximity_seconds = 0.0
         ps.today_zone_seconds = {}
         ps.distance_m = 50.0  # very_near bucket
+        ps.last_bucket = "very_near"
 
         now = datetime(2024, 6, 2, 0, 10, 0, tzinfo=UTC)
         result = coord._calc_pair(ps, "person.alice", "person.bob", now, set())

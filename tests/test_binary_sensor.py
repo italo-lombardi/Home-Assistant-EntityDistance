@@ -760,6 +760,17 @@ class TestAltitudeAlignedBinarySensor:
         sensor = _make_altitude_aligned_sensor(k, ps)
         assert sensor.is_on is None
 
+    def test_none_after_grace_expires_not_stale_bool(self):
+        # NEW-1: once outside the display grace window, is_on returns None instead
+        # of a stale bool computed from the last-known altitude_delta.
+        k = pair_key("person.alice", "person.bob")
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.altitude_delta_m = 3.0  # would otherwise be True
+        ps.data_valid = False
+        sensor = _make_altitude_aligned_sensor(k, ps)
+        sensor.coordinator.is_within_grace = MagicMock(return_value=False)
+        assert sensor.is_on is None
+
     def test_on_when_delta_zero(self):
         k = pair_key("person.alice", "person.bob")
         ps = PairState(entity_a_id=k[0], entity_b_id=k[1])

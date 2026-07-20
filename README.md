@@ -136,7 +136,7 @@ Each configured group creates one HA device (the group) with per-pair sub-device
 | Proximity Duration | Total time entities have been within proximity distance — live, includes the current open session | `duration` |
 | Proximity Tracking Started | Timestamp when tracking began for this pair (set once) | `timestamp` |
 | Proximity Rate | Percentage of tracked time spent in proximity | `%` |
-| Last Seen Together | Timestamp of the last time the pair **parted** (proximity session end / signal loss while together). While currently in proximity the raw sensor holds the *previous* parting time (or `unknown` if never parted); the Pair and Avatar cards substitute "Together now". Use `binary_sensor.<slug>_in_proximity` to test "together right now" in templates/automations. | `timestamp` |
+| Last Seen Together | Timestamp of the most recent moment the pair was in proximity. Updated on every in-proximity tick, so it reads "just now" / seconds ago while together; holds the last proximity timestamp after separation. `unknown` if the pair has never been in proximity. | `timestamp` |
 | Today Proximity Time | Total minutes together today — resets at midnight | `duration` |
 | Today Very Near Time | Minutes spent Very Near today | `duration` |
 | Today Near Time | Minutes spent Near today | `duration` |

@@ -99,6 +99,8 @@ def _make_coord_coordinator(
     coord._pair_states = pairs
     coord._resync_holding = resync_holding
     coord._resync_hold_until = resync_hold_until
+    coord._altitude_aligned_threshold_m = 5.0
+    coord._max_vertical_accuracy_m = 0.0
     coord.hass = hass or MagicMock()
     return coord
 

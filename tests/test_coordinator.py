@@ -642,6 +642,7 @@ def _make_calc_pair_coordinator(
     coordinator._min_updates_reliable = min_updates_reliable
     coordinator._updates_window_s = updates_window_s
     coordinator._altitude_aligned_threshold_m = 5.0
+    coordinator._max_vertical_accuracy_m = 0.0
     coordinator._bucket_thresholds = {
         BUCKET_VERY_NEAR: DEFAULT_ZONE_VERY_NEAR_M,
         BUCKET_NEAR: DEFAULT_ZONE_NEAR_M,
@@ -1406,6 +1407,7 @@ class TestCoordinatorProperties:
         coord._updates_window_s = 1800
         coord._require_reliable = False
         coord._altitude_aligned_threshold_m = 5.0
+        coord._max_vertical_accuracy_m = 0.0
         snap = coord.settings_snapshot
         assert snap["proximity_zone"] == "very_near"
         assert snap["zone_very_near_m"] == 200
@@ -1418,9 +1420,10 @@ class TestCoordinatorProperties:
         assert "resync_silence_s" in snap
         assert "resync_hold_s" in snap
         assert "altitude_aligned_threshold_m" in snap
+        assert "max_vertical_accuracy_m" in snap
         assert snap["stationary_threshold_factor"] == 0.15
         assert snap["stationary_threshold_min_m"] == 15.0
-        assert len(snap) == 18  # update this if fields are intentionally added/removed
+        assert len(snap) == 19  # update this if fields are intentionally added/removed
 
 
 # ---------------------------------------------------------------------------
@@ -3001,3 +3004,65 @@ class TestCalcPairGpsAttributes:
         assert ps.altitude_delta_m == pytest.approx(8.0)
         assert ps.speed_a_kmh == pytest.approx(5.0)
         assert ps.speed_b_kmh == pytest.approx(0.0)
+
+
+class TestCalcPairVerticalAccuracyFilter:
+    """Altitude suppression when vacc exceeds max_vertical_accuracy_m."""
+
+    def _run(self, vacc_a, vacc_b, alt_a=100.0, alt_b=110.0, max_vacc=30.0):
+        from unittest.mock import patch
+
+        from homeassistant.core import State
+
+        coordinator = _make_calc_pair_coordinator()
+        coordinator._max_vertical_accuracy_m = max_vacc
+        k = next(iter(coordinator._pair_states))
+        ps = coordinator._pair_states[k]
+        ea, eb = k
+
+        attrs_a = {"latitude": 51.5, "longitude": -0.1, "altitude": alt_a}
+        attrs_b = {"latitude": 51.6, "longitude": -0.2, "altitude": alt_b}
+        if vacc_a is not None:
+            attrs_a["vertical_accuracy"] = vacc_a
+        if vacc_b is not None:
+            attrs_b["vertical_accuracy"] = vacc_b
+
+        state_a = State(ea, "home", attrs_a)
+        state_b = State(eb, "home", attrs_b)
+        coordinator.hass.states.get.side_effect = lambda eid: state_a if eid == ea else state_b
+        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=500.0):
+            return coordinator._calc_pair(ps, ea, eb, datetime.now().astimezone(), set())
+
+    def test_altitude_passes_when_vacc_within_limit(self):
+        ps = self._run(vacc_a=20.0, vacc_b=25.0, max_vacc=30.0)
+        assert ps.altitude_a_m == pytest.approx(100.0)
+        assert ps.altitude_b_m == pytest.approx(110.0)
+
+    def test_altitude_a_suppressed_when_vacc_a_exceeds_limit(self):
+        ps = self._run(vacc_a=50.0, vacc_b=20.0, max_vacc=30.0)
+        assert ps.altitude_a_m is None
+        assert ps.altitude_b_m == pytest.approx(110.0)
+        assert ps.altitude_delta_m is None
+
+    def test_altitude_b_suppressed_when_vacc_b_exceeds_limit(self):
+        ps = self._run(vacc_a=20.0, vacc_b=50.0, max_vacc=30.0)
+        assert ps.altitude_a_m == pytest.approx(100.0)
+        assert ps.altitude_b_m is None
+        assert ps.altitude_delta_m is None
+
+    def test_both_suppressed_when_both_exceed_limit(self):
+        ps = self._run(vacc_a=50.0, vacc_b=50.0, max_vacc=30.0)
+        assert ps.altitude_a_m is None
+        assert ps.altitude_b_m is None
+        assert ps.altitude_delta_m is None
+
+    def test_filter_disabled_when_max_zero(self):
+        ps = self._run(vacc_a=999.0, vacc_b=999.0, max_vacc=0.0)
+        assert ps.altitude_a_m == pytest.approx(100.0)
+        assert ps.altitude_b_m == pytest.approx(110.0)
+
+    def test_vacc_none_does_not_suppress(self):
+        # No vertical_accuracy attr → vacc is None → altitude kept
+        ps = self._run(vacc_a=None, vacc_b=None, max_vacc=30.0)
+        assert ps.altitude_a_m == pytest.approx(100.0)
+        assert ps.altitude_b_m == pytest.approx(110.0)

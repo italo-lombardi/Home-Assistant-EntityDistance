@@ -43,7 +43,8 @@
           "min_updates_reliable": "Min. updates voor betrouwbare gegevens",
           "resync_silence_s": "GPS-stilte voor bevriezing (s)",
           "resync_hold_s": "Duur nabijheidsbevriezing (s)",
-          "altitude_aligned_threshold_m": "Drempel zelfde hoogte (m)"
+          "altitude_aligned_threshold_m": "Drempel zelfde hoogte (m)",
+          "max_vertical_accuracy_m": "Max. verticale GPS-fout (m, 0 = uit)"
         },
         "data_description": {
           "max_accuracy_m": "Locatie-updates negeren waarbij de GPS-fout groter is dan deze waarde. Telefoons in beweging melden doorgaans een nauwkeurigheid van 100–250 m, dus 300 m is een veilige standaard. Een telefoon met '350 m nauwkeurigheid' wordt overgeslagen. Stel in op 0 om uit te schakelen. Bereik: 0–1000 m.",
@@ -54,7 +55,8 @@
           "min_updates_reliable": "Minimum aantal locatie-updates in het venster voordat gegevens als betrouwbaar worden beschouwd. Bereik: 1–20.",
           "resync_silence_s": "Als alle gevolgde entiteiten gedurende deze tijd geen GPS-updates sturen, wordt de nabijheidsstatus bevroren om valse wijzigingen te voorkomen terwijl op het signaal gewacht wordt. Standaard: 600 s (10 min). Bereik: 60–3600 s.",
           "resync_hold_s": "Hoe lang de nabijheidsstatus bevroren blijft nadat GPS-stilte is gedetecteerd. Stel in op 0 om bevriezing uit te schakelen (stiltedetectie blijft actief voor tijdsboekhouding). Standaard: 60 s. Bereik: 0–300 s.",
-          "altitude_aligned_threshold_m": "Maximaal hoogteverschil (in meter) waarbij de binaire sensor 'Zelfde hoogte' AAN gaat. 0 = alleen exact dezelfde hoogte. Standaard: 5 m. Bereik: 0–100 m."
+          "altitude_aligned_threshold_m": "Maximaal hoogteverschil (in meter) waarbij de binaire sensor 'Zelfde hoogte' AAN gaat. 0 = alleen exact dezelfde hoogte. Standaard: 5 m. Bereik: 0–100 m.",
+          "max_vertical_accuracy_m": "Als de waarde hoger dan 0 is, geven hoogtesensoren 'onbekend' terug als de verticale GPS-fout deze waarde overschrijdt. Standaard: 0 (uit)."
         }
       }
     },
@@ -103,7 +105,8 @@
           "min_updates_reliable": "Min. updates voor betrouwbare gegevens",
           "resync_silence_s": "GPS-stilte voor bevriezing (s)",
           "resync_hold_s": "Duur nabijheidsbevriezing (s)",
-          "altitude_aligned_threshold_m": "Drempel zelfde hoogte (m)"
+          "altitude_aligned_threshold_m": "Drempel zelfde hoogte (m)",
+          "max_vertical_accuracy_m": "Max. verticale GPS-fout (m, 0 = uit)"
         },
         "data_description": {
           "max_accuracy_m": "Locatie-updates negeren waarbij de GPS-fout groter is dan deze waarde. Telefoons in beweging melden doorgaans een nauwkeurigheid van 100–250 m, dus 300 m is een veilige standaard. Een telefoon met '350 m nauwkeurigheid' wordt overgeslagen. Stel in op 0 om uit te schakelen. Bereik: 0–1000 m.",
@@ -114,7 +117,8 @@
           "min_updates_reliable": "Hoeveel opeenvolgende updates nodig zijn voordat de locatie als betrouwbaar wordt beschouwd. Bereik: 1–20.",
           "resync_silence_s": "Als alle gevolgde entiteiten gedurende deze tijd geen GPS-updates sturen, wordt de nabijheidsstatus bevroren om valse wijzigingen te voorkomen terwijl op het signaal gewacht wordt. Standaard: 600 s (10 min). Bereik: 60–3600 s.",
           "resync_hold_s": "Hoe lang de nabijheidsstatus bevroren blijft nadat GPS-stilte is gedetecteerd. Stel in op 0 om bevriezing uit te schakelen (stiltedetectie blijft actief voor tijdsboekhouding). Standaard: 60 s. Bereik: 0–300 s.",
-          "altitude_aligned_threshold_m": "Maximaal hoogteverschil (in meter) waarbij de binaire sensor 'Zelfde hoogte' AAN gaat. 0 = alleen exact dezelfde hoogte. Standaard: 5 m. Bereik: 0–100 m."
+          "altitude_aligned_threshold_m": "Maximaal hoogteverschil (in meter) waarbij de binaire sensor 'Zelfde hoogte' AAN gaat. 0 = alleen exact dezelfde hoogte. Standaard: 5 m. Bereik: 0–100 m.",
+          "max_vertical_accuracy_m": "Als de waarde hoger dan 0 is, geven hoogtesensoren 'onbekend' terug als de verticale GPS-fout deze waarde overschrijdt. Standaard: 0 (uit)."
         }
       }
     },
@@ -260,6 +264,9 @@
       },
       "altitude_aligned": {
         "name": "Zelfde hoogte"
+      },
+      "approaching": {
+        "name": "Naderend"
       }
     },
     "button": {

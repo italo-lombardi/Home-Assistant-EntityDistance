@@ -59,6 +59,8 @@ def _make_coordinator(
     coord._resync_hold_until = {}
     coord._min_updates_reliable = min_updates_reliable
     coord._require_reliable = require_reliable
+    coord._altitude_aligned_threshold_m = 5.0
+    coord._max_vertical_accuracy_m = 0.0
     return coord
 
 
@@ -1415,6 +1417,8 @@ class TestResyncHoldFlushesProximity:
         coord._grace_window_s = 900.0
         coord._min_updates_reliable = 1
         coord._require_reliable = False
+        coord._altitude_aligned_threshold_m = 5.0
+        coord._max_vertical_accuracy_m = 0.0
         ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
         ps.last_update_a = lu_a
         ps.last_update_b = lu_b

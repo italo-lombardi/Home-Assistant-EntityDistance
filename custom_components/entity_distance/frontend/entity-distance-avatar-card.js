@@ -726,7 +726,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
                 <div class="stat-box ${showLast && !showToday ? "full-width" : ""}"
                   style="background:rgba(251,146,60,0.1);border:1px solid rgba(251,146,60,0.25)">
                   <span class="stat-box-label">👁 Last seen together</span>
-                  <span class="stat-box-value" style="color:#ea580c">${_formatTs(lastSeen)}</span>
+                  <span class="stat-box-value" style="color:#ea580c">${isProx ? "Together now" : _formatTs(lastSeen)}</span>
                 </div>` : nothing}
               ${showSpeed ? html`
                 <div class="stat-box ${showSpeed && !showEta ? "full-width" : ""}"

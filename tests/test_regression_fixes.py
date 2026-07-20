@@ -7,7 +7,7 @@ Covers:
 - W3  _CARD_INSTALLED_KEY cleared on last-entry unload
 - W4  AnyInProximity / AllInProximity return None when all pairs invalid
 - W5  today_proximity_seconds only accumulates after reliability check
-- W6  last_seen_together stamped on was_proximity (in-prox ticks + EXIT)
+- W6  last_seen_together stamped ONLY on EXIT and on _invalidate-while-in-proximity (no per-tick stamp)
 """
 
 from __future__ import annotations
@@ -634,7 +634,7 @@ class TestTodayProximityAfterReliabilityCheck:
 
 
 # ---------------------------------------------------------------------------
-# W6 — last_seen_together stamped on was_proximity ticks
+# W6 — last_seen_together stamped ONLY on EXIT / _invalidate (not per-tick)
 # ---------------------------------------------------------------------------
 
 

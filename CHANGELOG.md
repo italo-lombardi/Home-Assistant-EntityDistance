@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added
+
+- **Approaching binary sensor.** `binary_sensor.<pair>_approaching` — ON while the pair is actively approaching, None when direction is unknown or no prior state. Cleaner trigger surface for arrival automations than the direction enum sensor. Skipped for zone-zone pairs.
+- **Altitude confidence filter.** New Advanced Filter option `max_vertical_accuracy_m` (default 0 = disabled). When set above 0, altitude sensors (`Altitude A/B`, `Elevation Difference`, `Same Altitude`) return unknown if either device's vertical GPS error exceeds the threshold. Prevents unreliable altitude readings from triggering floor-aware automations. Consumer GPS vertical error is typically 10–30 m.
+
 ## [0.4.3] - 2026-07-19
 
 ### Added

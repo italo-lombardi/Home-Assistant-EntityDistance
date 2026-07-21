@@ -660,13 +660,6 @@ class ProximityRateSensor(EntityDistanceSensorBase):
         now = dt_util.now()
         total_s = (now - ps.proximity_tracking_started).total_seconds()
         if total_s <= 0:
-            if total_s < -1.0:
-                _LOGGER.warning(
-                    "entity_distance: ProximityRateSensor clock skew (%s): "
-                    "tracking_started is %.1fs in the future",
-                    self._pair_key,
-                    -total_s,
-                )
             return None
         prox_s = ps.proximity_duration_s
         if ps.proximity and ps.proximity_since:

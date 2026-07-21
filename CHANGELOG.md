@@ -6,11 +6,6 @@
 
 - **Migration infinite retry** — `async_migrate_entry` now bumps entry version to 2 before returning `False` when entity data is invalid. Previously HA retried migration on every restart indefinitely.
 
-### Changed
-
-- **ETA explicit zero guard** — `closing_speed_kmh > 0` guard added to ETA block; structurally unreachable today but makes the invariant refactor-safe.
-- **`ProximityRateSensor` clock skew logging** — logs `WARNING` when `proximity_tracking_started` is more than 1 s in the future (NTP jump, VM freeze); sub-second jitter stays silent.
-
 ## [0.4.3] - 2026-07-20
 
 ### Added

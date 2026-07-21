@@ -543,38 +543,6 @@ class TestProximityRateSensor:
         # 3600 / 7200 = 50.0 — proximity_since must not be added when proximity=False
         assert sensor.native_value == 50.0
 
-    def test_clock_skew_beyond_1s_logs_warning(self, caplog):
-        # tracking_started more than 1 s in the future → None returned + warning logged
-        import logging
-
-        now = datetime.now().astimezone()
-        ps = self._ps(
-            proximity_tracking_started=now + timedelta(seconds=5),
-            proximity_duration_s=0.0,
-            proximity=False,
-        )
-        sensor = self._make_sensor(ps)
-        with caplog.at_level(logging.WARNING, logger="custom_components.entity_distance.sensor"):
-            value = sensor.native_value
-        assert value is None
-        assert "clock skew" in caplog.text
-
-    def test_clock_skew_under_1s_no_warning(self, caplog):
-        # tracking_started 0.5 s in the future → None but no warning (sub-second jitter)
-        import logging
-
-        now = datetime.now().astimezone()
-        ps = self._ps(
-            proximity_tracking_started=now + timedelta(milliseconds=500),
-            proximity_duration_s=0.0,
-            proximity=False,
-        )
-        sensor = self._make_sensor(ps)
-        with caplog.at_level(logging.WARNING, logger="custom_components.entity_distance.sensor"):
-            value = sensor.native_value
-        assert value is None
-        assert "clock skew" not in caplog.text
-
 
 # ---------------------------------------------------------------------------
 # TodayUnaccountedTimeSensor tests

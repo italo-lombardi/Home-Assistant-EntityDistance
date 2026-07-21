@@ -762,9 +762,8 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                     direction = DIRECTION_DIVERGING
 
                 closing_speed_kmh = 0.0 if direction == DIRECTION_STATIONARY else implied_speed_kmh
-                if direction == DIRECTION_APPROACHING:
-                    closing_speed_m_per_s = closing_speed_kmh / 3.6
-                    eta_minutes = dist_m / closing_speed_m_per_s / 60
+                if direction == DIRECTION_APPROACHING and closing_speed_kmh > 0:
+                    eta_minutes = dist_m / (closing_speed_kmh / 3.6) / 60
                     eta_minutes = min(eta_minutes, 1440.0)
 
         # Both sides zone-based (e.g. everyone home) with no motion measured: the

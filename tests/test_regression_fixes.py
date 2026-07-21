@@ -158,6 +158,7 @@ class TestAsyncMigrateEntry:
         from custom_components.entity_distance import async_migrate_entry
 
         hass = MagicMock()
+        hass.config_entries = MagicMock()
         entry = MagicMock()
         entry.version = 1
         entry.entry_id = "abc123"
@@ -165,6 +166,8 @@ class TestAsyncMigrateEntry:
 
         result = await async_migrate_entry(hass, entry)
         assert result is False
+        hass.config_entries.async_update_entry.assert_called_once()
+        assert hass.config_entries.async_update_entry.call_args[1]["version"] == 2
 
     @pytest.mark.asyncio
     async def test_unique_id_migration_renames_old_format(self):
@@ -774,10 +777,11 @@ class TestLastSeenTogetherSemantics:
 class TestMigrationNewGuards:
     @pytest.mark.asyncio
     async def test_v1_with_single_entity_returns_false(self):
-        """CONF_ENTITIES list with <2 items must return False (IndexError guard)."""
+        """CONF_ENTITIES list with <2 items must return False and still bump version."""
         from custom_components.entity_distance import async_migrate_entry
 
         hass = MagicMock()
+        hass.config_entries = MagicMock()
         entry = MagicMock()
         entry.version = 1
         entry.entry_id = "abc123"
@@ -785,6 +789,8 @@ class TestMigrationNewGuards:
 
         result = await async_migrate_entry(hass, entry)
         assert result is False
+        hass.config_entries.async_update_entry.assert_called_once()
+        assert hass.config_entries.async_update_entry.call_args[1]["version"] == 2
 
     @pytest.mark.asyncio
     async def test_unknown_version_returns_false(self):

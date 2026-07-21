@@ -66,6 +66,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     "entity_distance: cannot migrate entry %s — no entity data found",
                     entry.entry_id,
                 )
+                hass.config_entries.async_update_entry(entry, version=2, minor_version=1)
                 return False
 
         entities = new_data[CONF_ENTITIES]
@@ -74,6 +75,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 "entity_distance: cannot migrate entry %s — fewer than 2 entities",
                 entry.entry_id,
             )
+            hass.config_entries.async_update_entry(entry, version=2, minor_version=1)
             return False
 
         k = pair_key(entities[0], entities[1])

@@ -1148,6 +1148,64 @@ class TestCalcPairTimingEdges:
         assert result.today_proximity_seconds == pytest.approx(999.0, abs=1.0)
         assert result.today_zone_seconds == {"near": 999.0}
 
+    def test_eta_computed_when_approaching(self):
+        # Two ticks: pair closes from 1000 m to 500 m over 30 s → approaching,
+        # closing_speed_kmh > 0, eta_minutes must be set and positive.
+        from custom_components.entity_distance.models import pair_key
+        from tests.conftest import make_state
+
+        coordinator = _make_calc_pair_coordinator(max_speed_kmh=0.0)
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+
+        now = datetime.now().astimezone()
+        ps.prev_distance_m = 1000.0
+        ps.prev_calc_time = now - timedelta(seconds=30)
+
+        state_a = make_state("person.alice", 51.5, -0.1)
+        state_b = make_state("person.bob", 51.6, -0.2)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=500.0,
+        ):
+            result = coordinator._calc_pair(ps, "person.alice", "person.bob", now, set())
+
+        assert result.direction == "approaching"
+        assert result.eta_minutes is not None
+        assert result.eta_minutes > 0
+
+    def test_eta_none_when_stationary(self):
+        # Two ticks with no distance change → STATIONARY, eta_minutes stays None.
+        from custom_components.entity_distance.models import pair_key
+        from tests.conftest import make_state
+
+        coordinator = _make_calc_pair_coordinator(max_speed_kmh=0.0)
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+
+        now = datetime.now().astimezone()
+        ps.prev_distance_m = 500.0
+        ps.prev_calc_time = now - timedelta(seconds=30)
+
+        state_a = make_state("person.alice", 51.5, -0.1)
+        state_b = make_state("person.bob", 51.6, -0.2)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=500.0,
+        ):
+            result = coordinator._calc_pair(ps, "person.alice", "person.bob", now, set())
+
+        assert result.direction == "stationary"
+        assert result.eta_minutes is None
+
 
 # ---------------------------------------------------------------------------
 # _calc_pair — update window tracking (lines 467-474, 477-484)

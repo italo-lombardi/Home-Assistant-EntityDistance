@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- **Migration infinite retry** — `async_migrate_entry` now bumps entry version to 2 before returning `False` when entity data is invalid. Previously HA retried migration on every restart indefinitely.
+
 ## [0.4.3] - 2026-07-20
 
 ### Added

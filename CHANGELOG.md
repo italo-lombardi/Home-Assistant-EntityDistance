@@ -2,11 +2,7 @@
 
 ## [Unreleased]
 
-### Fixed
-
-- **Migration infinite retry** — `async_migrate_entry` now bumps entry version to 2 before returning `False` when entity data is invalid. Previously HA retried migration on every restart indefinitely.
-
-## [0.4.3] - 2026-07-20
+## [0.4.3] - 2026-07-22
 
 ### Added
 
@@ -33,6 +29,7 @@
 - **`same_altitude` stale after grace** — now returns `None` (unknown) once display grace window expires.
 - **Zone-pair movement section** — `_hasMovementStats()` guard tightened; no longer renders empty Movement section on zone-zone pairs when `show_altitude` is enabled.
 - **Person domain check** — `_resolve_gps_source` uses `state.domain` instead of `entity_id.startswith("person.")`.
+- **Migration infinite retry** — `async_migrate_entry` now bumps entry version to 2 before returning `False` when entity data is invalid. Previously HA retried migration on every restart indefinitely.
 
 ### Notes
 

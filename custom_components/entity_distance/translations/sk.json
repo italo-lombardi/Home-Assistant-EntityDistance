@@ -1,0 +1,206 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Výber entít",
+        "description": "Vyberte dve alebo viac entít na sledovanie vzdialeností medzi nimi. Podporované typy: osoba, sledovač zariadenia, senzor alebo zóna.\n\nPri skupine 3 a viac entít sa všetky párové vzdialenosti sledujú automaticky. Po nastavení budú senzory zobrazovať „Neznáme“, kým entity nenahlásia svoju polohu.",
+        "data": {
+          "entities": "Entity"
+        },
+        "data_description": {
+          "entities": "Vyberte 2 až 5 entít na sledovanie. Každý pár získa vlastnú sadu senzorov vzdialenosti a blízkosti."
+        }
+      },
+      "distances": {
+        "title": "Nastavenia vzdialeností",
+        "description": "Nastavte hranice zón a vyberte zónu, ktorá spúšťa upozornenie na blízkosť.",
+        "data": {
+          "zone_very_near_m": "Hranica zóny Veľmi blízko (m)",
+          "zone_near_m": "Hranica zóny Blízko (m)",
+          "zone_mid_m": "Hranica zóny Stredná vzdialenosť (m)",
+          "zone_far_m": "Hranica zóny Ďaleko (m)",
+          "proximity_zone": "Zóna upozornenia na blízkosť",
+          "show_advanced": "Nastaviť pokročilé filtre"
+        },
+        "data_description": {
+          "zone_very_near_m": "Entity sú „Veľmi blízko“ pri tejto vzdialenosti alebo bližšie. Predvolené: 200 m.",
+          "zone_near_m": "Entity sú „Blízko“ pri tejto vzdialenosti alebo bližšie. Musí byť väčšia ako Veľmi blízko. Predvolené: 1000 m.",
+          "zone_mid_m": "Entity sú v „Strednej vzdialenosti“ pri tejto hodnote alebo bližšie. Musí byť väčšia ako Blízko. Predvolené: 5000 m.",
+          "zone_far_m": "Entity sú „Ďaleko“ pri tejto vzdialenosti alebo bližšie. Musí byť väčšia ako Stredná vzdialenosť. Predvolené: 20000 m.\nZa touto hranicou sú „Veľmi ďaleko“.",
+          "proximity_zone": "Senzor „V blízkosti“ sa zapne, keď sú entity v tejto zóne alebo bližšie (napr. výber „Blízko“ sa spustí, aj keď sú entity „Veľmi blízko“). Vypne sa, keď vzdialenosť prekročí hranicu zóny (prísny prah). Aby pri hranici nedochádzalo k rýchlemu zapínaniu a vypínaniu kvôli GPS šumu, zapnite v pokročilých filtroch „Čakať pred reakciou“ (debounce).",
+          "show_advanced": "Zapnite na nastavenie filtrov presnosti GPS, rýchlosti a spoľahlivosti na ďalšej obrazovke. Ponechajte vypnuté, ak chcete použiť rozumné predvolené hodnoty."
+        }
+      },
+      "advanced": {
+        "title": "Pokročilé filtre",
+        "description": "Tieto filtre pomáhajú ignorovať chybné GPS dáta. Predvolené hodnoty fungujú dobre pre väčšinu používateľov — meňte ich iba vtedy, ak sa vyskytuje falošné spúšťanie.",
+        "data": {
+          "max_accuracy_m": "Max. polomer chyby GPS (m, 0 = vyp.)",
+          "debounce_s": "Čakať pred reakciou (s)",
+          "grace_window_s": "Okno tolerančného zobrazenia (s)",
+          "max_speed_kmh": "Max. prijateľná rýchlosť (km/h, 0 = vyp.)",
+          "require_reliable": "Spúšťať iba pri spoľahlivých dátach",
+          "min_updates_reliable": "Počet po sebe idúcich aktualizácií pre spoľahlivosť",
+          "resync_silence_s": "Ticho GPS pred zmrazením (s)",
+          "resync_hold_s": "Trvanie zmrazenia blízkosti (s)",
+          "altitude_aligned_threshold_m": "Prah rovnakej nadmorskej výšky (m)",
+          "max_vertical_accuracy_m": "Max. vertikálna chyba GPS (m, 0 = vyp.)"
+        },
+        "data_description": {
+          "max_accuracy_m": "Ignorovať aktualizácie polohy, pri ktorých je chyba GPS väčšia ako táto hodnota. Telefóny v pohybe zvyčajne hlásia presnosť 100 až 250 m, takže 300 m je bezpečná predvolená hodnota. Telefón, ktorý hlási presnosť „350 m“, sa preskočí. Nastavte 0 na vypnutie. Rozsah: 0 až 1000 m.",
+          "debounce_s": "Ako dlho čakať s prepočtom po prijatí aktualizácie polohy. Užitočné, keď telefóny posielajú niekoľko šumných GPS fixov za sebou — integrácia počká na ich ustálenie. 0 = reagovať okamžite (predvolené). Zvýšte na 5 až 15 s, ak sa vyskytuje nestabilné zapínanie a vypínanie. Rozsah: 0 až 60 s.",
+          "grace_window_s": "Keď pár nakrátko stratí GPS signál (výpadok, tunel, nečinný telefón), senzory zobrazujú poslednú známu hodnotu počas tohto času, kým nahlásia neznámy stav. Zabraňuje prerušovanému blikaniu. Predvolené: 900 s (15 min). Rozsah: 60 až 3600 s.",
+          "max_speed_kmh": "Ochrana pred teleportáciou. Odmietne GPS fix, ak predpokladaná rýchlosť pohybu — po odčítaní kombinovanej presnosti GPS oboch zariadení — prekročí túto hodnotu. Pri presnosti 150 m na každom telefóne musí skok predpokladať pohyb presahujúci túto rýchlosť nad úroveň šumu, aby bol odfiltrovaný. Predvolené: 1000 km/h — blokuje nemožné teleportácie a zároveň povoľuje lety lietadlom. Nastavte 0 na vypnutie. Rozsah: 0 až 2000 km/h.",
+          "require_reliable": "Ak je zapnuté, senzor „V blízkosti“ sa zapne až potom, ako je poloha konzistentná počas niekoľkých po sebe idúcich aktualizácií. Znižuje falošné poplachy spôsobené jediným chybným GPS fixom. Poznámka: ak sú aktualizácie nepravidelné (napr. každé 3 min), môže to pridať niekoľko minút oneskorenia.",
+          "min_updates_reliable": "Koľko po sebe idúcich aktualizácií je potrebných, kým sa poloha považuje za spoľahlivú. Platí iba vtedy, keď je zapnuté „Spúšťať iba pri spoľahlivých dátach“. Príklad: 3 aktualizácie v 3-minútových intervaloch = až 9 minút, kým sa senzor zapne. Rozsah: 1 až 20.",
+          "resync_silence_s": "Ak všetky sledované entity prestanú posielať GPS aktualizácie počas tohto času, stav blízkosti sa zmrazí, aby sa počas čakania na návrat signálu zabránilo falošným zmenám. Predvolené: 600 s (10 min). Rozsah: 60 až 3600 s.",
+          "resync_hold_s": "Ako dlho udržiavať stav blízkosti zmrazený po zistení ticha GPS. Nastavte 0 na vypnutie zmrazenia (zisťovanie ticha stále beží kvôli časovému účtovaniu). Predvolené: 60 s. Rozsah: 0 až 300 s.",
+          "altitude_aligned_threshold_m": "Maximálny rozdiel nadmorskej výšky (v metroch) na zapnutie binárneho senzora „Rovnaká nadmorská výška“. 0 = iba presne rovnaká výška. Predvolené: 5 m. Rozsah: 0 až 100 m.",
+          "max_vertical_accuracy_m": "Ak je nastavené nad 0, senzory nadmorskej výšky vrátia neznámy stav, keď vertikálna chyba GPS zariadenia prekročí túto hodnotu. Zabraňuje tomu, aby nespoľahlivé merania výšky spúšťali automatizácie založené na výške. 0 = vyp. (predvolené). Vertikálna chyba spotrebiteľského GPS je zvyčajne 10 až 30 m. Rozsah: 0 až 500 m."
+        }
+      }
+    },
+    "error": {
+      "too_few_entities": "Vyberte aspoň 2 entity.",
+      "too_many_entities": "Vyberte najviac 5 entít.",
+      "duplicate_entities": "Každá entita sa smie vyskytnúť iba raz.",
+      "zone_thresholds_not_ascending": "Prahy zón musia stúpať v poradí: Veľmi blízko < Blízko < Stredná vzdialenosť < Ďaleko."
+    },
+    "abort": {
+      "already_configured": "Tento pár entít je už nakonfigurovaný.",
+      "already_in_progress": "Nastavenie tejto integrácie už prebieha. Zatvorte a znova otvorte dialóg, ak chcete začať odznova."
+    }
+  },
+  "options": {
+    "step": {
+      "distances": {
+        "title": "Nastavenia vzdialeností",
+        "description": "Nastavte hranice zón a vyberte zónu, ktorá spúšťa upozornenie na blízkosť.",
+        "data": {
+          "zone_very_near_m": "Hranica zóny Veľmi blízko (m)",
+          "zone_near_m": "Hranica zóny Blízko (m)",
+          "zone_mid_m": "Hranica zóny Stredná vzdialenosť (m)",
+          "zone_far_m": "Hranica zóny Ďaleko (m)",
+          "proximity_zone": "Zóna upozornenia na blízkosť",
+          "show_advanced": "Nastaviť pokročilé filtre"
+        },
+        "data_description": {
+          "zone_very_near_m": "Entity sú „Veľmi blízko“ pri tejto vzdialenosti alebo bližšie. Predvolené: 200 m.",
+          "zone_near_m": "Entity sú „Blízko“ pri tejto vzdialenosti alebo bližšie. Musí byť väčšia ako Veľmi blízko. Predvolené: 1000 m.",
+          "zone_mid_m": "Entity sú v „Strednej vzdialenosti“ pri tejto hodnote alebo bližšie. Musí byť väčšia ako Blízko. Predvolené: 5000 m.",
+          "zone_far_m": "Entity sú „Ďaleko“ pri tejto vzdialenosti alebo bližšie. Musí byť väčšia ako Stredná vzdialenosť. Predvolené: 20000 m.\nZa touto hranicou sú „Veľmi ďaleko“.",
+          "proximity_zone": "Senzor „V blízkosti“ sa zapne, keď sú entity v tejto zóne alebo bližšie (napr. výber „Blízko“ sa spustí, aj keď sú entity „Veľmi blízko“). Vypne sa, keď vzdialenosť prekročí hranicu zóny (prísny prah). Aby pri hranici nedochádzalo k rýchlemu zapínaniu a vypínaniu kvôli GPS šumu, zapnite v pokročilých filtroch „Čakať pred reakciou“ (debounce).",
+          "show_advanced": "Zapnite na nastavenie filtrov presnosti GPS, rýchlosti a spoľahlivosti na ďalšej obrazovke. Ponechajte vypnuté, ak chcete použiť rozumné predvolené hodnoty."
+        }
+      },
+      "advanced": {
+        "title": "Pokročilé filtre",
+        "description": "Tieto filtre pomáhajú ignorovať chybné GPS dáta. Predvolené hodnoty fungujú dobre pre väčšinu používateľov — meňte ich iba vtedy, ak sa vyskytuje falošné spúšťanie.",
+        "data": {
+          "max_accuracy_m": "Max. polomer chyby GPS (m, 0 = vyp.)",
+          "debounce_s": "Čakať pred reakciou (s)",
+          "grace_window_s": "Okno tolerančného zobrazenia (s)",
+          "max_speed_kmh": "Max. prijateľná rýchlosť (km/h, 0 = vyp.)",
+          "require_reliable": "Spúšťať iba pri spoľahlivých dátach",
+          "min_updates_reliable": "Počet po sebe idúcich aktualizácií pre spoľahlivosť",
+          "resync_silence_s": "Ticho GPS pred zmrazením (s)",
+          "resync_hold_s": "Trvanie zmrazenia blízkosti (s)",
+          "altitude_aligned_threshold_m": "Prah rovnakej nadmorskej výšky (m)",
+          "max_vertical_accuracy_m": "Max. vertikálna chyba GPS (m, 0 = vyp.)"
+        },
+        "data_description": {
+          "max_accuracy_m": "Ignorovať aktualizácie polohy, pri ktorých je chyba GPS väčšia ako táto hodnota. Telefóny v pohybe zvyčajne hlásia presnosť 100 až 250 m, takže 300 m je bezpečná predvolená hodnota. Telefón, ktorý hlási presnosť „350 m“, sa preskočí. Nastavte 0 na vypnutie. Rozsah: 0 až 1000 m.",
+          "debounce_s": "Ako dlho čakať s prepočtom po prijatí aktualizácie polohy. Užitočné, keď telefóny posielajú niekoľko šumných GPS fixov za sebou — integrácia počká na ich ustálenie. 0 = reagovať okamžite (predvolené). Zvýšte na 5 až 15 s, ak sa vyskytuje nestabilné zapínanie a vypínanie. Rozsah: 0 až 60 s.",
+          "grace_window_s": "Keď pár nakrátko stratí GPS signál (výpadok, tunel, nečinný telefón), senzory zobrazujú poslednú známu hodnotu počas tohto času, kým nahlásia neznámy stav. Zabraňuje prerušovanému blikaniu. Predvolené: 900 s (15 min). Rozsah: 60 až 3600 s.",
+          "max_speed_kmh": "Ochrana pred teleportáciou. Odmietne GPS fix, ak predpokladaná rýchlosť pohybu — po odčítaní kombinovanej presnosti GPS oboch zariadení — prekročí túto hodnotu. Pri presnosti 150 m na každom telefóne musí skok predpokladať pohyb presahujúci túto rýchlosť nad úroveň šumu, aby bol odfiltrovaný. Predvolené: 1000 km/h — blokuje nemožné teleportácie a zároveň povoľuje lety lietadlom. Nastavte 0 na vypnutie. Rozsah: 0 až 2000 km/h.",
+          "require_reliable": "Ak je zapnuté, senzor „V blízkosti“ sa zapne až potom, ako je poloha konzistentná počas niekoľkých po sebe idúcich aktualizácií. Znižuje falošné poplachy spôsobené jediným chybným GPS fixom. Poznámka: ak sú aktualizácie nepravidelné (napr. každé 3 min), môže to pridať niekoľko minút oneskorenia.",
+          "min_updates_reliable": "Koľko po sebe idúcich aktualizácií je potrebných, kým sa poloha považuje za spoľahlivú. Platí iba vtedy, keď je zapnuté „Spúšťať iba pri spoľahlivých dátach“. Príklad: 3 aktualizácie v 3-minútových intervaloch = až 9 minút, kým sa senzor zapne. Rozsah: 1 až 20.",
+          "resync_silence_s": "Ak všetky sledované entity prestanú posielať GPS aktualizácie počas tohto času, stav blízkosti sa zmrazí, aby sa počas čakania na návrat signálu zabránilo falošným zmenám. Predvolené: 600 s (10 min). Rozsah: 60 až 3600 s.",
+          "resync_hold_s": "Ako dlho udržiavať stav blízkosti zmrazený po zistení ticha GPS. Nastavte 0 na vypnutie zmrazenia (zisťovanie ticha stále beží kvôli časovému účtovaniu). Predvolené: 60 s. Rozsah: 0 až 300 s.",
+          "altitude_aligned_threshold_m": "Maximálny rozdiel nadmorskej výšky (v metroch) na zapnutie binárneho senzora „Rovnaká nadmorská výška“. 0 = iba presne rovnaká výška. Predvolené: 5 m. Rozsah: 0 až 100 m.",
+          "max_vertical_accuracy_m": "Ak je nastavené nad 0, senzory nadmorskej výšky vrátia neznámy stav, keď vertikálna chyba GPS zariadenia prekročí túto hodnotu. Zabraňuje tomu, aby nespoľahlivé merania výšky spúšťali automatizácie založené na výške. 0 = vyp. (predvolené). Vertikálna chyba spotrebiteľského GPS je zvyčajne 10 až 30 m. Rozsah: 0 až 500 m."
+        }
+      }
+    },
+    "error": {
+      "zone_thresholds_not_ascending": "Prahy zón musia stúpať v poradí: Veľmi blízko < Blízko < Stredná vzdialenosť < Ďaleko."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "distance": {"name": "Vzdialenosť"},
+      "bucket": {
+        "name": "Zóna blízkosti",
+        "state": {
+          "very_near": "Veľmi blízko",
+          "near": "Blízko",
+          "mid": "Stredná vzdialenosť",
+          "far": "Ďaleko",
+          "very_far": "Veľmi ďaleko"
+        }
+      },
+      "bucket_level": {"name": "Číslo zóny blízkosti"},
+      "proximity_duration": {"name": "Trvanie blízkosti"},
+      "proximity_tracking_started": {"name": "Začiatok sledovania blízkosti"},
+      "proximity_rate": {"name": "Frekvencia blízkosti"},
+      "last_seen_together": {"name": "Naposledy videní spolu"},
+      "today_proximity_time": {"name": "Dnešný čas blízkosti"},
+      "today_zone_time_very_near": {"name": "Dnešný čas Veľmi blízko"},
+      "today_zone_time_near": {"name": "Dnešný čas Blízko"},
+      "today_zone_time_mid": {"name": "Dnešný čas Stredná vzdialenosť"},
+      "today_zone_time_far": {"name": "Dnešný čas Ďaleko"},
+      "today_zone_time_very_far": {"name": "Dnešný čas Veľmi ďaleko"},
+      "direction": {
+        "name": "Smer",
+        "state": {
+          "approaching": "Približuje sa",
+          "diverging": "Vzdiaľuje sa",
+          "stationary": "Stacionárny"
+        }
+      },
+      "direction_level": {"name": "Úroveň smeru"},
+      "closing_speed": {"name": "Rýchlosť priblíženia"},
+      "eta": {"name": "Odhadovaný čas príchodu"},
+      "gps_accuracy_a": {"name": "Presnosť GPS (A)"},
+      "gps_accuracy_b": {"name": "Presnosť GPS (B)"},
+      "last_update_a": {"name": "Posledná aktualizácia (A)"},
+      "last_update_b": {"name": "Posledná aktualizácia (B)"},
+      "update_count_a": {"name": "Počet aktualizácií za 30 min (A)"},
+      "update_count_b": {"name": "Počet aktualizácií za 30 min (B)"},
+      "entity_state_a": {"name": "Stav (A)"},
+      "entity_state_b": {"name": "Stav (B)"},
+      "today_unaccounted_time": {"name": "Dnešný nezapočítaný čas"},
+      "min_distance": {"name": "Min. vzdialenosť"},
+      "settings": {"name": "Nastavenia"},
+      "altitude_delta": {"name": "Rozdiel nadmorskej výšky"},
+      "altitude": {"name": "Nadmorská výška ({name})"}
+    },
+    "binary_sensor": {
+      "proximity": {"name": "V blízkosti"},
+      "any_in_proximity": {"name": "Niekto v blízkosti"},
+      "all_in_proximity": {"name": "Všetci v blízkosti"},
+      "same_zone": {"name": "Rovnaká zóna"},
+      "in_very_near": {"name": "Veľmi blízko"},
+      "in_near": {"name": "Blízko"},
+      "in_mid": {"name": "Stredná vzdialenosť"},
+      "in_far": {"name": "Ďaleko"},
+      "in_very_far": {"name": "Veľmi ďaleko"},
+      "reliable": {"name": "Spoľahlivé"},
+      "altitude_aligned": {"name": "Rovnaká nadmorská výška"},
+      "approaching": {"name": "Približuje sa"}
+    },
+    "button": {
+      "refresh": {"name": "Obnoviť polohu"}
+    }
+  },
+  "selector": {
+    "proximity_zone": {
+      "options": {
+        "very_near": "Veľmi blízko",
+        "near": "Blízko",
+        "mid": "Stredná vzdialenosť",
+        "far": "Ďaleko"
+      }
+    }
+  }
+}

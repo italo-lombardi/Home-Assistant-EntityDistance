@@ -1,0 +1,206 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Trieu les entitats",
+        "description": "Seleccioneu dues o més entitats per fer el seguiment de les distàncies entre elles. Tipus admesos: persona, dispositiu de seguiment, sensor o zona.\n\nPer a un grup de 3 o més entitats, es fa el seguiment automàtic de totes les distàncies per parelles. Un cop feta la configuració, els sensors mostraran 'Desconegut' fins que les entitats hagin informat d'una ubicació.",
+        "data": {
+          "entities": "Entitats"
+        },
+        "data_description": {
+          "entities": "Seleccioneu entre 2 i 5 entitats per fer-ne el seguiment. Cada parella tindrà el seu propi conjunt de sensors de distància i de proximitat."
+        }
+      },
+      "distances": {
+        "title": "Configuració de distàncies",
+        "description": "Establiu els límits de les zones i trieu quina zona activa l'alerta de proximitat.",
+        "data": {
+          "zone_very_near_m": "Límit de la zona Molt A Prop (m)",
+          "zone_near_m": "Límit de la zona A Prop (m)",
+          "zone_mid_m": "Límit de la zona Distància Mitjana (m)",
+          "zone_far_m": "Límit de la zona Lluny (m)",
+          "proximity_zone": "Zona d'alerta de proximitat",
+          "show_advanced": "Configura els filtres avançats"
+        },
+        "data_description": {
+          "zone_very_near_m": "Les entitats estan 'Molt A Prop' a aquesta distància o menys. Per defecte: 200 m.",
+          "zone_near_m": "Les entitats estan 'A Prop' a aquesta distància o menys. Ha de ser més gran que Molt A Prop. Per defecte: 1000 m.",
+          "zone_mid_m": "Les entitats estan a 'Distància Mitjana' a aquest valor o menys. Ha de ser més gran que A Prop. Per defecte: 5000 m.",
+          "zone_far_m": "Les entitats estan 'Lluny' a aquesta distància o menys. Ha de ser més gran que Distància Mitjana. Per defecte: 20000 m.\nMés enllà d'això es considera 'Molt Lluny'.",
+          "proximity_zone": "El sensor 'En proximitat' s'activa quan les entitats es troben dins d'aquesta zona o més a prop (p. ex., si seleccioneu 'A Prop' també s'activarà quan estiguin 'Molt A Prop'). Es desactiva quan la distància supera el límit de la zona (llindar estricte). Per evitar canvis ràpids d'activat/desactivat prop del límit a causa del soroll del GPS, activeu 'Espera abans de reaccionar' (antirebot) als Filtres avançats.",
+          "show_advanced": "Activeu-ho per configurar els filtres de precisió del GPS, de velocitat i de fiabilitat a la pantalla següent. Deixeu-ho desactivat per fer servir valors per defecte raonables."
+        }
+      },
+      "advanced": {
+        "title": "Filtres avançats",
+        "description": "Aquests filtres ajuden a ignorar dades GPS incorrectes. Els valors per defecte funcionen bé per a la majoria d'usuaris; canvieu-los només si observeu activacions falses.",
+        "data": {
+          "max_accuracy_m": "Radi màxim d'error del GPS (m, 0 = desactivat)",
+          "debounce_s": "Espera abans de reaccionar (s)",
+          "grace_window_s": "Finestra de tolerància de visualització (s)",
+          "max_speed_kmh": "Velocitat màxima plausible (km/h, 0 = desactivat)",
+          "require_reliable": "Activa només quan les dades siguin fiables",
+          "min_updates_reliable": "Actualitzacions consecutives necessàries per a la fiabilitat",
+          "resync_silence_s": "Silenci del GPS abans de congelar (s)",
+          "resync_hold_s": "Durada de la congelació de la proximitat (s)",
+          "altitude_aligned_threshold_m": "Llindar de mateixa altitud (m)",
+          "max_vertical_accuracy_m": "Error vertical màxim del GPS (m, 0 = desactivat)"
+        },
+        "data_description": {
+          "max_accuracy_m": "Ignora les actualitzacions d'ubicació en què l'error del GPS és més gran que aquest valor. Els telèfons en moviment solen informar d'una precisió de 100–250 m, de manera que 300 m és un valor per defecte segur. Un telèfon que indica '350 m de precisió' s'ometria. Poseu-ho a 0 per desactivar-ho. Interval: 0–1000 m.",
+          "debounce_s": "Un cop arriba una actualització d'ubicació, quant de temps cal esperar abans de recalcular. És útil quan els telèfons envien diverses correccions GPS sorolloses seguides: la integració espera que s'estabilitzin. 0 = reacciona immediatament (per defecte). Augmenteu-ho a 5–15 s si observeu canvis inestables. Interval: 0–60 s.",
+          "grace_window_s": "Quan una parella perd breument el senyal GPS (una interrupció, un túnel, el telèfon inactiu), els sensors continuen mostrant l'últim valor conegut durant aquest temps abans d'informar com a desconegut. Evita el parpelleig intermitent. Per defecte: 900 s (15 min). Interval: 60–3600 s.",
+          "max_speed_kmh": "Protecció contra la teletransportació. Rebutja una correcció GPS si la velocitat de moviment implícita —restant la precisió GPS combinada dels dos dispositius— supera aquest valor. Amb 150 m de precisió a cada telèfon, un salt ha d'implicar un moviment per sobre d'aquesta velocitat i per damunt del soroll perquè es filtri. Per defecte: 1000 km/h; bloqueja teletransportacions impossibles i alhora permet els avions. Poseu-ho a 0 per desactivar-ho. Interval: 0–2000 km/h.",
+          "require_reliable": "Si està activat, el sensor 'En proximitat' s'activa només després que la ubicació hagi estat coherent durant diverses actualitzacions consecutives. Redueix els falsos positius provocats per una sola correcció GPS incorrecta. Nota: si les actualitzacions són poc freqüents (p. ex., cada 3 min), això pot afegir uns quants minuts de retard.",
+          "min_updates_reliable": "Quantes actualitzacions consecutives calen abans que la ubicació es consideri fiable. Només s'aplica quan 'Activa només quan les dades siguin fiables' està activat. Exemple: 3 actualitzacions a intervals de 3 minuts = fins a 9 minuts abans que el sensor s'activi. Interval: 1–20.",
+          "resync_silence_s": "Si totes les entitats seguides deixen d'enviar actualitzacions GPS durant aquest temps, l'estat de proximitat es congela per evitar canvis falsos mentre s'espera que torni el senyal. Per defecte: 600 s (10 min). Interval: 60–3600 s.",
+          "resync_hold_s": "Quant de temps cal mantenir congelat l'estat de proximitat després de detectar el silenci del GPS. Poseu-ho a 0 per desactivar la congelació (la detecció de silenci continua funcionant per al recompte de temps). Per defecte: 60 s. Interval: 0–300 s.",
+          "altitude_aligned_threshold_m": "Diferència màxima d'altitud (en metres) perquè s'activi el sensor binari 'Mateixa altitud'. 0 = només exactament la mateixa altitud. Per defecte: 5 m. Interval: 0–100 m.",
+          "max_vertical_accuracy_m": "Quan es configura per sobre de 0, els sensors d'altitud retornen desconegut si l'error vertical del GPS del dispositiu supera aquest valor. Evita que les lectures d'altitud poc fiables activin automatitzacions basades en l'altitud. 0 = desactivat (per defecte). L'error vertical del GPS de consum sol ser de 10–30 m. Interval: 0–500 m."
+        }
+      }
+    },
+    "error": {
+      "too_few_entities": "Seleccioneu almenys 2 entitats.",
+      "too_many_entities": "Seleccioneu com a màxim 5 entitats.",
+      "duplicate_entities": "Cada entitat només pot aparèixer una vegada.",
+      "zone_thresholds_not_ascending": "Els llindars de les zones han d'anar en ordre creixent: Molt A Prop < A Prop < Distància Mitjana < Lluny."
+    },
+    "abort": {
+      "already_configured": "Aquesta parella d'entitats ja està configurada.",
+      "already_in_progress": "Ja hi ha una configuració en curs per a aquesta integració. Tanqueu i torneu a obrir el diàleg per començar de nou."
+    }
+  },
+  "options": {
+    "step": {
+      "distances": {
+        "title": "Configuració de distàncies",
+        "description": "Establiu els límits de les zones i trieu quina zona activa l'alerta de proximitat.",
+        "data": {
+          "zone_very_near_m": "Límit de la zona Molt A Prop (m)",
+          "zone_near_m": "Límit de la zona A Prop (m)",
+          "zone_mid_m": "Límit de la zona Distància Mitjana (m)",
+          "zone_far_m": "Límit de la zona Lluny (m)",
+          "proximity_zone": "Zona d'alerta de proximitat",
+          "show_advanced": "Configura els filtres avançats"
+        },
+        "data_description": {
+          "zone_very_near_m": "Les entitats estan 'Molt A Prop' a aquesta distància o menys. Per defecte: 200 m.",
+          "zone_near_m": "Les entitats estan 'A Prop' a aquesta distància o menys. Ha de ser més gran que Molt A Prop. Per defecte: 1000 m.",
+          "zone_mid_m": "Les entitats estan a 'Distància Mitjana' a aquest valor o menys. Ha de ser més gran que A Prop. Per defecte: 5000 m.",
+          "zone_far_m": "Les entitats estan 'Lluny' a aquesta distància o menys. Ha de ser més gran que Distància Mitjana. Per defecte: 20000 m.\nMés enllà d'això es considera 'Molt Lluny'.",
+          "proximity_zone": "El sensor 'En proximitat' s'activa quan les entitats es troben dins d'aquesta zona o més a prop (p. ex., si seleccioneu 'A Prop' també s'activarà quan estiguin 'Molt A Prop'). Es desactiva quan la distància supera el límit de la zona (llindar estricte). Per evitar canvis ràpids d'activat/desactivat prop del límit a causa del soroll del GPS, activeu 'Espera abans de reaccionar' (antirebot) als Filtres avançats.",
+          "show_advanced": "Activeu-ho per configurar els filtres de precisió del GPS, de velocitat i de fiabilitat a la pantalla següent. Deixeu-ho desactivat per fer servir valors per defecte raonables."
+        }
+      },
+      "advanced": {
+        "title": "Filtres avançats",
+        "description": "Aquests filtres ajuden a ignorar dades GPS incorrectes. Els valors per defecte funcionen bé per a la majoria d'usuaris; canvieu-los només si observeu activacions falses.",
+        "data": {
+          "max_accuracy_m": "Radi màxim d'error del GPS (m, 0 = desactivat)",
+          "debounce_s": "Espera abans de reaccionar (s)",
+          "grace_window_s": "Finestra de tolerància de visualització (s)",
+          "max_speed_kmh": "Velocitat màxima plausible (km/h, 0 = desactivat)",
+          "require_reliable": "Activa només quan les dades siguin fiables",
+          "min_updates_reliable": "Actualitzacions consecutives necessàries per a la fiabilitat",
+          "resync_silence_s": "Silenci del GPS abans de congelar (s)",
+          "resync_hold_s": "Durada de la congelació de la proximitat (s)",
+          "altitude_aligned_threshold_m": "Llindar de mateixa altitud (m)",
+          "max_vertical_accuracy_m": "Error vertical màxim del GPS (m, 0 = desactivat)"
+        },
+        "data_description": {
+          "max_accuracy_m": "Ignora les actualitzacions d'ubicació en què l'error del GPS és més gran que aquest valor. Els telèfons en moviment solen informar d'una precisió de 100–250 m, de manera que 300 m és un valor per defecte segur. Un telèfon que indica '350 m de precisió' s'ometria. Poseu-ho a 0 per desactivar-ho. Interval: 0–1000 m.",
+          "debounce_s": "Un cop arriba una actualització d'ubicació, quant de temps cal esperar abans de recalcular. És útil quan els telèfons envien diverses correccions GPS sorolloses seguides: la integració espera que s'estabilitzin. 0 = reacciona immediatament (per defecte). Augmenteu-ho a 5–15 s si observeu canvis inestables. Interval: 0–60 s.",
+          "grace_window_s": "Quan una parella perd breument el senyal GPS (una interrupció, un túnel, el telèfon inactiu), els sensors continuen mostrant l'últim valor conegut durant aquest temps abans d'informar com a desconegut. Evita el parpelleig intermitent. Per defecte: 900 s (15 min). Interval: 60–3600 s.",
+          "max_speed_kmh": "Protecció contra la teletransportació. Rebutja una correcció GPS si la velocitat de moviment implícita —restant la precisió GPS combinada dels dos dispositius— supera aquest valor. Amb 150 m de precisió a cada telèfon, un salt ha d'implicar un moviment per sobre d'aquesta velocitat i per damunt del soroll perquè es filtri. Per defecte: 1000 km/h; bloqueja teletransportacions impossibles i alhora permet els avions. Poseu-ho a 0 per desactivar-ho. Interval: 0–2000 km/h.",
+          "require_reliable": "Si està activat, el sensor 'En proximitat' s'activa només després que la ubicació hagi estat coherent durant diverses actualitzacions consecutives. Redueix els falsos positius provocats per una sola correcció GPS incorrecta. Nota: si les actualitzacions són poc freqüents (p. ex., cada 3 min), això pot afegir uns quants minuts de retard.",
+          "min_updates_reliable": "Quantes actualitzacions consecutives calen abans que la ubicació es consideri fiable. Només s'aplica quan 'Activa només quan les dades siguin fiables' està activat. Exemple: 3 actualitzacions a intervals de 3 minuts = fins a 9 minuts abans que el sensor s'activi. Interval: 1–20.",
+          "resync_silence_s": "Si totes les entitats seguides deixen d'enviar actualitzacions GPS durant aquest temps, l'estat de proximitat es congela per evitar canvis falsos mentre s'espera que torni el senyal. Per defecte: 600 s (10 min). Interval: 60–3600 s.",
+          "resync_hold_s": "Quant de temps cal mantenir congelat l'estat de proximitat després de detectar el silenci del GPS. Poseu-ho a 0 per desactivar la congelació (la detecció de silenci continua funcionant per al recompte de temps). Per defecte: 60 s. Interval: 0–300 s.",
+          "altitude_aligned_threshold_m": "Diferència màxima d'altitud (en metres) perquè s'activi el sensor binari 'Mateixa altitud'. 0 = només exactament la mateixa altitud. Per defecte: 5 m. Interval: 0–100 m.",
+          "max_vertical_accuracy_m": "Quan es configura per sobre de 0, els sensors d'altitud retornen desconegut si l'error vertical del GPS del dispositiu supera aquest valor. Evita que les lectures d'altitud poc fiables activin automatitzacions basades en l'altitud. 0 = desactivat (per defecte). L'error vertical del GPS de consum sol ser de 10–30 m. Interval: 0–500 m."
+        }
+      }
+    },
+    "error": {
+      "zone_thresholds_not_ascending": "Els llindars de les zones han d'anar en ordre creixent: Molt A Prop < A Prop < Distància Mitjana < Lluny."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "distance": {"name": "Distància"},
+      "bucket": {
+        "name": "Zona de proximitat",
+        "state": {
+          "very_near": "Molt A Prop",
+          "near": "A Prop",
+          "mid": "Distància Mitjana",
+          "far": "Lluny",
+          "very_far": "Molt Lluny"
+        }
+      },
+      "bucket_level": {"name": "Número de zona de proximitat"},
+      "proximity_duration": {"name": "Durada de la proximitat"},
+      "proximity_tracking_started": {"name": "Inici del seguiment de proximitat"},
+      "proximity_rate": {"name": "Taxa de proximitat"},
+      "last_seen_together": {"name": "Última vegada vistos junts"},
+      "today_proximity_time": {"name": "Temps de proximitat avui"},
+      "today_zone_time_very_near": {"name": "Avui Molt A Prop"},
+      "today_zone_time_near": {"name": "Avui A Prop"},
+      "today_zone_time_mid": {"name": "Avui Distància Mitjana"},
+      "today_zone_time_far": {"name": "Avui Lluny"},
+      "today_zone_time_very_far": {"name": "Avui Molt Lluny"},
+      "direction": {
+        "name": "Direcció",
+        "state": {
+          "approaching": "Aproximant-se",
+          "diverging": "Allunyant-se",
+          "stationary": "Estacionari"
+        }
+      },
+      "direction_level": {"name": "Nivell de direcció"},
+      "closing_speed": {"name": "Velocitat d'aproximació"},
+      "eta": {"name": "Hora estimada d'arribada"},
+      "gps_accuracy_a": {"name": "Precisió del GPS (A)"},
+      "gps_accuracy_b": {"name": "Precisió del GPS (B)"},
+      "last_update_a": {"name": "Última actualització (A)"},
+      "last_update_b": {"name": "Última actualització (B)"},
+      "update_count_a": {"name": "Recompte d'actualitzacions dels últims 30 min (A)"},
+      "update_count_b": {"name": "Recompte d'actualitzacions dels últims 30 min (B)"},
+      "entity_state_a": {"name": "Estat (A)"},
+      "entity_state_b": {"name": "Estat (B)"},
+      "today_unaccounted_time": {"name": "Temps no comptabilitzat avui"},
+      "min_distance": {"name": "Distància mínima"},
+      "settings": {"name": "Configuració"},
+      "altitude_delta": {"name": "Diferència d'elevació"},
+      "altitude": {"name": "Altitud ({name})"}
+    },
+    "binary_sensor": {
+      "proximity": {"name": "En proximitat"},
+      "any_in_proximity": {"name": "Algun en proximitat"},
+      "all_in_proximity": {"name": "Tots en proximitat"},
+      "same_zone": {"name": "Mateixa zona"},
+      "in_very_near": {"name": "Molt A Prop"},
+      "in_near": {"name": "A Prop"},
+      "in_mid": {"name": "Distància Mitjana"},
+      "in_far": {"name": "Lluny"},
+      "in_very_far": {"name": "Molt Lluny"},
+      "reliable": {"name": "Fiable"},
+      "altitude_aligned": {"name": "Mateixa altitud"},
+      "approaching": {"name": "Aproximant-se"}
+    },
+    "button": {
+      "refresh": {"name": "Actualitza la ubicació"}
+    }
+  },
+  "selector": {
+    "proximity_zone": {
+      "options": {
+        "very_near": "Molt A Prop",
+        "near": "A Prop",
+        "mid": "Distància Mitjana",
+        "far": "Lluny"
+      }
+    }
+  }
+}

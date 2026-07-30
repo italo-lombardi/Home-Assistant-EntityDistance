@@ -1,0 +1,206 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Izvēlieties entītijas",
+        "description": "Atlasiet divas vai vairākas entītijas, lai izsekotu attālumus starp tām. Atbalstītie tipi: persona, ierīces izsekotājs, sensors vai zona.\n\nJa grupā ir trīs vai vairāk entītiju, visi pāru attālumi tiek izsekoti automātiski. Pēc iestatīšanas sensori rādīs 'Nezināms', līdz entītijas ziņos par savu atrašanās vietu.",
+        "data": {
+          "entities": "Entītijas"
+        },
+        "data_description": {
+          "entities": "Atlasiet 2–5 entītijas izsekošanai. Katrs pāris iegūs savu attāluma un tuvuma sensoru kopu."
+        }
+      },
+      "distances": {
+        "title": "Attāluma iestatījumi",
+        "description": "Iestatiet zonu robežas un izvēlieties, kura zona aktivizē tuvuma brīdinājumu.",
+        "data": {
+          "zone_very_near_m": "Zonas 'Ļoti Tuvu' robeža (m)",
+          "zone_near_m": "Zonas 'Tuvu' robeža (m)",
+          "zone_mid_m": "Zonas 'Vidējs Attālums' robeža (m)",
+          "zone_far_m": "Zonas 'Tālu' robeža (m)",
+          "proximity_zone": "Tuvuma brīdinājuma zona",
+          "show_advanced": "Konfigurēt papildu filtrus"
+        },
+        "data_description": {
+          "zone_very_near_m": "Entītijas ir 'Ļoti Tuvu', ja atrodas šajā attālumā vai tuvāk. Noklusējums: 200 m.",
+          "zone_near_m": "Entītijas ir 'Tuvu', ja atrodas šajā attālumā vai tuvāk. Vērtībai jābūt lielākai par 'Ļoti Tuvu'. Noklusējums: 1000 m.",
+          "zone_mid_m": "Entītijas ir 'Vidējā Attālumā', ja atrodas šajā attālumā vai tuvāk. Vērtībai jābūt lielākai par 'Tuvu'. Noklusējums: 5000 m.",
+          "zone_far_m": "Entītijas ir 'Tālu', ja atrodas šajā attālumā vai tuvāk. Vērtībai jābūt lielākai par 'Vidēju Attālumu'. Noklusējums: 20000 m.\nTālāk seko 'Ļoti Tālu'.",
+          "proximity_zone": "Sensors 'Tuvumā' ieslēdzas, kad entītijas atrodas šajā zonā vai tuvāk (piem., izvēloties 'Tuvu', tas aktivizējas arī tad, kad entītijas ir 'Ļoti Tuvu'). Tas izslēdzas, kad attālums pārsniedz zonas robežu (stingrs slieksnis). Lai izvairītos no biežas ieslēgšanās/izslēgšanās pie robežas GPS trokšņa dēļ, papildu filtros iespējojiet 'Gaidīt pirms reaģēšanas' (debounce).",
+          "show_advanced": "Ieslēdziet, lai nākamajā ekrānā konfigurētu GPS precizitātes, ātruma un uzticamības filtrus. Atstājiet izslēgtu, lai izmantotu saprātīgas noklusējuma vērtības."
+        }
+      },
+      "advanced": {
+        "title": "Papildu filtri",
+        "description": "Šie filtri palīdz ignorēt sliktus GPS datus. Noklusējuma vērtības labi darbojas lielākajai daļai lietotāju — mainiet tās tikai tad, ja novērojat nepareizus aktivizēšanās gadījumus.",
+        "data": {
+          "max_accuracy_m": "Maks. GPS kļūdas rādiuss (m, 0 = izslēgts)",
+          "debounce_s": "Gaidīt pirms reaģēšanas (s)",
+          "grace_window_s": "Attēlošanas pielaides logs (s)",
+          "max_speed_kmh": "Maks. ticamais ātrums (km/h, 0 = izslēgts)",
+          "require_reliable": "Aktivizēt tikai tad, kad dati ir uzticami",
+          "min_updates_reliable": "Secīgi atjauninājumi uzticamībai",
+          "resync_silence_s": "GPS klusums pirms iesaldēšanas (s)",
+          "resync_hold_s": "Tuvuma iesaldēšanas ilgums (s)",
+          "altitude_aligned_threshold_m": "Vienāda augstuma slieksnis (m)",
+          "max_vertical_accuracy_m": "Maks. vertikālā GPS kļūda (m, 0 = izslēgts)"
+        },
+        "data_description": {
+          "max_accuracy_m": "Ignorēt atrašanās vietas atjauninājumus, kuros GPS kļūda ir lielāka par šo vērtību. Kustībā esoši tālruņi parasti ziņo par 100–250 m precizitāti, tāpēc 300 m ir droša noklusējuma vērtība. Tālrunis, kas ziņo par '350 m precizitāti', tiks izlaists. Iestatiet 0, lai izslēgtu. Diapazons: 0–1000 m.",
+          "debounce_s": "Cik ilgi pēc atrašanās vietas atjauninājuma saņemšanas gaidīt pirms pārrēķina. Noderīgi, kad tālruņi pēc kārtas nosūta vairākus trokšņainus GPS labojumus — integrācija gaida, kamēr tie nostabilizējas. 0 = reaģēt uzreiz (noklusējums). Palieliniet līdz 5–15 s, ja novērojat nestabilu ieslēgšanos/izslēgšanos. Diapazons: 0–60 s.",
+          "grace_window_s": "Kad pāris īslaicīgi zaudē GPS signālu (traucējums, tunelis, neaktīvs tālrunis), sensori šo laiku turpina rādīt pēdējo zināmo vērtību, pirms ziņo par nezināmu. Novērš periodisku mirgošanu. Noklusējums: 900 s (15 min). Diapazons: 60–3600 s.",
+          "max_speed_kmh": "Aizsardzība pret teleportāciju. Noraida GPS labojumu, ja netieši aprēķinātais kustības ātrums — pēc abu ierīču kombinētās GPS precizitātes atņemšanas — pārsniedz šo vērtību. Ja katram tālrunim ir 150 m precizitāte, lēcienam ir jānozīmē kustība ātrāk par šo ātrumu virs trokšņa līmeņa, lai tas tiktu filtrēts. Noklusējums: 1000 km/h — bloķē neiespējamas teleportācijas, bet atļauj lidmašīnas. Iestatiet 0, lai atspējotu. Diapazons: 0–2000 km/h.",
+          "require_reliable": "Ja ieslēgts, sensors 'Tuvumā' aktivizējas tikai pēc tam, kad atrašanās vieta ir bijusi konsekventa vairākos secīgos atjauninājumos. Samazina viltus pozitīvos rezultātus, ko izraisa viens slikts GPS labojums. Piezīme: ja atjauninājumi ir reti (piem., ik pēc 3 min), tas var pievienot vairāku minūšu aizkavi.",
+          "min_updates_reliable": "Cik secīgu atjauninājumu nepieciešams, pirms atrašanās vieta tiek uzskatīta par uzticamu. Attiecas tikai tad, kad ieslēgts 'Aktivizēt tikai tad, kad dati ir uzticami'. Piemērs: 3 atjauninājumi ar 3 minūšu intervālu = līdz 9 minūtēm pirms sensora ieslēgšanās. Diapazons: 1–20.",
+          "resync_silence_s": "Ja visas izsekotās entītijas šo laiku pārtrauc sūtīt GPS atjauninājumus, tuvuma stāvoklis tiek iesaldēts, lai novērstu nepareizas izmaiņas, gaidot signāla atgriešanos. Noklusējums: 600 s (10 min). Diapazons: 60–3600 s.",
+          "resync_hold_s": "Cik ilgi turēt tuvuma stāvokli iesaldētu pēc GPS klusuma noteikšanas. Iestatiet 0, lai atspējotu iesaldēšanu (klusuma noteikšana joprojām darbojas laika uzskaitei). Noklusējums: 60 s. Diapazons: 0–300 s.",
+          "altitude_aligned_threshold_m": "Maksimālā augstuma starpība (metros), lai binārais sensors 'Vienāds Augstums' ieslēgtos. 0 = tikai precīzi vienāds augstums. Noklusējums: 5 m. Diapazons: 0–100 m.",
+          "max_vertical_accuracy_m": "Ja iestatīts virs 0, augstuma sensori atgriež nezināmu vērtību, kad ierīces vertikālā GPS kļūda pārsniedz šo vērtību. Novērš neuzticamus augstuma rādījumus, kas aktivizē uz augstumu balstītas automatizācijas. 0 = izslēgts (noklusējums). Patērētāju GPS vertikālā kļūda parasti ir 10–30 m. Diapazons: 0–500 m."
+        }
+      }
+    },
+    "error": {
+      "too_few_entities": "Atlasiet vismaz 2 entītijas.",
+      "too_many_entities": "Atlasiet ne vairāk kā 5 entītijas.",
+      "duplicate_entities": "Katra entītija drīkst parādīties tikai vienu reizi.",
+      "zone_thresholds_not_ascending": "Zonu sliekšņiem jāpalielinās šādā secībā: Ļoti Tuvu < Tuvu < Vidējs Attālums < Tālu."
+    },
+    "abort": {
+      "already_configured": "Šis entītiju pāris jau ir konfigurēts.",
+      "already_in_progress": "Šīs integrācijas iestatīšana jau notiek. Aizveriet un atkārtoti atveriet dialogu, lai sāktu no jauna."
+    }
+  },
+  "options": {
+    "step": {
+      "distances": {
+        "title": "Attāluma iestatījumi",
+        "description": "Iestatiet zonu robežas un izvēlieties, kura zona aktivizē tuvuma brīdinājumu.",
+        "data": {
+          "zone_very_near_m": "Zonas 'Ļoti Tuvu' robeža (m)",
+          "zone_near_m": "Zonas 'Tuvu' robeža (m)",
+          "zone_mid_m": "Zonas 'Vidējs Attālums' robeža (m)",
+          "zone_far_m": "Zonas 'Tālu' robeža (m)",
+          "proximity_zone": "Tuvuma brīdinājuma zona",
+          "show_advanced": "Konfigurēt papildu filtrus"
+        },
+        "data_description": {
+          "zone_very_near_m": "Entītijas ir 'Ļoti Tuvu', ja atrodas šajā attālumā vai tuvāk. Noklusējums: 200 m.",
+          "zone_near_m": "Entītijas ir 'Tuvu', ja atrodas šajā attālumā vai tuvāk. Vērtībai jābūt lielākai par 'Ļoti Tuvu'. Noklusējums: 1000 m.",
+          "zone_mid_m": "Entītijas ir 'Vidējā Attālumā', ja atrodas šajā attālumā vai tuvāk. Vērtībai jābūt lielākai par 'Tuvu'. Noklusējums: 5000 m.",
+          "zone_far_m": "Entītijas ir 'Tālu', ja atrodas šajā attālumā vai tuvāk. Vērtībai jābūt lielākai par 'Vidēju Attālumu'. Noklusējums: 20000 m.\nTālāk seko 'Ļoti Tālu'.",
+          "proximity_zone": "Sensors 'Tuvumā' ieslēdzas, kad entītijas atrodas šajā zonā vai tuvāk (piem., izvēloties 'Tuvu', tas aktivizējas arī tad, kad entītijas ir 'Ļoti Tuvu'). Tas izslēdzas, kad attālums pārsniedz zonas robežu (stingrs slieksnis). Lai izvairītos no biežas ieslēgšanās/izslēgšanās pie robežas GPS trokšņa dēļ, papildu filtros iespējojiet 'Gaidīt pirms reaģēšanas' (debounce).",
+          "show_advanced": "Ieslēdziet, lai nākamajā ekrānā konfigurētu GPS precizitātes, ātruma un uzticamības filtrus. Atstājiet izslēgtu, lai izmantotu saprātīgas noklusējuma vērtības."
+        }
+      },
+      "advanced": {
+        "title": "Papildu filtri",
+        "description": "Šie filtri palīdz ignorēt sliktus GPS datus. Noklusējuma vērtības labi darbojas lielākajai daļai lietotāju — mainiet tās tikai tad, ja novērojat nepareizus aktivizēšanās gadījumus.",
+        "data": {
+          "max_accuracy_m": "Maks. GPS kļūdas rādiuss (m, 0 = izslēgts)",
+          "debounce_s": "Gaidīt pirms reaģēšanas (s)",
+          "grace_window_s": "Attēlošanas pielaides logs (s)",
+          "max_speed_kmh": "Maks. ticamais ātrums (km/h, 0 = izslēgts)",
+          "require_reliable": "Aktivizēt tikai tad, kad dati ir uzticami",
+          "min_updates_reliable": "Secīgi atjauninājumi uzticamībai",
+          "resync_silence_s": "GPS klusums pirms iesaldēšanas (s)",
+          "resync_hold_s": "Tuvuma iesaldēšanas ilgums (s)",
+          "altitude_aligned_threshold_m": "Vienāda augstuma slieksnis (m)",
+          "max_vertical_accuracy_m": "Maks. vertikālā GPS kļūda (m, 0 = izslēgts)"
+        },
+        "data_description": {
+          "max_accuracy_m": "Ignorēt atrašanās vietas atjauninājumus, kuros GPS kļūda ir lielāka par šo vērtību. Kustībā esoši tālruņi parasti ziņo par 100–250 m precizitāti, tāpēc 300 m ir droša noklusējuma vērtība. Tālrunis, kas ziņo par '350 m precizitāti', tiks izlaists. Iestatiet 0, lai izslēgtu. Diapazons: 0–1000 m.",
+          "debounce_s": "Cik ilgi pēc atrašanās vietas atjauninājuma saņemšanas gaidīt pirms pārrēķina. Noderīgi, kad tālruņi pēc kārtas nosūta vairākus trokšņainus GPS labojumus — integrācija gaida, kamēr tie nostabilizējas. 0 = reaģēt uzreiz (noklusējums). Palieliniet līdz 5–15 s, ja novērojat nestabilu ieslēgšanos/izslēgšanos. Diapazons: 0–60 s.",
+          "grace_window_s": "Kad pāris īslaicīgi zaudē GPS signālu (traucējums, tunelis, neaktīvs tālrunis), sensori šo laiku turpina rādīt pēdējo zināmo vērtību, pirms ziņo par nezināmu. Novērš periodisku mirgošanu. Noklusējums: 900 s (15 min). Diapazons: 60–3600 s.",
+          "max_speed_kmh": "Aizsardzība pret teleportāciju. Noraida GPS labojumu, ja netieši aprēķinātais kustības ātrums — pēc abu ierīču kombinētās GPS precizitātes atņemšanas — pārsniedz šo vērtību. Ja katram tālrunim ir 150 m precizitāte, lēcienam ir jānozīmē kustība ātrāk par šo ātrumu virs trokšņa līmeņa, lai tas tiktu filtrēts. Noklusējums: 1000 km/h — bloķē neiespējamas teleportācijas, bet atļauj lidmašīnas. Iestatiet 0, lai atspējotu. Diapazons: 0–2000 km/h.",
+          "require_reliable": "Ja ieslēgts, sensors 'Tuvumā' aktivizējas tikai pēc tam, kad atrašanās vieta ir bijusi konsekventa vairākos secīgos atjauninājumos. Samazina viltus pozitīvos rezultātus, ko izraisa viens slikts GPS labojums. Piezīme: ja atjauninājumi ir reti (piem., ik pēc 3 min), tas var pievienot vairāku minūšu aizkavi.",
+          "min_updates_reliable": "Cik secīgu atjauninājumu nepieciešams, pirms atrašanās vieta tiek uzskatīta par uzticamu. Attiecas tikai tad, kad ieslēgts 'Aktivizēt tikai tad, kad dati ir uzticami'. Piemērs: 3 atjauninājumi ar 3 minūšu intervālu = līdz 9 minūtēm pirms sensora ieslēgšanās. Diapazons: 1–20.",
+          "resync_silence_s": "Ja visas izsekotās entītijas šo laiku pārtrauc sūtīt GPS atjauninājumus, tuvuma stāvoklis tiek iesaldēts, lai novērstu nepareizas izmaiņas, gaidot signāla atgriešanos. Noklusējums: 600 s (10 min). Diapazons: 60–3600 s.",
+          "resync_hold_s": "Cik ilgi turēt tuvuma stāvokli iesaldētu pēc GPS klusuma noteikšanas. Iestatiet 0, lai atspējotu iesaldēšanu (klusuma noteikšana joprojām darbojas laika uzskaitei). Noklusējums: 60 s. Diapazons: 0–300 s.",
+          "altitude_aligned_threshold_m": "Maksimālā augstuma starpība (metros), lai binārais sensors 'Vienāds Augstums' ieslēgtos. 0 = tikai precīzi vienāds augstums. Noklusējums: 5 m. Diapazons: 0–100 m.",
+          "max_vertical_accuracy_m": "Ja iestatīts virs 0, augstuma sensori atgriež nezināmu vērtību, kad ierīces vertikālā GPS kļūda pārsniedz šo vērtību. Novērš neuzticamus augstuma rādījumus, kas aktivizē uz augstumu balstītas automatizācijas. 0 = izslēgts (noklusējums). Patērētāju GPS vertikālā kļūda parasti ir 10–30 m. Diapazons: 0–500 m."
+        }
+      }
+    },
+    "error": {
+      "zone_thresholds_not_ascending": "Zonu sliekšņiem jāpalielinās šādā secībā: Ļoti Tuvu < Tuvu < Vidējs Attālums < Tālu."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "distance": {"name": "Attālums"},
+      "bucket": {
+        "name": "Tuvuma zona",
+        "state": {
+          "very_near": "Ļoti Tuvu",
+          "near": "Tuvu",
+          "mid": "Vidējs Attālums",
+          "far": "Tālu",
+          "very_far": "Ļoti Tālu"
+        }
+      },
+      "bucket_level": {"name": "Tuvuma zonas numurs"},
+      "proximity_duration": {"name": "Tuvuma ilgums"},
+      "proximity_tracking_started": {"name": "Tuvuma izsekošana sākta"},
+      "proximity_rate": {"name": "Tuvuma biežums"},
+      "last_seen_together": {"name": "Pēdējo reizi redzēti kopā"},
+      "today_proximity_time": {"name": "Šodienas tuvuma laiks"},
+      "today_zone_time_very_near": {"name": "Šodien zonā 'Ļoti Tuvu'"},
+      "today_zone_time_near": {"name": "Šodien zonā 'Tuvu'"},
+      "today_zone_time_mid": {"name": "Šodien zonā 'Vidējs Attālums'"},
+      "today_zone_time_far": {"name": "Šodien zonā 'Tālu'"},
+      "today_zone_time_very_far": {"name": "Šodien zonā 'Ļoti Tālu'"},
+      "direction": {
+        "name": "Virziens",
+        "state": {
+          "approaching": "Tuvojas",
+          "diverging": "Attālinās",
+          "stationary": "Nekustīgs"
+        }
+      },
+      "direction_level": {"name": "Virziena līmenis"},
+      "closing_speed": {"name": "Tuvošanās ātrums"},
+      "eta": {"name": "Paredzamais ierašanās laiks"},
+      "gps_accuracy_a": {"name": "GPS precizitāte (A)"},
+      "gps_accuracy_b": {"name": "GPS precizitāte (B)"},
+      "last_update_a": {"name": "Pēdējais atjauninājums (A)"},
+      "last_update_b": {"name": "Pēdējais atjauninājums (B)"},
+      "update_count_a": {"name": "Atjauninājumu skaits pēdējās 30 min. (A)"},
+      "update_count_b": {"name": "Atjauninājumu skaits pēdējās 30 min. (B)"},
+      "entity_state_a": {"name": "Stāvoklis (A)"},
+      "entity_state_b": {"name": "Stāvoklis (B)"},
+      "today_unaccounted_time": {"name": "Šodienas neuzskaitītais laiks"},
+      "min_distance": {"name": "Min. attālums"},
+      "settings": {"name": "Iestatījumi"},
+      "altitude_delta": {"name": "Augstuma starpība"},
+      "altitude": {"name": "Augstums ({name})"}
+    },
+    "binary_sensor": {
+      "proximity": {"name": "Tuvumā"},
+      "any_in_proximity": {"name": "Kāds tuvumā"},
+      "all_in_proximity": {"name": "Visi tuvumā"},
+      "same_zone": {"name": "Vienā zonā"},
+      "in_very_near": {"name": "Ļoti Tuvu"},
+      "in_near": {"name": "Tuvu"},
+      "in_mid": {"name": "Vidējs Attālums"},
+      "in_far": {"name": "Tālu"},
+      "in_very_far": {"name": "Ļoti Tālu"},
+      "reliable": {"name": "Uzticams"},
+      "altitude_aligned": {"name": "Vienāds Augstums"},
+      "approaching": {"name": "Tuvojas"}
+    },
+    "button": {
+      "refresh": {"name": "Atjaunināt atrašanās vietu"}
+    }
+  },
+  "selector": {
+    "proximity_zone": {
+      "options": {
+        "very_near": "Ļoti Tuvu",
+        "near": "Tuvu",
+        "mid": "Vidējs Attālums",
+        "far": "Tālu"
+      }
+    }
+  }
+}

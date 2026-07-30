@@ -1,0 +1,206 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "選擇實體",
+        "description": "選擇兩個或更多實體來追蹤彼此之間的距離。支援的類型：person、device tracker、sensor 或 zone。\n\n選擇 3 個以上的實體時，系統會自動追蹤每一組兩兩配對的距離。設定完成後，感測器會先顯示「未知」，直到實體回報位置為止。",
+        "data": {
+          "entities": "實體"
+        },
+        "data_description": {
+          "entities": "選擇 2 至 5 個要追蹤的實體。每一組配對都會擁有各自的距離感測器與鄰近感測器。"
+        }
+      },
+      "distances": {
+        "title": "距離設定",
+        "description": "設定各區域的邊界，並選擇要在哪個區域觸發鄰近提醒。",
+        "data": {
+          "zone_very_near_m": "非常近區域上限 (m)",
+          "zone_near_m": "近區域上限 (m)",
+          "zone_mid_m": "中等區域上限 (m)",
+          "zone_far_m": "遠區域上限 (m)",
+          "proximity_zone": "鄰近提醒區域",
+          "show_advanced": "設定進階篩選條件"
+        },
+        "data_description": {
+          "zone_very_near_m": "實體距離在此值以內時視為「非常近」。預設值：200 m。",
+          "zone_near_m": "實體距離在此值以內時視為「近」。必須大於非常近。預設值：1000 m。",
+          "zone_mid_m": "實體距離在此值以內時視為「中等」。必須大於近。預設值：5000 m。",
+          "zone_far_m": "實體距離在此值以內時視為「遠」。必須大於中等。預設值：20000 m。\n超過此距離則視為「非常遠」。",
+          "proximity_zone": "當實體位於所選區域或更近的範圍內時，「鄰近中」感測器會開啟（例如選擇「近」時，處於「非常近」的實體同樣會觸發）。一旦距離超出該區域邊界即關閉（採用嚴格閾值）。若要避免因 GPS 雜訊而在邊界附近反覆開關，請在進階篩選條件中啟用「反應前先等待」（防抖動）。",
+          "show_advanced": "開啟後可在下一個畫面設定 GPS 精確度、速度與可靠性篩選條件。關閉則沿用合理的預設值。"
+        }
+      },
+      "advanced": {
+        "title": "進階篩選條件",
+        "description": "這些篩選條件可協助忽略錯誤的 GPS 資料。預設值適用於大多數使用者——只有在出現誤觸發時才需要調整。",
+        "data": {
+          "max_accuracy_m": "GPS 誤差半徑上限 (m，0 = 關閉)",
+          "debounce_s": "反應前等待時間 (s)",
+          "grace_window_s": "顯示寬限時間 (s)",
+          "max_speed_kmh": "合理速度上限 (km/h，0 = 關閉)",
+          "require_reliable": "僅在資料可靠時才觸發",
+          "min_updates_reliable": "判定可靠所需的連續更新次數",
+          "resync_silence_s": "凍結前的 GPS 靜默時間 (s)",
+          "resync_hold_s": "鄰近狀態凍結時間 (s)",
+          "altitude_aligned_threshold_m": "相同海拔判定閾值 (m)",
+          "max_vertical_accuracy_m": "垂直 GPS 誤差上限 (m，0 = 關閉)"
+        },
+        "data_description": {
+          "max_accuracy_m": "忽略 GPS 誤差大於此值的位置更新。移動中的手機通常回報 100 至 250 m 的精確度，因此 300 m 是安全的預設值。回報「350 m 精確度」的手機更新會被略過。設為 0 可停用此功能。範圍：0 至 1000 m。",
+          "debounce_s": "位置更新送達後，等待多久再重新計算。當手機連續送出多筆雜訊 GPS 定位時特別有用——整合會等它們穩定下來。0 = 立即反應（預設值）。若出現不穩定的反覆切換，可調高至 5 至 15 s。範圍：0 至 60 s。",
+          "grace_window_s": "當某一組實體暫時失去 GPS 訊號（短暫斷線、隧道、手機閒置）時，感測器會在這段時間內繼續顯示最後已知的數值，之後才回報未知。可避免間歇性的閃爍。預設值：900 s（15 分鐘）。範圍：60 至 3600 s。",
+          "max_speed_kmh": "瞬移防護。扣除兩台裝置合計的 GPS 精確度後，若推算出的移動速度仍超過此值，即拒絕該筆 GPS 定位。當每支手機精確度為 150 m 時，位置跳動所隱含的速度必須超過此值才會被過濾。預設值：1000 km/h——可阻擋不可能的瞬移，同時保留搭飛機的情境。設為 0 可停用。範圍：0 至 2000 km/h。",
+          "require_reliable": "開啟後，「鄰近中」感測器只有在位置連續多次更新皆保持一致時才會開啟。可減少因單一錯誤 GPS 定位造成的誤報。注意：若更新頻率較低（例如每 3 分鐘一次），這可能會增加數分鐘的延遲。",
+          "min_updates_reliable": "位置需連續更新幾次才視為可靠。僅在「僅在資料可靠時才觸發」開啟時適用。舉例：以 3 分鐘為間隔更新 3 次 = 感測器最多需等待 9 分鐘才會開啟。範圍：1 至 20。",
+          "resync_silence_s": "若所有被追蹤的實體停止送出 GPS 更新達此時間，鄰近狀態會被凍結，以避免在等待訊號恢復期間發生錯誤變化。預設值：600 s（10 分鐘）。範圍：60 至 3600 s。",
+          "resync_hold_s": "偵測到 GPS 靜默後，鄰近狀態要維持凍結多久。設為 0 可停用凍結（靜默偵測仍會運作以進行時間計算）。預設值：60 s。範圍：0 至 300 s。",
+          "altitude_aligned_threshold_m": "「相同海拔」二元感測器開啟時所允許的最大海拔差（以公尺為單位）。0 = 僅在海拔完全相同時。預設值：5 m。範圍：0 至 100 m。",
+          "max_vertical_accuracy_m": "設為大於 0 的值時，若裝置的垂直 GPS 誤差超過此值，海拔感測器會回傳未知。可避免不可靠的海拔讀數觸發以海拔為條件的自動化。0 = 關閉（預設值）。消費級 GPS 的垂直誤差通常為 10 至 30 m。範圍：0 至 500 m。"
+        }
+      }
+    },
+    "error": {
+      "too_few_entities": "請至少選擇 2 個實體。",
+      "too_many_entities": "最多只能選擇 5 個實體。",
+      "duplicate_entities": "每個實體只能選擇一次。",
+      "zone_thresholds_not_ascending": "區域閾值必須由小到大遞增：非常近 < 近 < 中等 < 遠。"
+    },
+    "abort": {
+      "already_configured": "此實體配對已設定過。",
+      "already_in_progress": "此整合的設定正在進行中。請關閉並重新開啟對話框以重新開始。"
+    }
+  },
+  "options": {
+    "step": {
+      "distances": {
+        "title": "距離設定",
+        "description": "設定各區域的邊界，並選擇要在哪個區域觸發鄰近提醒。",
+        "data": {
+          "zone_very_near_m": "非常近區域上限 (m)",
+          "zone_near_m": "近區域上限 (m)",
+          "zone_mid_m": "中等區域上限 (m)",
+          "zone_far_m": "遠區域上限 (m)",
+          "proximity_zone": "鄰近提醒區域",
+          "show_advanced": "設定進階篩選條件"
+        },
+        "data_description": {
+          "zone_very_near_m": "實體距離在此值以內時視為「非常近」。預設值：200 m。",
+          "zone_near_m": "實體距離在此值以內時視為「近」。必須大於非常近。預設值：1000 m。",
+          "zone_mid_m": "實體距離在此值以內時視為「中等」。必須大於近。預設值：5000 m。",
+          "zone_far_m": "實體距離在此值以內時視為「遠」。必須大於中等。預設值：20000 m。\n超過此距離則視為「非常遠」。",
+          "proximity_zone": "當實體位於所選區域或更近的範圍內時，「鄰近中」感測器會開啟（例如選擇「近」時，處於「非常近」的實體同樣會觸發）。一旦距離超出該區域邊界即關閉（採用嚴格閾值）。若要避免因 GPS 雜訊而在邊界附近反覆開關，請在進階篩選條件中啟用「反應前先等待」（防抖動）。",
+          "show_advanced": "開啟後可在下一個畫面設定 GPS 精確度、速度與可靠性篩選條件。關閉則沿用合理的預設值。"
+        }
+      },
+      "advanced": {
+        "title": "進階篩選條件",
+        "description": "這些篩選條件可協助忽略錯誤的 GPS 資料。預設值適用於大多數使用者——只有在出現誤觸發時才需要調整。",
+        "data": {
+          "max_accuracy_m": "GPS 誤差半徑上限 (m，0 = 關閉)",
+          "debounce_s": "反應前等待時間 (s)",
+          "grace_window_s": "顯示寬限時間 (s)",
+          "max_speed_kmh": "合理速度上限 (km/h，0 = 關閉)",
+          "require_reliable": "僅在資料可靠時才觸發",
+          "min_updates_reliable": "判定可靠所需的連續更新次數",
+          "resync_silence_s": "凍結前的 GPS 靜默時間 (s)",
+          "resync_hold_s": "鄰近狀態凍結時間 (s)",
+          "altitude_aligned_threshold_m": "相同海拔判定閾值 (m)",
+          "max_vertical_accuracy_m": "垂直 GPS 誤差上限 (m，0 = 關閉)"
+        },
+        "data_description": {
+          "max_accuracy_m": "忽略 GPS 誤差大於此值的位置更新。移動中的手機通常回報 100 至 250 m 的精確度，因此 300 m 是安全的預設值。回報「350 m 精確度」的手機更新會被略過。設為 0 可停用此功能。範圍：0 至 1000 m。",
+          "debounce_s": "位置更新送達後，等待多久再重新計算。當手機連續送出多筆雜訊 GPS 定位時特別有用——整合會等它們穩定下來。0 = 立即反應（預設值）。若出現不穩定的反覆切換，可調高至 5 至 15 s。範圍：0 至 60 s。",
+          "grace_window_s": "當某一組實體暫時失去 GPS 訊號（短暫斷線、隧道、手機閒置）時，感測器會在這段時間內繼續顯示最後已知的數值，之後才回報未知。可避免間歇性的閃爍。預設值：900 s（15 分鐘）。範圍：60 至 3600 s。",
+          "max_speed_kmh": "瞬移防護。扣除兩台裝置合計的 GPS 精確度後，若推算出的移動速度仍超過此值，即拒絕該筆 GPS 定位。當每支手機精確度為 150 m 時，位置跳動所隱含的速度必須超過此值才會被過濾。預設值：1000 km/h——可阻擋不可能的瞬移，同時保留搭飛機的情境。設為 0 可停用。範圍：0 至 2000 km/h。",
+          "require_reliable": "開啟後，「鄰近中」感測器只有在位置連續多次更新皆保持一致時才會開啟。可減少因單一錯誤 GPS 定位造成的誤報。注意：若更新頻率較低（例如每 3 分鐘一次），這可能會增加數分鐘的延遲。",
+          "min_updates_reliable": "位置需連續更新幾次才視為可靠。僅在「僅在資料可靠時才觸發」開啟時適用。舉例：以 3 分鐘為間隔更新 3 次 = 感測器最多需等待 9 分鐘才會開啟。範圍：1 至 20。",
+          "resync_silence_s": "若所有被追蹤的實體停止送出 GPS 更新達此時間，鄰近狀態會被凍結，以避免在等待訊號恢復期間發生錯誤變化。預設值：600 s（10 分鐘）。範圍：60 至 3600 s。",
+          "resync_hold_s": "偵測到 GPS 靜默後，鄰近狀態要維持凍結多久。設為 0 可停用凍結（靜默偵測仍會運作以進行時間計算）。預設值：60 s。範圍：0 至 300 s。",
+          "altitude_aligned_threshold_m": "「相同海拔」二元感測器開啟時所允許的最大海拔差（以公尺為單位）。0 = 僅在海拔完全相同時。預設值：5 m。範圍：0 至 100 m。",
+          "max_vertical_accuracy_m": "設為大於 0 的值時，若裝置的垂直 GPS 誤差超過此值，海拔感測器會回傳未知。可避免不可靠的海拔讀數觸發以海拔為條件的自動化。0 = 關閉（預設值）。消費級 GPS 的垂直誤差通常為 10 至 30 m。範圍：0 至 500 m。"
+        }
+      }
+    },
+    "error": {
+      "zone_thresholds_not_ascending": "區域閾值必須由小到大遞增：非常近 < 近 < 中等 < 遠。"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "distance": {"name": "距離"},
+      "bucket": {
+        "name": "鄰近區域",
+        "state": {
+          "very_near": "非常近",
+          "near": "近",
+          "mid": "中等",
+          "far": "遠",
+          "very_far": "非常遠"
+        }
+      },
+      "bucket_level": {"name": "鄰近區域編號"},
+      "proximity_duration": {"name": "鄰近持續時間"},
+      "proximity_tracking_started": {"name": "鄰近追蹤開始時間"},
+      "proximity_rate": {"name": "鄰近比率"},
+      "last_seen_together": {"name": "最後一次同時出現"},
+      "today_proximity_time": {"name": "今日鄰近時間"},
+      "today_zone_time_very_near": {"name": "今日非常近時間"},
+      "today_zone_time_near": {"name": "今日近距離時間"},
+      "today_zone_time_mid": {"name": "今日中等距離時間"},
+      "today_zone_time_far": {"name": "今日遠距離時間"},
+      "today_zone_time_very_far": {"name": "今日非常遠時間"},
+      "direction": {
+        "name": "方向",
+        "state": {
+          "approaching": "接近中",
+          "diverging": "遠離中",
+          "stationary": "靜止"
+        }
+      },
+      "direction_level": {"name": "方向等級"},
+      "closing_speed": {"name": "接近速度"},
+      "eta": {"name": "預計抵達時間"},
+      "gps_accuracy_a": {"name": "GPS 精確度 (A)"},
+      "gps_accuracy_b": {"name": "GPS 精確度 (B)"},
+      "last_update_a": {"name": "最後更新 (A)"},
+      "last_update_b": {"name": "最後更新 (B)"},
+      "update_count_a": {"name": "最近 30 分鐘更新次數 (A)"},
+      "update_count_b": {"name": "最近 30 分鐘更新次數 (B)"},
+      "entity_state_a": {"name": "狀態 (A)"},
+      "entity_state_b": {"name": "狀態 (B)"},
+      "today_unaccounted_time": {"name": "今日未計入時間"},
+      "min_distance": {"name": "最小距離"},
+      "settings": {"name": "設定"},
+      "altitude_delta": {"name": "海拔差"},
+      "altitude": {"name": "海拔 ({name})"}
+    },
+    "binary_sensor": {
+      "proximity": {"name": "鄰近中"},
+      "any_in_proximity": {"name": "任一鄰近"},
+      "all_in_proximity": {"name": "全部鄰近"},
+      "same_zone": {"name": "相同區域"},
+      "in_very_near": {"name": "非常近"},
+      "in_near": {"name": "近"},
+      "in_mid": {"name": "中等"},
+      "in_far": {"name": "遠"},
+      "in_very_far": {"name": "非常遠"},
+      "reliable": {"name": "可靠"},
+      "altitude_aligned": {"name": "相同海拔"},
+      "approaching": {"name": "接近中"}
+    },
+    "button": {
+      "refresh": {"name": "重新整理位置"}
+    }
+  },
+  "selector": {
+    "proximity_zone": {
+      "options": {
+        "very_near": "非常近",
+        "near": "近",
+        "mid": "中等",
+        "far": "遠"
+      }
+    }
+  }
+}

@@ -1,0 +1,206 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Entitások kiválasztása",
+        "description": "Válasszon ki két vagy több entitást a köztük lévő távolság követéséhez. Támogatott típusok: személy, eszközkövető, érzékelő és zóna.\n\nHárom vagy több entitásból álló csoport esetén az összes páronkénti távolság automatikusan követve lesz. A beállítás után az érzékelők „Ismeretlen” értéket mutatnak, amíg az entitások helyzete meg nem érkezik.",
+        "data": {
+          "entities": "Entitások"
+        },
+        "data_description": {
+          "entities": "Válasszon ki 2–5 entitást a követéshez. Minden pár saját távolság- és közelségérzékelő-készletet kap."
+        }
+      },
+      "distances": {
+        "title": "Távolságbeállítások",
+        "description": "Állítsa be a zónahatárokat, és válassza ki azt a zónát, amely aktiválja a közelségi figyelmeztetést.",
+        "data": {
+          "zone_very_near_m": "Nagyon közel zóna határa (m)",
+          "zone_near_m": "Közel zóna határa (m)",
+          "zone_mid_m": "Közepes távolság zóna határa (m)",
+          "zone_far_m": "Messze zóna határa (m)",
+          "proximity_zone": "Közelségi figyelmeztetési zóna",
+          "show_advanced": "Speciális szűrők beállítása"
+        },
+        "data_description": {
+          "zone_very_near_m": "Az entitások ezen a távolságon vagy annál közelebb „Nagyon közel” állapotban vannak. Alapértelmezett: 200 m.",
+          "zone_near_m": "Az entitások ezen a távolságon vagy annál közelebb „Közel” állapotban vannak. Nagyobbnak kell lennie, mint a Nagyon közel érték. Alapértelmezett: 1000 m.",
+          "zone_mid_m": "Az entitások ezen a távolságon vagy annál közelebb „Közepes távolság” állapotban vannak. Nagyobbnak kell lennie, mint a Közel érték. Alapértelmezett: 5000 m.",
+          "zone_far_m": "Az entitások ezen a távolságon vagy annál közelebb „Messze” állapotban vannak. Nagyobbnak kell lennie, mint a Közepes távolság érték. Alapértelmezett: 20000 m.\nEnnél távolabb „Nagyon messze”.",
+          "proximity_zone": "A „Közelségben” érzékelő BEKAPCSOL, amikor az entitások ebben a zónában vagy annál közelebb vannak (pl. a „Közel” kiválasztása akkor is aktiválódik, amikor az entitások „Nagyon közel” vannak). KIKAPCSOL, amikor a távolság meghaladja a zóna határát (szigorú küszöb). A GPS-zaj miatti gyors, határ menti ki-be kapcsolás elkerülése érdekében kapcsolja be a „Várakozás reakció előtt” (debounce) funkciót a Speciális szűrők között.",
+          "show_advanced": "Kapcsolja be a GPS-pontossági, sebességi és megbízhatósági szűrők beállításához a következő képernyőn. Hagyja kikapcsolva az ésszerű alapértelmezett értékek használatához."
+        }
+      },
+      "advanced": {
+        "title": "Speciális szűrők",
+        "description": "Ezek a szűrők segítenek figyelmen kívül hagyni a hibás GPS-adatokat. Az alapértelmezett értékek a legtöbb felhasználó számára megfelelően működnek — csak akkor módosítsa őket, ha téves aktiválásokat tapasztal.",
+        "data": {
+          "max_accuracy_m": "Max. GPS-hibakör sugara (m, 0 = ki)",
+          "debounce_s": "Várakozás reakció előtt (s)",
+          "grace_window_s": "Megjelenítési türelmi idő (s)",
+          "max_speed_kmh": "Max. elfogadható sebesség (km/h, 0 = ki)",
+          "require_reliable": "Csak megbízható adatoknál aktiváljon",
+          "min_updates_reliable": "Megbízhatósághoz szükséges egymást követő frissítések",
+          "resync_silence_s": "GPS-csend a befagyasztás előtt (s)",
+          "resync_hold_s": "Közelségi befagyasztás időtartama (s)",
+          "altitude_aligned_threshold_m": "Azonos magasság küszöbértéke (m)",
+          "max_vertical_accuracy_m": "Max. függőleges GPS-hiba (m, 0 = ki)"
+        },
+        "data_description": {
+          "max_accuracy_m": "Hagyja figyelmen kívül azokat a helyzetfrissítéseket, amelyeknél a GPS-hiba nagyobb ennél az értéknél. A mozgásban lévő telefonok általában 100–250 m pontosságot jelentenek, ezért a 300 m biztonságos alapértelmezett érték. A „350 m pontosságot” jelentő telefon frissítése ki lesz hagyva. A kikapcsoláshoz állítsa 0-ra. Tartomány: 0–1000 m.",
+          "debounce_s": "Egy helyzetfrissítés érkezése után mennyi ideig várjon az újraszámítás előtt. Akkor hasznos, amikor a telefonok gyors egymásutánban több zajos GPS-javítást küldenek — az integráció megvárja, amíg ezek stabilizálódnak. 0 = azonnali reakció (alapértelmezett). Ha instabil ki-be kapcsolást tapasztal, emelje 5–15 s-ra. Tartomány: 0–60 s.",
+          "grace_window_s": "Ha egy pár rövid időre elveszíti a GPS-jelet (kimaradás, alagút, tétlen telefon), az érzékelők ennyi ideig az utolsó ismert értéket mutatják, mielőtt ismeretlent jeleznének. Megakadályozza az időszakos villódzást. Alapértelmezett: 900 s (15 perc). Tartomány: 60–3600 s.",
+          "max_speed_kmh": "Teleportálásvédelem. Elutasít egy GPS-javítást, ha az abból adódó mozgási sebesség — a két eszköz összesített GPS-pontosságának levonása után — meghaladja ezt az értéket. Minden telefonon 150 m pontosságot feltételezve egy ugrásnak ennél nagyobb sebességet kell jeleznie ahhoz, hogy kiszűrésre kerüljön. Alapértelmezett: 1000 km/h — blokkolja a lehetetlen teleportálásokat, de átengedi a repülőgépeket. A letiltáshoz állítsa 0-ra. Tartomány: 0–2000 km/h.",
+          "require_reliable": "Ha be van kapcsolva, a „Közelségben” érzékelő csak azután kapcsol BE, hogy a helyzet több egymást követő frissítésen keresztül konzisztens volt. Csökkenti az egyetlen hibás GPS-javítás okozta téves riasztásokat. Megjegyzés: ha a frissítések ritkák (pl. 3 percenként), ez több perces késleltetést okozhat.",
+          "min_updates_reliable": "Hány egymást követő frissítés szükséges ahhoz, hogy a helyzet megbízhatónak minősüljön. Csak akkor érvényes, ha a „Csak megbízható adatoknál aktiváljon” funkció be van kapcsolva. Példa: 3 frissítés, egyenként 3 perces időközzel = akár 9 perc az érzékelő BEKAPCSOLÁSA előtt. Tartomány: 1–20.",
+          "resync_silence_s": "Ha az összes követett entitás ennyi ideig nem küld GPS-frissítést, a közelségi állapot befagy, hogy megakadályozza a hamis változásokat, amíg a jel visszatérésére vár. Alapértelmezett: 600 s (10 perc). Tartomány: 60–3600 s.",
+          "resync_hold_s": "Mennyi ideig tartsa befagyasztva a közelségi állapotot a GPS-csend észlelése után. A befagyasztás letiltásához állítsa 0-ra (a csendészlelés továbbra is fut az időelszámoláshoz). Alapértelmezett: 60 s. Tartomány: 0–300 s.",
+          "altitude_aligned_threshold_m": "Az „Azonos magasság” bináris érzékelő BEKAPCSOLÁSÁHOZ szükséges maximális magasságkülönbség (méterben). 0 = csak pontosan azonos magasság esetén. Alapértelmezett: 5 m. Tartomány: 0–100 m.",
+          "max_vertical_accuracy_m": "0-nál nagyobb értékre állítva a magasságérzékelők ismeretlent adnak vissza, ha az eszköz függőleges GPS-hibája meghaladja ezt az értéket. Megakadályozza, hogy a megbízhatatlan magasságértékek magasságalapú automatizálásokat indítsanak el. 0 = ki (alapértelmezett). A fogyasztói GPS függőleges hibája általában 10–30 m. Tartomány: 0–500 m."
+        }
+      }
+    },
+    "error": {
+      "too_few_entities": "Válasszon ki legalább 2 entitást.",
+      "too_many_entities": "Legfeljebb 5 entitást válasszon ki.",
+      "duplicate_entities": "Minden entitás csak egyszer szerepelhet.",
+      "zone_thresholds_not_ascending": "A zónaküszöböknek növekvő sorrendben kell lenniük: Nagyon közel < Közel < Közepes távolság < Messze."
+    },
+    "abort": {
+      "already_configured": "Ez az entitáspár már be van állítva.",
+      "already_in_progress": "Ehhez az integrációhoz már folyamatban van egy beállítás. Zárja be, majd nyissa meg újra a párbeszédpanelt az újrakezdéshez."
+    }
+  },
+  "options": {
+    "step": {
+      "distances": {
+        "title": "Távolságbeállítások",
+        "description": "Állítsa be a zónahatárokat, és válassza ki azt a zónát, amely aktiválja a közelségi figyelmeztetést.",
+        "data": {
+          "zone_very_near_m": "Nagyon közel zóna határa (m)",
+          "zone_near_m": "Közel zóna határa (m)",
+          "zone_mid_m": "Közepes távolság zóna határa (m)",
+          "zone_far_m": "Messze zóna határa (m)",
+          "proximity_zone": "Közelségi figyelmeztetési zóna",
+          "show_advanced": "Speciális szűrők beállítása"
+        },
+        "data_description": {
+          "zone_very_near_m": "Az entitások ezen a távolságon vagy annál közelebb „Nagyon közel” állapotban vannak. Alapértelmezett: 200 m.",
+          "zone_near_m": "Az entitások ezen a távolságon vagy annál közelebb „Közel” állapotban vannak. Nagyobbnak kell lennie, mint a Nagyon közel érték. Alapértelmezett: 1000 m.",
+          "zone_mid_m": "Az entitások ezen a távolságon vagy annál közelebb „Közepes távolság” állapotban vannak. Nagyobbnak kell lennie, mint a Közel érték. Alapértelmezett: 5000 m.",
+          "zone_far_m": "Az entitások ezen a távolságon vagy annál közelebb „Messze” állapotban vannak. Nagyobbnak kell lennie, mint a Közepes távolság érték. Alapértelmezett: 20000 m.\nEnnél távolabb „Nagyon messze”.",
+          "proximity_zone": "A „Közelségben” érzékelő BEKAPCSOL, amikor az entitások ebben a zónában vagy annál közelebb vannak (pl. a „Közel” kiválasztása akkor is aktiválódik, amikor az entitások „Nagyon közel” vannak). KIKAPCSOL, amikor a távolság meghaladja a zóna határát (szigorú küszöb). A GPS-zaj miatti gyors, határ menti ki-be kapcsolás elkerülése érdekében kapcsolja be a „Várakozás reakció előtt” (debounce) funkciót a Speciális szűrők között.",
+          "show_advanced": "Kapcsolja be a GPS-pontossági, sebességi és megbízhatósági szűrők beállításához a következő képernyőn. Hagyja kikapcsolva az ésszerű alapértelmezett értékek használatához."
+        }
+      },
+      "advanced": {
+        "title": "Speciális szűrők",
+        "description": "Ezek a szűrők segítenek figyelmen kívül hagyni a hibás GPS-adatokat. Az alapértelmezett értékek a legtöbb felhasználó számára megfelelően működnek — csak akkor módosítsa őket, ha téves aktiválásokat tapasztal.",
+        "data": {
+          "max_accuracy_m": "Max. GPS-hibakör sugara (m, 0 = ki)",
+          "debounce_s": "Várakozás reakció előtt (s)",
+          "grace_window_s": "Megjelenítési türelmi idő (s)",
+          "max_speed_kmh": "Max. elfogadható sebesség (km/h, 0 = ki)",
+          "require_reliable": "Csak megbízható adatoknál aktiváljon",
+          "min_updates_reliable": "Megbízhatósághoz szükséges egymást követő frissítések",
+          "resync_silence_s": "GPS-csend a befagyasztás előtt (s)",
+          "resync_hold_s": "Közelségi befagyasztás időtartama (s)",
+          "altitude_aligned_threshold_m": "Azonos magasság küszöbértéke (m)",
+          "max_vertical_accuracy_m": "Max. függőleges GPS-hiba (m, 0 = ki)"
+        },
+        "data_description": {
+          "max_accuracy_m": "Hagyja figyelmen kívül azokat a helyzetfrissítéseket, amelyeknél a GPS-hiba nagyobb ennél az értéknél. A mozgásban lévő telefonok általában 100–250 m pontosságot jelentenek, ezért a 300 m biztonságos alapértelmezett érték. A „350 m pontosságot” jelentő telefon frissítése ki lesz hagyva. A kikapcsoláshoz állítsa 0-ra. Tartomány: 0–1000 m.",
+          "debounce_s": "Egy helyzetfrissítés érkezése után mennyi ideig várjon az újraszámítás előtt. Akkor hasznos, amikor a telefonok gyors egymásutánban több zajos GPS-javítást küldenek — az integráció megvárja, amíg ezek stabilizálódnak. 0 = azonnali reakció (alapértelmezett). Ha instabil ki-be kapcsolást tapasztal, emelje 5–15 s-ra. Tartomány: 0–60 s.",
+          "grace_window_s": "Ha egy pár rövid időre elveszíti a GPS-jelet (kimaradás, alagút, tétlen telefon), az érzékelők ennyi ideig az utolsó ismert értéket mutatják, mielőtt ismeretlent jeleznének. Megakadályozza az időszakos villódzást. Alapértelmezett: 900 s (15 perc). Tartomány: 60–3600 s.",
+          "max_speed_kmh": "Teleportálásvédelem. Elutasít egy GPS-javítást, ha az abból adódó mozgási sebesség — a két eszköz összesített GPS-pontosságának levonása után — meghaladja ezt az értéket. Minden telefonon 150 m pontosságot feltételezve egy ugrásnak ennél nagyobb sebességet kell jeleznie ahhoz, hogy kiszűrésre kerüljön. Alapértelmezett: 1000 km/h — blokkolja a lehetetlen teleportálásokat, de átengedi a repülőgépeket. A letiltáshoz állítsa 0-ra. Tartomány: 0–2000 km/h.",
+          "require_reliable": "Ha be van kapcsolva, a „Közelségben” érzékelő csak azután kapcsol BE, hogy a helyzet több egymást követő frissítésen keresztül konzisztens volt. Csökkenti az egyetlen hibás GPS-javítás okozta téves riasztásokat. Megjegyzés: ha a frissítések ritkák (pl. 3 percenként), ez több perces késleltetést okozhat.",
+          "min_updates_reliable": "Hány egymást követő frissítés szükséges ahhoz, hogy a helyzet megbízhatónak minősüljön. Csak akkor érvényes, ha a „Csak megbízható adatoknál aktiváljon” funkció be van kapcsolva. Példa: 3 frissítés, egyenként 3 perces időközzel = akár 9 perc az érzékelő BEKAPCSOLÁSA előtt. Tartomány: 1–20.",
+          "resync_silence_s": "Ha az összes követett entitás ennyi ideig nem küld GPS-frissítést, a közelségi állapot befagy, hogy megakadályozza a hamis változásokat, amíg a jel visszatérésére vár. Alapértelmezett: 600 s (10 perc). Tartomány: 60–3600 s.",
+          "resync_hold_s": "Mennyi ideig tartsa befagyasztva a közelségi állapotot a GPS-csend észlelése után. A befagyasztás letiltásához állítsa 0-ra (a csendészlelés továbbra is fut az időelszámoláshoz). Alapértelmezett: 60 s. Tartomány: 0–300 s.",
+          "altitude_aligned_threshold_m": "Az „Azonos magasság” bináris érzékelő BEKAPCSOLÁSÁHOZ szükséges maximális magasságkülönbség (méterben). 0 = csak pontosan azonos magasság esetén. Alapértelmezett: 5 m. Tartomány: 0–100 m.",
+          "max_vertical_accuracy_m": "0-nál nagyobb értékre állítva a magasságérzékelők ismeretlent adnak vissza, ha az eszköz függőleges GPS-hibája meghaladja ezt az értéket. Megakadályozza, hogy a megbízhatatlan magasságértékek magasságalapú automatizálásokat indítsanak el. 0 = ki (alapértelmezett). A fogyasztói GPS függőleges hibája általában 10–30 m. Tartomány: 0–500 m."
+        }
+      }
+    },
+    "error": {
+      "zone_thresholds_not_ascending": "A zónaküszöböknek növekvő sorrendben kell lenniük: Nagyon közel < Közel < Közepes távolság < Messze."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "distance": {"name": "Távolság"},
+      "bucket": {
+        "name": "Közelségi zóna",
+        "state": {
+          "very_near": "Nagyon közel",
+          "near": "Közel",
+          "mid": "Közepes távolság",
+          "far": "Messze",
+          "very_far": "Nagyon messze"
+        }
+      },
+      "bucket_level": {"name": "Közelségi zóna száma"},
+      "proximity_duration": {"name": "Közelség időtartama"},
+      "proximity_tracking_started": {"name": "Közelségkövetés kezdete"},
+      "proximity_rate": {"name": "Közelségi arány"},
+      "last_seen_together": {"name": "Utoljára együtt látva"},
+      "today_proximity_time": {"name": "Mai közelségi idő"},
+      "today_zone_time_very_near": {"name": "Mai Nagyon közel idő"},
+      "today_zone_time_near": {"name": "Mai Közel idő"},
+      "today_zone_time_mid": {"name": "Mai Közepes távolság idő"},
+      "today_zone_time_far": {"name": "Mai Messze idő"},
+      "today_zone_time_very_far": {"name": "Mai Nagyon messze idő"},
+      "direction": {
+        "name": "Irány",
+        "state": {
+          "approaching": "Közeledik",
+          "diverging": "Távolodik",
+          "stationary": "Álló"
+        }
+      },
+      "direction_level": {"name": "Irányjelző szint"},
+      "closing_speed": {"name": "Közeledési sebesség"},
+      "eta": {"name": "Becsült érkezési idő"},
+      "gps_accuracy_a": {"name": "GPS-pontosság (A)"},
+      "gps_accuracy_b": {"name": "GPS-pontosság (B)"},
+      "last_update_a": {"name": "Utolsó frissítés (A)"},
+      "last_update_b": {"name": "Utolsó frissítés (B)"},
+      "update_count_a": {"name": "Frissítések száma az elmúlt 30 percben (A)"},
+      "update_count_b": {"name": "Frissítések száma az elmúlt 30 percben (B)"},
+      "entity_state_a": {"name": "Állapot (A)"},
+      "entity_state_b": {"name": "Állapot (B)"},
+      "today_unaccounted_time": {"name": "Mai el nem számolt idő"},
+      "min_distance": {"name": "Minimális távolság"},
+      "settings": {"name": "Beállítások"},
+      "altitude_delta": {"name": "Magasságkülönbség"},
+      "altitude": {"name": "Magasság ({name})"}
+    },
+    "binary_sensor": {
+      "proximity": {"name": "Közelségben"},
+      "any_in_proximity": {"name": "Valamelyik közelségben"},
+      "all_in_proximity": {"name": "Mindegyik közelségben"},
+      "same_zone": {"name": "Azonos zóna"},
+      "in_very_near": {"name": "Nagyon közel"},
+      "in_near": {"name": "Közel"},
+      "in_mid": {"name": "Közepes távolság"},
+      "in_far": {"name": "Messze"},
+      "in_very_far": {"name": "Nagyon messze"},
+      "reliable": {"name": "Megbízható"},
+      "altitude_aligned": {"name": "Azonos magasság"},
+      "approaching": {"name": "Közeledik"}
+    },
+    "button": {
+      "refresh": {"name": "Helyzet frissítése"}
+    }
+  },
+  "selector": {
+    "proximity_zone": {
+      "options": {
+        "very_near": "Nagyon közel",
+        "near": "Közel",
+        "mid": "Közepes távolság",
+        "far": "Messze"
+      }
+    }
+  }
+}

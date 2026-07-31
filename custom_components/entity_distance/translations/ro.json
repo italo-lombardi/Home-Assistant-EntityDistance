@@ -1,0 +1,206 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Alegeți entitățile",
+        "description": "Selectați două sau mai multe entități pentru a urmări distanțele dintre ele. Tipuri acceptate: persoană, dispozitiv de urmărire, senzor sau zonă.\n\nPentru un grup de 3 sau mai multe entități, toate distanțele dintre perechi sunt urmărite automat. După configurare, senzorii vor afișa „Necunoscut” până când entitățile își raportează o locație.",
+        "data": {
+          "entities": "Entități"
+        },
+        "data_description": {
+          "entities": "Selectați între 2 și 5 entități de urmărit. Fiecare pereche va primi propriul set de senzori de distanță și proximitate."
+        }
+      },
+      "distances": {
+        "title": "Setări de distanță",
+        "description": "Stabiliți limitele zonelor și alegeți ce zonă declanșează alerta de proximitate.",
+        "data": {
+          "zone_very_near_m": "Limita zonei Foarte aproape (m)",
+          "zone_near_m": "Limita zonei Aproape (m)",
+          "zone_mid_m": "Limita zonei Distanță medie (m)",
+          "zone_far_m": "Limita zonei Departe (m)",
+          "proximity_zone": "Zona alertei de proximitate",
+          "show_advanced": "Configurați filtrele avansate"
+        },
+        "data_description": {
+          "zone_very_near_m": "Entitățile sunt „Foarte aproape” la această distanță sau mai puțin. Implicit: 200 m.",
+          "zone_near_m": "Entitățile sunt „Aproape” la această distanță sau mai puțin. Trebuie să fie mai mare decât Foarte aproape. Implicit: 1000 m.",
+          "zone_mid_m": "Entitățile sunt la „Distanță medie” la această distanță sau mai puțin. Trebuie să fie mai mare decât Aproape. Implicit: 5000 m.",
+          "zone_far_m": "Entitățile sunt „Departe” la această distanță sau mai puțin. Trebuie să fie mai mare decât Distanță medie. Implicit: 20000 m.\nDincolo de aceasta se consideră „Foarte departe”.",
+          "proximity_zone": "Senzorul „În proximitate” se activează când entitățile sunt în această zonă sau mai aproape (de ex. selectând „Aproape” se declanșează și când entitățile sunt „Foarte aproape”). Se dezactivează când distanța depășește limita zonei (prag strict). Pentru a evita comutările rapide pornit/oprit lângă limită din cauza zgomotului GPS, activați „Așteptare înainte de reacție” (debounce) în Filtrele avansate.",
+          "show_advanced": "Activați pentru a configura filtrele de precizie GPS, viteză și fiabilitate pe ecranul următor. Lăsați dezactivat pentru a folosi valorile implicite rezonabile."
+        }
+      },
+      "advanced": {
+        "title": "Filtre avansate",
+        "description": "Aceste filtre ajută la ignorarea datelor GPS eronate. Valorile implicite funcționează bine pentru majoritatea utilizatorilor — modificați-le doar dacă observați declanșări false.",
+        "data": {
+          "max_accuracy_m": "Raza maximă a erorii GPS (m, 0 = dezactivat)",
+          "debounce_s": "Așteptare înainte de reacție (s)",
+          "grace_window_s": "Fereastra de toleranță la afișare (s)",
+          "max_speed_kmh": "Viteza maximă plauzibilă (km/h, 0 = dezactivat)",
+          "require_reliable": "Declanșați doar când datele sunt fiabile",
+          "min_updates_reliable": "Actualizări consecutive necesare pentru fiabilitate",
+          "resync_silence_s": "Perioadă fără semnal GPS înainte de înghețare (s)",
+          "resync_hold_s": "Durata înghețării proximității (s)",
+          "altitude_aligned_threshold_m": "Pragul altitudinii identice (m)",
+          "max_vertical_accuracy_m": "Eroarea verticală maximă GPS (m, 0 = dezactivat)"
+        },
+        "data_description": {
+          "max_accuracy_m": "Ignorați actualizările de locație în care eroarea GPS este mai mare decât aceasta. Telefoanele în mișcare raportează de obicei o precizie de 100–250 m, așa că 300 m este o valoare implicită sigură. Un telefon care afișează „precizie 350 m” va fi ignorat. Setați la 0 pentru a dezactiva. Interval: 0–1000 m.",
+          "debounce_s": "După ce sosește o actualizare de locație, cât timp să se aștepte înainte de recalculare. Util când telefoanele trimit mai multe corecții GPS zgomotoase la rând — integrarea așteaptă stabilizarea. 0 = reacție instantanee (implicit). Creșteți la 5–15 s dacă observați comutări instabile pornit/oprit. Interval: 0–60 s.",
+          "grace_window_s": "Când o pereche pierde temporar semnalul GPS (întrerupere, tunel, telefon inactiv), senzorii continuă să afișeze ultima valoare cunoscută pe durata acestui interval înainte de a raporta „Necunoscut”. Previne pâlpâirea intermitentă. Implicit: 900 s (15 min). Interval: 60–3600 s.",
+          "max_speed_kmh": "Protecție contra „teleportării”. Respinge o corecție GPS dacă viteza de deplasare implicată — după scăderea preciziei GPS combinate a ambelor dispozitive — depășește această valoare. Cu o precizie de 150 m pe fiecare telefon, un salt trebuie să implice o mișcare peste această viteză, dincolo de zgomot, pentru a fi filtrat. Implicit: 1000 km/h — blochează teleportările imposibile, dar permite deplasarea cu avionul. Setați la 0 pentru a dezactiva. Interval: 0–2000 km/h.",
+          "require_reliable": "Când este activat, senzorul „În proximitate” se activează doar după ce locația a fost consecventă pe parcursul mai multor actualizări la rând. Reduce rezultatele fals pozitive cauzate de o singură corecție GPS eronată. Notă: dacă actualizările sunt rare (de ex. la fiecare 3 min), aceasta poate adăuga câteva minute de întârziere.",
+          "min_updates_reliable": "Câte actualizări consecutive sunt necesare înainte ca locația să fie considerată fiabilă. Se aplică doar când opțiunea „Declanșați doar când datele sunt fiabile” este activată. Exemplu: 3 actualizări la intervale de 3 minute = până la 9 minute înainte ca senzorul să se activeze. Interval: 1–20.",
+          "resync_silence_s": "Dacă toate entitățile urmărite nu mai trimit actualizări GPS pe durata acestui interval, starea de proximitate este înghețată pentru a preveni modificările false în timp ce se așteaptă revenirea semnalului. Implicit: 600 s (10 min). Interval: 60–3600 s.",
+          "resync_hold_s": "Cât timp să se mențină înghețată starea de proximitate după detectarea absenței semnalului GPS. Setați la 0 pentru a dezactiva înghețarea (detectarea absenței semnalului continuă să ruleze pentru contabilizarea timpului). Implicit: 60 s. Interval: 0–300 s.",
+          "altitude_aligned_threshold_m": "Diferența maximă de altitudine (în metri) pentru care senzorul binar „Aceeași altitudine” se activează. 0 = doar altitudine exact identică. Implicit: 5 m. Interval: 0–100 m.",
+          "max_vertical_accuracy_m": "Când este setat peste 0, senzorii de altitudine returnează „Necunoscut” dacă eroarea GPS verticală a dispozitivului depășește această valoare. Împiedică citirile de altitudine nesigure să declanșeze automatizări bazate pe altitudine. 0 = dezactivat (implicit). Eroarea GPS verticală a dispozitivelor de larg consum este de obicei 10–30 m. Interval: 0–500 m."
+        }
+      }
+    },
+    "error": {
+      "too_few_entities": "Selectați cel puțin 2 entități.",
+      "too_many_entities": "Selectați cel mult 5 entități.",
+      "duplicate_entities": "Fiecare entitate trebuie să apară o singură dată.",
+      "zone_thresholds_not_ascending": "Pragurile zonelor trebuie să crească în ordine: Foarte aproape < Aproape < Distanță medie < Departe."
+    },
+    "abort": {
+      "already_configured": "Această pereche de entități este deja configurată.",
+      "already_in_progress": "O configurare este deja în curs pentru această integrare. Închideți și redeschideți dialogul pentru a începe din nou."
+    }
+  },
+  "options": {
+    "step": {
+      "distances": {
+        "title": "Setări de distanță",
+        "description": "Stabiliți limitele zonelor și alegeți ce zonă declanșează alerta de proximitate.",
+        "data": {
+          "zone_very_near_m": "Limita zonei Foarte aproape (m)",
+          "zone_near_m": "Limita zonei Aproape (m)",
+          "zone_mid_m": "Limita zonei Distanță medie (m)",
+          "zone_far_m": "Limita zonei Departe (m)",
+          "proximity_zone": "Zona alertei de proximitate",
+          "show_advanced": "Configurați filtrele avansate"
+        },
+        "data_description": {
+          "zone_very_near_m": "Entitățile sunt „Foarte aproape” la această distanță sau mai puțin. Implicit: 200 m.",
+          "zone_near_m": "Entitățile sunt „Aproape” la această distanță sau mai puțin. Trebuie să fie mai mare decât Foarte aproape. Implicit: 1000 m.",
+          "zone_mid_m": "Entitățile sunt la „Distanță medie” la această distanță sau mai puțin. Trebuie să fie mai mare decât Aproape. Implicit: 5000 m.",
+          "zone_far_m": "Entitățile sunt „Departe” la această distanță sau mai puțin. Trebuie să fie mai mare decât Distanță medie. Implicit: 20000 m.\nDincolo de aceasta se consideră „Foarte departe”.",
+          "proximity_zone": "Senzorul „În proximitate” se activează când entitățile sunt în această zonă sau mai aproape (de ex. selectând „Aproape” se declanșează și când entitățile sunt „Foarte aproape”). Se dezactivează când distanța depășește limita zonei (prag strict). Pentru a evita comutările rapide pornit/oprit lângă limită din cauza zgomotului GPS, activați „Așteptare înainte de reacție” (debounce) în Filtrele avansate.",
+          "show_advanced": "Activați pentru a configura filtrele de precizie GPS, viteză și fiabilitate pe ecranul următor. Lăsați dezactivat pentru a folosi valorile implicite rezonabile."
+        }
+      },
+      "advanced": {
+        "title": "Filtre avansate",
+        "description": "Aceste filtre ajută la ignorarea datelor GPS eronate. Valorile implicite funcționează bine pentru majoritatea utilizatorilor — modificați-le doar dacă observați declanșări false.",
+        "data": {
+          "max_accuracy_m": "Raza maximă a erorii GPS (m, 0 = dezactivat)",
+          "debounce_s": "Așteptare înainte de reacție (s)",
+          "grace_window_s": "Fereastra de toleranță la afișare (s)",
+          "max_speed_kmh": "Viteza maximă plauzibilă (km/h, 0 = dezactivat)",
+          "require_reliable": "Declanșați doar când datele sunt fiabile",
+          "min_updates_reliable": "Actualizări consecutive necesare pentru fiabilitate",
+          "resync_silence_s": "Perioadă fără semnal GPS înainte de înghețare (s)",
+          "resync_hold_s": "Durata înghețării proximității (s)",
+          "altitude_aligned_threshold_m": "Pragul altitudinii identice (m)",
+          "max_vertical_accuracy_m": "Eroarea verticală maximă GPS (m, 0 = dezactivat)"
+        },
+        "data_description": {
+          "max_accuracy_m": "Ignorați actualizările de locație în care eroarea GPS este mai mare decât aceasta. Telefoanele în mișcare raportează de obicei o precizie de 100–250 m, așa că 300 m este o valoare implicită sigură. Un telefon care afișează „precizie 350 m” va fi ignorat. Setați la 0 pentru a dezactiva. Interval: 0–1000 m.",
+          "debounce_s": "După ce sosește o actualizare de locație, cât timp să se aștepte înainte de recalculare. Util când telefoanele trimit mai multe corecții GPS zgomotoase la rând — integrarea așteaptă stabilizarea. 0 = reacție instantanee (implicit). Creșteți la 5–15 s dacă observați comutări instabile pornit/oprit. Interval: 0–60 s.",
+          "grace_window_s": "Când o pereche pierde temporar semnalul GPS (întrerupere, tunel, telefon inactiv), senzorii continuă să afișeze ultima valoare cunoscută pe durata acestui interval înainte de a raporta „Necunoscut”. Previne pâlpâirea intermitentă. Implicit: 900 s (15 min). Interval: 60–3600 s.",
+          "max_speed_kmh": "Protecție contra „teleportării”. Respinge o corecție GPS dacă viteza de deplasare implicată — după scăderea preciziei GPS combinate a ambelor dispozitive — depășește această valoare. Cu o precizie de 150 m pe fiecare telefon, un salt trebuie să implice o mișcare peste această viteză, dincolo de zgomot, pentru a fi filtrat. Implicit: 1000 km/h — blochează teleportările imposibile, dar permite deplasarea cu avionul. Setați la 0 pentru a dezactiva. Interval: 0–2000 km/h.",
+          "require_reliable": "Când este activat, senzorul „În proximitate” se activează doar după ce locația a fost consecventă pe parcursul mai multor actualizări la rând. Reduce rezultatele fals pozitive cauzate de o singură corecție GPS eronată. Notă: dacă actualizările sunt rare (de ex. la fiecare 3 min), aceasta poate adăuga câteva minute de întârziere.",
+          "min_updates_reliable": "Câte actualizări consecutive sunt necesare înainte ca locația să fie considerată fiabilă. Se aplică doar când opțiunea „Declanșați doar când datele sunt fiabile” este activată. Exemplu: 3 actualizări la intervale de 3 minute = până la 9 minute înainte ca senzorul să se activeze. Interval: 1–20.",
+          "resync_silence_s": "Dacă toate entitățile urmărite nu mai trimit actualizări GPS pe durata acestui interval, starea de proximitate este înghețată pentru a preveni modificările false în timp ce se așteaptă revenirea semnalului. Implicit: 600 s (10 min). Interval: 60–3600 s.",
+          "resync_hold_s": "Cât timp să se mențină înghețată starea de proximitate după detectarea absenței semnalului GPS. Setați la 0 pentru a dezactiva înghețarea (detectarea absenței semnalului continuă să ruleze pentru contabilizarea timpului). Implicit: 60 s. Interval: 0–300 s.",
+          "altitude_aligned_threshold_m": "Diferența maximă de altitudine (în metri) pentru care senzorul binar „Aceeași altitudine” se activează. 0 = doar altitudine exact identică. Implicit: 5 m. Interval: 0–100 m.",
+          "max_vertical_accuracy_m": "Când este setat peste 0, senzorii de altitudine returnează „Necunoscut” dacă eroarea GPS verticală a dispozitivului depășește această valoare. Împiedică citirile de altitudine nesigure să declanșeze automatizări bazate pe altitudine. 0 = dezactivat (implicit). Eroarea GPS verticală a dispozitivelor de larg consum este de obicei 10–30 m. Interval: 0–500 m."
+        }
+      }
+    },
+    "error": {
+      "zone_thresholds_not_ascending": "Pragurile zonelor trebuie să crească în ordine: Foarte aproape < Aproape < Distanță medie < Departe."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "distance": {"name": "Distanță"},
+      "bucket": {
+        "name": "Zonă de proximitate",
+        "state": {
+          "very_near": "Foarte aproape",
+          "near": "Aproape",
+          "mid": "Distanță medie",
+          "far": "Departe",
+          "very_far": "Foarte departe"
+        }
+      },
+      "bucket_level": {"name": "Numărul zonei de proximitate"},
+      "proximity_duration": {"name": "Durata proximității"},
+      "proximity_tracking_started": {"name": "Urmărirea proximității a început"},
+      "proximity_rate": {"name": "Rata de proximitate"},
+      "last_seen_together": {"name": "Ultima dată văzuți împreună"},
+      "today_proximity_time": {"name": "Timp în proximitate azi"},
+      "today_zone_time_very_near": {"name": "Timp Foarte aproape azi"},
+      "today_zone_time_near": {"name": "Timp Aproape azi"},
+      "today_zone_time_mid": {"name": "Timp Distanță medie azi"},
+      "today_zone_time_far": {"name": "Timp Departe azi"},
+      "today_zone_time_very_far": {"name": "Timp Foarte departe azi"},
+      "direction": {
+        "name": "Direcție",
+        "state": {
+          "approaching": "Se apropie",
+          "diverging": "Se îndepărtează",
+          "stationary": "Staționar"
+        }
+      },
+      "direction_level": {"name": "Nivel direcție"},
+      "closing_speed": {"name": "Viteză de apropiere"},
+      "eta": {"name": "Timp estimat până la sosire"},
+      "gps_accuracy_a": {"name": "Precizie GPS (A)"},
+      "gps_accuracy_b": {"name": "Precizie GPS (B)"},
+      "last_update_a": {"name": "Ultima actualizare (A)"},
+      "last_update_b": {"name": "Ultima actualizare (B)"},
+      "update_count_a": {"name": "Număr de actualizări în ultimele 30 min (A)"},
+      "update_count_b": {"name": "Număr de actualizări în ultimele 30 min (B)"},
+      "entity_state_a": {"name": "Stare (A)"},
+      "entity_state_b": {"name": "Stare (B)"},
+      "today_unaccounted_time": {"name": "Timp necontabilizat azi"},
+      "min_distance": {"name": "Distanță minimă"},
+      "settings": {"name": "Setări"},
+      "altitude_delta": {"name": "Diferență de altitudine"},
+      "altitude": {"name": "Altitudine ({name})"}
+    },
+    "binary_sensor": {
+      "proximity": {"name": "În proximitate"},
+      "any_in_proximity": {"name": "Oricare în proximitate"},
+      "all_in_proximity": {"name": "Toți în proximitate"},
+      "same_zone": {"name": "Aceeași zonă"},
+      "in_very_near": {"name": "Foarte aproape"},
+      "in_near": {"name": "Aproape"},
+      "in_mid": {"name": "Distanță medie"},
+      "in_far": {"name": "Departe"},
+      "in_very_far": {"name": "Foarte departe"},
+      "reliable": {"name": "Fiabil"},
+      "altitude_aligned": {"name": "Aceeași altitudine"},
+      "approaching": {"name": "Se apropie"}
+    },
+    "button": {
+      "refresh": {"name": "Actualizare locație"}
+    }
+  },
+  "selector": {
+    "proximity_zone": {
+      "options": {
+        "very_near": "Foarte aproape",
+        "near": "Aproape",
+        "mid": "Distanță medie",
+        "far": "Departe"
+      }
+    }
+  }
+}

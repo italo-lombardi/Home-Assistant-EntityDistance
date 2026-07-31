@@ -1,0 +1,206 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Pasirinkite objektus",
+        "description": "Pasirinkite du ar daugiau objektų, kad būtų stebimi atstumai tarp jų. Palaikomi tipai: person, device tracker, sensor arba zone.\n\nTrijų ar daugiau objektų grupei visų porų atstumai stebimi automatiškai. Po sąrankos jutikliai rodys „Nežinoma“, kol objektai nepraneš apie savo buvimo vietą.",
+        "data": {
+          "entities": "Objektai"
+        },
+        "data_description": {
+          "entities": "Pasirinkite 2–5 objektus stebėjimui. Kiekviena pora gaus savo atstumo ir artumo jutiklių rinkinį."
+        }
+      },
+      "distances": {
+        "title": "Atstumo nustatymai",
+        "description": "Nustatykite zonų ribas ir pasirinkite, kuri zona suaktyvina artumo įspėjimą.",
+        "data": {
+          "zone_very_near_m": "Labai Arti zonos riba (m)",
+          "zone_near_m": "Arti zonos riba (m)",
+          "zone_mid_m": "Vidutinio Atstumo zonos riba (m)",
+          "zone_far_m": "Toli zonos riba (m)",
+          "proximity_zone": "Artumo įspėjimo zona",
+          "show_advanced": "Konfigūruoti išplėstinius filtrus"
+        },
+        "data_description": {
+          "zone_very_near_m": "Objektai laikomi „Labai Arti“ esantys šiuo atstumu ar arčiau. Numatytoji reikšmė: 200 m.",
+          "zone_near_m": "Objektai laikomi „Arti“ esantys šiuo atstumu ar arčiau. Turi būti didesnė nei Labai Arti riba. Numatytoji reikšmė: 1000 m.",
+          "zone_mid_m": "Objektai laikomi „Vidutiniu Atstumu“ esantys šiuo atstumu ar arčiau. Turi būti didesnė nei Arti riba. Numatytoji reikšmė: 5000 m.",
+          "zone_far_m": "Objektai laikomi „Toli“ esantys šiuo atstumu ar arčiau. Turi būti didesnė nei Vidutinio Atstumo riba. Numatytoji reikšmė: 20000 m.\nToliau — „Labai Toli“.",
+          "proximity_zone": "Jutiklis „Artumo zonoje“ įsijungia, kai objektai yra šioje zonoje ar arčiau (pvz., pasirinkus „Arti“ jis taip pat suaktyvinamas, kai objektai yra „Labai Arti“). Išsijungia, kai atstumas viršija zonos ribą (griežtas slenkstis). Kad prie ribos dėl GPS triukšmo nekiltų greitas įjungimas / išjungimas, išplėstiniuose filtruose įjunkite „Palaukti prieš reaguojant“ (debounce).",
+          "show_advanced": "Įjunkite, kad kitame ekrane galėtumėte konfigūruoti GPS tikslumo, greičio ir patikimumo filtrus. Palikite išjungtą, kad būtų naudojamos tinkamos numatytosios reikšmės."
+        }
+      },
+      "advanced": {
+        "title": "Išplėstiniai filtrai",
+        "description": "Šie filtrai padeda ignoruoti prastus GPS duomenis. Numatytosios reikšmės gerai tinka daugumai vartotojų — keiskite jas tik tuomet, jei matote klaidingus suaktyvinimus.",
+        "data": {
+          "max_accuracy_m": "Maks. GPS paklaidos spindulys (m, 0 = išjungta)",
+          "debounce_s": "Palaukti prieš reaguojant (s)",
+          "grace_window_s": "Rodymo tolerancijos langas (s)",
+          "max_speed_kmh": "Maks. tikėtinas greitis (km/val, 0 = išjungta)",
+          "require_reliable": "Suaktyvinti tik kai duomenys patikimi",
+          "min_updates_reliable": "Nuoseklių naujinimų skaičius patikimumui",
+          "resync_silence_s": "GPS tyla prieš užšaldymą (s)",
+          "resync_hold_s": "Artumo užšaldymo trukmė (s)",
+          "altitude_aligned_threshold_m": "Vienodo aukščio slenkstis (m)",
+          "max_vertical_accuracy_m": "Maks. vertikali GPS paklaida (m, 0 = išjungta)"
+        },
+        "data_description": {
+          "max_accuracy_m": "Ignoruoti vietos naujinimus, kai GPS paklaida didesnė nei ši reikšmė. Judantys telefonai paprastai praneša 100–250 m tikslumą, todėl 300 m yra saugi numatytoji reikšmė. Telefonas, rodantis „350 m tikslumą“, bus praleistas. Nustatykite 0, kad išjungtumėte. Diapazonas: 0–1000 m.",
+          "debounce_s": "Gavus vietos naujinimą, kiek laiko laukti prieš perskaičiuojant. Naudinga, kai telefonai iš eilės siunčia kelis triukšmingus GPS pataisymus — integracija palaukia, kol jie nusistovi. 0 = reaguoti iš karto (numatytoji reikšmė). Padidinkite iki 5–15 s, jei matote nestabilų įjungimą / išjungimą. Diapazonas: 0–60 s.",
+          "grace_window_s": "Kai pora trumpam praranda GPS signalą (trikdžiai, tunelis, neaktyvus telefonas), jutikliai tiek laiko toliau rodo paskutinę žinomą reikšmę, kol nepraneša „Nežinoma“. Taip išvengiama periodiško mirksėjimo. Numatytoji reikšmė: 900 s (15 min). Diapazonas: 60–3600 s.",
+          "max_speed_kmh": "Apsauga nuo teleportacijos. GPS pataisymas atmetamas, jei numanomas judėjimo greitis — atėmus abiejų įrenginių bendrą GPS tikslumą — viršija šią reikšmę. Kai kiekvieno telefono tikslumas yra 150 m, šuolis turi rodyti judėjimą, viršijantį šį greitį virš triukšmo lygio, kad būtų atfiltruotas. Numatytoji reikšmė: 1000 km/val — blokuoja neįmanomas teleportacijas, bet leidžia skrydžius lėktuvu. Nustatykite 0, kad išjungtumėte. Diapazonas: 0–2000 km/val.",
+          "require_reliable": "Įjungus, jutiklis „Artumo zonoje“ įsijungia tik tada, kai vieta buvo nuosekli per kelis nuoseklius naujinimus. Taip sumažinama klaidingai teigiamų atvejų, kuriuos sukelia vienas prastas GPS pataisymas. Pastaba: jei naujinimai reti (pvz., kas 3 min), tai gali pridėti kelias minutes vėlavimo.",
+          "min_updates_reliable": "Kiek nuoseklių naujinimų reikia, kad vieta būtų laikoma patikima. Taikoma tik tuomet, kai „Suaktyvinti tik kai duomenys patikimi“ yra įjungta. Pavyzdys: 3 naujinimai 3 minučių intervalais = iki 9 minučių, kol jutiklis įsijungs. Diapazonas: 1–20.",
+          "resync_silence_s": "Jei visi stebimi objektai tiek laiko nustoja siųsti GPS naujinimus, artumo būsena užšaldoma, kad, laukiant signalo grįžimo, nekiltų klaidingų pokyčių. Numatytoji reikšmė: 600 s (10 min). Diapazonas: 60–3600 s.",
+          "resync_hold_s": "Kiek laiko laikyti artumo būseną užšaldytą aptikus GPS tylą. Nustatykite 0, kad išjungtumėte užšaldymą (tylos aptikimas vis tiek veikia laiko apskaitai). Numatytoji reikšmė: 60 s. Diapazonas: 0–300 s.",
+          "altitude_aligned_threshold_m": "Didžiausias aukščio skirtumas (metrais), kad įsijungtų dvejetainis jutiklis „Vienodas aukštis“. 0 = tik tiksliai vienodas aukštis. Numatytoji reikšmė: 5 m. Diapazonas: 0–100 m.",
+          "max_vertical_accuracy_m": "Nustačius reikšmę virš 0, aukščio jutikliai grąžina „Nežinoma“, jei įrenginio vertikali GPS paklaida viršija šią reikšmę. Taip nepatikimi aukščio rodmenys negali suaktyvinti aukščiu pagrįstų automatizacijų. 0 = išjungta (numatytoji reikšmė). Vartotojų GPS vertikali paklaida paprastai yra 10–30 m. Diapazonas: 0–500 m."
+        }
+      }
+    },
+    "error": {
+      "too_few_entities": "Pasirinkite bent 2 objektus.",
+      "too_many_entities": "Pasirinkite daugiausiai 5 objektus.",
+      "duplicate_entities": "Kiekvienas objektas gali būti nurodytas tik vieną kartą.",
+      "zone_thresholds_not_ascending": "Zonų slenksčiai turi didėti eilės tvarka: Labai Arti < Arti < Vidutinis < Toli."
+    },
+    "abort": {
+      "already_configured": "Ši objektų pora jau sukonfigūruota.",
+      "already_in_progress": "Šios integracijos sąranka jau vyksta. Uždarykite ir vėl atidarykite dialogo langą, kad pradėtumėte iš naujo."
+    }
+  },
+  "options": {
+    "step": {
+      "distances": {
+        "title": "Atstumo nustatymai",
+        "description": "Nustatykite zonų ribas ir pasirinkite, kuri zona suaktyvina artumo įspėjimą.",
+        "data": {
+          "zone_very_near_m": "Labai Arti zonos riba (m)",
+          "zone_near_m": "Arti zonos riba (m)",
+          "zone_mid_m": "Vidutinio Atstumo zonos riba (m)",
+          "zone_far_m": "Toli zonos riba (m)",
+          "proximity_zone": "Artumo įspėjimo zona",
+          "show_advanced": "Konfigūruoti išplėstinius filtrus"
+        },
+        "data_description": {
+          "zone_very_near_m": "Objektai laikomi „Labai Arti“ esantys šiuo atstumu ar arčiau. Numatytoji reikšmė: 200 m.",
+          "zone_near_m": "Objektai laikomi „Arti“ esantys šiuo atstumu ar arčiau. Turi būti didesnė nei Labai Arti riba. Numatytoji reikšmė: 1000 m.",
+          "zone_mid_m": "Objektai laikomi „Vidutiniu Atstumu“ esantys šiuo atstumu ar arčiau. Turi būti didesnė nei Arti riba. Numatytoji reikšmė: 5000 m.",
+          "zone_far_m": "Objektai laikomi „Toli“ esantys šiuo atstumu ar arčiau. Turi būti didesnė nei Vidutinio Atstumo riba. Numatytoji reikšmė: 20000 m.\nToliau — „Labai Toli“.",
+          "proximity_zone": "Jutiklis „Artumo zonoje“ įsijungia, kai objektai yra šioje zonoje ar arčiau (pvz., pasirinkus „Arti“ jis taip pat suaktyvinamas, kai objektai yra „Labai Arti“). Išsijungia, kai atstumas viršija zonos ribą (griežtas slenkstis). Kad prie ribos dėl GPS triukšmo nekiltų greitas įjungimas / išjungimas, išplėstiniuose filtruose įjunkite „Palaukti prieš reaguojant“ (debounce).",
+          "show_advanced": "Įjunkite, kad kitame ekrane galėtumėte konfigūruoti GPS tikslumo, greičio ir patikimumo filtrus. Palikite išjungtą, kad būtų naudojamos tinkamos numatytosios reikšmės."
+        }
+      },
+      "advanced": {
+        "title": "Išplėstiniai filtrai",
+        "description": "Šie filtrai padeda ignoruoti prastus GPS duomenis. Numatytosios reikšmės gerai tinka daugumai vartotojų — keiskite jas tik tuomet, jei matote klaidingus suaktyvinimus.",
+        "data": {
+          "max_accuracy_m": "Maks. GPS paklaidos spindulys (m, 0 = išjungta)",
+          "debounce_s": "Palaukti prieš reaguojant (s)",
+          "grace_window_s": "Rodymo tolerancijos langas (s)",
+          "max_speed_kmh": "Maks. tikėtinas greitis (km/val, 0 = išjungta)",
+          "require_reliable": "Suaktyvinti tik kai duomenys patikimi",
+          "min_updates_reliable": "Nuoseklių naujinimų skaičius patikimumui",
+          "resync_silence_s": "GPS tyla prieš užšaldymą (s)",
+          "resync_hold_s": "Artumo užšaldymo trukmė (s)",
+          "altitude_aligned_threshold_m": "Vienodo aukščio slenkstis (m)",
+          "max_vertical_accuracy_m": "Maks. vertikali GPS paklaida (m, 0 = išjungta)"
+        },
+        "data_description": {
+          "max_accuracy_m": "Ignoruoti vietos naujinimus, kai GPS paklaida didesnė nei ši reikšmė. Judantys telefonai paprastai praneša 100–250 m tikslumą, todėl 300 m yra saugi numatytoji reikšmė. Telefonas, rodantis „350 m tikslumą“, bus praleistas. Nustatykite 0, kad išjungtumėte. Diapazonas: 0–1000 m.",
+          "debounce_s": "Gavus vietos naujinimą, kiek laiko laukti prieš perskaičiuojant. Naudinga, kai telefonai iš eilės siunčia kelis triukšmingus GPS pataisymus — integracija palaukia, kol jie nusistovi. 0 = reaguoti iš karto (numatytoji reikšmė). Padidinkite iki 5–15 s, jei matote nestabilų įjungimą / išjungimą. Diapazonas: 0–60 s.",
+          "grace_window_s": "Kai pora trumpam praranda GPS signalą (trikdžiai, tunelis, neaktyvus telefonas), jutikliai tiek laiko toliau rodo paskutinę žinomą reikšmę, kol nepraneša „Nežinoma“. Taip išvengiama periodiško mirksėjimo. Numatytoji reikšmė: 900 s (15 min). Diapazonas: 60–3600 s.",
+          "max_speed_kmh": "Apsauga nuo teleportacijos. GPS pataisymas atmetamas, jei numanomas judėjimo greitis — atėmus abiejų įrenginių bendrą GPS tikslumą — viršija šią reikšmę. Kai kiekvieno telefono tikslumas yra 150 m, šuolis turi rodyti judėjimą, viršijantį šį greitį virš triukšmo lygio, kad būtų atfiltruotas. Numatytoji reikšmė: 1000 km/val — blokuoja neįmanomas teleportacijas, bet leidžia skrydžius lėktuvu. Nustatykite 0, kad išjungtumėte. Diapazonas: 0–2000 km/val.",
+          "require_reliable": "Įjungus, jutiklis „Artumo zonoje“ įsijungia tik tada, kai vieta buvo nuosekli per kelis nuoseklius naujinimus. Taip sumažinama klaidingai teigiamų atvejų, kuriuos sukelia vienas prastas GPS pataisymas. Pastaba: jei naujinimai reti (pvz., kas 3 min), tai gali pridėti kelias minutes vėlavimo.",
+          "min_updates_reliable": "Kiek nuoseklių naujinimų reikia, kad vieta būtų laikoma patikima. Taikoma tik tuomet, kai „Suaktyvinti tik kai duomenys patikimi“ yra įjungta. Pavyzdys: 3 naujinimai 3 minučių intervalais = iki 9 minučių, kol jutiklis įsijungs. Diapazonas: 1–20.",
+          "resync_silence_s": "Jei visi stebimi objektai tiek laiko nustoja siųsti GPS naujinimus, artumo būsena užšaldoma, kad, laukiant signalo grįžimo, nekiltų klaidingų pokyčių. Numatytoji reikšmė: 600 s (10 min). Diapazonas: 60–3600 s.",
+          "resync_hold_s": "Kiek laiko laikyti artumo būseną užšaldytą aptikus GPS tylą. Nustatykite 0, kad išjungtumėte užšaldymą (tylos aptikimas vis tiek veikia laiko apskaitai). Numatytoji reikšmė: 60 s. Diapazonas: 0–300 s.",
+          "altitude_aligned_threshold_m": "Didžiausias aukščio skirtumas (metrais), kad įsijungtų dvejetainis jutiklis „Vienodas aukštis“. 0 = tik tiksliai vienodas aukštis. Numatytoji reikšmė: 5 m. Diapazonas: 0–100 m.",
+          "max_vertical_accuracy_m": "Nustačius reikšmę virš 0, aukščio jutikliai grąžina „Nežinoma“, jei įrenginio vertikali GPS paklaida viršija šią reikšmę. Taip nepatikimi aukščio rodmenys negali suaktyvinti aukščiu pagrįstų automatizacijų. 0 = išjungta (numatytoji reikšmė). Vartotojų GPS vertikali paklaida paprastai yra 10–30 m. Diapazonas: 0–500 m."
+        }
+      }
+    },
+    "error": {
+      "zone_thresholds_not_ascending": "Zonų slenksčiai turi didėti eilės tvarka: Labai Arti < Arti < Vidutinis < Toli."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "distance": {"name": "Atstumas"},
+      "bucket": {
+        "name": "Artumo zona",
+        "state": {
+          "very_near": "Labai Arti",
+          "near": "Arti",
+          "mid": "Vidutinis Atstumas",
+          "far": "Toli",
+          "very_far": "Labai Toli"
+        }
+      },
+      "bucket_level": {"name": "Artumo zonos numeris"},
+      "proximity_duration": {"name": "Artumo trukmė"},
+      "proximity_tracking_started": {"name": "Artumo stebėjimas pradėtas"},
+      "proximity_rate": {"name": "Artumo dažnis"},
+      "last_seen_together": {"name": "Paskutinį kartą matyti kartu"},
+      "today_proximity_time": {"name": "Šiandienos artumo laikas"},
+      "today_zone_time_very_near": {"name": "Šiandien Labai Arti"},
+      "today_zone_time_near": {"name": "Šiandien Arti"},
+      "today_zone_time_mid": {"name": "Šiandien Vidutiniu Atstumu"},
+      "today_zone_time_far": {"name": "Šiandien Toli"},
+      "today_zone_time_very_far": {"name": "Šiandien Labai Toli"},
+      "direction": {
+        "name": "Kryptis",
+        "state": {
+          "approaching": "Artėja",
+          "diverging": "Tolsta",
+          "stationary": "Stacionarus"
+        }
+      },
+      "direction_level": {"name": "Krypties lygis"},
+      "closing_speed": {"name": "Artėjimo greitis"},
+      "eta": {"name": "Numatomas atvykimo laikas"},
+      "gps_accuracy_a": {"name": "GPS tikslumas (A)"},
+      "gps_accuracy_b": {"name": "GPS tikslumas (B)"},
+      "last_update_a": {"name": "Paskutinis naujinimas (A)"},
+      "last_update_b": {"name": "Paskutinis naujinimas (B)"},
+      "update_count_a": {"name": "Naujinimų skaičius per 30 min. (A)"},
+      "update_count_b": {"name": "Naujinimų skaičius per 30 min. (B)"},
+      "entity_state_a": {"name": "Būsena (A)"},
+      "entity_state_b": {"name": "Būsena (B)"},
+      "today_unaccounted_time": {"name": "Šiandienos neapskaitytas laikas"},
+      "min_distance": {"name": "Min. atstumas"},
+      "settings": {"name": "Nustatymai"},
+      "altitude_delta": {"name": "Aukščio skirtumas"},
+      "altitude": {"name": "Aukštis ({name})"}
+    },
+    "binary_sensor": {
+      "proximity": {"name": "Artumo zonoje"},
+      "any_in_proximity": {"name": "Kai kurie artumo zonoje"},
+      "all_in_proximity": {"name": "Visi artumo zonoje"},
+      "same_zone": {"name": "Ta pati zona"},
+      "in_very_near": {"name": "Labai Arti"},
+      "in_near": {"name": "Arti"},
+      "in_mid": {"name": "Vidutinis Atstumas"},
+      "in_far": {"name": "Toli"},
+      "in_very_far": {"name": "Labai Toli"},
+      "reliable": {"name": "Patikima"},
+      "altitude_aligned": {"name": "Vienodas aukštis"},
+      "approaching": {"name": "Artėja"}
+    },
+    "button": {
+      "refresh": {"name": "Atnaujinti vietą"}
+    }
+  },
+  "selector": {
+    "proximity_zone": {
+      "options": {
+        "very_near": "Labai Arti",
+        "near": "Arti",
+        "mid": "Vidutinis Atstumas",
+        "far": "Toli"
+      }
+    }
+  }
+}

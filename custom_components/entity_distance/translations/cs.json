@@ -1,0 +1,206 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Výběr entit",
+        "description": "Vyberte dvě nebo více entit, mezi kterými se má sledovat vzdálenost. Podporované typy: osoba, sledovač zařízení, senzor nebo zóna.\n\nU skupiny tří a více entit se automaticky sledují všechny vzdálenosti mezi jednotlivými páry. Po nastavení budou senzory zobrazovat „Neznámé“, dokud entity nenahlásí svou polohu.",
+        "data": {
+          "entities": "Entity"
+        },
+        "data_description": {
+          "entities": "Vyberte 2 až 5 entit ke sledování. Každý pár získá vlastní sadu senzorů vzdálenosti a blízkosti."
+        }
+      },
+      "distances": {
+        "title": "Nastavení vzdáleností",
+        "description": "Nastavte hranice zón a vyberte zónu, která spouští upozornění na blízkost.",
+        "data": {
+          "zone_very_near_m": "Hranice zóny Velmi blízko (m)",
+          "zone_near_m": "Hranice zóny Blízko (m)",
+          "zone_mid_m": "Hranice zóny Střední vzdálenost (m)",
+          "zone_far_m": "Hranice zóny Daleko (m)",
+          "proximity_zone": "Zóna pro upozornění na blízkost",
+          "show_advanced": "Nastavit pokročilé filtry"
+        },
+        "data_description": {
+          "zone_very_near_m": "Entity jsou „Velmi blízko“, pokud je jejich vzdálenost nejvýše tato hodnota. Výchozí: 200 m.",
+          "zone_near_m": "Entity jsou „Blízko“, pokud je jejich vzdálenost nejvýše tato hodnota. Musí být větší než Velmi blízko. Výchozí: 1000 m.",
+          "zone_mid_m": "Entity jsou ve „Střední vzdálenosti“, pokud je jejich vzdálenost nejvýše tato hodnota. Musí být větší než Blízko. Výchozí: 5000 m.",
+          "zone_far_m": "Entity jsou „Daleko“, pokud je jejich vzdálenost nejvýše tato hodnota. Musí být větší než Střední vzdálenost. Výchozí: 20000 m.\nCokoli za touto hranicí je „Velmi daleko“.",
+          "proximity_zone": "Senzor „V blízkosti“ se zapne, když jsou entity v této zóně nebo blíže (např. volba „Blízko“ se spustí i tehdy, když jsou entity „Velmi blízko“). Vypne se, jakmile vzdálenost překročí hranici zóny (přesný práh). Aby u hranice nedocházelo k rychlému přepínání kvůli šumu GPS, zapněte v pokročilých filtrech volbu „Čekat před reakcí“ (debounce).",
+          "show_advanced": "Zapněte, chcete-li na další obrazovce nastavit filtry přesnosti GPS, rychlosti a spolehlivosti. Ponechte vypnuté, chcete-li použít rozumné výchozí hodnoty."
+        }
+      },
+      "advanced": {
+        "title": "Pokročilé filtry",
+        "description": "Tyto filtry pomáhají ignorovat chybná data GPS. Výchozí hodnoty vyhovují většině uživatelů — měňte je pouze tehdy, pokud dochází k falešným spuštěním.",
+        "data": {
+          "max_accuracy_m": "Max. poloměr chyby GPS (m, 0 = vypnuto)",
+          "debounce_s": "Čekat před reakcí (s)",
+          "grace_window_s": "Okno tolerovaného zobrazení (s)",
+          "max_speed_kmh": "Max. přijatelná rychlost (km/h, 0 = vypnuto)",
+          "require_reliable": "Spouštět jen při spolehlivých datech",
+          "min_updates_reliable": "Počet po sobě jdoucích aktualizací pro spolehlivost",
+          "resync_silence_s": "Ticho GPS před zmrazením (s)",
+          "resync_hold_s": "Doba zmrazení blízkosti (s)",
+          "altitude_aligned_threshold_m": "Práh shodné nadmořské výšky (m)",
+          "max_vertical_accuracy_m": "Max. svislá chyba GPS (m, 0 = vypnuto)"
+        },
+        "data_description": {
+          "max_accuracy_m": "Ignorovat aktualizace polohy, u kterých je chyba GPS větší než tato hodnota. Telefony v pohybu obvykle hlásí přesnost 100 až 250 m, takže 300 m je bezpečná výchozí hodnota. Telefon, který hlásí „přesnost 350 m“, bude přeskočen. Nastavením na 0 filtr vypnete. Rozsah: 0 až 1000 m.",
+          "debounce_s": "Jak dlouho po přijetí aktualizace polohy počkat, než se hodnoty přepočítají. Hodí se, když telefony posílají několik zašuměných fixů GPS za sebou — integrace počká, až se ustálí. Hodnota 0 znamená okamžitou reakci (výchozí). Zvyšte na 5 až 15 s, pokud dochází k nestabilnímu přepínání. Rozsah: 0 až 60 s.",
+          "grace_window_s": "Když pár nakrátko ztratí signál GPS (výpadek, tunel, nečinný telefon), senzory po tuto dobu zobrazují poslední známou hodnotu, než nahlásí Neznámé. Zabraňuje to přerušovanému blikání. Výchozí: 900 s (15 min). Rozsah: 60 až 3600 s.",
+          "max_speed_kmh": "Ochrana proti teleportaci. Odmítne fix GPS, pokud předpokládaná rychlost pohybu — po odečtení kombinované přesnosti GPS obou zařízení — překročí tuto hodnotu. Při přesnosti 150 m na každém telefonu musí skok předpokládat pohyb nad úrovní šumu rychlejší než tato hodnota, aby byl odfiltrován. Výchozí: 1000 km/h — blokuje nemožné teleportace, ale ponechává prostor pro cestování letadlem. Nastavením na 0 filtr vypnete. Rozsah: 0 až 2000 km/h.",
+          "require_reliable": "Při zapnutí se senzor „V blízkosti“ aktivuje až poté, co je poloha konzistentní během několika po sobě jdoucích aktualizací. Snižuje počet falešných poplachů způsobených jediným chybným fixem GPS. Poznámka: pokud jsou aktualizace nepravidelné (např. jednou za 3 min), může to přidat několik minut zpoždění.",
+          "min_updates_reliable": "Kolik po sobě jdoucích aktualizací je zapotřebí, než je poloha považována za spolehlivou. Uplatní se pouze tehdy, když je zapnuta volba „Spouštět jen při spolehlivých datech“. Příklad: 3 aktualizace ve tříminutových intervalech = až 9 minut, než se senzor zapne. Rozsah: 1 až 20.",
+          "resync_silence_s": "Pokud všechny sledované entity přestanou po tuto dobu posílat aktualizace GPS, stav blízkosti se zmrazí, aby se během čekání na návrat signálu předešlo falešným změnám. Výchozí: 600 s (10 min). Rozsah: 60 až 3600 s.",
+          "resync_hold_s": "Jak dlouho ponechat stav blízkosti zmrazený po zjištění ticha GPS. Nastavením na 0 zmrazení vypnete (zjišťování ticha nadále běží pro účely evidence času). Výchozí: 60 s. Rozsah: 0 až 300 s.",
+          "altitude_aligned_threshold_m": "Maximální rozdíl nadmořské výšky (v metrech), při kterém se zapne binární senzor „Shodná nadmořská výška“. Hodnota 0 znamená pouze naprosto shodnou výšku. Výchozí: 5 m. Rozsah: 0 až 100 m.",
+          "max_vertical_accuracy_m": "Při nastavení nad 0 vrátí senzory výšky hodnotu Neznámé, pokud svislá chyba GPS zařízení překročí tuto hodnotu. Zabraňuje tomu, aby nespolehlivá měření výšky spouštěla automatizace závislé na nadmořské výšce. Hodnota 0 = vypnuto (výchozí). Svislá chyba běžného spotřebitelského GPS bývá 10 až 30 m. Rozsah: 0 až 500 m."
+        }
+      }
+    },
+    "error": {
+      "too_few_entities": "Vyberte alespoň 2 entity.",
+      "too_many_entities": "Vyberte nejvýše 5 entit.",
+      "duplicate_entities": "Každá entita se smí vyskytnout pouze jednou.",
+      "zone_thresholds_not_ascending": "Prahy zón musí vzrůstat v pořadí: Velmi blízko < Blízko < Střední vzdálenost < Daleko."
+    },
+    "abort": {
+      "already_configured": "Tento pár entit je již nakonfigurován.",
+      "already_in_progress": "Nastavení této integrace již probíhá. Zavřete a znovu otevřete dialog, chcete-li začít znovu."
+    }
+  },
+  "options": {
+    "step": {
+      "distances": {
+        "title": "Nastavení vzdáleností",
+        "description": "Nastavte hranice zón a vyberte zónu, která spouští upozornění na blízkost.",
+        "data": {
+          "zone_very_near_m": "Hranice zóny Velmi blízko (m)",
+          "zone_near_m": "Hranice zóny Blízko (m)",
+          "zone_mid_m": "Hranice zóny Střední vzdálenost (m)",
+          "zone_far_m": "Hranice zóny Daleko (m)",
+          "proximity_zone": "Zóna pro upozornění na blízkost",
+          "show_advanced": "Nastavit pokročilé filtry"
+        },
+        "data_description": {
+          "zone_very_near_m": "Entity jsou „Velmi blízko“, pokud je jejich vzdálenost nejvýše tato hodnota. Výchozí: 200 m.",
+          "zone_near_m": "Entity jsou „Blízko“, pokud je jejich vzdálenost nejvýše tato hodnota. Musí být větší než Velmi blízko. Výchozí: 1000 m.",
+          "zone_mid_m": "Entity jsou ve „Střední vzdálenosti“, pokud je jejich vzdálenost nejvýše tato hodnota. Musí být větší než Blízko. Výchozí: 5000 m.",
+          "zone_far_m": "Entity jsou „Daleko“, pokud je jejich vzdálenost nejvýše tato hodnota. Musí být větší než Střední vzdálenost. Výchozí: 20000 m.\nCokoli za touto hranicí je „Velmi daleko“.",
+          "proximity_zone": "Senzor „V blízkosti“ se zapne, když jsou entity v této zóně nebo blíže (např. volba „Blízko“ se spustí i tehdy, když jsou entity „Velmi blízko“). Vypne se, jakmile vzdálenost překročí hranici zóny (přesný práh). Aby u hranice nedocházelo k rychlému přepínání kvůli šumu GPS, zapněte v pokročilých filtrech volbu „Čekat před reakcí“ (debounce).",
+          "show_advanced": "Zapněte, chcete-li na další obrazovce nastavit filtry přesnosti GPS, rychlosti a spolehlivosti. Ponechte vypnuté, chcete-li použít rozumné výchozí hodnoty."
+        }
+      },
+      "advanced": {
+        "title": "Pokročilé filtry",
+        "description": "Tyto filtry pomáhají ignorovat chybná data GPS. Výchozí hodnoty vyhovují většině uživatelů — měňte je pouze tehdy, pokud dochází k falešným spuštěním.",
+        "data": {
+          "max_accuracy_m": "Max. poloměr chyby GPS (m, 0 = vypnuto)",
+          "debounce_s": "Čekat před reakcí (s)",
+          "grace_window_s": "Okno tolerovaného zobrazení (s)",
+          "max_speed_kmh": "Max. přijatelná rychlost (km/h, 0 = vypnuto)",
+          "require_reliable": "Spouštět jen při spolehlivých datech",
+          "min_updates_reliable": "Počet po sobě jdoucích aktualizací pro spolehlivost",
+          "resync_silence_s": "Ticho GPS před zmrazením (s)",
+          "resync_hold_s": "Doba zmrazení blízkosti (s)",
+          "altitude_aligned_threshold_m": "Práh shodné nadmořské výšky (m)",
+          "max_vertical_accuracy_m": "Max. svislá chyba GPS (m, 0 = vypnuto)"
+        },
+        "data_description": {
+          "max_accuracy_m": "Ignorovat aktualizace polohy, u kterých je chyba GPS větší než tato hodnota. Telefony v pohybu obvykle hlásí přesnost 100 až 250 m, takže 300 m je bezpečná výchozí hodnota. Telefon, který hlásí „přesnost 350 m“, bude přeskočen. Nastavením na 0 filtr vypnete. Rozsah: 0 až 1000 m.",
+          "debounce_s": "Jak dlouho po přijetí aktualizace polohy počkat, než se hodnoty přepočítají. Hodí se, když telefony posílají několik zašuměných fixů GPS za sebou — integrace počká, až se ustálí. Hodnota 0 znamená okamžitou reakci (výchozí). Zvyšte na 5 až 15 s, pokud dochází k nestabilnímu přepínání. Rozsah: 0 až 60 s.",
+          "grace_window_s": "Když pár nakrátko ztratí signál GPS (výpadek, tunel, nečinný telefon), senzory po tuto dobu zobrazují poslední známou hodnotu, než nahlásí Neznámé. Zabraňuje to přerušovanému blikání. Výchozí: 900 s (15 min). Rozsah: 60 až 3600 s.",
+          "max_speed_kmh": "Ochrana proti teleportaci. Odmítne fix GPS, pokud předpokládaná rychlost pohybu — po odečtení kombinované přesnosti GPS obou zařízení — překročí tuto hodnotu. Při přesnosti 150 m na každém telefonu musí skok předpokládat pohyb nad úrovní šumu rychlejší než tato hodnota, aby byl odfiltrován. Výchozí: 1000 km/h — blokuje nemožné teleportace, ale ponechává prostor pro cestování letadlem. Nastavením na 0 filtr vypnete. Rozsah: 0 až 2000 km/h.",
+          "require_reliable": "Při zapnutí se senzor „V blízkosti“ aktivuje až poté, co je poloha konzistentní během několika po sobě jdoucích aktualizací. Snižuje počet falešných poplachů způsobených jediným chybným fixem GPS. Poznámka: pokud jsou aktualizace nepravidelné (např. jednou za 3 min), může to přidat několik minut zpoždění.",
+          "min_updates_reliable": "Kolik po sobě jdoucích aktualizací je zapotřebí, než je poloha považována za spolehlivou. Uplatní se pouze tehdy, když je zapnuta volba „Spouštět jen při spolehlivých datech“. Příklad: 3 aktualizace ve tříminutových intervalech = až 9 minut, než se senzor zapne. Rozsah: 1 až 20.",
+          "resync_silence_s": "Pokud všechny sledované entity přestanou po tuto dobu posílat aktualizace GPS, stav blízkosti se zmrazí, aby se během čekání na návrat signálu předešlo falešným změnám. Výchozí: 600 s (10 min). Rozsah: 60 až 3600 s.",
+          "resync_hold_s": "Jak dlouho ponechat stav blízkosti zmrazený po zjištění ticha GPS. Nastavením na 0 zmrazení vypnete (zjišťování ticha nadále běží pro účely evidence času). Výchozí: 60 s. Rozsah: 0 až 300 s.",
+          "altitude_aligned_threshold_m": "Maximální rozdíl nadmořské výšky (v metrech), při kterém se zapne binární senzor „Shodná nadmořská výška“. Hodnota 0 znamená pouze naprosto shodnou výšku. Výchozí: 5 m. Rozsah: 0 až 100 m.",
+          "max_vertical_accuracy_m": "Při nastavení nad 0 vrátí senzory výšky hodnotu Neznámé, pokud svislá chyba GPS zařízení překročí tuto hodnotu. Zabraňuje tomu, aby nespolehlivá měření výšky spouštěla automatizace závislé na nadmořské výšce. Hodnota 0 = vypnuto (výchozí). Svislá chyba běžného spotřebitelského GPS bývá 10 až 30 m. Rozsah: 0 až 500 m."
+        }
+      }
+    },
+    "error": {
+      "zone_thresholds_not_ascending": "Prahy zón musí vzrůstat v pořadí: Velmi blízko < Blízko < Střední vzdálenost < Daleko."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "distance": {"name": "Vzdálenost"},
+      "bucket": {
+        "name": "Zóna blízkosti",
+        "state": {
+          "very_near": "Velmi blízko",
+          "near": "Blízko",
+          "mid": "Střední vzdálenost",
+          "far": "Daleko",
+          "very_far": "Velmi daleko"
+        }
+      },
+      "bucket_level": {"name": "Číslo zóny blízkosti"},
+      "proximity_duration": {"name": "Doba trvání blízkosti"},
+      "proximity_tracking_started": {"name": "Začátek sledování blízkosti"},
+      "proximity_rate": {"name": "Frekvence blízkosti"},
+      "last_seen_together": {"name": "Naposledy spatřeny spolu"},
+      "today_proximity_time": {"name": "Dnešní čas v blízkosti"},
+      "today_zone_time_very_near": {"name": "Dnešní čas Velmi blízko"},
+      "today_zone_time_near": {"name": "Dnešní čas Blízko"},
+      "today_zone_time_mid": {"name": "Dnešní čas Střední vzdálenost"},
+      "today_zone_time_far": {"name": "Dnešní čas Daleko"},
+      "today_zone_time_very_far": {"name": "Dnešní čas Velmi daleko"},
+      "direction": {
+        "name": "Směr",
+        "state": {
+          "approaching": "Přibližuje se",
+          "diverging": "Vzdaluje se",
+          "stationary": "Stacionární"
+        }
+      },
+      "direction_level": {"name": "Úroveň směru"},
+      "closing_speed": {"name": "Rychlost přibližování"},
+      "eta": {"name": "Odhadovaný čas příjezdu"},
+      "gps_accuracy_a": {"name": "Přesnost GPS (A)"},
+      "gps_accuracy_b": {"name": "Přesnost GPS (B)"},
+      "last_update_a": {"name": "Poslední aktualizace (A)"},
+      "last_update_b": {"name": "Poslední aktualizace (B)"},
+      "update_count_a": {"name": "Počet aktualizací za 30 min (A)"},
+      "update_count_b": {"name": "Počet aktualizací za 30 min (B)"},
+      "entity_state_a": {"name": "Stav (A)"},
+      "entity_state_b": {"name": "Stav (B)"},
+      "today_unaccounted_time": {"name": "Dnešní nezapočítaný čas"},
+      "min_distance": {"name": "Min. vzdálenost"},
+      "settings": {"name": "Nastavení"},
+      "altitude_delta": {"name": "Rozdíl nadmořské výšky"},
+      "altitude": {"name": "Nadmořská výška ({name})"}
+    },
+    "binary_sensor": {
+      "proximity": {"name": "V blízkosti"},
+      "any_in_proximity": {"name": "Někdo v blízkosti"},
+      "all_in_proximity": {"name": "Všichni v blízkosti"},
+      "same_zone": {"name": "Stejná zóna"},
+      "in_very_near": {"name": "Velmi blízko"},
+      "in_near": {"name": "Blízko"},
+      "in_mid": {"name": "Střední vzdálenost"},
+      "in_far": {"name": "Daleko"},
+      "in_very_far": {"name": "Velmi daleko"},
+      "reliable": {"name": "Spolehlivé"},
+      "altitude_aligned": {"name": "Shodná nadmořská výška"},
+      "approaching": {"name": "Přibližuje se"}
+    },
+    "button": {
+      "refresh": {"name": "Obnovit polohu"}
+    }
+  },
+  "selector": {
+    "proximity_zone": {
+      "options": {
+        "very_near": "Velmi blízko",
+        "near": "Blízko",
+        "mid": "Střední vzdálenost",
+        "far": "Daleko"
+      }
+    }
+  }
+}

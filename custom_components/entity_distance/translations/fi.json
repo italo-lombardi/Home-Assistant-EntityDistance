@@ -1,0 +1,206 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Valitse entiteetit",
+        "description": "Valitse vähintään kaksi entiteettiä, joiden välisiä etäisyyksiä seurataan. Tuetut tyypit: henkilö, laitepaikannin, anturi tai alue.\n\nKun ryhmässä on kolme tai useampia entiteettejä, kaikkien parien väliset etäisyydet seurataan automaattisesti. Asennuksen jälkeen anturit näyttävät tilaa \"Tuntematon\", kunnes entiteetit ovat raportoineet sijaintinsa.",
+        "data": {
+          "entities": "Entiteetit"
+        },
+        "data_description": {
+          "entities": "Valitse 2–5 seurattavaa entiteettiä. Jokainen pari saa oman etäisyys- ja läheisyysanturisarjansa."
+        }
+      },
+      "distances": {
+        "title": "Etäisyysasetukset",
+        "description": "Määritä vyöhykkeiden rajat ja valitse, mikä vyöhyke laukaisee läheisyysvaroituksen.",
+        "data": {
+          "zone_very_near_m": "Hyvin lähellä -vyöhykkeen raja (m)",
+          "zone_near_m": "Lähellä-vyöhykkeen raja (m)",
+          "zone_mid_m": "Keskietäisyysvyöhykkeen raja (m)",
+          "zone_far_m": "Kaukana-vyöhykkeen raja (m)",
+          "proximity_zone": "Läheisyysvaroituksen vyöhyke",
+          "show_advanced": "Määritä lisäsuodattimet"
+        },
+        "data_description": {
+          "zone_very_near_m": "Entiteetit ovat \"Hyvin lähellä\", kun etäisyys on tämä tai pienempi. Oletus: 200 m.",
+          "zone_near_m": "Entiteetit ovat \"Lähellä\", kun etäisyys on tämä tai pienempi. Arvon on oltava suurempi kuin Hyvin lähellä. Oletus: 1000 m.",
+          "zone_mid_m": "Entiteetit ovat \"Keskietäisyydellä\", kun etäisyys on tämä tai pienempi. Arvon on oltava suurempi kuin Lähellä. Oletus: 5000 m.",
+          "zone_far_m": "Entiteetit ovat \"Kaukana\", kun etäisyys on tämä tai pienempi. Arvon on oltava suurempi kuin Keskietäisyys. Oletus: 20000 m.\nTätä kauempana ne ovat \"Hyvin kaukana\".",
+          "proximity_zone": "\"Läheisyydessä\"-anturi kytkeytyy PÄÄLLE, kun entiteetit ovat tällä vyöhykkeellä tai sitä lähempänä (esim. \"Lähellä\"-valinta laukeaa myös silloin, kun entiteetit ovat \"Hyvin lähellä\"). Se kytkeytyy POIS, kun etäisyys ylittää vyöhykkeen rajan (tiukka kynnys). GPS-kohinan aiheuttaman nopean päälle/pois-kytkeytymisen välttämiseksi rajan tuntumassa ota käyttöön \"Odota ennen reagoimista\" (viivästys) Lisäsuodattimista.",
+          "show_advanced": "Ota käyttöön, jos haluat määrittää GPS-tarkkuuden, nopeuden ja luotettavuuden suodattimet seuraavalla näytöllä. Jätä pois päältä käyttääksesi järkeviä oletusarvoja."
+        }
+      },
+      "advanced": {
+        "title": "Lisäsuodattimet",
+        "description": "Nämä suodattimet auttavat jättämään huomiotta huonon GPS-datan. Oletusarvot toimivat hyvin useimmilla käyttäjillä — muuta niitä vain, jos havaitset virheellisiä laukeamisia.",
+        "data": {
+          "max_accuracy_m": "GPS-virheen enimmäissäde (m, 0 = pois)",
+          "debounce_s": "Odota ennen reagoimista (s)",
+          "grace_window_s": "Näytön toleranssi-ikkuna (s)",
+          "max_speed_kmh": "Enimmäisnopeus (km/h, 0 = pois)",
+          "require_reliable": "Laukaise vain, kun data on luotettavaa",
+          "min_updates_reliable": "Peräkkäisiä päivityksiä luotettavuutta varten",
+          "resync_silence_s": "GPS-hiljaisuus ennen jäädytystä (s)",
+          "resync_hold_s": "Läheisyyden jäädytyksen kesto (s)",
+          "altitude_aligned_threshold_m": "Sama korkeus -kynnys (m)",
+          "max_vertical_accuracy_m": "GPS:n pystysuuntaisen virheen enimmäisarvo (m, 0 = pois)"
+        },
+        "data_description": {
+          "max_accuracy_m": "Jätä huomiotta sijaintipäivitykset, joissa GPS-virhe on tätä suurempi. Liikkeessä olevat puhelimet raportoivat yleensä 100–250 m:n tarkkuuden, joten 300 m on turvallinen oletusarvo. Puhelin, joka näyttää tarkkuudeksi \"350 m\", ohitetaan. Poista käytöstä arvolla 0. Alue: 0–1000 m.",
+          "debounce_s": "Kuinka kauan sijaintipäivityksen saapumisen jälkeen odotetaan ennen uudelleenlaskentaa. Hyödyllinen, kun puhelimet lähettävät useita kohinaisia GPS-korjauksia peräkkäin — integraatio odottaa niiden tasaantumista. 0 = reagoi välittömästi (oletus). Nosta arvoon 5–15 s, jos havaitset epävakaata päälle/pois-kytkeytymistä. Alue: 0–60 s.",
+          "grace_window_s": "Kun pari menettää hetkellisesti GPS-signaalin (katkos, tunneli, käyttämätön puhelin), anturit jatkavat viimeisen tunnetun arvon näyttämistä tämän ajan ennen kuin ne ilmoittavat tilaksi Tuntematon. Estää satunnaisen välkkymisen. Oletus: 900 s (15 min). Alue: 60–3600 s.",
+          "max_speed_kmh": "Teleporttaussuoja. Hylkää GPS-korjauksen, jos siitä laskettu liikenopeus — sen jälkeen kun molempien laitteiden yhdistetty GPS-tarkkuus on vähennetty — ylittää tämän arvon. Kun kummankin puhelimen tarkkuus on 150 m, hyppäyksen on viitattava tämän nopeuden ylittävään liikkeeseen erottuakseen kohinasta. Oletus: 1000 km/h — estää mahdottomat teleporttaukset mutta sallii lentokoneet. Poista käytöstä arvolla 0. Alue: 0–2000 km/h.",
+          "require_reliable": "Kun tämä on päällä, \"Läheisyydessä\"-anturi kytkeytyy PÄÄLLE vasta, kun sijainti on pysynyt johdonmukaisena usean peräkkäisen päivityksen ajan. Vähentää yksittäisen huonon GPS-korjauksen aiheuttamia vääriä laukeamisia. Huom.: jos päivityksiä tulee harvoin (esim. 3 minuutin välein), tämä voi lisätä muutaman minuutin viiveen.",
+          "min_updates_reliable": "Kuinka monta peräkkäistä päivitystä tarvitaan, ennen kuin sijainti katsotaan luotettavaksi. Vaikuttaa vain, kun \"Laukaise vain, kun data on luotettavaa\" on päällä. Esimerkki: 3 päivitystä 3 minuutin välein = jopa 9 minuuttia ennen kuin anturi kytkeytyy PÄÄLLE. Alue: 1–20.",
+          "resync_silence_s": "Jos kaikki seuratut entiteetit lakkaavat lähettämästä GPS-päivityksiä tämän ajan, läheisyystila jäädytetään, jotta vältetään väärät muutokset signaalin palautumista odotettaessa. Oletus: 600 s (10 min). Alue: 60–3600 s.",
+          "resync_hold_s": "Kuinka kauan läheisyystila pidetään jäädytettynä GPS-hiljaisuuden havaitsemisen jälkeen. Poista jäädytys käytöstä arvolla 0 (hiljaisuuden havaitseminen jatkuu ajanseurantaa varten). Oletus: 60 s. Alue: 0–300 s.",
+          "altitude_aligned_threshold_m": "Suurin sallittu korkeusero (metreinä), jolla \"Sama korkeus\" -binäärianturi kytkeytyy PÄÄLLE. 0 = vain täsmälleen sama korkeus. Oletus: 5 m. Alue: 0–100 m.",
+          "max_vertical_accuracy_m": "Kun arvo on suurempi kuin 0, korkeusanturit palauttavat tilan Tuntematon, jos laitteen pystysuuntainen GPS-virhe ylittää tämän arvon. Estää epäluotettavia korkeuslukemia laukaisemasta korkeuteen perustuvia automaatioita. 0 = pois (oletus). Kuluttajatason GPS:n pystysuuntainen virhe on yleensä 10–30 m. Alue: 0–500 m."
+        }
+      }
+    },
+    "error": {
+      "too_few_entities": "Valitse vähintään 2 entiteettiä.",
+      "too_many_entities": "Valitse enintään 5 entiteettiä.",
+      "duplicate_entities": "Kukin entiteetti voidaan valita vain kerran.",
+      "zone_thresholds_not_ascending": "Vyöhykkeiden kynnysarvojen on kasvettava järjestyksessä: Hyvin lähellä < Lähellä < Keskietäisyys < Kaukana."
+    },
+    "abort": {
+      "already_configured": "Tämä entiteettipari on jo määritetty.",
+      "already_in_progress": "Tämän integraation asennus on jo käynnissä. Sulje ja avaa valintaikkuna uudelleen aloittaaksesi alusta."
+    }
+  },
+  "options": {
+    "step": {
+      "distances": {
+        "title": "Etäisyysasetukset",
+        "description": "Määritä vyöhykkeiden rajat ja valitse, mikä vyöhyke laukaisee läheisyysvaroituksen.",
+        "data": {
+          "zone_very_near_m": "Hyvin lähellä -vyöhykkeen raja (m)",
+          "zone_near_m": "Lähellä-vyöhykkeen raja (m)",
+          "zone_mid_m": "Keskietäisyysvyöhykkeen raja (m)",
+          "zone_far_m": "Kaukana-vyöhykkeen raja (m)",
+          "proximity_zone": "Läheisyysvaroituksen vyöhyke",
+          "show_advanced": "Määritä lisäsuodattimet"
+        },
+        "data_description": {
+          "zone_very_near_m": "Entiteetit ovat \"Hyvin lähellä\", kun etäisyys on tämä tai pienempi. Oletus: 200 m.",
+          "zone_near_m": "Entiteetit ovat \"Lähellä\", kun etäisyys on tämä tai pienempi. Arvon on oltava suurempi kuin Hyvin lähellä. Oletus: 1000 m.",
+          "zone_mid_m": "Entiteetit ovat \"Keskietäisyydellä\", kun etäisyys on tämä tai pienempi. Arvon on oltava suurempi kuin Lähellä. Oletus: 5000 m.",
+          "zone_far_m": "Entiteetit ovat \"Kaukana\", kun etäisyys on tämä tai pienempi. Arvon on oltava suurempi kuin Keskietäisyys. Oletus: 20000 m.\nTätä kauempana ne ovat \"Hyvin kaukana\".",
+          "proximity_zone": "\"Läheisyydessä\"-anturi kytkeytyy PÄÄLLE, kun entiteetit ovat tällä vyöhykkeellä tai sitä lähempänä (esim. \"Lähellä\"-valinta laukeaa myös silloin, kun entiteetit ovat \"Hyvin lähellä\"). Se kytkeytyy POIS, kun etäisyys ylittää vyöhykkeen rajan (tiukka kynnys). GPS-kohinan aiheuttaman nopean päälle/pois-kytkeytymisen välttämiseksi rajan tuntumassa ota käyttöön \"Odota ennen reagoimista\" (viivästys) Lisäsuodattimista.",
+          "show_advanced": "Ota käyttöön, jos haluat määrittää GPS-tarkkuuden, nopeuden ja luotettavuuden suodattimet seuraavalla näytöllä. Jätä pois päältä käyttääksesi järkeviä oletusarvoja."
+        }
+      },
+      "advanced": {
+        "title": "Lisäsuodattimet",
+        "description": "Nämä suodattimet auttavat jättämään huomiotta huonon GPS-datan. Oletusarvot toimivat hyvin useimmilla käyttäjillä — muuta niitä vain, jos havaitset virheellisiä laukeamisia.",
+        "data": {
+          "max_accuracy_m": "GPS-virheen enimmäissäde (m, 0 = pois)",
+          "debounce_s": "Odota ennen reagoimista (s)",
+          "grace_window_s": "Näytön toleranssi-ikkuna (s)",
+          "max_speed_kmh": "Enimmäisnopeus (km/h, 0 = pois)",
+          "require_reliable": "Laukaise vain, kun data on luotettavaa",
+          "min_updates_reliable": "Peräkkäisiä päivityksiä luotettavuutta varten",
+          "resync_silence_s": "GPS-hiljaisuus ennen jäädytystä (s)",
+          "resync_hold_s": "Läheisyyden jäädytyksen kesto (s)",
+          "altitude_aligned_threshold_m": "Sama korkeus -kynnys (m)",
+          "max_vertical_accuracy_m": "GPS:n pystysuuntaisen virheen enimmäisarvo (m, 0 = pois)"
+        },
+        "data_description": {
+          "max_accuracy_m": "Jätä huomiotta sijaintipäivitykset, joissa GPS-virhe on tätä suurempi. Liikkeessä olevat puhelimet raportoivat yleensä 100–250 m:n tarkkuuden, joten 300 m on turvallinen oletusarvo. Puhelin, joka näyttää tarkkuudeksi \"350 m\", ohitetaan. Poista käytöstä arvolla 0. Alue: 0–1000 m.",
+          "debounce_s": "Kuinka kauan sijaintipäivityksen saapumisen jälkeen odotetaan ennen uudelleenlaskentaa. Hyödyllinen, kun puhelimet lähettävät useita kohinaisia GPS-korjauksia peräkkäin — integraatio odottaa niiden tasaantumista. 0 = reagoi välittömästi (oletus). Nosta arvoon 5–15 s, jos havaitset epävakaata päälle/pois-kytkeytymistä. Alue: 0–60 s.",
+          "grace_window_s": "Kun pari menettää hetkellisesti GPS-signaalin (katkos, tunneli, käyttämätön puhelin), anturit jatkavat viimeisen tunnetun arvon näyttämistä tämän ajan ennen kuin ne ilmoittavat tilaksi Tuntematon. Estää satunnaisen välkkymisen. Oletus: 900 s (15 min). Alue: 60–3600 s.",
+          "max_speed_kmh": "Teleporttaussuoja. Hylkää GPS-korjauksen, jos siitä laskettu liikenopeus — sen jälkeen kun molempien laitteiden yhdistetty GPS-tarkkuus on vähennetty — ylittää tämän arvon. Kun kummankin puhelimen tarkkuus on 150 m, hyppäyksen on viitattava tämän nopeuden ylittävään liikkeeseen erottuakseen kohinasta. Oletus: 1000 km/h — estää mahdottomat teleporttaukset mutta sallii lentokoneet. Poista käytöstä arvolla 0. Alue: 0–2000 km/h.",
+          "require_reliable": "Kun tämä on päällä, \"Läheisyydessä\"-anturi kytkeytyy PÄÄLLE vasta, kun sijainti on pysynyt johdonmukaisena usean peräkkäisen päivityksen ajan. Vähentää yksittäisen huonon GPS-korjauksen aiheuttamia vääriä laukeamisia. Huom.: jos päivityksiä tulee harvoin (esim. 3 minuutin välein), tämä voi lisätä muutaman minuutin viiveen.",
+          "min_updates_reliable": "Kuinka monta peräkkäistä päivitystä tarvitaan, ennen kuin sijainti katsotaan luotettavaksi. Vaikuttaa vain, kun \"Laukaise vain, kun data on luotettavaa\" on päällä. Esimerkki: 3 päivitystä 3 minuutin välein = jopa 9 minuuttia ennen kuin anturi kytkeytyy PÄÄLLE. Alue: 1–20.",
+          "resync_silence_s": "Jos kaikki seuratut entiteetit lakkaavat lähettämästä GPS-päivityksiä tämän ajan, läheisyystila jäädytetään, jotta vältetään väärät muutokset signaalin palautumista odotettaessa. Oletus: 600 s (10 min). Alue: 60–3600 s.",
+          "resync_hold_s": "Kuinka kauan läheisyystila pidetään jäädytettynä GPS-hiljaisuuden havaitsemisen jälkeen. Poista jäädytys käytöstä arvolla 0 (hiljaisuuden havaitseminen jatkuu ajanseurantaa varten). Oletus: 60 s. Alue: 0–300 s.",
+          "altitude_aligned_threshold_m": "Suurin sallittu korkeusero (metreinä), jolla \"Sama korkeus\" -binäärianturi kytkeytyy PÄÄLLE. 0 = vain täsmälleen sama korkeus. Oletus: 5 m. Alue: 0–100 m.",
+          "max_vertical_accuracy_m": "Kun arvo on suurempi kuin 0, korkeusanturit palauttavat tilan Tuntematon, jos laitteen pystysuuntainen GPS-virhe ylittää tämän arvon. Estää epäluotettavia korkeuslukemia laukaisemasta korkeuteen perustuvia automaatioita. 0 = pois (oletus). Kuluttajatason GPS:n pystysuuntainen virhe on yleensä 10–30 m. Alue: 0–500 m."
+        }
+      }
+    },
+    "error": {
+      "zone_thresholds_not_ascending": "Vyöhykkeiden kynnysarvojen on kasvettava järjestyksessä: Hyvin lähellä < Lähellä < Keskietäisyys < Kaukana."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "distance": {"name": "Etäisyys"},
+      "bucket": {
+        "name": "Läheisyysvyöhyke",
+        "state": {
+          "very_near": "Hyvin lähellä",
+          "near": "Lähellä",
+          "mid": "Keskietäisyys",
+          "far": "Kaukana",
+          "very_far": "Hyvin kaukana"
+        }
+      },
+      "bucket_level": {"name": "Läheisyysvyöhykkeen numero"},
+      "proximity_duration": {"name": "Läheisyyden kesto"},
+      "proximity_tracking_started": {"name": "Läheisyyden seuranta aloitettu"},
+      "proximity_rate": {"name": "Läheisyysaste"},
+      "last_seen_together": {"name": "Viimeksi nähty yhdessä"},
+      "today_proximity_time": {"name": "Läheisyysaika tänään"},
+      "today_zone_time_very_near": {"name": "Hyvin lähellä tänään"},
+      "today_zone_time_near": {"name": "Lähellä tänään"},
+      "today_zone_time_mid": {"name": "Keskietäisyydellä tänään"},
+      "today_zone_time_far": {"name": "Kaukana tänään"},
+      "today_zone_time_very_far": {"name": "Hyvin kaukana tänään"},
+      "direction": {
+        "name": "Suunta",
+        "state": {
+          "approaching": "Lähestymässä",
+          "diverging": "Loittonemassa",
+          "stationary": "Paikallaan"
+        }
+      },
+      "direction_level": {"name": "Suuntataso"},
+      "closing_speed": {"name": "Lähestymisnopeus"},
+      "eta": {"name": "Arvioitu saapumisaika"},
+      "gps_accuracy_a": {"name": "GPS-tarkkuus (A)"},
+      "gps_accuracy_b": {"name": "GPS-tarkkuus (B)"},
+      "last_update_a": {"name": "Viimeisin päivitys (A)"},
+      "last_update_b": {"name": "Viimeisin päivitys (B)"},
+      "update_count_a": {"name": "Päivitysten määrä viim. 30 min (A)"},
+      "update_count_b": {"name": "Päivitysten määrä viim. 30 min (B)"},
+      "entity_state_a": {"name": "Tila (A)"},
+      "entity_state_b": {"name": "Tila (B)"},
+      "today_unaccounted_time": {"name": "Kirjaamaton aika tänään"},
+      "min_distance": {"name": "Vähimmäisetäisyys"},
+      "settings": {"name": "Asetukset"},
+      "altitude_delta": {"name": "Korkeusero"},
+      "altitude": {"name": "Korkeus ({name})"}
+    },
+    "binary_sensor": {
+      "proximity": {"name": "Läheisyydessä"},
+      "any_in_proximity": {"name": "Jokin läheisyydessä"},
+      "all_in_proximity": {"name": "Kaikki läheisyydessä"},
+      "same_zone": {"name": "Sama vyöhyke"},
+      "in_very_near": {"name": "Hyvin lähellä"},
+      "in_near": {"name": "Lähellä"},
+      "in_mid": {"name": "Keskietäisyys"},
+      "in_far": {"name": "Kaukana"},
+      "in_very_far": {"name": "Hyvin kaukana"},
+      "reliable": {"name": "Luotettava"},
+      "altitude_aligned": {"name": "Sama korkeus"},
+      "approaching": {"name": "Lähestymässä"}
+    },
+    "button": {
+      "refresh": {"name": "Päivitä sijainti"}
+    }
+  },
+  "selector": {
+    "proximity_zone": {
+      "options": {
+        "very_near": "Hyvin lähellä",
+        "near": "Lähellä",
+        "mid": "Keskietäisyys",
+        "far": "Kaukana"
+      }
+    }
+  }
+}

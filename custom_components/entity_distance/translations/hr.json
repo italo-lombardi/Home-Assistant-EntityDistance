@@ -1,0 +1,206 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Odabir entiteta",
+        "description": "Odaberite dva ili više entiteta za praćenje udaljenosti među njima. Podržane vrste: osoba, uređaj za praćenje, senzor ili zona.\n\nZa grupu od 3 ili više entiteta svi parovi udaljenosti prate se automatski. Nakon postavljanja senzori će prikazivati 'Nepoznato' dok entiteti ne prijave svoju lokaciju.",
+        "data": {
+          "entities": "Entiteti"
+        },
+        "data_description": {
+          "entities": "Odaberite 2 do 5 entiteta za praćenje. Svaki par dobiva vlastiti skup senzora udaljenosti i blizine."
+        }
+      },
+      "distances": {
+        "title": "Postavke udaljenosti",
+        "description": "Postavite granice zona i odaberite koja zona pokreće upozorenje o blizini.",
+        "data": {
+          "zone_very_near_m": "Granica zone Vrlo blizu (m)",
+          "zone_near_m": "Granica zone Blizu (m)",
+          "zone_mid_m": "Granica zone Srednja udaljenost (m)",
+          "zone_far_m": "Granica zone Daleko (m)",
+          "proximity_zone": "Zona upozorenja o blizini",
+          "show_advanced": "Konfiguriraj napredne filtre"
+        },
+        "data_description": {
+          "zone_very_near_m": "Entiteti su 'Vrlo blizu' na ovoj udaljenosti ili bliže. Zadano: 200 m.",
+          "zone_near_m": "Entiteti su 'Blizu' na ovoj udaljenosti ili bliže. Mora biti veće od Vrlo blizu. Zadano: 1000 m.",
+          "zone_mid_m": "Entiteti su na 'Srednjoj udaljenosti' na ovoj vrijednosti ili bliže. Mora biti veće od Blizu. Zadano: 5000 m.",
+          "zone_far_m": "Entiteti su 'Daleko' na ovoj udaljenosti ili bliže. Mora biti veće od Srednje udaljenosti. Zadano: 20000 m.\nIzvan toga je 'Vrlo daleko'.",
+          "proximity_zone": "Senzor 'U blizini' uključuje se kada su entiteti unutar ove zone ili bliže (npr. odabir 'Blizu' aktivira se i kada su entiteti 'Vrlo blizu'). Isključuje se kada udaljenost premaši granicu zone (strogi prag). Kako biste izbjegli brzo uključivanje i isključivanje uz granicu zbog GPS šuma, omogućite 'Čekanje prije reakcije' (debounce) u Naprednim filtrima.",
+          "show_advanced": "Uključite za konfiguraciju filtera GPS točnosti, brzine i pouzdanosti na sljedećem zaslonu. Ostavite isključeno za korištenje razumnih zadanih vrijednosti."
+        }
+      },
+      "advanced": {
+        "title": "Napredni filtri",
+        "description": "Ovi filtri pomažu u zanemarivanju loših GPS podataka. Zadane vrijednosti dobro rade za većinu korisnika — mijenjajte ih samo ako primijetite lažna aktiviranja.",
+        "data": {
+          "max_accuracy_m": "Maks. polumjer GPS pogreške (m, 0 = isklj.)",
+          "debounce_s": "Čekanje prije reakcije (s)",
+          "grace_window_s": "Prozor tolerancije prikaza (s)",
+          "max_speed_kmh": "Maks. vjerodostojna brzina (km/h, 0 = isklj.)",
+          "require_reliable": "Aktiviraj samo pri pouzdanim podacima",
+          "min_updates_reliable": "Broj uzastopnih ažuriranja potrebnih za pouzdanost",
+          "resync_silence_s": "GPS tišina prije zamrzavanja (s)",
+          "resync_hold_s": "Trajanje zamrzavanja blizine (s)",
+          "altitude_aligned_threshold_m": "Prag jednake nadmorske visine (m)",
+          "max_vertical_accuracy_m": "Maks. vertikalna GPS pogreška (m, 0 = isklj.)"
+        },
+        "data_description": {
+          "max_accuracy_m": "Zanemarite ažuriranja lokacije kod kojih je GPS pogreška veća od ove vrijednosti. Telefoni u pokretu obično prijavljuju točnost od 100 do 250 m, pa je 300 m sigurna zadana vrijednost. Telefon koji prikazuje '350 m točnosti' bit će preskočen. Postavite na 0 za isključivanje. Raspon: 0–1000 m.",
+          "debounce_s": "Nakon što stigne ažuriranje lokacije, koliko dugo čekati prije ponovnog izračuna. Korisno kada telefoni pošalju nekoliko bučnih GPS očitanja zaredom — integracija čeka da se stabiliziraju. 0 = trenutačna reakcija (zadano). Povećajte na 5–15 s ako primijetite nestabilno uključivanje i isključivanje. Raspon: 0–60 s.",
+          "grace_window_s": "Kada par privremeno izgubi GPS signal (ispadi, tunel, telefon u mirovanju), senzori nastavljaju prikazivati posljednju poznatu vrijednost ovoliko dugo prije nego što prijave nepoznato. Sprječava povremeno treperenje. Zadano: 900 s (15 min). Raspon: 60–3600 s.",
+          "max_speed_kmh": "Zaštita od teleportacije. Odbacuje GPS očitanje ako implicirana brzina kretanja — nakon što se oduzme kombinirana GPS točnost obaju uređaja — premaši ovu vrijednost. Uz točnost od 150 m na svakom telefonu, skok mora implicirati kretanje brže od ove brzine iznad razine šuma da bi bio filtriran. Zadano: 1000 km/h — blokira nemoguće teleportacije, a dopušta brzine zrakoplova. Postavite na 0 za onemogućavanje. Raspon: 0–2000 km/h.",
+          "require_reliable": "Kada je uključeno, senzor 'U blizini' aktivira se tek nakon što je lokacija bila dosljedna kroz nekoliko uzastopnih ažuriranja. Smanjuje lažno pozitivne rezultate uzrokovane jednim lošim GPS očitanjem. Napomena: ako su ažuriranja rijetka (npr. svake 3 min), ovo može dodati nekoliko minuta kašnjenja.",
+          "min_updates_reliable": "Koliko je uzastopnih ažuriranja potrebno prije nego što se lokacija smatra pouzdanom. Primjenjuje se samo kada je uključeno 'Aktiviraj samo pri pouzdanim podacima'. Primjer: 3 ažuriranja u razmacima od 3 minute = do 9 minuta prije uključivanja senzora. Raspon: 1–20.",
+          "resync_silence_s": "Ako svi praćeni entiteti prestanu slati GPS ažuriranja ovoliko dugo, stanje blizine se zamrzava kako bi se spriječile lažne promjene dok se čeka povratak signala. Zadano: 600 s (10 min). Raspon: 60–3600 s.",
+          "resync_hold_s": "Koliko dugo zadržati zamrznuto stanje blizine nakon otkrivene GPS tišine. Postavite na 0 za onemogućavanje zamrzavanja (otkrivanje tišine i dalje radi za računanje vremena). Zadano: 60 s. Raspon: 0–300 s.",
+          "altitude_aligned_threshold_m": "Najveća razlika nadmorske visine (u metrima) za uključivanje binarnog senzora 'Jednaka nadmorska visina'. 0 = samo potpuno jednaka visina. Zadano: 5 m. Raspon: 0–100 m.",
+          "max_vertical_accuracy_m": "Kada je postavljeno iznad 0, senzori visine vraćaju nepoznato ako vertikalna GPS pogreška uređaja premaši ovu vrijednost. Sprječava da nepouzdana očitanja visine pokrenu automatizacije temeljene na visini. 0 = isklj. (zadano). Vertikalna GPS pogreška potrošačke razine obično iznosi od 10 do 30 m. Raspon: 0–500 m."
+        }
+      }
+    },
+    "error": {
+      "too_few_entities": "Odaberite najmanje 2 entiteta.",
+      "too_many_entities": "Odaberite najviše 5 entiteta.",
+      "duplicate_entities": "Svaki se entitet smije pojaviti samo jednom.",
+      "zone_thresholds_not_ascending": "Pragovi zona moraju rasti ovim redom: Vrlo blizu < Blizu < Srednja udaljenost < Daleko."
+    },
+    "abort": {
+      "already_configured": "Ovaj par entiteta već je konfiguriran.",
+      "already_in_progress": "Postavljanje ove integracije već je u tijeku. Zatvorite i ponovno otvorite dijalog da biste počeli ispočetka."
+    }
+  },
+  "options": {
+    "step": {
+      "distances": {
+        "title": "Postavke udaljenosti",
+        "description": "Postavite granice zona i odaberite koja zona pokreće upozorenje o blizini.",
+        "data": {
+          "zone_very_near_m": "Granica zone Vrlo blizu (m)",
+          "zone_near_m": "Granica zone Blizu (m)",
+          "zone_mid_m": "Granica zone Srednja udaljenost (m)",
+          "zone_far_m": "Granica zone Daleko (m)",
+          "proximity_zone": "Zona upozorenja o blizini",
+          "show_advanced": "Konfiguriraj napredne filtre"
+        },
+        "data_description": {
+          "zone_very_near_m": "Entiteti su 'Vrlo blizu' na ovoj udaljenosti ili bliže. Zadano: 200 m.",
+          "zone_near_m": "Entiteti su 'Blizu' na ovoj udaljenosti ili bliže. Mora biti veće od Vrlo blizu. Zadano: 1000 m.",
+          "zone_mid_m": "Entiteti su na 'Srednjoj udaljenosti' na ovoj vrijednosti ili bliže. Mora biti veće od Blizu. Zadano: 5000 m.",
+          "zone_far_m": "Entiteti su 'Daleko' na ovoj udaljenosti ili bliže. Mora biti veće od Srednje udaljenosti. Zadano: 20000 m.\nIzvan toga je 'Vrlo daleko'.",
+          "proximity_zone": "Senzor 'U blizini' uključuje se kada su entiteti unutar ove zone ili bliže (npr. odabir 'Blizu' aktivira se i kada su entiteti 'Vrlo blizu'). Isključuje se kada udaljenost premaši granicu zone (strogi prag). Kako biste izbjegli brzo uključivanje i isključivanje uz granicu zbog GPS šuma, omogućite 'Čekanje prije reakcije' (debounce) u Naprednim filtrima.",
+          "show_advanced": "Uključite za konfiguraciju filtera GPS točnosti, brzine i pouzdanosti na sljedećem zaslonu. Ostavite isključeno za korištenje razumnih zadanih vrijednosti."
+        }
+      },
+      "advanced": {
+        "title": "Napredni filtri",
+        "description": "Ovi filtri pomažu u zanemarivanju loših GPS podataka. Zadane vrijednosti dobro rade za većinu korisnika — mijenjajte ih samo ako primijetite lažna aktiviranja.",
+        "data": {
+          "max_accuracy_m": "Maks. polumjer GPS pogreške (m, 0 = isklj.)",
+          "debounce_s": "Čekanje prije reakcije (s)",
+          "grace_window_s": "Prozor tolerancije prikaza (s)",
+          "max_speed_kmh": "Maks. vjerodostojna brzina (km/h, 0 = isklj.)",
+          "require_reliable": "Aktiviraj samo pri pouzdanim podacima",
+          "min_updates_reliable": "Broj uzastopnih ažuriranja potrebnih za pouzdanost",
+          "resync_silence_s": "GPS tišina prije zamrzavanja (s)",
+          "resync_hold_s": "Trajanje zamrzavanja blizine (s)",
+          "altitude_aligned_threshold_m": "Prag jednake nadmorske visine (m)",
+          "max_vertical_accuracy_m": "Maks. vertikalna GPS pogreška (m, 0 = isklj.)"
+        },
+        "data_description": {
+          "max_accuracy_m": "Zanemarite ažuriranja lokacije kod kojih je GPS pogreška veća od ove vrijednosti. Telefoni u pokretu obično prijavljuju točnost od 100 do 250 m, pa je 300 m sigurna zadana vrijednost. Telefon koji prikazuje '350 m točnosti' bit će preskočen. Postavite na 0 za isključivanje. Raspon: 0–1000 m.",
+          "debounce_s": "Nakon što stigne ažuriranje lokacije, koliko dugo čekati prije ponovnog izračuna. Korisno kada telefoni pošalju nekoliko bučnih GPS očitanja zaredom — integracija čeka da se stabiliziraju. 0 = trenutačna reakcija (zadano). Povećajte na 5–15 s ako primijetite nestabilno uključivanje i isključivanje. Raspon: 0–60 s.",
+          "grace_window_s": "Kada par privremeno izgubi GPS signal (ispadi, tunel, telefon u mirovanju), senzori nastavljaju prikazivati posljednju poznatu vrijednost ovoliko dugo prije nego što prijave nepoznato. Sprječava povremeno treperenje. Zadano: 900 s (15 min). Raspon: 60–3600 s.",
+          "max_speed_kmh": "Zaštita od teleportacije. Odbacuje GPS očitanje ako implicirana brzina kretanja — nakon što se oduzme kombinirana GPS točnost obaju uređaja — premaši ovu vrijednost. Uz točnost od 150 m na svakom telefonu, skok mora implicirati kretanje brže od ove brzine iznad razine šuma da bi bio filtriran. Zadano: 1000 km/h — blokira nemoguće teleportacije, a dopušta brzine zrakoplova. Postavite na 0 za onemogućavanje. Raspon: 0–2000 km/h.",
+          "require_reliable": "Kada je uključeno, senzor 'U blizini' aktivira se tek nakon što je lokacija bila dosljedna kroz nekoliko uzastopnih ažuriranja. Smanjuje lažno pozitivne rezultate uzrokovane jednim lošim GPS očitanjem. Napomena: ako su ažuriranja rijetka (npr. svake 3 min), ovo može dodati nekoliko minuta kašnjenja.",
+          "min_updates_reliable": "Koliko je uzastopnih ažuriranja potrebno prije nego što se lokacija smatra pouzdanom. Primjenjuje se samo kada je uključeno 'Aktiviraj samo pri pouzdanim podacima'. Primjer: 3 ažuriranja u razmacima od 3 minute = do 9 minuta prije uključivanja senzora. Raspon: 1–20.",
+          "resync_silence_s": "Ako svi praćeni entiteti prestanu slati GPS ažuriranja ovoliko dugo, stanje blizine se zamrzava kako bi se spriječile lažne promjene dok se čeka povratak signala. Zadano: 600 s (10 min). Raspon: 60–3600 s.",
+          "resync_hold_s": "Koliko dugo zadržati zamrznuto stanje blizine nakon otkrivene GPS tišine. Postavite na 0 za onemogućavanje zamrzavanja (otkrivanje tišine i dalje radi za računanje vremena). Zadano: 60 s. Raspon: 0–300 s.",
+          "altitude_aligned_threshold_m": "Najveća razlika nadmorske visine (u metrima) za uključivanje binarnog senzora 'Jednaka nadmorska visina'. 0 = samo potpuno jednaka visina. Zadano: 5 m. Raspon: 0–100 m.",
+          "max_vertical_accuracy_m": "Kada je postavljeno iznad 0, senzori visine vraćaju nepoznato ako vertikalna GPS pogreška uređaja premaši ovu vrijednost. Sprječava da nepouzdana očitanja visine pokrenu automatizacije temeljene na visini. 0 = isklj. (zadano). Vertikalna GPS pogreška potrošačke razine obično iznosi od 10 do 30 m. Raspon: 0–500 m."
+        }
+      }
+    },
+    "error": {
+      "zone_thresholds_not_ascending": "Pragovi zona moraju rasti ovim redom: Vrlo blizu < Blizu < Srednja udaljenost < Daleko."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "distance": {"name": "Udaljenost"},
+      "bucket": {
+        "name": "Zona blizine",
+        "state": {
+          "very_near": "Vrlo blizu",
+          "near": "Blizu",
+          "mid": "Srednja udaljenost",
+          "far": "Daleko",
+          "very_far": "Vrlo daleko"
+        }
+      },
+      "bucket_level": {"name": "Broj zone blizine"},
+      "proximity_duration": {"name": "Trajanje blizine"},
+      "proximity_tracking_started": {"name": "Praćenje blizine započeto"},
+      "proximity_rate": {"name": "Stopa blizine"},
+      "last_seen_together": {"name": "Zadnji put viđeni zajedno"},
+      "today_proximity_time": {"name": "Danas u blizini"},
+      "today_zone_time_very_near": {"name": "Danas Vrlo blizu"},
+      "today_zone_time_near": {"name": "Danas Blizu"},
+      "today_zone_time_mid": {"name": "Danas Srednja udaljenost"},
+      "today_zone_time_far": {"name": "Danas Daleko"},
+      "today_zone_time_very_far": {"name": "Danas Vrlo daleko"},
+      "direction": {
+        "name": "Smjer",
+        "state": {
+          "approaching": "Približava se",
+          "diverging": "Udaljava se",
+          "stationary": "Stacionaran"
+        }
+      },
+      "direction_level": {"name": "Razina smjera"},
+      "closing_speed": {"name": "Brzina približavanja"},
+      "eta": {"name": "Procijenjeno vrijeme dolaska"},
+      "gps_accuracy_a": {"name": "GPS točnost (A)"},
+      "gps_accuracy_b": {"name": "GPS točnost (B)"},
+      "last_update_a": {"name": "Zadnje ažuriranje (A)"},
+      "last_update_b": {"name": "Zadnje ažuriranje (B)"},
+      "update_count_a": {"name": "Broj ažuriranja zadnjih 30 min (A)"},
+      "update_count_b": {"name": "Broj ažuriranja zadnjih 30 min (B)"},
+      "entity_state_a": {"name": "Stanje (A)"},
+      "entity_state_b": {"name": "Stanje (B)"},
+      "today_unaccounted_time": {"name": "Danas neobračunato vrijeme"},
+      "min_distance": {"name": "Min. udaljenost"},
+      "settings": {"name": "Postavke"},
+      "altitude_delta": {"name": "Razlika nadmorske visine"},
+      "altitude": {"name": "Nadmorska visina ({name})"}
+    },
+    "binary_sensor": {
+      "proximity": {"name": "U blizini"},
+      "any_in_proximity": {"name": "Netko u blizini"},
+      "all_in_proximity": {"name": "Svi u blizini"},
+      "same_zone": {"name": "Ista zona"},
+      "in_very_near": {"name": "Vrlo blizu"},
+      "in_near": {"name": "Blizu"},
+      "in_mid": {"name": "Srednja udaljenost"},
+      "in_far": {"name": "Daleko"},
+      "in_very_far": {"name": "Vrlo daleko"},
+      "reliable": {"name": "Pouzdano"},
+      "altitude_aligned": {"name": "Jednaka nadmorska visina"},
+      "approaching": {"name": "Približava se"}
+    },
+    "button": {
+      "refresh": {"name": "Osvježi lokaciju"}
+    }
+  },
+  "selector": {
+    "proximity_zone": {
+      "options": {
+        "very_near": "Vrlo blizu",
+        "near": "Blizu",
+        "mid": "Srednja udaljenost",
+        "far": "Daleko"
+      }
+    }
+  }
+}

@@ -1,0 +1,206 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "选择实体",
+        "description": "选择两个或多个实体以追踪它们之间的距离。支持的类型：person（人员）、device tracker（设备追踪器）、sensor（传感器）或 zone（区域）。\n\n若选择 3 个或更多实体，将自动追踪所有两两之间的距离。设置完成后，传感器会显示“未知”，直到实体上报位置。",
+        "data": {
+          "entities": "实体"
+        },
+        "data_description": {
+          "entities": "选择 2–5 个实体进行追踪。每一对实体都会拥有各自的距离传感器和邻近传感器。"
+        }
+      },
+      "distances": {
+        "title": "距离设置",
+        "description": "设置区域边界，并选择触发邻近提醒的区域。",
+        "data": {
+          "zone_very_near_m": "非常近区域上限（m）",
+          "zone_near_m": "近区域上限（m）",
+          "zone_mid_m": "中等区域上限（m）",
+          "zone_far_m": "远区域上限（m）",
+          "proximity_zone": "邻近提醒区域",
+          "show_advanced": "配置高级过滤器"
+        },
+        "data_description": {
+          "zone_very_near_m": "实体距离在此值以内时视为“非常近”。默认值：200 m。",
+          "zone_near_m": "实体距离在此值以内时视为“近”。必须大于“非常近”。默认值：1000 m。",
+          "zone_mid_m": "实体距离在此值以内时视为“中等”。必须大于“近”。默认值：5000 m。",
+          "zone_far_m": "实体距离在此值以内时视为“远”。必须大于“中等”。默认值：20000 m。\n超过此距离则视为“非常远”。",
+          "proximity_zone": "当实体处于所选区域或更近的范围内时，“邻近”传感器会开启（例如选择“近”时，处于“非常近”的实体也会触发）。当距离超出该区域边界时则关闭（严格阈值）。为避免 GPS 噪声导致在边界附近频繁开关，请在高级过滤器中启用“反应前等待”（防抖）。",
+          "show_advanced": "开启后可在下一屏配置 GPS 精度、速度和可靠性过滤器。关闭则使用合理的默认值。"
+        }
+      },
+      "advanced": {
+        "title": "高级过滤器",
+        "description": "这些过滤器有助于忽略错误的 GPS 数据。默认值对大多数用户都能良好工作——仅在出现误触发时才需要调整。",
+        "data": {
+          "max_accuracy_m": "GPS 最大误差半径（m，0 = 关闭）",
+          "debounce_s": "反应前等待时间（s）",
+          "grace_window_s": "显示宽限窗口（s）",
+          "max_speed_kmh": "最大合理速度（km/h，0 = 关闭）",
+          "require_reliable": "仅在数据可靠时触发",
+          "min_updates_reliable": "判定可靠所需的连续更新次数",
+          "resync_silence_s": "触发冻结前的 GPS 静默时长（s）",
+          "resync_hold_s": "邻近状态冻结持续时长（s）",
+          "altitude_aligned_threshold_m": "同海拔阈值（m）",
+          "max_vertical_accuracy_m": "垂直 GPS 最大误差（m，0 = 关闭）"
+        },
+        "data_description": {
+          "max_accuracy_m": "忽略 GPS 误差大于此值的位置更新。移动中的手机通常上报 100–250 m 的精度，因此 300 m 是安全的默认值。上报“350 m 精度”的手机将被跳过。设为 0 可关闭此功能。范围：0–1000 m。",
+          "debounce_s": "收到位置更新后，等待多长时间再重新计算。当手机连续发送多个含噪声的 GPS 定位时很有用——集成会等待其稳定。0 = 立即响应（默认）。若出现频繁抖动切换，可调高到 5–15 s。范围：0–60 s。",
+          "grace_window_s": "当一对实体短暂丢失 GPS 信号（短暂中断、隧道、手机空闲）时，传感器在报告“未知”之前会保持显示最后已知值这么长时间。可防止间歇性闪烁。默认值：900 s（15 分钟）。范围：60–3600 s。",
+          "max_speed_kmh": "瞬移保护。若隐含的移动速度——在扣除两台设备的合并 GPS 精度后——超过此值，则拒绝该 GPS 定位。当每部手机精度为 150 m 时，位置跳变所隐含的速度必须超过此值才会被过滤掉。默认值：1000 km/h——既能阻止不可能的瞬移，又能允许飞机出行。设为 0 可禁用。范围：0–2000 km/h。",
+          "require_reliable": "开启后，“邻近”传感器仅在位置连续多次更新保持一致后才会开启。可减少单次错误 GPS 定位引起的误报。注意：若更新不频繁（例如每 3 分钟一次），这可能会带来几分钟的延迟。",
+          "min_updates_reliable": "位置在被判定为可靠之前需要多少次连续更新。仅在开启“仅在数据可靠时触发”时生效。示例：每 3 分钟更新一次、需 3 次更新 = 传感器最多需等待 9 分钟才会开启。范围：1–20。",
+          "resync_silence_s": "若所有被追踪的实体停止发送 GPS 更新达到此时长，邻近状态将被冻结，以防在等待信号恢复期间发生错误变化。默认值：600 s（10 分钟）。范围：60–3600 s。",
+          "resync_hold_s": "检测到 GPS 静默后，邻近状态保持冻结的时长。设为 0 可禁用冻结（静默检测仍会运行，用于时间统计）。默认值：60 s。范围：0–300 s。",
+          "altitude_aligned_threshold_m": "“同海拔”二元传感器开启时所允许的最大海拔差（单位：米）。0 = 仅当海拔完全相同。默认值：5 m。范围：0–100 m。",
+          "max_vertical_accuracy_m": "设为大于 0 的值时，若设备的垂直 GPS 误差超过此值，海拔传感器将返回“未知”。可防止不可靠的海拔读数触发基于海拔的自动化。0 = 关闭（默认）。消费级 GPS 的垂直误差通常为 10–30 m。范围：0–500 m。"
+        }
+      }
+    },
+    "error": {
+      "too_few_entities": "请至少选择 2 个实体。",
+      "too_many_entities": "最多可选择 5 个实体。",
+      "duplicate_entities": "每个实体只能出现一次。",
+      "zone_thresholds_not_ascending": "区域阈值必须依次递增：非常近 < 近 < 中等 < 远。"
+    },
+    "abort": {
+      "already_configured": "该实体对已配置。",
+      "already_in_progress": "该集成的设置已在进行中。请关闭并重新打开对话框以重新开始。"
+    }
+  },
+  "options": {
+    "step": {
+      "distances": {
+        "title": "距离设置",
+        "description": "设置区域边界，并选择触发邻近提醒的区域。",
+        "data": {
+          "zone_very_near_m": "非常近区域上限（m）",
+          "zone_near_m": "近区域上限（m）",
+          "zone_mid_m": "中等区域上限（m）",
+          "zone_far_m": "远区域上限（m）",
+          "proximity_zone": "邻近提醒区域",
+          "show_advanced": "配置高级过滤器"
+        },
+        "data_description": {
+          "zone_very_near_m": "实体距离在此值以内时视为“非常近”。默认值：200 m。",
+          "zone_near_m": "实体距离在此值以内时视为“近”。必须大于“非常近”。默认值：1000 m。",
+          "zone_mid_m": "实体距离在此值以内时视为“中等”。必须大于“近”。默认值：5000 m。",
+          "zone_far_m": "实体距离在此值以内时视为“远”。必须大于“中等”。默认值：20000 m。\n超过此距离则视为“非常远”。",
+          "proximity_zone": "当实体处于所选区域或更近的范围内时，“邻近”传感器会开启（例如选择“近”时，处于“非常近”的实体也会触发）。当距离超出该区域边界时则关闭（严格阈值）。为避免 GPS 噪声导致在边界附近频繁开关，请在高级过滤器中启用“反应前等待”（防抖）。",
+          "show_advanced": "开启后可在下一屏配置 GPS 精度、速度和可靠性过滤器。关闭则使用合理的默认值。"
+        }
+      },
+      "advanced": {
+        "title": "高级过滤器",
+        "description": "这些过滤器有助于忽略错误的 GPS 数据。默认值对大多数用户都能良好工作——仅在出现误触发时才需要调整。",
+        "data": {
+          "max_accuracy_m": "GPS 最大误差半径（m，0 = 关闭）",
+          "debounce_s": "反应前等待时间（s）",
+          "grace_window_s": "显示宽限窗口（s）",
+          "max_speed_kmh": "最大合理速度（km/h，0 = 关闭）",
+          "require_reliable": "仅在数据可靠时触发",
+          "min_updates_reliable": "判定可靠所需的连续更新次数",
+          "resync_silence_s": "触发冻结前的 GPS 静默时长（s）",
+          "resync_hold_s": "邻近状态冻结持续时长（s）",
+          "altitude_aligned_threshold_m": "同海拔阈值（m）",
+          "max_vertical_accuracy_m": "垂直 GPS 最大误差（m，0 = 关闭）"
+        },
+        "data_description": {
+          "max_accuracy_m": "忽略 GPS 误差大于此值的位置更新。移动中的手机通常上报 100–250 m 的精度，因此 300 m 是安全的默认值。上报“350 m 精度”的手机将被跳过。设为 0 可关闭此功能。范围：0–1000 m。",
+          "debounce_s": "收到位置更新后，等待多长时间再重新计算。当手机连续发送多个含噪声的 GPS 定位时很有用——集成会等待其稳定。0 = 立即响应（默认）。若出现频繁抖动切换，可调高到 5–15 s。范围：0–60 s。",
+          "grace_window_s": "当一对实体短暂丢失 GPS 信号（短暂中断、隧道、手机空闲）时，传感器在报告“未知”之前会保持显示最后已知值这么长时间。可防止间歇性闪烁。默认值：900 s（15 分钟）。范围：60–3600 s。",
+          "max_speed_kmh": "瞬移保护。若隐含的移动速度——在扣除两台设备的合并 GPS 精度后——超过此值，则拒绝该 GPS 定位。当每部手机精度为 150 m 时，位置跳变所隐含的速度必须超过此值才会被过滤掉。默认值：1000 km/h——既能阻止不可能的瞬移，又能允许飞机出行。设为 0 可禁用。范围：0–2000 km/h。",
+          "require_reliable": "开启后，“邻近”传感器仅在位置连续多次更新保持一致后才会开启。可减少单次错误 GPS 定位引起的误报。注意：若更新不频繁（例如每 3 分钟一次），这可能会带来几分钟的延迟。",
+          "min_updates_reliable": "位置在被判定为可靠之前需要多少次连续更新。仅在开启“仅在数据可靠时触发”时生效。示例：每 3 分钟更新一次、需 3 次更新 = 传感器最多需等待 9 分钟才会开启。范围：1–20。",
+          "resync_silence_s": "若所有被追踪的实体停止发送 GPS 更新达到此时长，邻近状态将被冻结，以防在等待信号恢复期间发生错误变化。默认值：600 s（10 分钟）。范围：60–3600 s。",
+          "resync_hold_s": "检测到 GPS 静默后，邻近状态保持冻结的时长。设为 0 可禁用冻结（静默检测仍会运行，用于时间统计）。默认值：60 s。范围：0–300 s。",
+          "altitude_aligned_threshold_m": "“同海拔”二元传感器开启时所允许的最大海拔差（单位：米）。0 = 仅当海拔完全相同。默认值：5 m。范围：0–100 m。",
+          "max_vertical_accuracy_m": "设为大于 0 的值时，若设备的垂直 GPS 误差超过此值，海拔传感器将返回“未知”。可防止不可靠的海拔读数触发基于海拔的自动化。0 = 关闭（默认）。消费级 GPS 的垂直误差通常为 10–30 m。范围：0–500 m。"
+        }
+      }
+    },
+    "error": {
+      "zone_thresholds_not_ascending": "区域阈值必须依次递增：非常近 < 近 < 中等 < 远。"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "distance": {"name": "距离"},
+      "bucket": {
+        "name": "邻近区域",
+        "state": {
+          "very_near": "非常近",
+          "near": "近",
+          "mid": "中等",
+          "far": "远",
+          "very_far": "非常远"
+        }
+      },
+      "bucket_level": {"name": "邻近区域编号"},
+      "proximity_duration": {"name": "邻近持续时间"},
+      "proximity_tracking_started": {"name": "邻近追踪开始时间"},
+      "proximity_rate": {"name": "邻近占比"},
+      "last_seen_together": {"name": "上次共同出现"},
+      "today_proximity_time": {"name": "今日邻近时长"},
+      "today_zone_time_very_near": {"name": "今日非常近时长"},
+      "today_zone_time_near": {"name": "今日近距离时长"},
+      "today_zone_time_mid": {"name": "今日中等距离时长"},
+      "today_zone_time_far": {"name": "今日远距离时长"},
+      "today_zone_time_very_far": {"name": "今日非常远时长"},
+      "direction": {
+        "name": "方向",
+        "state": {
+          "approaching": "接近中",
+          "diverging": "远离中",
+          "stationary": "静止"
+        }
+      },
+      "direction_level": {"name": "方向级别"},
+      "closing_speed": {"name": "接近速度"},
+      "eta": {"name": "预计到达时间"},
+      "gps_accuracy_a": {"name": "GPS 精度（A）"},
+      "gps_accuracy_b": {"name": "GPS 精度（B）"},
+      "last_update_a": {"name": "上次更新（A）"},
+      "last_update_b": {"name": "上次更新（B）"},
+      "update_count_a": {"name": "最近 30 分钟更新次数（A）"},
+      "update_count_b": {"name": "最近 30 分钟更新次数（B）"},
+      "entity_state_a": {"name": "状态（A）"},
+      "entity_state_b": {"name": "状态（B）"},
+      "today_unaccounted_time": {"name": "今日未统计时长"},
+      "min_distance": {"name": "最小距离"},
+      "settings": {"name": "设置"},
+      "altitude_delta": {"name": "海拔差"},
+      "altitude": {"name": "海拔（{name}）"}
+    },
+    "binary_sensor": {
+      "proximity": {"name": "邻近"},
+      "any_in_proximity": {"name": "任意邻近"},
+      "all_in_proximity": {"name": "全部邻近"},
+      "same_zone": {"name": "同一区域"},
+      "in_very_near": {"name": "非常近"},
+      "in_near": {"name": "近"},
+      "in_mid": {"name": "中等"},
+      "in_far": {"name": "远"},
+      "in_very_far": {"name": "非常远"},
+      "reliable": {"name": "可靠"},
+      "altitude_aligned": {"name": "同海拔"},
+      "approaching": {"name": "接近中"}
+    },
+    "button": {
+      "refresh": {"name": "刷新位置"}
+    }
+  },
+  "selector": {
+    "proximity_zone": {
+      "options": {
+        "very_near": "非常近",
+        "near": "近",
+        "mid": "中等",
+        "far": "远"
+      }
+    }
+  }
+}

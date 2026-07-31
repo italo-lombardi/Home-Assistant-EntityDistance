@@ -1,0 +1,206 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Varlık Seçin",
+        "description": "Aralarındaki mesafeleri izlemek için iki veya daha fazla varlık seçin. Desteklenen türler: kişi (person), cihaz izleyici (device tracker), sensör (sensor) veya bölge (zone).\n\n3 veya daha fazla varlıktan oluşan bir grup için tüm ikili mesafeler otomatik olarak izlenir. Kurulumdan sonra, varlıklar bir konum bildirene kadar sensörler 'Bilinmiyor' olarak görünür.",
+        "data": {
+          "entities": "Varlıklar"
+        },
+        "data_description": {
+          "entities": "İzlemek için 2–5 varlık seçin. Her ikili kendi mesafe ve yakınlık sensörü setine sahip olur."
+        }
+      },
+      "distances": {
+        "title": "Mesafe Ayarları",
+        "description": "Bölge sınırlarını ayarlayın ve yakınlık uyarısını tetikleyecek bölgeyi seçin.",
+        "data": {
+          "zone_very_near_m": "Çok Yakın bölge sınırı (m)",
+          "zone_near_m": "Yakın bölge sınırı (m)",
+          "zone_mid_m": "Orta Mesafe bölge sınırı (m)",
+          "zone_far_m": "Uzak bölge sınırı (m)",
+          "proximity_zone": "Yakınlık uyarı bölgesi",
+          "show_advanced": "Gelişmiş filtreleri yapılandır"
+        },
+        "data_description": {
+          "zone_very_near_m": "Varlıklar bu mesafede veya daha yakında 'Çok Yakın' durumundadır. Varsayılan: 200 m.",
+          "zone_near_m": "Varlıklar bu mesafede veya daha yakında 'Yakın' durumundadır. Çok Yakın'dan büyük olmalıdır. Varsayılan: 1000 m.",
+          "zone_mid_m": "Varlıklar bu mesafede veya daha yakında 'Orta Mesafe' durumundadır. Yakın'dan büyük olmalıdır. Varsayılan: 5000 m.",
+          "zone_far_m": "Varlıklar bu mesafede veya daha yakında 'Uzak' durumundadır. Orta Mesafe'den büyük olmalıdır. Varsayılan: 20000 m.\nBunun ötesi 'Çok Uzak'tır.",
+          "proximity_zone": "'Yakınlıkta' sensörü, varlıklar bu bölgede veya daha yakında olduğunda AÇILIR (ör. 'Yakın' seçildiğinde, varlıklar 'Çok Yakın' olduğunda da tetiklenir). Mesafe, bölge sınırını aştığında KAPANIR (kesin eşik). GPS gürültüsü nedeniyle sınıra yakın konumlarda hızlı açma/kapama döngüsünü önlemek için Gelişmiş Filtreler'de 'Tepkiden önce bekleme' (debounce) seçeneğini etkinleştirin.",
+          "show_advanced": "GPS doğruluğu, hız ve güvenilirlik filtrelerini sonraki ekranda yapılandırmak için açın. Makul varsayılanları kullanmak için kapalı bırakın."
+        }
+      },
+      "advanced": {
+        "title": "Gelişmiş Filtreler",
+        "description": "Bu filtreler hatalı GPS verilerini yok saymaya yardımcı olur. Varsayılan değerler çoğu kullanıcı için iyi çalışır — yalnızca yanlış tetiklemeler görüyorsanız değiştirin.",
+        "data": {
+          "max_accuracy_m": "Maks. GPS hata yarıçapı (m, 0 = kapalı)",
+          "debounce_s": "Tepkiden önce bekleme (s)",
+          "grace_window_s": "Görüntüleme tolerans penceresi (s)",
+          "max_speed_kmh": "Maks. makul hız (km/s, 0 = kapalı)",
+          "require_reliable": "Yalnızca veriler güvenilirken tetikle",
+          "min_updates_reliable": "Güvenilirlik için gereken ardışık güncelleme sayısı",
+          "resync_silence_s": "Dondurma öncesi GPS sessizliği (s)",
+          "resync_hold_s": "Yakınlık dondurma süresi (s)",
+          "altitude_aligned_threshold_m": "Aynı irtifa eşiği (m)",
+          "max_vertical_accuracy_m": "Maks. dikey GPS hatası (m, 0 = kapalı)"
+        },
+        "data_description": {
+          "max_accuracy_m": "GPS hatasının bu değerden büyük olduğu konum güncellemelerini yok sayar. Hareket halindeki telefonlar genellikle 100–250 m doğruluk bildirir, bu nedenle 300 m güvenli bir varsayılandır. '350 m doğruluk' bildiren bir telefon atlanır. Kapatmak için 0 olarak ayarlayın. Aralık: 0–1000 m.",
+          "debounce_s": "Bir konum güncellemesi geldikten sonra yeniden hesaplamadan önce ne kadar bekleneceği. Telefonlar art arda birkaç gürültülü GPS düzeltmesi gönderdiğinde işe yarar — entegrasyon değerlerin oturmasını bekler. 0 = anında tepki (varsayılan). Düzensiz açma/kapama görüyorsanız 5–15 s'ye yükseltin. Aralık: 0–60 s.",
+          "grace_window_s": "Bir ikili GPS sinyalini kısa süreliğine kaybettiğinde (kesinti, tünel, boştaki telefon), sensörler 'bilinmiyor' bildirmeden önce bu süre boyunca son bilinen değeri göstermeye devam eder. Aralıklı titremeyi önler. Varsayılan: 900 s (15 dk). Aralık: 60–3600 s.",
+          "max_speed_kmh": "Işınlanma koruması. Her iki cihazın birleşik GPS doğruluğu çıkarıldıktan sonra ima edilen hareket hızı bu değeri aşarsa GPS düzeltmesini reddeder. Her telefonda 150 m doğrulukla, bir sıçramanın filtrelenmesi için bu hızın üzerinde bir hareketi ima etmesi gerekir. Varsayılan: 1000 km/s — imkânsız ışınlanmaları engeller, uçaklara izin verir. Devre dışı bırakmak için 0 olarak ayarlayın. Aralık: 0–2000 km/s.",
+          "require_reliable": "Açıkken, 'Yakınlıkta' sensörü yalnızca konum birkaç ardışık güncelleme boyunca tutarlı kaldıktan sonra AÇILIR. Tek bir hatalı GPS düzeltmesinden kaynaklanan yanlış pozitifleri azaltır. Not: güncellemeler seyrekse (ör. her 3 dakikada bir), bu birkaç dakikalık gecikme ekleyebilir.",
+          "min_updates_reliable": "Konumun güvenilir sayılmadan önce kaç ardışık güncelleme gerektirdiği. Yalnızca 'Yalnızca veriler güvenilirken tetikle' açıkken uygulanır. Örnek: 3 dakika aralıklarla 3 güncelleme = sensör AÇILMADAN önce 9 dakikaya kadar. Aralık: 1–20.",
+          "resync_silence_s": "İzlenen tüm varlıklar bu süre boyunca GPS güncellemesi göndermeyi durdurursa, sinyalin geri dönmesi beklenirken yanlış durum değişikliklerini önlemek için yakınlık durumu dondurulur. Varsayılan: 600 s (10 dk). Aralık: 60–3600 s.",
+          "resync_hold_s": "GPS sessizliği algılandıktan sonra yakınlık durumunun ne kadar süre dondurulmuş kalacağı. Dondurmayı devre dışı bırakmak için 0 olarak ayarlayın (sessizlik tespiti, zaman muhasebesi için çalışmaya devam eder). Varsayılan: 60 s. Aralık: 0–300 s.",
+          "altitude_aligned_threshold_m": "'Aynı İrtifa' ikili sensörünün AÇILMASI için izin verilen maksimum irtifa farkı (metre cinsinden). 0 = yalnızca tam olarak aynı irtifa. Varsayılan: 5 m. Aralık: 0–100 m.",
+          "max_vertical_accuracy_m": "0'ın üzerinde ayarlandığında, cihazın dikey GPS hatası bu değeri aşarsa irtifa sensörleri 'bilinmiyor' döndürür. Güvenilmez irtifa okumalarının irtifa tabanlı otomasyonları tetiklemesini önler. 0 = kapalı (varsayılan). Tüketici GPS'lerinde dikey hata genellikle 10–30 m'dir. Aralık: 0–500 m."
+        }
+      }
+    },
+    "error": {
+      "too_few_entities": "En az 2 varlık seçin.",
+      "too_many_entities": "En fazla 5 varlık seçin.",
+      "duplicate_entities": "Her varlık yalnızca bir kez görünmelidir.",
+      "zone_thresholds_not_ascending": "Bölge eşikleri artan sırada olmalıdır: Çok Yakın < Yakın < Orta Mesafe < Uzak."
+    },
+    "abort": {
+      "already_configured": "Bu varlık ikilisi zaten yapılandırılmış.",
+      "already_in_progress": "Bu entegrasyon için bir kurulum zaten devam ediyor. Yeniden başlatmak için iletişim kutusunu kapatıp yeniden açın."
+    }
+  },
+  "options": {
+    "step": {
+      "distances": {
+        "title": "Mesafe Ayarları",
+        "description": "Bölge sınırlarını ayarlayın ve yakınlık uyarısını tetikleyecek bölgeyi seçin.",
+        "data": {
+          "zone_very_near_m": "Çok Yakın bölge sınırı (m)",
+          "zone_near_m": "Yakın bölge sınırı (m)",
+          "zone_mid_m": "Orta Mesafe bölge sınırı (m)",
+          "zone_far_m": "Uzak bölge sınırı (m)",
+          "proximity_zone": "Yakınlık uyarı bölgesi",
+          "show_advanced": "Gelişmiş filtreleri yapılandır"
+        },
+        "data_description": {
+          "zone_very_near_m": "Varlıklar bu mesafede veya daha yakında 'Çok Yakın' durumundadır. Varsayılan: 200 m.",
+          "zone_near_m": "Varlıklar bu mesafede veya daha yakında 'Yakın' durumundadır. Çok Yakın'dan büyük olmalıdır. Varsayılan: 1000 m.",
+          "zone_mid_m": "Varlıklar bu mesafede veya daha yakında 'Orta Mesafe' durumundadır. Yakın'dan büyük olmalıdır. Varsayılan: 5000 m.",
+          "zone_far_m": "Varlıklar bu mesafede veya daha yakında 'Uzak' durumundadır. Orta Mesafe'den büyük olmalıdır. Varsayılan: 20000 m.\nBunun ötesi 'Çok Uzak'tır.",
+          "proximity_zone": "'Yakınlıkta' sensörü, varlıklar bu bölgede veya daha yakında olduğunda AÇILIR (ör. 'Yakın' seçildiğinde, varlıklar 'Çok Yakın' olduğunda da tetiklenir). Mesafe, bölge sınırını aştığında KAPANIR (kesin eşik). GPS gürültüsü nedeniyle sınıra yakın konumlarda hızlı açma/kapama döngüsünü önlemek için Gelişmiş Filtreler'de 'Tepkiden önce bekleme' (debounce) seçeneğini etkinleştirin.",
+          "show_advanced": "GPS doğruluğu, hız ve güvenilirlik filtrelerini sonraki ekranda yapılandırmak için açın. Makul varsayılanları kullanmak için kapalı bırakın."
+        }
+      },
+      "advanced": {
+        "title": "Gelişmiş Filtreler",
+        "description": "Bu filtreler hatalı GPS verilerini yok saymaya yardımcı olur. Varsayılan değerler çoğu kullanıcı için iyi çalışır — yalnızca yanlış tetiklemeler görüyorsanız değiştirin.",
+        "data": {
+          "max_accuracy_m": "Maks. GPS hata yarıçapı (m, 0 = kapalı)",
+          "debounce_s": "Tepkiden önce bekleme (s)",
+          "grace_window_s": "Görüntüleme tolerans penceresi (s)",
+          "max_speed_kmh": "Maks. makul hız (km/s, 0 = kapalı)",
+          "require_reliable": "Yalnızca veriler güvenilirken tetikle",
+          "min_updates_reliable": "Güvenilirlik için gereken ardışık güncelleme sayısı",
+          "resync_silence_s": "Dondurma öncesi GPS sessizliği (s)",
+          "resync_hold_s": "Yakınlık dondurma süresi (s)",
+          "altitude_aligned_threshold_m": "Aynı irtifa eşiği (m)",
+          "max_vertical_accuracy_m": "Maks. dikey GPS hatası (m, 0 = kapalı)"
+        },
+        "data_description": {
+          "max_accuracy_m": "GPS hatasının bu değerden büyük olduğu konum güncellemelerini yok sayar. Hareket halindeki telefonlar genellikle 100–250 m doğruluk bildirir, bu nedenle 300 m güvenli bir varsayılandır. '350 m doğruluk' bildiren bir telefon atlanır. Kapatmak için 0 olarak ayarlayın. Aralık: 0–1000 m.",
+          "debounce_s": "Bir konum güncellemesi geldikten sonra yeniden hesaplamadan önce ne kadar bekleneceği. Telefonlar art arda birkaç gürültülü GPS düzeltmesi gönderdiğinde işe yarar — entegrasyon değerlerin oturmasını bekler. 0 = anında tepki (varsayılan). Düzensiz açma/kapama görüyorsanız 5–15 s'ye yükseltin. Aralık: 0–60 s.",
+          "grace_window_s": "Bir ikili GPS sinyalini kısa süreliğine kaybettiğinde (kesinti, tünel, boştaki telefon), sensörler 'bilinmiyor' bildirmeden önce bu süre boyunca son bilinen değeri göstermeye devam eder. Aralıklı titremeyi önler. Varsayılan: 900 s (15 dk). Aralık: 60–3600 s.",
+          "max_speed_kmh": "Işınlanma koruması. Her iki cihazın birleşik GPS doğruluğu çıkarıldıktan sonra ima edilen hareket hızı bu değeri aşarsa GPS düzeltmesini reddeder. Her telefonda 150 m doğrulukla, bir sıçramanın filtrelenmesi için bu hızın üzerinde bir hareketi ima etmesi gerekir. Varsayılan: 1000 km/s — imkânsız ışınlanmaları engeller, uçaklara izin verir. Devre dışı bırakmak için 0 olarak ayarlayın. Aralık: 0–2000 km/s.",
+          "require_reliable": "Açıkken, 'Yakınlıkta' sensörü yalnızca konum birkaç ardışık güncelleme boyunca tutarlı kaldıktan sonra AÇILIR. Tek bir hatalı GPS düzeltmesinden kaynaklanan yanlış pozitifleri azaltır. Not: güncellemeler seyrekse (ör. her 3 dakikada bir), bu birkaç dakikalık gecikme ekleyebilir.",
+          "min_updates_reliable": "Konumun güvenilir sayılmadan önce kaç ardışık güncelleme gerektirdiği. Yalnızca 'Yalnızca veriler güvenilirken tetikle' açıkken uygulanır. Örnek: 3 dakika aralıklarla 3 güncelleme = sensör AÇILMADAN önce 9 dakikaya kadar. Aralık: 1–20.",
+          "resync_silence_s": "İzlenen tüm varlıklar bu süre boyunca GPS güncellemesi göndermeyi durdurursa, sinyalin geri dönmesi beklenirken yanlış durum değişikliklerini önlemek için yakınlık durumu dondurulur. Varsayılan: 600 s (10 dk). Aralık: 60–3600 s.",
+          "resync_hold_s": "GPS sessizliği algılandıktan sonra yakınlık durumunun ne kadar süre dondurulmuş kalacağı. Dondurmayı devre dışı bırakmak için 0 olarak ayarlayın (sessizlik tespiti, zaman muhasebesi için çalışmaya devam eder). Varsayılan: 60 s. Aralık: 0–300 s.",
+          "altitude_aligned_threshold_m": "'Aynı İrtifa' ikili sensörünün AÇILMASI için izin verilen maksimum irtifa farkı (metre cinsinden). 0 = yalnızca tam olarak aynı irtifa. Varsayılan: 5 m. Aralık: 0–100 m.",
+          "max_vertical_accuracy_m": "0'ın üzerinde ayarlandığında, cihazın dikey GPS hatası bu değeri aşarsa irtifa sensörleri 'bilinmiyor' döndürür. Güvenilmez irtifa okumalarının irtifa tabanlı otomasyonları tetiklemesini önler. 0 = kapalı (varsayılan). Tüketici GPS'lerinde dikey hata genellikle 10–30 m'dir. Aralık: 0–500 m."
+        }
+      }
+    },
+    "error": {
+      "zone_thresholds_not_ascending": "Bölge eşikleri artan sırada olmalıdır: Çok Yakın < Yakın < Orta Mesafe < Uzak."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "distance": {"name": "Mesafe"},
+      "bucket": {
+        "name": "Yakınlık Bölgesi",
+        "state": {
+          "very_near": "Çok Yakın",
+          "near": "Yakın",
+          "mid": "Orta Mesafe",
+          "far": "Uzak",
+          "very_far": "Çok Uzak"
+        }
+      },
+      "bucket_level": {"name": "Yakınlık Bölgesi Numarası"},
+      "proximity_duration": {"name": "Yakınlık Süresi"},
+      "proximity_tracking_started": {"name": "Yakınlık Takibi Başlangıcı"},
+      "proximity_rate": {"name": "Yakınlık Oranı"},
+      "last_seen_together": {"name": "Son Birlikte Görülme"},
+      "today_proximity_time": {"name": "Bugünkü Yakınlık Süresi"},
+      "today_zone_time_very_near": {"name": "Bugünkü Çok Yakın Süresi"},
+      "today_zone_time_near": {"name": "Bugünkü Yakın Süresi"},
+      "today_zone_time_mid": {"name": "Bugünkü Orta Mesafe Süresi"},
+      "today_zone_time_far": {"name": "Bugünkü Uzak Süresi"},
+      "today_zone_time_very_far": {"name": "Bugünkü Çok Uzak Süresi"},
+      "direction": {
+        "name": "Yön",
+        "state": {
+          "approaching": "Yaklaşıyor",
+          "diverging": "Uzaklaşıyor",
+          "stationary": "Hareketsiz"
+        }
+      },
+      "direction_level": {"name": "Yön Seviyesi"},
+      "closing_speed": {"name": "Yaklaşma Hızı"},
+      "eta": {"name": "Tahmini Varış Zamanı"},
+      "gps_accuracy_a": {"name": "GPS Doğruluğu (A)"},
+      "gps_accuracy_b": {"name": "GPS Doğruluğu (B)"},
+      "last_update_a": {"name": "Son Güncelleme (A)"},
+      "last_update_b": {"name": "Son Güncelleme (B)"},
+      "update_count_a": {"name": "Son 30 Dk. Güncelleme Sayısı (A)"},
+      "update_count_b": {"name": "Son 30 Dk. Güncelleme Sayısı (B)"},
+      "entity_state_a": {"name": "Durum (A)"},
+      "entity_state_b": {"name": "Durum (B)"},
+      "today_unaccounted_time": {"name": "Bugünkü Hesaplanmayan Süre"},
+      "min_distance": {"name": "Min. Mesafe"},
+      "settings": {"name": "Ayarlar"},
+      "altitude_delta": {"name": "İrtifa Farkı"},
+      "altitude": {"name": "İrtifa ({name})"}
+    },
+    "binary_sensor": {
+      "proximity": {"name": "Yakınlıkta"},
+      "any_in_proximity": {"name": "Herhangi Biri Yakınlıkta"},
+      "all_in_proximity": {"name": "Tümü Yakınlıkta"},
+      "same_zone": {"name": "Aynı Bölge"},
+      "in_very_near": {"name": "Çok Yakın"},
+      "in_near": {"name": "Yakın"},
+      "in_mid": {"name": "Orta Mesafe"},
+      "in_far": {"name": "Uzak"},
+      "in_very_far": {"name": "Çok Uzak"},
+      "reliable": {"name": "Güvenilir"},
+      "altitude_aligned": {"name": "Aynı İrtifa"},
+      "approaching": {"name": "Yaklaşıyor"}
+    },
+    "button": {
+      "refresh": {"name": "Konumu Yenile"}
+    }
+  },
+  "selector": {
+    "proximity_zone": {
+      "options": {
+        "very_near": "Çok Yakın",
+        "near": "Yakın",
+        "mid": "Orta Mesafe",
+        "far": "Uzak"
+      }
+    }
+  }
+}

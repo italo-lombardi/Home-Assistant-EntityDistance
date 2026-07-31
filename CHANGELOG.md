@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- **18 new translations** — Simplified Chinese (zh-Hans), Traditional Chinese (zh-Hant), Russian, Japanese, Korean, Ukrainian, Czech, Slovak, Hungarian, Romanian, Bulgarian, Croatian, Finnish, Greek, Turkish, Lithuanian, Latvian, Catalan. Brings locale coverage from 11 to 29 languages.
+
 ## [0.4.3] - 2026-07-22
 
 ### Added

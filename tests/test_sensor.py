@@ -1594,6 +1594,44 @@ class TestAsyncSetupEntrySensor:
         await async_setup_entry(hass, entry, lambda entities: added.extend(entities))
         assert len(added) > 0
 
+    @pytest.mark.asyncio
+    async def test_pre_registers_group_device(self):
+        # Drives the success path of the best-effort group-device pre-registration
+        # (sensor.py: dr.async_get(hass) -> dev_reg.async_get_or_create(...)).
+        # dr.async_get reads hass.data[dr.DATA_REGISTRY]; the other setup tests use a
+        # plain hass.data dict without that key, so async_get raises and the broad
+        # except swallows it, leaving async_get_or_create uncovered. Here we inject a
+        # real device-registry mock so the registry call actually runs and we assert
+        # the group device is created with the expected identifiers/metadata.
+        from homeassistant.helpers import device_registry as dr
+
+        from custom_components.entity_distance.const import DOMAIN
+        from custom_components.entity_distance.sensor import async_setup_entry
+
+        coordinator = MagicMock()
+        coordinator.is_within_grace.return_value = False
+        coordinator.entities = ["person.alice", "person.bob"]
+        coordinator.data = MagicMock()
+
+        entry = MagicMock()
+        entry.entry_id = "test_entry"
+
+        dev_reg = MagicMock()
+        hass = MagicMock()
+        hass.states.get.return_value = None
+        # async_get(hass) resolves via hass.data[DATA_REGISTRY]; provide it so the
+        # registry lookup succeeds and async_get_or_create is invoked.
+        hass.data = {DOMAIN: {"test_entry": coordinator}, dr.DATA_REGISTRY: dev_reg}
+
+        added = []
+        await async_setup_entry(hass, entry, lambda entities: added.extend(entities))
+
+        dev_reg.async_get_or_create.assert_called_once()
+        kwargs = dev_reg.async_get_or_create.call_args.kwargs
+        assert kwargs["config_entry_id"] == "test_entry"
+        assert kwargs["identifiers"] == {(DOMAIN, "test_entry")}
+        assert kwargs["manufacturer"] == "Entity Distance"
+
 
 class TestAltitudeSensor:
     def _make(self, which: str, alt_a=None, alt_b=None, data_valid=True):

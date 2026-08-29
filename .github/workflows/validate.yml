@@ -35,9 +35,9 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
+          python-version: "3.14"
       - name: Install ruff
-        run: pip install ruff
+        run: pip install ruff==0.16.1
       - name: Run ruff check
         run: ruff check .
       - name: Run ruff format check
@@ -51,7 +51,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
+          python-version: "3.14"
       - name: Install dependencies
         run: |
           pip install -r requirements_test.txt 2>/dev/null || true

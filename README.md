@@ -595,6 +595,7 @@ Other Home Assistant integrations by the same author:
 |-------------|-------------|
 | [Entity Availability](https://github.com/italo-lombardi/Home-Assistant-EntityAvailability) | Monitor entity availability by group — tracks offline entities, availability history, and degraded states with a custom dashboard card |
 | [Entity Guard](https://github.com/italo-lombardi/Home-Assistant-EntityGuard) | Enforce entity state via declarative rules — replaces hand-written auto-off / auto-lock / kill-switch automations |
+| [Entity State Tracker](https://github.com/italo-lombardi/Home-Assistant-EntityStateTracker) | Tracks time-in-state and transitions across time frames — per-state breakdowns and compliance scoring, with a custom card |
 | [Fuel Compare](https://github.com/italo-lombardi/Home-Assistant-FuelCompare) | Live fuel prices from 36 providers across 30 countries |
 | [WashWise](https://github.com/italo-lombardi/Home-Assistant-WashWise) | Decide whether to wash your car, bike, or solar panels based on the weather forecast — verdict, 0–100 score, and per-day breakdown |
 | [DashSnap](https://github.com/italo-lombardi/DashSnap) | Record or screenshot any web page via headless Chromium — HA dashboards, Grafana, public pages; HA Add-on or Docker |

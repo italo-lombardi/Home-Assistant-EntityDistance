@@ -2826,6 +2826,88 @@ class TestCalcPairAltitude:
         assert ps.altitude_b_m == pytest.approx(42.0)
         assert ps.altitude_delta_m == pytest.approx(-8.0)
 
+    def test_home_zone_fallback_elevation_none(self):
+        """hass.config.elevation = None → no fallback, altitude stays None."""
+        from unittest.mock import patch
+
+        from custom_components.entity_distance.models import pair_key
+        from tests.conftest import make_state
+
+        coordinator = _make_calc_pair_coordinator()
+        coordinator.hass.config.elevation = None
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+
+        state_a = make_state("person.alice", 51.5, -0.1, altitude=None)
+        state_b = make_state("person.bob", 51.6, -0.2, altitude=50.0)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=500.0,
+        ):
+            ps = coordinator._calc_pair(
+                ps, "person.alice", "person.bob", datetime.now().astimezone(), set()
+            )
+        assert ps.altitude_a_m is None
+        assert ps.altitude_delta_m is None
+
+    def test_home_zone_fallback_elevation_zero(self):
+        """hass.config.elevation = 0 is valid (sea level) and must be used."""
+        from unittest.mock import patch
+
+        from custom_components.entity_distance.models import pair_key
+        from tests.conftest import make_state
+
+        coordinator = _make_calc_pair_coordinator()
+        coordinator.hass.config.elevation = 0
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+
+        state_a = make_state("person.alice", 51.5, -0.1, altitude=None)
+        state_b = make_state("person.bob", 51.6, -0.2, altitude=10.0)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=500.0,
+        ):
+            ps = coordinator._calc_pair(
+                ps, "person.alice", "person.bob", datetime.now().astimezone(), set()
+            )
+        assert ps.altitude_a_m == pytest.approx(0.0)
+        assert ps.altitude_delta_m == pytest.approx(10.0)
+
+    def test_home_zone_fallback_not_triggered_when_not_home(self):
+        """Entity with no altitude but state != 'home' gets no fallback."""
+        from unittest.mock import patch
+
+        from homeassistant.core import State
+
+        from custom_components.entity_distance.models import pair_key
+
+        coordinator = _make_calc_pair_coordinator()
+        coordinator.hass.config.elevation = 42.0
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+
+        state_a = State("person.alice", "not_home", {"latitude": 51.5, "longitude": -0.1})
+        state_b = State("person.bob", "home", {"latitude": 51.6, "longitude": -0.2, "altitude": 50.0})
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=500.0,
+        ):
+            ps = coordinator._calc_pair(
+                ps, "person.alice", "person.bob", datetime.now().astimezone(), set()
+            )
+        assert ps.altitude_a_m is None
+        assert ps.altitude_delta_m is None
+
 
 class TestResolveGpsSource:
     """Tests for _resolve_gps_source."""

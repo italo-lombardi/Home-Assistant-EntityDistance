@@ -816,11 +816,16 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
 
         alt_a = _extract_altitude(src_a)
         alt_b = _extract_altitude(src_b)
-        home_elev = float(self.hass.config.elevation)
-        if alt_a is None and state_a.state == "home":
-            alt_a = home_elev
-        if alt_b is None and state_b.state == "home":
-            alt_b = home_elev
+        if (alt_a is None and state_a.state == "home") or (
+            alt_b is None and state_b.state == "home"
+        ):
+            _raw_elev = self.hass.config.elevation
+            if _raw_elev is not None:
+                home_elev = float(_raw_elev)
+                if alt_a is None and state_a.state == "home":
+                    alt_a = home_elev
+                if alt_b is None and state_b.state == "home":
+                    alt_b = home_elev
         vacc_a = _extract_vertical_accuracy(src_a)
         vacc_b = _extract_vertical_accuracy(src_b)
         if self._max_vertical_accuracy_m > 0:

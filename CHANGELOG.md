@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added
+
+- **Home zone altitude fallback** — when a tracked entity's state is `home` and no GPS altitude is available (e.g. iCloud, network-based trackers), the HA instance elevation (`hass.config.elevation`, set in Settings → System → General) is substituted. Enables `altitude_delta_m` and `same_altitude` binary sensor to work for home entities without requiring GPS altitude reporting.
+
+### Changed
+
+- **Altitude stat box label** — card now shows `⛰ Altitude · Δ8m` / `Δ−8m` instead of `same floor` / `different floor`. GPS vertical accuracy (±10–30 m) makes floor detection unreliable; the raw signed delta is more honest and always available when altitude data exists.
+
 ## [0.4.4] - 2026-09-08
 
 ### Added

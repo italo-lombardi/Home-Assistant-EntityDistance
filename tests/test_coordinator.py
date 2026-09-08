@@ -1448,9 +1448,18 @@ class TestCoordinatorProperties:
         assert coord.altitude_aligned_threshold_m == 10.0
 
     def test_proximity_threshold_property(self):
+        from custom_components.entity_distance.const import (
+            BUCKET_NEAR,
+            DEFAULT_ZONE_NEAR_M,
+            DEFAULT_ZONE_VERY_NEAR_M,
+        )
+
         coord = self._make()
-        coord._entry_threshold_m = 300.0
-        assert coord.proximity_threshold_m == 300.0
+        # Set entry and exit to different values to verify property returns entry, not exit
+        coord._entry_threshold_m = DEFAULT_ZONE_VERY_NEAR_M
+        coord._exit_threshold_m = DEFAULT_ZONE_NEAR_M
+        assert coord.proximity_threshold_m == DEFAULT_ZONE_VERY_NEAR_M
+        assert coord.proximity_threshold_m != DEFAULT_ZONE_NEAR_M
 
     def test_settings_snapshot(self):
         coord = self._make()

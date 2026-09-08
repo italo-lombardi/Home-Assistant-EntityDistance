@@ -1449,7 +1449,6 @@ class TestCoordinatorProperties:
 
     def test_proximity_threshold_property(self):
         from custom_components.entity_distance.const import (
-            BUCKET_NEAR,
             DEFAULT_ZONE_NEAR_M,
             DEFAULT_ZONE_VERY_NEAR_M,
         )

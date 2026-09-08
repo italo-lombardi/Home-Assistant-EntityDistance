@@ -726,7 +726,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
                 </div>` : nothing}
               ${c.show_altitude && (altA !== null || altB !== null) ? html`
                 <div class="stat-box full-width" style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.25)">
-                  <span class="stat-box-label">⛰ Altitude${altDelta !== null ? ` · Δ${Math.abs(altDelta).toFixed(0)}m` : ""}</span>
+                  <span class="stat-box-label">⛰ Altitude${altDelta !== null ? ` · Δ${altDelta >= 0 ? "+" : "−"}${Math.abs(altDelta).toFixed(0)}m` : ""}</span>
                   <span class="stat-box-value" style="color:#16a34a">
                     ${altA !== null ? altA.toFixed(0) : "?"}m / ${altB !== null ? altB.toFixed(0) : "?"}m
                   </span>

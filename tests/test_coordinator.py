@@ -2937,6 +2937,9 @@ class TestCalcPairAltitude:
             )
         assert ps.altitude_a_m is None
         assert ps.altitude_delta_m is None
+
+
+class TestResolveGpsSource:
     """Tests for _resolve_gps_source."""
 
     def _state(self, entity_id, attrs, state_val="home"):

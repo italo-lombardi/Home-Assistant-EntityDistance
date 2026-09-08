@@ -819,9 +819,9 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         if (alt_a is None and state_a.state == "home") or (
             alt_b is None and state_b.state == "home"
         ):
-            _raw_elev = self.hass.config.elevation
-            if _raw_elev is not None:
-                home_elev = float(_raw_elev)
+            elev = self.hass.config.elevation
+            if elev is not None:
+                home_elev = float(elev)
                 if ALTITUDE_MIN_M <= home_elev <= ALTITUDE_MAX_M:
                     if alt_a is None and state_a.state == "home":
                         alt_a = home_elev

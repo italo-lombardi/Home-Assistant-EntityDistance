@@ -195,7 +195,11 @@ def test_altitude_sensors():
     s = state(f"binary_sensor.{SLUG}_same_altitude")
     check("Same altitude binary sensor exists", s is not None)
     if s:
-        check("Same altitude = off (8m > 5m threshold, entities nearby)", s["state"] == "off", s["state"])
+        check(
+            "Same altitude = off (8m > 5m threshold, entities nearby)",
+            s["state"] == "off",
+            s["state"],
+        )
 
 
 def test_same_altitude_threshold():

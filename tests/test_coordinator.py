@@ -2772,6 +2772,60 @@ class TestCalcPairAltitude:
         ps = self._run(10.0, 500.0)
         assert ps.distance_m == pytest.approx(500.0)
 
+    def test_home_zone_fallback_a(self):
+        """Entity A at home with no GPS altitude uses hass.config.elevation."""
+        from unittest.mock import patch
+
+        from custom_components.entity_distance.models import pair_key
+        from tests.conftest import make_state
+
+        coordinator = _make_calc_pair_coordinator()
+        coordinator.hass.config.elevation = 42.0
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+
+        state_a = make_state("person.alice", 51.5, -0.1, altitude=None)
+        state_b = make_state("person.bob", 51.6, -0.2, altitude=50.0)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=500.0,
+        ):
+            ps = coordinator._calc_pair(
+                ps, "person.alice", "person.bob", datetime.now().astimezone(), set()
+            )
+        assert ps.altitude_a_m == pytest.approx(42.0)
+        assert ps.altitude_delta_m == pytest.approx(8.0)
+
+    def test_home_zone_fallback_b(self):
+        """Entity B at home with no GPS altitude uses hass.config.elevation."""
+        from unittest.mock import patch
+
+        from custom_components.entity_distance.models import pair_key
+        from tests.conftest import make_state
+
+        coordinator = _make_calc_pair_coordinator()
+        coordinator.hass.config.elevation = 42.0
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+
+        state_a = make_state("person.alice", 51.5, -0.1, altitude=50.0)
+        state_b = make_state("person.bob", 51.6, -0.2, altitude=None)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=500.0,
+        ):
+            ps = coordinator._calc_pair(
+                ps, "person.alice", "person.bob", datetime.now().astimezone(), set()
+            )
+        assert ps.altitude_b_m == pytest.approx(42.0)
+        assert ps.altitude_delta_m == pytest.approx(-8.0)
+
 
 class TestResolveGpsSource:
     """Tests for _resolve_gps_source."""

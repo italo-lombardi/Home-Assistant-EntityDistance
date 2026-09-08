@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
 
+from homeassistant.core import State
 import pytest
 
 from custom_components.entity_distance.const import (
@@ -717,6 +718,7 @@ def _make_calc_pair_coordinator(
     coordinator._resync_holding = resync_holding
     coordinator._resync_hold_until = resync_hold_until
     coordinator.hass = MagicMock()
+    coordinator.hass.config.elevation = None  # disable home fallback by default
     return coordinator
 
 
@@ -2771,6 +2773,65 @@ class TestCalcPairAltitude:
     def test_altitude_does_not_affect_distance(self):
         ps = self._run(10.0, 500.0)
         assert ps.distance_m == pytest.approx(500.0)
+
+    def _run_fallback(self, alt_a, alt_b, elevation=42.0, state_a_val="home", state_b_val="home"):
+        coordinator = _make_calc_pair_coordinator()
+        coordinator.hass.config.elevation = elevation
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+        sa = State(
+            "person.alice",
+            state_a_val,
+            {"latitude": 51.5, "longitude": -0.1}
+            | ({"altitude": alt_a} if alt_a is not None else {}),
+        )
+        sb = State(
+            "person.bob",
+            state_b_val,
+            {"latitude": 51.6, "longitude": -0.2}
+            | ({"altitude": alt_b} if alt_b is not None else {}),
+        )
+        coordinator.hass.states.get.side_effect = lambda eid: sa if eid == "person.alice" else sb
+        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=500.0):
+            return coordinator._calc_pair(
+                ps, "person.alice", "person.bob", datetime.now().astimezone(), set()
+            )
+
+    def test_home_zone_fallback_a(self):
+        """Entity A at home with no GPS altitude uses hass.config.elevation."""
+        ps = self._run_fallback(alt_a=None, alt_b=50.0)
+        assert ps.altitude_a_m == pytest.approx(42.0)
+        assert ps.altitude_delta_m == pytest.approx(8.0)
+
+    def test_home_zone_fallback_b(self):
+        """Entity B at home with no GPS altitude uses hass.config.elevation."""
+        ps = self._run_fallback(alt_a=50.0, alt_b=None)
+        assert ps.altitude_b_m == pytest.approx(42.0)
+        assert ps.altitude_delta_m == pytest.approx(-8.0)
+
+    def test_home_zone_fallback_elevation_none(self):
+        """hass.config.elevation = None → no fallback, altitude stays None."""
+        ps = self._run_fallback(alt_a=None, alt_b=50.0, elevation=None)
+        assert ps.altitude_a_m is None
+        assert ps.altitude_delta_m is None
+
+    def test_home_zone_fallback_elevation_zero(self):
+        """hass.config.elevation = 0 is valid (sea level) and must be used."""
+        ps = self._run_fallback(alt_a=None, alt_b=10.0, elevation=0)
+        assert ps.altitude_a_m == pytest.approx(0.0)
+        assert ps.altitude_delta_m == pytest.approx(10.0)
+
+    def test_home_zone_fallback_not_triggered_when_not_home(self):
+        """Entity with no altitude but state != 'home' gets no fallback."""
+        ps = self._run_fallback(alt_a=None, alt_b=50.0, state_a_val="not_home")
+        assert ps.altitude_a_m is None
+        assert ps.altitude_delta_m is None
+
+    def test_home_zone_fallback_out_of_bounds_elevation(self):
+        """hass.config.elevation out of bounds (e.g. ft instead of m) → no fallback."""
+        ps = self._run_fallback(alt_a=None, alt_b=50.0, elevation=16000)
+        assert ps.altitude_a_m is None
+        assert ps.altitude_delta_m is None
 
 
 class TestResolveGpsSource:

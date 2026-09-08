@@ -176,7 +176,7 @@ Each configured group creates one HA device (the group) with per-pair sub-device
 | In Proximity | ON when entities are within the selected proximity zone (or closer), OFF when distance > zone boundary | `presence` |
 | Same Zone | ON when both entities are in the same named zone (e.g. both `home`), OFF otherwise. Never `unknown` — when either side is `not_home` / `unknown` / `unavailable`, the pair is not in the same zone so the sensor is OFF | — |
 | Reliable | ON when both entities have enough recent GPS updates to meet the reliability threshold | — |
-| Same Altitude | ON when absolute altitude difference ≤ threshold (default 5 m) and entities are within the proximity zone distance. Unknown when altitude data is missing or entities are farther apart than the proximity threshold. Registered for all pair types including zone pairs | — |
+| Same Altitude | ON when absolute altitude difference ≤ threshold (default 5 m) and entities are within the proximity zone distance. Unknown when altitude data is missing or entities are farther apart than the proximity threshold. When an entity's state is `home` and GPS altitude is unavailable, the HA instance elevation (Settings → System → General) is used as a fallback. Registered for all pair types including zone pairs | — |
 | Very Near | ON while the pair's current distance falls in the Very Near zone | — |
 | Near | ON while the pair's current distance falls in the Near zone | — |
 | Medium | ON while the pair's current distance falls in the Medium zone | — |
@@ -266,6 +266,8 @@ Uses Home Assistant's built-in Vincenty formula (ellipsoidal earth model) on the
 ### Altitude
 
 Reads the `altitude` attribute (metres, WGS-84) directly from each entity's source. For `person.*` entities, the integration automatically reads from the active source device tracker (`person.attributes.source`) — altitude and all GPS attributes now work correctly for person entities without extra config. Values are bounds-checked to −500–15 000 m; out-of-range readings are treated as `unknown`.
+
+**Home zone fallback:** when an entity's state is `home` and no GPS altitude is available (e.g. iCloud or network-based trackers that don't report altitude), the HA instance elevation from Settings → System → General is substituted. Set that value accurately during onboarding for best results.
 
 **Elevation Difference** is computed as B−A (positive = B is higher). **Same Altitude** turns ON when `|elevation difference| ≤ threshold` (default 5 m, configurable 0–100 m in Advanced Filters).
 

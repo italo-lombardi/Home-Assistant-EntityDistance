@@ -4,7 +4,7 @@
  * People-focused layout: two avatars side-by-side with distance in the middle.
  */
 
-const PEOPLE_CARD_VERSION = "0.4.3";
+const PEOPLE_CARD_VERSION = "0.4.4";
 
 console.info(
   `%c ENTITY-DISTANCE-AVATAR-CARD %c v${PEOPLE_CARD_VERSION} %c — github.com/italo-lombardi`,
@@ -604,7 +604,6 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       const altA = _elevAttrs.altitude_a_m ?? null;
       const altB = _elevAttrs.altitude_b_m ?? null;
       const altDelta = _num(this.hass, slug, "elevation_difference");
-      const altAligned = this.hass.states[`binary_sensor.${slug}_same_altitude`]?.state;
       const proxDurMin = _num(this.hass, slug, "proximity_duration");
       const proxTrackingStarted = _val(this.hass, slug, "proximity_tracking_started");
       const proxRate = _num(this.hass, slug, "proximity_rate");
@@ -742,11 +741,9 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
                 </div>` : nothing}
               ${showAlt ? html`
                 <div class="stat-box full-width" style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.25)">
-                  <span class="stat-box-label">⛰ Altitude${altAligned === "on" ? " · same floor" : altAligned === "off" ? " · different floor" : ""}</span>
+                  <span class="stat-box-label">⛰ Altitude${altDelta !== null ? ` · Δ${altDelta < 0 ? "−" : ""}${Math.abs(altDelta).toFixed(0)}m` : ""}</span>
                   <span class="stat-box-value" style="color:#16a34a">
-                    ${altA !== null ? altA.toFixed(0) : "?"}m
-                    ${altDelta !== null ? html`<span style="font-size:0.8em;opacity:0.7">(${altDelta > 0 ? "+" : ""}${altDelta.toFixed(0)}m)</span>` : nothing}
-                    / ${altB !== null ? altB.toFixed(0) : "?"}m
+                    ${altA !== null ? altA.toFixed(0) : "?"}m / ${altB !== null ? altB.toFixed(0) : "?"}m
                   </span>
                 </div>` : nothing}
               ${showUnaccounted ? html`

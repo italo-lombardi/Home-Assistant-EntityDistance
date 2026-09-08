@@ -2,9 +2,15 @@
 
 ## [Unreleased]
 
+## [0.4.4] - 2026-09-08
+
 ### Added
 
 - **18 new translations** — Simplified Chinese (zh-Hans), Traditional Chinese (zh-Hant), Russian, Japanese, Korean, Ukrainian, Czech, Slovak, Hungarian, Romanian, Bulgarian, Croatian, Finnish, Greek, Turkish, Lithuanian, Latvian, Catalan. Brings locale coverage from 11 to 29 languages.
+
+### Fixed
+
+- **`same_altitude` misleading when far apart** — `binary_sensor.<pair>_same_altitude` previously turned ON whenever altitude matched regardless of distance. Now returns `None` (unavailable) when `distance_m` is unavailable or exceeds the proximity threshold; the "same floor / different floor" card label disappears automatically.
 
 ## [0.4.3] - 2026-07-22
 

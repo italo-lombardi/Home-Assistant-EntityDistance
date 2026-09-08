@@ -699,6 +699,7 @@ def _make_altitude_aligned_sensor(
     pair_key_val: tuple[str, str],
     ps: PairState,
     threshold_m: float = 5.0,
+    proximity_threshold_m: float = 200.0,
 ):
     from custom_components.entity_distance.binary_sensor import AltitudeAlignedBinarySensor
 
@@ -706,6 +707,7 @@ def _make_altitude_aligned_sensor(
     coordinator.data = MagicMock()
     coordinator.data.pairs = {pair_key_val: ps}
     coordinator.altitude_aligned_threshold_m = threshold_m
+    coordinator.proximity_threshold_m = proximity_threshold_m
     entry = MagicMock()
     entry.entry_id = "test_entry"
     sensor = AltitudeAlignedBinarySensor.__new__(AltitudeAlignedBinarySensor)
@@ -722,6 +724,7 @@ class TestAltitudeAlignedBinarySensor:
         k = pair_key("person.alice", "person.bob")
         ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
         ps.altitude_delta_m = 3.0
+        ps.distance_m = 10.0
         sensor = _make_altitude_aligned_sensor(k, ps)
         assert sensor.is_on is True
 
@@ -729,6 +732,7 @@ class TestAltitudeAlignedBinarySensor:
         k = pair_key("person.alice", "person.bob")
         ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
         ps.altitude_delta_m = 5.0
+        ps.distance_m = 10.0
         sensor = _make_altitude_aligned_sensor(k, ps)
         assert sensor.is_on is True
 
@@ -736,6 +740,7 @@ class TestAltitudeAlignedBinarySensor:
         k = pair_key("person.alice", "person.bob")
         ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
         ps.altitude_delta_m = 6.0
+        ps.distance_m = 10.0
         sensor = _make_altitude_aligned_sensor(k, ps)
         assert sensor.is_on is False
 
@@ -743,6 +748,7 @@ class TestAltitudeAlignedBinarySensor:
         k = pair_key("person.alice", "person.bob")
         ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
         ps.altitude_delta_m = -4.0
+        ps.distance_m = 10.0
         sensor = _make_altitude_aligned_sensor(k, ps)
         assert sensor.is_on is True
 
@@ -750,6 +756,7 @@ class TestAltitudeAlignedBinarySensor:
         k = pair_key("person.alice", "person.bob")
         ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
         ps.altitude_delta_m = -8.0
+        ps.distance_m = 10.0
         sensor = _make_altitude_aligned_sensor(k, ps)
         assert sensor.is_on is False
 
@@ -775,7 +782,32 @@ class TestAltitudeAlignedBinarySensor:
         k = pair_key("person.alice", "person.bob")
         ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
         ps.altitude_delta_m = 0.0
+        ps.distance_m = 10.0
         sensor = _make_altitude_aligned_sensor(k, ps)
+        assert sensor.is_on is True
+
+    def test_none_when_distance_none(self):
+        k = pair_key("person.alice", "person.bob")
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.altitude_delta_m = 3.0
+        ps.distance_m = None
+        sensor = _make_altitude_aligned_sensor(k, ps)
+        assert sensor.is_on is None
+
+    def test_none_when_distance_exceeds_proximity_threshold(self):
+        k = pair_key("person.alice", "person.bob")
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.altitude_delta_m = 3.0
+        ps.distance_m = 1_500_000.0  # 1500 km
+        sensor = _make_altitude_aligned_sensor(k, ps)
+        assert sensor.is_on is None
+
+    def test_on_when_distance_exactly_at_proximity_threshold(self):
+        k = pair_key("person.alice", "person.bob")
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.altitude_delta_m = 3.0
+        ps.distance_m = 200.0
+        sensor = _make_altitude_aligned_sensor(k, ps, proximity_threshold_m=200.0)
         assert sensor.is_on is True
 
     def test_extra_state_attributes_has_threshold(self):

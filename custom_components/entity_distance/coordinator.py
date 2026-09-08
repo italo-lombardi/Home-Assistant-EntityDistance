@@ -386,6 +386,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
 
     @property
     def proximity_threshold_m(self) -> float:
+        """Entry distance threshold for the configured proximity zone."""
         return self._entry_threshold_m
 
     @property

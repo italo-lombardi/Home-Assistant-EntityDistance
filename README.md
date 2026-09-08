@@ -176,7 +176,7 @@ Each configured group creates one HA device (the group) with per-pair sub-device
 | In Proximity | ON when entities are within the selected proximity zone (or closer), OFF when distance > zone boundary | `presence` |
 | Same Zone | ON when both entities are in the same named zone (e.g. both `home`), OFF otherwise. Never `unknown` — when either side is `not_home` / `unknown` / `unavailable`, the pair is not in the same zone so the sensor is OFF | — |
 | Reliable | ON when both entities have enough recent GPS updates to meet the reliability threshold | — |
-| Same Altitude | ON when absolute altitude difference ≤ threshold (default 5 m). Unknown when either entity lacks altitude data. Registered for all pair types including zone pairs | — |
+| Same Altitude | ON when absolute altitude difference ≤ threshold (default 5 m) and entities are within the proximity zone distance. Unknown when altitude data is missing or entities are farther apart than the proximity threshold. Registered for all pair types including zone pairs | — |
 | Very Near | ON while the pair's current distance falls in the Very Near zone | — |
 | Near | ON while the pair's current distance falls in the Near zone | — |
 | Medium | ON while the pair's current distance falls in the Medium zone | — |
@@ -522,11 +522,11 @@ If auto-registration fails (e.g. YAML-only Lovelace mode), add manually:
 
 ```yaml
 resources:
-  - url: /entity_distance/entity-distance-pair-card.js?0.4.3
+  - url: /entity_distance/entity-distance-pair-card.js?0.4.4
     type: module
-  - url: /entity_distance/entity-distance-avatar-card.js?0.4.3
+  - url: /entity_distance/entity-distance-avatar-card.js?0.4.4
     type: module
-  - url: /entity_distance/entity-distance-group-card.js?0.4.3
+  - url: /entity_distance/entity-distance-group-card.js?0.4.4
     type: module
 ```
 

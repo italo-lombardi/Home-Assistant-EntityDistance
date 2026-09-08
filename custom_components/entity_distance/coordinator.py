@@ -385,6 +385,10 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         return self._altitude_aligned_threshold_m
 
     @property
+    def proximity_threshold_m(self) -> float:
+        return self._entry_threshold_m
+
+    @property
     def settings_snapshot(self) -> dict[str, float | int | bool]:
         """All proximity / filter settings the coordinator was constructed with.
         Exposed so a diagnostic sensor can present them on the device card."""

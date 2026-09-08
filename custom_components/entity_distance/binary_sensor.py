@@ -327,6 +327,8 @@ class AltitudeAlignedBinarySensor(CoordinatorEntity[EntityDistanceCoordinator], 
             return None
         if ps.altitude_delta_m is None:
             return None
+        if ps.distance_m is None or ps.distance_m > self.coordinator.proximity_threshold_m:
+            return None
         return abs(ps.altitude_delta_m) <= self.coordinator.altitude_aligned_threshold_m
 
     @property

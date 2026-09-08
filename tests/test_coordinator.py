@@ -2911,8 +2911,32 @@ class TestCalcPairAltitude:
         assert ps.altitude_a_m is None
         assert ps.altitude_delta_m is None
 
+    def test_home_zone_fallback_out_of_bounds_elevation(self):
+        """hass.config.elevation out of bounds (e.g. ft instead of m) → no fallback."""
+        from unittest.mock import patch
 
-class TestResolveGpsSource:
+        from custom_components.entity_distance.models import pair_key
+        from tests.conftest import make_state
+
+        coordinator = _make_calc_pair_coordinator()
+        coordinator.hass.config.elevation = 16000  # exceeds ALTITUDE_MAX_M (15000)
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+
+        state_a = make_state("person.alice", 51.5, -0.1, altitude=None)
+        state_b = make_state("person.bob", 51.6, -0.2, altitude=50.0)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=500.0,
+        ):
+            ps = coordinator._calc_pair(
+                ps, "person.alice", "person.bob", datetime.now().astimezone(), set()
+            )
+        assert ps.altitude_a_m is None
+        assert ps.altitude_delta_m is None
     """Tests for _resolve_gps_source."""
 
     def _state(self, entity_id, attrs, state_val="home"):

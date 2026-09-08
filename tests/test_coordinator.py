@@ -717,6 +717,7 @@ def _make_calc_pair_coordinator(
     coordinator._resync_holding = resync_holding
     coordinator._resync_hold_until = resync_hold_until
     coordinator.hass = MagicMock()
+    coordinator.hass.config.elevation = None  # disable home fallback by default
     return coordinator
 
 
@@ -2894,7 +2895,9 @@ class TestCalcPairAltitude:
         ps = coordinator._pair_states[k]
 
         state_a = State("person.alice", "not_home", {"latitude": 51.5, "longitude": -0.1})
-        state_b = State("person.bob", "home", {"latitude": 51.6, "longitude": -0.2, "altitude": 50.0})
+        state_b = State(
+            "person.bob", "home", {"latitude": 51.6, "longitude": -0.2, "altitude": 50.0}
+        )
         coordinator.hass.states.get.side_effect = lambda eid: (
             state_a if eid == "person.alice" else state_b
         )

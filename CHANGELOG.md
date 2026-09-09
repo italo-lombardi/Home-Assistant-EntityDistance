@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+
 ### Changed
 
 - **Altitude stat box label** — card now shows `⛰ Altitude · Δ8m` / `Δ−8m` instead of `same floor` / `different floor`. GPS vertical accuracy (±10–30 m) makes floor detection unreliable; the raw signed delta is more honest and always available when altitude data exists.

@@ -75,6 +75,10 @@ def _is_zone(state: State) -> bool:
     return state.entity_id.startswith("zone.")
 
 
+def _is_home_zone(state: State) -> bool:
+    return state.entity_id == "zone.home"
+
+
 def _find_zone_by_name(hass: HomeAssistant, name: str) -> State | None:
     """Return the zone State whose entity_id or name matches *name*.
 
@@ -816,16 +820,16 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
 
         alt_a = _extract_altitude(src_a)
         alt_b = _extract_altitude(src_b)
-        if (alt_a is None and state_a.state == "home") or (
-            alt_b is None and state_b.state == "home"
-        ):
+        home_a = alt_a is None and (state_a.state == "home" or _is_home_zone(state_a))
+        home_b = alt_b is None and (state_b.state == "home" or _is_home_zone(state_b))
+        if home_a or home_b:
             elev = self.hass.config.elevation
             if elev is not None:
                 home_elev = float(elev)
                 if ALTITUDE_MIN_M <= home_elev <= ALTITUDE_MAX_M:
-                    if alt_a is None and state_a.state == "home":
+                    if home_a:
                         alt_a = home_elev
-                    if alt_b is None and state_b.state == "home":
+                    if home_b:
                         alt_b = home_elev
         vacc_a = _extract_vertical_accuracy(src_a)
         vacc_b = _extract_vertical_accuracy(src_b)

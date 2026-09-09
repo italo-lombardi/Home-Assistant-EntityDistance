@@ -2833,6 +2833,40 @@ class TestCalcPairAltitude:
         assert ps.altitude_a_m is None
         assert ps.altitude_delta_m is None
 
+    def test_zone_entity_gets_elevation_fallback(self):
+        """zone.home with no altitude uses hass.config.elevation."""
+        coordinator = _make_calc_pair_coordinator(entities=["person.alice", "zone.home"])
+        coordinator.hass.config.elevation = 42.0
+        k = pair_key("person.alice", "zone.home")
+        ps = coordinator._pair_states[k]
+        sa = State("person.alice", "home", {"latitude": 51.5, "longitude": -0.1, "altitude": 34.0})
+        sb = State("zone.home", "2", {"latitude": 51.5, "longitude": -0.1})
+        coordinator.hass.states.get.side_effect = lambda eid: sa if eid == "person.alice" else sb
+        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=15.0):
+            ps = coordinator._calc_pair(
+                ps, "person.alice", "zone.home", datetime.now().astimezone(), set()
+            )
+        assert ps.altitude_b_m == pytest.approx(42.0)
+        assert ps.altitude_delta_m == pytest.approx(8.0)
+
+    def test_non_home_zone_does_not_get_elevation_fallback(self):
+        """zone.work (not zone.home) must NOT receive hass.config.elevation as fallback."""
+        coordinator = _make_calc_pair_coordinator(entities=["person.alice", "zone.work"])
+        coordinator.hass.config.elevation = 42.0
+        k = pair_key("person.alice", "zone.work")
+        ps = coordinator._pair_states[k]
+        sa = State("person.alice", "home", {"latitude": 51.5, "longitude": -0.1, "altitude": 34.0})
+        sb = State("zone.work", "0", {"latitude": 52.0, "longitude": -0.2})
+        coordinator.hass.states.get.side_effect = lambda eid: sa if eid == "person.alice" else sb
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance", return_value=5000.0
+        ):
+            ps = coordinator._calc_pair(
+                ps, "person.alice", "zone.work", datetime.now().astimezone(), set()
+            )
+        assert ps.altitude_b_m is None
+        assert ps.altitude_delta_m is None
+
 
 class TestResolveGpsSource:
     """Tests for _resolve_gps_source."""

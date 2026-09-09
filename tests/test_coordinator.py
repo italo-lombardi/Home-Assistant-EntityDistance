@@ -2843,7 +2843,9 @@ class TestCalcPairAltitude:
         sb = State("zone.home", "2", {"latitude": 51.5, "longitude": -0.1})
         coordinator.hass.states.get.side_effect = lambda eid: sa if eid == "person.alice" else sb
         with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=15.0):
-            ps = coordinator._calc_pair(ps, "person.alice", "zone.home", datetime.now().astimezone(), set())
+            ps = coordinator._calc_pair(
+                ps, "person.alice", "zone.home", datetime.now().astimezone(), set()
+            )
         assert ps.altitude_b_m == pytest.approx(42.0)
         assert ps.altitude_delta_m == pytest.approx(8.0)
 
@@ -2856,8 +2858,12 @@ class TestCalcPairAltitude:
         sa = State("person.alice", "home", {"latitude": 51.5, "longitude": -0.1, "altitude": 34.0})
         sb = State("zone.work", "0", {"latitude": 52.0, "longitude": -0.2})
         coordinator.hass.states.get.side_effect = lambda eid: sa if eid == "person.alice" else sb
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=5000.0):
-            ps = coordinator._calc_pair(ps, "person.alice", "zone.work", datetime.now().astimezone(), set())
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance", return_value=5000.0
+        ):
+            ps = coordinator._calc_pair(
+                ps, "person.alice", "zone.work", datetime.now().astimezone(), set()
+            )
         assert ps.altitude_b_m is None
         assert ps.altitude_delta_m is None
 

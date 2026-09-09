@@ -2,23 +2,21 @@
 
 ## [Unreleased]
 
-### Added
-
-- **Home zone altitude fallback** — when a tracked entity's state is `home` and no GPS altitude is available (e.g. iCloud, network-based trackers), the HA instance elevation (`hass.config.elevation`, set in Settings → System → General) is substituted. Enables `altitude_delta_m` and `same_altitude` binary sensor to work for home entities without requiring GPS altitude reporting.
-
 ### Changed
 
 - **Altitude stat box label** — card now shows `⛰ Altitude · Δ8m` / `Δ−8m` instead of `same floor` / `different floor`. GPS vertical accuracy (±10–30 m) makes floor detection unreliable; the raw signed delta is more honest and always available when altitude data exists.
 
-## [0.4.4] - 2026-09-08
+## [0.4.4] - 2026-09-09
 
 ### Added
 
 - **18 new translations** — Simplified Chinese (zh-Hans), Traditional Chinese (zh-Hant), Russian, Japanese, Korean, Ukrainian, Czech, Slovak, Hungarian, Romanian, Bulgarian, Croatian, Finnish, Greek, Turkish, Lithuanian, Latvian, Catalan. Brings locale coverage from 11 to 29 languages.
+- **Home zone altitude fallback** — when a tracked entity's state is `home` and no GPS altitude is available (e.g. iCloud, network-based trackers), the HA instance elevation (`hass.config.elevation`, set in Settings → System → General) is substituted. Enables `altitude_delta_m` and `same_altitude` binary sensor to work for home entities without requiring GPS altitude reporting.
 
 ### Fixed
 
 - **`same_altitude` misleading when far apart** — `binary_sensor.<pair>_same_altitude` previously turned ON whenever altitude matched regardless of distance. Now returns `None` (unavailable) when `distance_m` is unavailable or exceeds the proximity threshold; the "same floor / different floor" card label disappears automatically.
+- **`zone.home` altitude shows `?m`** — `zone.*` entities never carry GPS altitude; the home elevation fallback now also applies to `zone.home` (HA reserves this entity ID). Pairs like "Italo & Home" now show `34m / 42m` instead of `34m / ?m`. Other zones are excluded — `hass.config.elevation` is the home elevation only.
 
 ## [0.4.3] - 2026-07-22
 

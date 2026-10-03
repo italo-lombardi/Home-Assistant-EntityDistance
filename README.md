@@ -39,6 +39,7 @@ Track the distance between any two or more entities — people, devices, or zone
 - **Reliability tracking** — require consistent updates before the 'In Proximity' sensor turns ON
 - **Diagnostic sensors** — GPS accuracy, last update, update count (last 30 min) per tracked entity
 - **Refresh button** — force immediate mobile app location update
+- **Reset proximity duration button** — zero the cumulative proximity-duration counter and start a fresh count
 - **Multiple pairs** — each pair gets its own HA device; add as many as needed
 - **Configurable altitude threshold** — set the maximum altitude difference for "Same Altitude" in Advanced Filters (default 5 m, range 0–100 m)
 - **Vincenty distance** — uses HA's built-in ellipsoidal distance calculation, more accurate than Haversine
@@ -117,14 +118,14 @@ All settings can be changed after setup via **Configure** on the integration car
 
 ## Entities
 
-Each configured group creates one HA device (the group) with per-pair sub-devices. A 2-entity group creates 46 entities (36 sensors + 9 binary sensors + 1 button). A 3-entity group creates 138 pair entities + 4 group sensors.
+Each configured group creates one HA device (the group) with per-pair sub-devices. A 2-entity group creates 47 entities (36 sensors + 9 binary sensors + 2 buttons). A 3-entity group creates 138 pair entities + 4 group sensors.
 
 | Group size | Pairs | Total entities (approx) |
 |-----------|-------|------------------------|
-| 2 | 1 | 46 |
-| 3 | 3 | 138 + 4 group |
-| 4 | 6 | 276 + 4 group |
-| 5 | 10 | 460 + 4 group |
+| 2 | 1 | 47 |
+| 3 | 3 | 138 + 4 group + 2 buttons |
+| 4 | 6 | 276 + 4 group + 2 buttons |
+| 5 | 10 | 460 + 4 group + 2 buttons |
 
 ### Pair Sensors
 
@@ -201,6 +202,7 @@ Each configured group creates one HA device (the group) with per-pair sub-device
 | Entity | Description |
 |--------|-------------|
 | Refresh Location | Sends a silent push notification to request an immediate location update from both entities (iOS and Android) |
+| Reset Proximity Duration | Zeroes the cumulative proximity-duration total for every pair in the group and restarts the count from now. Today/zone-time sensors are unaffected (they reset at midnight) |
 
 ![Pair device card — all entities](assets/screenshots/device_card_entities.png)
 

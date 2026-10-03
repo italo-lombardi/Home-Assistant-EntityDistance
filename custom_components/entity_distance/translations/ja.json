@@ -190,7 +190,8 @@
       "approaching": {"name": "接近中"}
     },
     "button": {
-      "refresh": {"name": "位置を更新"}
+      "refresh": {"name": "位置を更新"},
+      "reset_proximity_duration": {"name": "近接継続時間をリセット"}
     }
   },
   "selector": {

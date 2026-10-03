@@ -190,7 +190,8 @@
       "approaching": {"name": "Približava se"}
     },
     "button": {
-      "refresh": {"name": "Osvježi lokaciju"}
+      "refresh": {"name": "Osvježi lokaciju"},
+      "reset_proximity_duration": {"name": "Poništi trajanje blizine"}
     }
   },
   "selector": {

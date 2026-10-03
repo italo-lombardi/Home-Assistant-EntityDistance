@@ -3275,9 +3275,7 @@ class TestResetProximityDuration:
         sensor = ProximityDurationSensor.__new__(ProximityDurationSensor)
         sensor.coordinator = MagicMock()
         sensor.coordinator.last_update_success = True
-        with patch.object(
-            type(sensor), "_pair", new_callable=lambda: property(lambda self: ps)
-        ):
+        with patch.object(type(sensor), "_pair", new_callable=lambda: property(lambda self: ps)):
             assert sensor.native_value == 0.0
 
     async def test_reset_when_not_in_proximity_leaves_since_none(self):

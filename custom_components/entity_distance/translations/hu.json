@@ -190,7 +190,8 @@
       "approaching": {"name": "Közeledik"}
     },
     "button": {
-      "refresh": {"name": "Helyzet frissítése"}
+      "refresh": {"name": "Helyzet frissítése"},
+      "reset_proximity_duration": {"name": "Közelség időtartamának nullázása"}
     }
   },
   "selector": {

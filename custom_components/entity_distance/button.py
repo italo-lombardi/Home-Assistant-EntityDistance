@@ -129,9 +129,7 @@ class RefreshButton(CoordinatorEntity[EntityDistanceCoordinator], ButtonEntity):
         return get_notify_service(self.hass, webhook_id)
 
 
-class ResetProximityDurationButton(
-    CoordinatorEntity[EntityDistanceCoordinator], ButtonEntity
-):
+class ResetProximityDurationButton(CoordinatorEntity[EntityDistanceCoordinator], ButtonEntity):
     _attr_has_entity_name = True
     _attr_translation_key = "reset_proximity_duration"
     _attr_entity_category = EntityCategory.CONFIG

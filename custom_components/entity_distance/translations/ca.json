@@ -190,7 +190,8 @@
       "approaching": {"name": "Aproximant-se"}
     },
     "button": {
-      "refresh": {"name": "Actualitza la ubicació"}
+      "refresh": {"name": "Actualitza la ubicació"},
+      "reset_proximity_duration": {"name": "Restableix la durada de la proximitat"}
     }
   },
   "selector": {

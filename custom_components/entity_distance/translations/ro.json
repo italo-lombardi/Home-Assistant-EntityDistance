@@ -190,7 +190,8 @@
       "approaching": {"name": "Se apropie"}
     },
     "button": {
-      "refresh": {"name": "Actualizare locație"}
+      "refresh": {"name": "Actualizare locație"},
+      "reset_proximity_duration": {"name": "Resetare durată proximitate"}
     }
   },
   "selector": {

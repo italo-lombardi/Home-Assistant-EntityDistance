@@ -272,6 +272,9 @@
     "button": {
       "refresh": {
         "name": "Opdater lokation"
+      },
+      "reset_proximity_duration": {
+        "name": "Nulstil nærhedsvarighed"
       }
     }
   },

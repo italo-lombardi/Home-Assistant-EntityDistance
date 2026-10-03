@@ -190,7 +190,8 @@
       "approaching": {"name": "Πλησιάζει"}
     },
     "button": {
-      "refresh": {"name": "Ανανέωση τοποθεσίας"}
+      "refresh": {"name": "Ανανέωση τοποθεσίας"},
+      "reset_proximity_duration": {"name": "Μηδενισμός διάρκειας εγγύτητας"}
     }
   },
   "selector": {

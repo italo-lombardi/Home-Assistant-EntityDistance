@@ -190,7 +190,8 @@
       "approaching": {"name": "접근 중"}
     },
     "button": {
-      "refresh": {"name": "위치 새로고침"}
+      "refresh": {"name": "위치 새로고침"},
+      "reset_proximity_duration": {"name": "근접 지속 시간 재설정"}
     }
   },
   "selector": {

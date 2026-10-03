@@ -272,6 +272,9 @@
     "button": {
       "refresh": {
         "name": "Actualiser la localisation"
+      },
+      "reset_proximity_duration": {
+        "name": "Réinitialiser la durée de proximité"
       }
     }
   },

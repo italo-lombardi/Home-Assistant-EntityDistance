@@ -272,6 +272,9 @@
     "button": {
       "refresh": {
         "name": "Aggiorna posizione"
+      },
+      "reset_proximity_duration": {
+        "name": "Azzera durata prossimità"
       }
     }
   },

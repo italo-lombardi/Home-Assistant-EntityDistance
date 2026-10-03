@@ -272,6 +272,9 @@
     "button": {
       "refresh": {
         "name": "Oppdater posisjon"
+      },
+      "reset_proximity_duration": {
+        "name": "Nullstill nærhetsvarighet"
       }
     }
   },

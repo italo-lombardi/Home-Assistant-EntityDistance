@@ -272,6 +272,9 @@
     "button": {
       "refresh": {
         "name": "Uppdatera plats"
+      },
+      "reset_proximity_duration": {
+        "name": "Återställ närvarotid"
       }
     }
   },

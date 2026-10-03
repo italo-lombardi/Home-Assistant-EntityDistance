@@ -190,7 +190,8 @@
       "approaching": {"name": "Yaklaşıyor"}
     },
     "button": {
-      "refresh": {"name": "Konumu Yenile"}
+      "refresh": {"name": "Konumu Yenile"},
+      "reset_proximity_duration": {"name": "Yakınlık Süresini Sıfırla"}
     }
   },
   "selector": {

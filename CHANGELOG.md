@@ -3,9 +3,12 @@
 ## [Unreleased]
 
 
+## [0.4.5] - 2026-10-03
+
 ### Changed
 
 - **Altitude stat box label** — card now shows `⛰ Altitude · Δ8m` / `Δ−8m` instead of `same floor` / `different floor`. GPS vertical accuracy (±10–30 m) makes floor detection unreliable; the raw signed delta is more honest and always available when altitude data exists.
+- **Duration display rolls over to days and weeks** — cards previously showed long proximity/ETA durations as overflowing hours (e.g. `2480h 27m`). The card formatter now renders the top two units: `≥24h` as `Nd Nh`, `≥7d` as `Nw Nd` (e.g. `103d 8h` → `14w 5d`). Weeks are exact (7 d); nothing above, since the elapsed-seconds total has no calendar for months/years. Durations under an hour are unchanged.
 
 ## [0.4.4] - 2026-09-09
 

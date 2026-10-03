@@ -338,6 +338,7 @@ class TestAsyncSetupEntry:
     async def test_setup_entry_adds_refresh_button(self):
         from custom_components.entity_distance.button import (
             RefreshButton,
+            ResetProximityDurationButton,
             async_setup_entry,
         )
         from custom_components.entity_distance.const import DOMAIN
@@ -355,8 +356,9 @@ class TestAsyncSetupEntry:
         added = []
         await async_setup_entry(hass, entry, lambda entities: added.extend(entities))
 
-        assert len(added) == 1
+        assert len(added) == 2
         assert isinstance(added[0], RefreshButton)
+        assert isinstance(added[1], ResetProximityDurationButton)
 
     @pytest.mark.asyncio
     async def test_setup_entry_friendly_name_from_state(self):
@@ -380,7 +382,7 @@ class TestAsyncSetupEntry:
 
         added = []
         await async_setup_entry(hass, entry, lambda entities: added.extend(entities))
-        assert len(added) == 1
+        assert len(added) == 2
 
     @pytest.mark.asyncio
     async def test_refresh_button_init_sets_attrs(self):
@@ -396,3 +398,33 @@ class TestAsyncSetupEntry:
         assert btn._attr_unique_id == "my_entry_refresh"
         assert btn._attr_device_info is device_info
         assert btn._entry is entry
+
+
+class TestResetProximityDurationButton:
+    @pytest.mark.asyncio
+    async def test_init_sets_attrs(self):
+        from custom_components.entity_distance.button import ResetProximityDurationButton
+
+        coordinator = MagicMock()
+        entry = MagicMock()
+        entry.entry_id = "my_entry"
+        device_info = MagicMock()
+
+        btn = ResetProximityDurationButton(coordinator, entry, device_info)
+
+        assert btn._attr_unique_id == "my_entry_reset_proximity_duration"
+        assert btn._attr_device_info is device_info
+
+    @pytest.mark.asyncio
+    async def test_press_delegates_to_coordinator(self):
+        from custom_components.entity_distance.button import ResetProximityDurationButton
+
+        coordinator = MagicMock()
+        coordinator.async_reset_proximity_duration = AsyncMock()
+        entry = MagicMock()
+        entry.entry_id = "my_entry"
+
+        btn = ResetProximityDurationButton(coordinator, entry, MagicMock())
+        await btn.async_press()
+
+        coordinator.async_reset_proximity_duration.assert_awaited_once()

@@ -3228,3 +3228,69 @@ class TestCalcPairVerticalAccuracyFilter:
         ps = self._run(vacc_a=None, vacc_b=None, max_vacc=30.0)
         assert ps.altitude_a_m == pytest.approx(100.0)
         assert ps.altitude_b_m == pytest.approx(110.0)
+
+
+class TestResetProximityDuration:
+    """async_reset_proximity_duration zeroes the lifetime total, correctly even mid-proximity."""
+
+    def _make_coordinator(self, pair_states):
+        from unittest.mock import AsyncMock
+
+        from custom_components.entity_distance.coordinator import EntityDistanceCoordinator
+
+        coord = EntityDistanceCoordinator.__new__(EntityDistanceCoordinator)
+        coord._pair_states = pair_states
+        coord._store = MagicMock()
+        coord._store.async_save = AsyncMock()
+        coord.async_update_listeners = MagicMock()
+        return coord
+
+    async def test_reset_while_in_proximity_zeroes_live_total(self):
+        """The regression that bites: reset mid-proximity must drop the in-progress segment too."""
+        from custom_components.entity_distance.sensor import ProximityDurationSensor
+
+        k = pair_key("person.a", "person.b")
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        before = datetime.now().astimezone() - timedelta(hours=2)
+        ps.proximity = True
+        ps.proximity_since = before
+        ps.proximity_duration_s = 3600.0
+        ps.proximity_tracking_started = before
+        ps.prev_calc_time = before
+
+        coord = self._make_coordinator({k: ps})
+        await coord.async_reset_proximity_duration()
+
+        now = datetime.now().astimezone()
+        assert ps.proximity_duration_s == 0.0
+        assert ps.proximity is True  # flag preserved
+        assert ps.proximity_since is not None
+        assert abs((ps.proximity_since - now).total_seconds()) < 2
+        assert abs((ps.proximity_tracking_started - now).total_seconds()) < 2
+        assert abs((ps.prev_calc_time - now).total_seconds()) < 2
+        coord._store.async_save.assert_awaited_once()  # persisted immediately
+        coord.async_update_listeners.assert_called_once()
+
+        # Sensor must now read ~0, not the ~2h live delta it showed before reset.
+        sensor = ProximityDurationSensor.__new__(ProximityDurationSensor)
+        sensor.coordinator = MagicMock()
+        sensor.coordinator.last_update_success = True
+        with patch.object(
+            type(sensor), "_pair", new_callable=lambda: property(lambda self: ps)
+        ):
+            assert sensor.native_value == 0.0
+
+    async def test_reset_when_not_in_proximity_leaves_since_none(self):
+        k = pair_key("person.a", "person.b")
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.proximity = False
+        ps.proximity_since = None
+        ps.proximity_duration_s = 7200.0
+        ps.proximity_tracking_started = datetime.now().astimezone() - timedelta(days=1)
+
+        coord = self._make_coordinator({k: ps})
+        await coord.async_reset_proximity_duration()
+
+        assert ps.proximity_duration_s == 0.0
+        assert ps.proximity_since is None  # not resurrected
+        assert ps.proximity is False

@@ -4,6 +4,7 @@ import logging
 
 from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceEntryType
@@ -38,7 +39,12 @@ async def async_setup_entry(
         entry_type=DeviceEntryType.SERVICE,
     )
 
-    async_add_entities([RefreshButton(coordinator, entry, group_dev)])
+    async_add_entities(
+        [
+            RefreshButton(coordinator, entry, group_dev),
+            ResetProximityDurationButton(coordinator, entry, group_dev),
+        ]
+    )
 
 
 class RefreshButton(CoordinatorEntity[EntityDistanceCoordinator], ButtonEntity):
@@ -121,3 +127,24 @@ class RefreshButton(CoordinatorEntity[EntityDistanceCoordinator], ButtonEntity):
         if webhook_id is None:
             return None
         return get_notify_service(self.hass, webhook_id)
+
+
+class ResetProximityDurationButton(
+    CoordinatorEntity[EntityDistanceCoordinator], ButtonEntity
+):
+    _attr_has_entity_name = True
+    _attr_translation_key = "reset_proximity_duration"
+    _attr_entity_category = EntityCategory.CONFIG
+
+    def __init__(
+        self,
+        coordinator: EntityDistanceCoordinator,
+        entry: ConfigEntry,
+        device_info: DeviceInfo,
+    ) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{entry.entry_id}_reset_proximity_duration"
+        self._attr_device_info = device_info
+
+    async def async_press(self) -> None:
+        await self.coordinator.async_reset_proximity_duration()

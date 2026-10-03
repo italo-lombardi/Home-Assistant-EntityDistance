@@ -5,6 +5,10 @@
 
 ## [0.4.5] - 2026-10-03
 
+### Added
+
+- **Reset proximity duration button** — each group device now has a *Reset Proximity Duration* button (diagnostic/config control). Pressing it zeroes the cumulative proximity-duration total for every pair in the group and restarts the count from now. Works correctly mid-proximity (re-anchors the in-progress segment so the sensor drops to 0 immediately) and persists through a restart. Today/zone-time accumulators are untouched — they reset on their own at midnight.
+
 ### Changed
 
 - **Altitude stat box label** — card now shows `⛰ Altitude · Δ8m` / `Δ−8m` instead of `same floor` / `different floor`. GPS vertical accuracy (±10–30 m) makes floor detection unreliable; the raw signed delta is more honest and always available when altitude data exists.

@@ -272,6 +272,9 @@
     "button": {
       "refresh": {
         "name": "Refresh Location"
+      },
+      "reset_proximity_duration": {
+        "name": "Reset Proximity Duration"
       }
     }
   },

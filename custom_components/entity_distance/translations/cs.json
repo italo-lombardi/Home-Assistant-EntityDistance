@@ -190,7 +190,8 @@
       "approaching": {"name": "Přibližuje se"}
     },
     "button": {
-      "refresh": {"name": "Obnovit polohu"}
+      "refresh": {"name": "Obnovit polohu"},
+      "reset_proximity_duration": {"name": "Vynulovat dobu trvání blízkosti"}
     }
   },
   "selector": {

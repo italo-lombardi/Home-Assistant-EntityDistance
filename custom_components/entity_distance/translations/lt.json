@@ -190,7 +190,8 @@
       "approaching": {"name": "Artėja"}
     },
     "button": {
-      "refresh": {"name": "Atnaujinti vietą"}
+      "refresh": {"name": "Atnaujinti vietą"},
+      "reset_proximity_duration": {"name": "Nustatyti artumo trukmę iš naujo"}
     }
   },
   "selector": {

@@ -190,7 +190,8 @@
       "approaching": {"name": "Tuvojas"}
     },
     "button": {
-      "refresh": {"name": "Atjaunināt atrašanās vietu"}
+      "refresh": {"name": "Atjaunināt atrašanās vietu"},
+      "reset_proximity_duration": {"name": "Atiestatīt tuvuma ilgumu"}
     }
   },
   "selector": {

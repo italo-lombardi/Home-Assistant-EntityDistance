@@ -190,7 +190,8 @@
       "approaching": {"name": "Приближается"}
     },
     "button": {
-      "refresh": {"name": "Обновить местоположение"}
+      "refresh": {"name": "Обновить местоположение"},
+      "reset_proximity_duration": {"name": "Сбросить длительность близости"}
     }
   },
   "selector": {

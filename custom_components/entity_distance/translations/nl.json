@@ -272,6 +272,9 @@
     "button": {
       "refresh": {
         "name": "Locatie vernieuwen"
+      },
+      "reset_proximity_duration": {
+        "name": "Nabijheidsduur resetten"
       }
     }
   },

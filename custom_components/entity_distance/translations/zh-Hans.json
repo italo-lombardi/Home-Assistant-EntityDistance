@@ -190,7 +190,8 @@
       "approaching": {"name": "接近中"}
     },
     "button": {
-      "refresh": {"name": "刷新位置"}
+      "refresh": {"name": "刷新位置"},
+      "reset_proximity_duration": {"name": "重置邻近持续时间"}
     }
   },
   "selector": {

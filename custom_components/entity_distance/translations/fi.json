@@ -190,7 +190,8 @@
       "approaching": {"name": "Lähestymässä"}
     },
     "button": {
-      "refresh": {"name": "Päivitä sijainti"}
+      "refresh": {"name": "Päivitä sijainti"},
+      "reset_proximity_duration": {"name": "Nollaa läheisyyden kesto"}
     }
   },
   "selector": {

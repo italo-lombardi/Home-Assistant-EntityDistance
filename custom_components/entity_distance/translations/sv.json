@@ -142,7 +142,7 @@
         }
       },
       "proximity_duration": {
-        "name": "Nährvarotid"
+        "name": "Närhetstid"
       },
       "proximity_tracking_started": {
         "name": "Proximity Tracking Started"
@@ -154,7 +154,7 @@
         "name": "Senast sedd tillsammans"
       },
       "today_proximity_time": {
-        "name": "Nährvarotid idag"
+        "name": "Närhetstid idag"
       },
       "direction": {
         "name": "Riktning",
@@ -272,6 +272,9 @@
     "button": {
       "refresh": {
         "name": "Uppdatera plats"
+      },
+      "reset_proximity_duration": {
+        "name": "Återställ närhetstid"
       }
     }
   },

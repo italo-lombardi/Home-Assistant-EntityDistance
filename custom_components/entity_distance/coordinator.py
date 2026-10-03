@@ -1129,6 +1129,31 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             and (now - ps.stale_since).total_seconds() < self._grace_window_s
         )
 
+    async def async_reset_proximity_duration(self) -> None:
+        """Zero the cumulative proximity-duration total for every pair and start fresh.
+
+        Resets only the lifetime proximity-duration accumulator (and its
+        tracking anchor / proximity-rate baseline). Today/zone accumulators are
+        left alone — they reset on their own at midnight.
+        """
+        now = dt_util.now()
+        for ps in self._pair_states.values():
+            ps.proximity_duration_s = 0.0
+            ps.proximity_tracking_started = now
+            # ProximityDurationSensor adds a live (now - proximity_since) delta
+            # while in proximity, so re-anchor the open segment to now (not None,
+            # which would drop the segment and lose credit on the next EXIT).
+            if ps.proximity and ps.proximity_since is not None:
+                ps.proximity_since = now
+            # The load path re-anchors a restart gap on prev_calc_time and folds
+            # it back into proximity_duration_s; re-stamp it so a restart right
+            # after a reset does not resurrect the time we just zeroed.
+            ps.prev_calc_time = now
+        # Persist immediately so the zeroed total survives a restart, then push
+        # the new values to the sensors without running a full recalculate tick.
+        await self._async_save_state()
+        self.async_update_listeners()
+
     async def _async_save_state(self) -> None:
         payload: dict = {}
         for k, ps in self._pair_states.items():

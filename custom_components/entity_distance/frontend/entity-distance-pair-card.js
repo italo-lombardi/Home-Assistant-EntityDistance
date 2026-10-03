@@ -3,7 +3,7 @@
  * Lovelace custom card for the Entity Distance integration.
  */
 
-const CARD_VERSION = "0.4.4";
+const CARD_VERSION = "0.4.5";
 
 console.info(
   `%c ENTITY-DISTANCE-PAIR-CARD %c v${CARD_VERSION} %c — github.com/italo-lombardi`,
@@ -104,11 +104,17 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
     if (min < 1) return "< 1 min";
     if (min >= 60) {
       // Convert minutes to total seconds (1 d.p. of precision from sensor),
-      // then split into h/m without re-rounding so the displayed h+m matches
-      // the source value (e.g. 29822.78 min -> 497h 2m, never 497h 3m).
+      // then split into w/d/h/m without re-rounding so the displayed parts
+      // match the source value (e.g. 29822.78 min -> 2w 6d, never 2w 7d).
+      // Weeks are exact (7d); nothing above (months/years need a calendar
+      // the elapsed-seconds accumulator doesn't have). Show top two units.
       const totalSec = Math.round(min * 60);
-      const h = Math.floor(totalSec / 3600);
+      const w = Math.floor(totalSec / 604800);
+      const d = Math.floor((totalSec % 604800) / 86400);
+      const h = Math.floor((totalSec % 86400) / 3600);
       const m = Math.floor((totalSec % 3600) / 60);
+      if (w > 0) return d > 0 ? `${w}w ${d}d` : `${w}w`;
+      if (d > 0) return h > 0 ? `${d}d ${h}h` : `${d}d`;
       return m > 0 ? `${h}h ${m}m` : `${h}h`;
     }
     return `${Math.round(min)} min`;

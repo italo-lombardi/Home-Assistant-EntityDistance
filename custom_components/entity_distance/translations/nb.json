@@ -142,7 +142,7 @@
         }
       },
       "proximity_duration": {
-        "name": "Nærhetvarighet"
+        "name": "Nærhetsvarighet"
       },
       "proximity_tracking_started": {
         "name": "Proximity Tracking Started"

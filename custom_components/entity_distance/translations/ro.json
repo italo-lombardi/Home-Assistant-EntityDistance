@@ -191,7 +191,7 @@
     },
     "button": {
       "refresh": {"name": "Actualizare locație"},
-      "reset_proximity_duration": {"name": "Resetare durată proximitate"}
+      "reset_proximity_duration": {"name": "Resetare durata proximității"}
     }
   },
   "selector": {

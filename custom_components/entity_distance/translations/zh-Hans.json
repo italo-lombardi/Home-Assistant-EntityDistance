@@ -191,7 +191,7 @@
     },
     "button": {
       "refresh": {"name": "刷新位置"},
-      "reset_proximity_duration": {"name": "重置邻近时长"}
+      "reset_proximity_duration": {"name": "重置邻近持续时间"}
     }
   },
   "selector": {

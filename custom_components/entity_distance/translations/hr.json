@@ -191,7 +191,7 @@
     },
     "button": {
       "refresh": {"name": "Osvježi lokaciju"},
-      "reset_proximity_duration": {"name": "Poništi trajanje blizine"}
+      "reset_proximity_duration": {"name": "Resetiraj trajanje blizine"}
     }
   },
   "selector": {

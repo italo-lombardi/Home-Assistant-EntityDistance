@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- **`DeviceInfo` import path** — imported from `homeassistant.helpers.device_registry` instead of the deprecated `homeassistant.helpers.entity` alias, which logs a deprecation warning in recent Home Assistant releases. Warning-level cleanup, no behaviour change.
+
 
 ## [0.4.5] - 2026-10-03
 

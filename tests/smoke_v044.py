@@ -32,7 +32,8 @@ FAIL = "\033[31mFAIL\033[0m"
 SKIP = "\033[33mSKIP\033[0m"
 
 results: list[tuple[str, bool, str]] = []
-_nudge = 0
+import random as _random
+_nudge = _random.randint(10000, 99999)
 
 
 # ---------------------------------------------------------------------------
@@ -69,7 +70,7 @@ def inject(
     api(f"/states/{entity_id}", method="POST", data={"state": "not_home", "attributes": attrs})
 
 
-def inject_and_wait(alice_kwargs, bob_kwargs, wait=3):
+def inject_and_wait(alice_kwargs, bob_kwargs, wait=6):
     """Inject both entities twice and wait for coordinator to settle.
 
     Two injects are needed because the coordinator computes direction/speed from
@@ -136,7 +137,7 @@ def test_basic_sensors():
     section("Basic sensors — distance, proximity, direction")
     inject("device_tracker.test_alice", 53.3498, -6.2603)
     inject("device_tracker.test_bob", 53.3600, -6.2603)
-    time.sleep(3)
+    time.sleep(7)
 
     s = state(f"sensor.{SLUG}_distance")
     check("Distance sensor exists", s is not None)
@@ -163,8 +164,8 @@ def test_basic_sensors():
 def test_altitude_sensors():
     section("Altitude sensors — Altitude A/B, Elevation Difference, Same Altitude")
     inject("device_tracker.test_alice", 53.3498, -6.2603, altitude=42.0)
-    inject("device_tracker.test_bob", 53.3512, -6.2603, altitude=50.0)
-    time.sleep(3)
+    inject("device_tracker.test_bob", 53.3499, -6.2603, altitude=50.0)  # ~11m apart — within proximity threshold
+    time.sleep(7)
 
     s = state(f"sensor.{SLUG}_altitude_test_alice")
     check("Altitude A exists", s is not None)
@@ -206,11 +207,11 @@ def test_same_altitude_threshold():
     section("Same Altitude — within threshold")
     # Two injects needed — coordinator requires prev_state to compute altitude delta
     inject("device_tracker.test_alice", 53.3498, -6.2603, altitude=100.0)
-    inject("device_tracker.test_bob", 53.3512, -6.2603, altitude=103.0)
+    inject("device_tracker.test_bob", 53.3499, -6.2603, altitude=103.0)  # ~11m — within proximity threshold
     time.sleep(2)
     inject("device_tracker.test_alice", 53.3498, -6.2603, altitude=100.0)
-    inject("device_tracker.test_bob", 53.3512, -6.2603, altitude=103.0)
-    time.sleep(4)
+    inject("device_tracker.test_bob", 53.3499, -6.2603, altitude=103.0)
+    time.sleep(6)
 
     s = state(f"binary_sensor.{SLUG}_same_altitude")
     if s:
@@ -222,7 +223,7 @@ def test_gps_speed_sensors():
     section("GPS Speed sensors")
     inject("device_tracker.test_alice", 53.3498, -6.2603, speed=5.0)
     inject("device_tracker.test_bob", 53.3600, -6.2603, speed=3.0)
-    time.sleep(3)
+    time.sleep(7)
 
     s = state(f"sensor.{SLUG}_gps_speed_test_alice")
     check("GPS Speed A exists", s is not None)
@@ -239,7 +240,7 @@ def test_gps_heading_sensors():
     section("GPS Heading sensors")
     inject("device_tracker.test_alice", 53.3498, -6.2603, course=270.0)
     inject("device_tracker.test_bob", 53.3600, -6.2603, course=90.0)
-    time.sleep(3)
+    time.sleep(7)
 
     s = state(f"sensor.{SLUG}_gps_heading_test_alice")
     check("GPS Heading A exists", s is not None)
@@ -256,7 +257,7 @@ def test_gps_vertical_accuracy_sensors():
     section("GPS Vertical Accuracy sensors")
     inject("device_tracker.test_alice", 53.3498, -6.2603, vertical_accuracy=8.0)
     inject("device_tracker.test_bob", 53.3600, -6.2603, vertical_accuracy=12.0)
-    time.sleep(3)
+    time.sleep(7)
 
     s = state(f"sensor.{SLUG}_gps_vertical_accuracy_test_alice")
     check("GPS Vertical Accuracy A exists", s is not None)
@@ -288,7 +289,7 @@ def test_combined_inject():
             "course": 0.0,
             "vertical_accuracy": 9.0,
         },
-        wait=4,
+        wait=6,
     )
 
     checks = [
@@ -332,7 +333,7 @@ def test_person_source_fallback():
 
     # Check if a person-based pair exists (slug may differ)
     person_slug = "test_alice_person_test_bob"
-    time.sleep(3)
+    time.sleep(7)
 
     s = state(f"sensor.{person_slug}_altitude_test_alice_person")
     if s is None:
@@ -361,7 +362,7 @@ def test_out_of_range_rejection():
     # Altitude out of range (>15000m) → should show unknown/previous value
     inject("device_tracker.test_alice", 53.3498, -6.2603, altitude=20000.0)
     inject("device_tracker.test_bob", 53.3600, -6.2603, altitude=50.0)
-    time.sleep(3)
+    time.sleep(7)
 
     s = state(f"sensor.{SLUG}_altitude_test_alice")
     # Either unknown or the previous valid value — not 20000
@@ -376,7 +377,7 @@ def test_out_of_range_rejection():
 
     # Speed out of range (>1000 km/h) → unknown
     inject("device_tracker.test_alice", 53.3498, -6.2603, speed=2000.0)
-    time.sleep(3)
+    time.sleep(7)
     s = state(f"sensor.{SLUG}_gps_speed_test_alice")
     if s:
         check(
@@ -434,7 +435,7 @@ def test_approaching_binary_sensor():
     time.sleep(2)
     inject("device_tracker.test_alice", 53.3550, -6.2603)  # moved south, closer to Bob
     inject("device_tracker.test_bob", 53.3500, -6.2603)
-    time.sleep(4)
+    time.sleep(6)
 
     s = state(f"binary_sensor.{SLUG}_approaching")
     check("Approaching binary sensor exists", s is not None)
@@ -451,7 +452,7 @@ def test_approaching_binary_sensor():
     time.sleep(2)
     inject("device_tracker.test_alice", 53.3600, -6.2603)  # moved north, away from Bob
     inject("device_tracker.test_bob", 53.3500, -6.2603)
-    time.sleep(4)
+    time.sleep(6)
 
     s = state(f"binary_sensor.{SLUG}_approaching")
     if s:
@@ -468,7 +469,7 @@ def test_vertical_accuracy_filter():
     # and confirm altitude still shows (filter off).
     inject("device_tracker.test_alice", 53.3498, -6.2603, altitude=80.0, vertical_accuracy=100.0)
     inject("device_tracker.test_bob", 53.3600, -6.2603, altitude=85.0, vertical_accuracy=5.0)
-    time.sleep(3)
+    time.sleep(7)
 
     s = state(f"sensor.{SLUG}_altitude_test_alice")
     if s and s["state"] not in ("unknown", "unavailable"):

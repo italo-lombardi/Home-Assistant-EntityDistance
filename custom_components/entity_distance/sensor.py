@@ -36,7 +36,7 @@ from .models import PairState, _zone_match_value, friendly_name, pair_key
 
 _LOGGER = logging.getLogger(__name__)
 
-# HA 2026.x+ uses via_device_id (str); older HA uses via_device (domain, id) tuple.
+# via_device_id (str) preferred on HA ≥2026; via_device tuple deprecated, removed 2027.8.
 # ponytail: runtime sniff avoids a hard min-HA-version bump while silencing the deprecation warning
 _USE_VIA_DEVICE_ID: bool = "via_device_id" in DeviceInfo.__annotations__
 

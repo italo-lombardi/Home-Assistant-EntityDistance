@@ -556,13 +556,14 @@ class TestAsyncSetupEntry:
     @pytest.mark.asyncio
     async def test_pair_devices_omit_via_link_when_group_not_found(self):
         # When the group device isn't registered yet, no via link must be set.
+        # Uses 3 entities to also exercise the group-level device path (AnyInProximity etc).
         from homeassistant.helpers import device_registry as dr
 
         from custom_components.entity_distance.const import DOMAIN
 
         coordinator = MagicMock()
         coordinator.is_within_grace.return_value = False
-        coordinator.entities = ["person.alice", "person.bob"]
+        coordinator.entities = ["person.alice", "person.bob", "person.carol"]
         coordinator.data = MagicMock()
 
         entry = MagicMock()
@@ -577,6 +578,7 @@ class TestAsyncSetupEntry:
         added = []
         await async_setup_entry(hass, entry, lambda entities: added.extend(entities))
 
+        assert len(added) > 0
         for sensor in added:
             info = sensor._attr_device_info
             if info is not None:

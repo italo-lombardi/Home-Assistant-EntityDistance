@@ -80,9 +80,8 @@ class TestPairDeviceInfo:
 
         with mock.patch.object(sensor_mod, "_USE_VIA_DEVICE_ID", True):
             info = _pair_device_info(entry, k, "Alice", "Bob", "dev-uuid-123")
-
-        assert info.get("via_device_id") == "dev-uuid-123"
-        assert "via_device" not in info
+            assert info.get("via_device_id") == "dev-uuid-123"
+            assert "via_device" not in info
 
     def test_via_device_tuple_when_flag_false(self):
         import unittest.mock as mock

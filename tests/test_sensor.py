@@ -96,9 +96,8 @@ class TestPairDeviceInfo:
 
         with mock.patch.object(sensor_mod, "_USE_VIA_DEVICE_ID", False):
             info = _pair_device_info(entry, k, "Alice", "Bob", "dev-uuid-123")
-
-        assert info.get("via_device") == (DOMAIN, "eid")
-        assert "via_device_id" not in info
+            assert info.get("via_device") == (DOMAIN, "eid")
+            assert "via_device_id" not in info
 
     def test_no_via_link_when_group_device_id_none(self):
         import unittest.mock as mock

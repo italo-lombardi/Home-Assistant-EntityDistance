@@ -90,10 +90,12 @@ def test_direction_sensors_exist():
 def test_direction_approaching_on_gps_update():
     section("Direction → approaching when distance decreases")
 
-    # Establish baseline: alice and bob far apart
+    # Step the entities closer in small increments (< 800m per step) to stay
+    # under the 1000 km/h teleport-rejection threshold at ~3s inter-update intervals.
+    # Each 0.005° latitude ≈ 555m — safely below the speed cap.
     inject("device_tracker.test_alice", 53.3498, -6.2603)
-    inject("device_tracker.test_bob", 53.4000, -6.2603)  # ~5.6 km apart
-    time.sleep(3)
+    inject("device_tracker.test_bob", 53.3598, -6.2603)  # ~1.1 km apart — baseline
+    time.sleep(5)
 
     s_before = state(f"sensor.{SLUG}_distance")
     check(
@@ -102,9 +104,9 @@ def test_direction_approaching_on_gps_update():
         s_before["state"] if s_before else "missing",
     )
 
-    # Move bob closer to alice
-    inject("device_tracker.test_bob", 53.3600, -6.2603)  # ~1.1 km apart
-    time.sleep(3)
+    # Move bob 0.004° closer (~444m) — well under speed cap
+    inject("device_tracker.test_bob", 53.3558, -6.2603)
+    time.sleep(5)
 
     s_dir = state(f"sensor.{SLUG}_direction")
     check(
@@ -123,13 +125,13 @@ def test_direction_held_between_gps_updates():
     """
     section("Direction held between GPS updates (timer tick regression)")
 
-    # Move bob closer to establish approaching
+    # Build up approaching in two small steps so no step exceeds speed cap.
     inject("device_tracker.test_alice", 53.3498, -6.2603)
-    inject("device_tracker.test_bob", 53.3800, -6.2603)
-    time.sleep(3)
+    inject("device_tracker.test_bob", 53.3598, -6.2603)  # ~1.1 km baseline
+    time.sleep(5)
 
-    inject("device_tracker.test_bob", 53.3600, -6.2603)
-    time.sleep(3)
+    inject("device_tracker.test_bob", 53.3558, -6.2603)  # move 444m closer
+    time.sleep(5)
 
     s_dir = state(f"sensor.{SLUG}_direction")
     if s_dir is None or s_dir["state"] != "approaching":
@@ -151,16 +153,16 @@ def test_direction_held_between_gps_updates():
 def test_direction_updates_on_new_gps():
     section("Direction updates correctly when new GPS fix arrives")
 
-    # Establish approaching
+    # Establish approaching in two small steps
     inject("device_tracker.test_alice", 53.3498, -6.2603)
-    inject("device_tracker.test_bob", 53.3700, -6.2603)
-    time.sleep(3)
-    inject("device_tracker.test_bob", 53.3600, -6.2603)
-    time.sleep(3)
+    inject("device_tracker.test_bob", 53.3598, -6.2603)
+    time.sleep(5)
+    inject("device_tracker.test_bob", 53.3558, -6.2603)  # move closer
+    time.sleep(5)
 
-    # Now move bob away — new GPS fix should update direction to diverging
-    inject("device_tracker.test_bob", 53.3900, -6.2603)
-    time.sleep(3)
+    # Move bob 0.004° away — new GPS fix should update direction to diverging
+    inject("device_tracker.test_bob", 53.3598, -6.2603)
+    time.sleep(5)
 
     s_dir = state(f"sensor.{SLUG}_direction")
     check(

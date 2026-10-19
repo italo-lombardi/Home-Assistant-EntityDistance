@@ -9,6 +9,7 @@ from homeassistant.components.binary_sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -17,6 +18,7 @@ from homeassistant.util import dt as dt_util
 from .const import BUCKETS, DIRECTION_APPROACHING, DOMAIN
 from .coordinator import EntityDistanceCoordinator, calc_bucket
 from .models import PairState, _zone_match_value, friendly_name, pair_key
+from .sensor import _pair_device_info
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -52,17 +54,22 @@ async def async_setup_entry(
 
     sensors: list = []
 
+    group_device_id: str | None = None
+    try:
+        dev_reg = dr.async_get(hass)
+        group_dev_entry = dev_reg.async_get_device(
+            identifiers={(DOMAIN, entry.entry_id)}
+        )
+        if group_dev_entry is not None:
+            group_device_id = group_dev_entry.id
+    except Exception:  # noqa: BLE001
+        pass
+
     for a, b in itertools.combinations(entities_list, 2):
         k = pair_key(a, b)
         a_name = _friendly_name(k[0])
         b_name = _friendly_name(k[1])
-        pair_dev = DeviceInfo(
-            identifiers={(DOMAIN, f"{entry.entry_id}_{k[0]}__{k[1]}")},
-            name=f"{a_name} & {b_name}",
-            manufacturer="Entity Distance",
-            entry_type=DeviceEntryType.SERVICE,
-            via_device=(DOMAIN, entry.entry_id),
-        )
+        pair_dev = _pair_device_info(entry, k, a_name, b_name, group_device_id)
         is_zone_pair = k[0].startswith("zone.") and k[1].startswith("zone.")
         sensors.append(ProximityBinarySensor(coordinator, entry, pair_dev, k, a_name, b_name))
         sensors.append(ReliableBinarySensor(coordinator, entry, pair_dev, k))

@@ -514,6 +514,77 @@ class TestAsyncSetupEntry:
         await async_setup_entry(hass, entry, mock_add)
         assert len(added) > 0
 
+    @pytest.mark.asyncio
+    async def test_pair_devices_use_correct_via_device_key(self):
+        # Uses via_device_id on new HA (2026+), via_device tuple on old HA (2025.x).
+        # Both cases: no regression in parent link, no deprecated key on new HA.
+        from homeassistant.helpers import device_registry as dr
+
+        from custom_components.entity_distance.const import DOMAIN
+        from custom_components.entity_distance.sensor import _USE_VIA_DEVICE_ID
+
+        coordinator = MagicMock()
+        coordinator.is_within_grace.return_value = False
+        coordinator.entities = ["person.alice", "person.bob"]
+        coordinator.data = MagicMock()
+
+        entry = MagicMock()
+        entry.entry_id = "test_entry"
+
+        fake_group_device = MagicMock()
+        fake_group_device.id = "group-device-uuid"
+        dev_reg = MagicMock()
+        dev_reg.async_get_device.return_value = fake_group_device
+        hass = MagicMock()
+        hass.states.get.return_value = None
+        hass.data = {DOMAIN: {"test_entry": coordinator}, dr.DATA_REGISTRY: dev_reg}
+
+        added = []
+        await async_setup_entry(hass, entry, lambda entities: added.extend(entities))
+
+        dev_reg.async_get_device.assert_called_once_with(
+            identifiers={(DOMAIN, "test_entry")}
+        )
+        for sensor in added:
+            info = sensor._attr_device_info
+            if info is not None and info.get("identifiers") != {(DOMAIN, "test_entry")}:
+                if _USE_VIA_DEVICE_ID:
+                    assert info.get("via_device_id") == "group-device-uuid"
+                    assert "via_device" not in info
+                else:
+                    assert info.get("via_device") == (DOMAIN, "test_entry")
+                    assert "via_device_id" not in info
+
+    @pytest.mark.asyncio
+    async def test_pair_devices_omit_via_link_when_group_not_found(self):
+        # When the group device isn't registered yet, no via link must be set.
+        from homeassistant.helpers import device_registry as dr
+
+        from custom_components.entity_distance.const import DOMAIN
+
+        coordinator = MagicMock()
+        coordinator.is_within_grace.return_value = False
+        coordinator.entities = ["person.alice", "person.bob"]
+        coordinator.data = MagicMock()
+
+        entry = MagicMock()
+        entry.entry_id = "test_entry"
+
+        dev_reg = MagicMock()
+        dev_reg.async_get_device.return_value = None  # group device not found
+        hass = MagicMock()
+        hass.states.get.return_value = None
+        hass.data = {DOMAIN: {"test_entry": coordinator}, dr.DATA_REGISTRY: dev_reg}
+
+        added = []
+        await async_setup_entry(hass, entry, lambda entities: added.extend(entities))
+
+        for sensor in added:
+            info = sensor._attr_device_info
+            if info is not None:
+                assert "via_device" not in info
+                assert "via_device_id" not in info
+
     def test_is_on_when_proximity_true(self):
         k = pair_key("person.alice", "person.bob")
         gd = _make_group_data(["person.alice", "person.bob"], {k: True})

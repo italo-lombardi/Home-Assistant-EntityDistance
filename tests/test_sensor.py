@@ -67,6 +67,58 @@ def _make_sensor(cls, pair_state: PairState):
     return sensor
 
 
+class TestPairDeviceInfo:
+    def test_via_device_id_when_flag_true(self):
+        import unittest.mock as mock
+
+        from custom_components.entity_distance.const import DOMAIN
+        import custom_components.entity_distance.sensor as sensor_mod
+        from custom_components.entity_distance.sensor import _pair_device_info
+
+        entry = mock.MagicMock()
+        entry.entry_id = "eid"
+        k = ("person.alice", "person.bob")
+
+        with mock.patch.object(sensor_mod, "_USE_VIA_DEVICE_ID", True):
+            info = _pair_device_info(entry, k, "Alice", "Bob", "dev-uuid-123")
+
+        assert info.get("via_device_id") == "dev-uuid-123"
+        assert "via_device" not in info
+
+    def test_via_device_tuple_when_flag_false(self):
+        import unittest.mock as mock
+
+        from custom_components.entity_distance.const import DOMAIN
+        import custom_components.entity_distance.sensor as sensor_mod
+        from custom_components.entity_distance.sensor import _pair_device_info
+
+        entry = mock.MagicMock()
+        entry.entry_id = "eid"
+        k = ("person.alice", "person.bob")
+
+        with mock.patch.object(sensor_mod, "_USE_VIA_DEVICE_ID", False):
+            info = _pair_device_info(entry, k, "Alice", "Bob", "dev-uuid-123")
+
+        assert info.get("via_device") == (DOMAIN, "eid")
+        assert "via_device_id" not in info
+
+    def test_no_via_link_when_group_device_id_none(self):
+        import unittest.mock as mock
+
+        import custom_components.entity_distance.sensor as sensor_mod
+        from custom_components.entity_distance.sensor import _pair_device_info
+
+        entry = mock.MagicMock()
+        entry.entry_id = "eid"
+        k = ("person.alice", "person.bob")
+
+        for flag in (True, False):
+            with mock.patch.object(sensor_mod, "_USE_VIA_DEVICE_ID", flag):
+                info = _pair_device_info(entry, k, "Alice", "Bob", None)
+            assert "via_device" not in info
+            assert "via_device_id" not in info
+
+
 class TestSensorValues:
     def _make_pair(self, **kwargs) -> PairState:
         ps = PairState(entity_a_id="person.alice", entity_b_id="person.bob")
@@ -1603,6 +1655,7 @@ class TestAsyncSetupEntrySensor:
         # except swallows it, leaving async_get_or_create uncovered. Here we inject a
         # real device-registry mock so the registry call actually runs and we assert
         # the group device is created with the expected identifiers/metadata.
+        # Also verifies that pair devices receive via_device_id (not deprecated via_device).
         from homeassistant.helpers import device_registry as dr
 
         from custom_components.entity_distance.const import DOMAIN
@@ -1616,7 +1669,10 @@ class TestAsyncSetupEntrySensor:
         entry = MagicMock()
         entry.entry_id = "test_entry"
 
+        fake_group_device = MagicMock()
+        fake_group_device.id = "group-device-uuid"
         dev_reg = MagicMock()
+        dev_reg.async_get_or_create.return_value = fake_group_device
         hass = MagicMock()
         hass.states.get.return_value = None
         # async_get(hass) resolves via hass.data[DATA_REGISTRY]; provide it so the
@@ -1631,6 +1687,19 @@ class TestAsyncSetupEntrySensor:
         assert kwargs["config_entry_id"] == "test_entry"
         assert kwargs["identifiers"] == {(DOMAIN, "test_entry")}
         assert kwargs["manufacturer"] == "Entity Distance"
+
+        # Pair sensors carry the correct via link for the running HA version.
+        from custom_components.entity_distance.sensor import _USE_VIA_DEVICE_ID
+
+        for sensor in added:
+            info = sensor._attr_device_info
+            if info is not None and info.get("identifiers") != {(DOMAIN, "test_entry")}:
+                if _USE_VIA_DEVICE_ID:
+                    assert info.get("via_device_id") == "group-device-uuid"
+                    assert "via_device" not in info
+                else:
+                    assert info.get("via_device") == (DOMAIN, "test_entry")
+                    assert "via_device_id" not in info
 
 
 class TestAltitudeSensor:

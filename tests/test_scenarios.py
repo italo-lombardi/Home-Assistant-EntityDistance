@@ -105,7 +105,9 @@ def _tick(coord, now: datetime, state_map: dict):
         ]
     )
     for k, ps in coord._pair_states.items():
-        coord._pair_states[k] = coord._calc_pair(ps, ps.entity_a_id, ps.entity_b_id, now, set())
+        coord._pair_states[k] = coord._calc_pair(
+            ps, ps.entity_a_id, ps.entity_b_id, now, {ps.entity_a_id, ps.entity_b_id}
+        )
 
 
 def _ps(coord, a: str, b: str) -> PairState:

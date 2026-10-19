@@ -2359,7 +2359,9 @@ class TestStationaryThresholdPerTick:
             "custom_components.entity_distance.coordinator.ha_distance",
             return_value=curr_dist,
         ):
-            return coordinator._calc_pair(ps, "person.alice", "person.bob", now, set())
+            return coordinator._calc_pair(
+                ps, "person.alice", "person.bob", now, {"person.alice", "person.bob"}
+            )
 
     def test_stationary_with_high_accuracy_noise(self):
         """Two devices each acc=100m → noise_budget=400m → threshold=60m; delta=50m → STATIONARY."""
@@ -2400,6 +2402,73 @@ class TestStationaryThresholdPerTick:
             curr_acc=None,
         )
         assert result.direction == "stationary"
+
+
+class TestDirectionHeldOnTimerTick:
+    """Timer ticks (empty pending) must not overwrite direction."""
+
+    def test_approaching_held_on_timer_tick(self):
+        """Core regression: timer tick with delta_m≈0 must NOT flip approaching→stationary."""
+        from unittest.mock import patch
+
+        from custom_components.entity_distance.models import pair_key
+        from tests.conftest import make_state
+
+        coordinator = _make_calc_pair_coordinator(max_speed_kmh=0.0)
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+
+        now = datetime.now().astimezone()
+        ps.prev_distance_m = 500.0  # same as curr → delta_m=0
+        ps.prev_calc_time = now - timedelta(seconds=30)
+        ps.direction = "approaching"  # set by prior real GPS tick
+
+        state_a = make_state("person.alice", 51.5, -0.1)
+        state_b = make_state("person.bob", 51.501, -0.1)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+
+        # Timer tick: pending=set() (no new GPS fix)
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=500.0,  # unchanged → delta_m=0
+        ):
+            result = coordinator._calc_pair(ps, "person.alice", "person.bob", now, set())
+
+        assert result.direction == "approaching"  # must be held, not flipped to stationary
+
+    def test_teleport_on_timer_tick_clears_direction(self):
+        """Teleport rejection on a timer tick must still clear direction to None."""
+        from unittest.mock import patch
+
+        from custom_components.entity_distance.models import pair_key
+        from tests.conftest import make_state
+
+        coordinator = _make_calc_pair_coordinator(max_speed_kmh=0.0)
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+
+        now = datetime.now().astimezone()
+        ps.prev_distance_m = 500.0
+        ps.prev_calc_time = now - timedelta(seconds=60)
+        ps.direction = "approaching"  # must be cleared by teleport rejection
+
+        state_a = make_state("person.alice", 51.5, -0.1)
+        state_b = make_state("person.bob", 51.501, -0.1)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+
+        # Timer tick with teleport: pending=set(), but 99km jump
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=99_000.0,  # 99km in 60s = 5940 km/h > DEFAULT_MAX_SPEED_KMH
+        ):
+            result = coordinator._calc_pair(ps, "person.alice", "person.bob", now, set())
+
+        assert result.direction is None  # teleport rejection clears direction
+        assert result.prev_distance_m is None  # baseline also nulled
 
 
 class TestGraceWindowConfig:

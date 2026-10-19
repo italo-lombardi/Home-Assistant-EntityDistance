@@ -471,7 +471,7 @@ class TestCalcPairDirection:
             "custom_components.entity_distance.coordinator.ha_distance",
             return_value=300.0,
         ):
-            result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+            result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, {"person.alice"})
 
         assert result.direction == "stationary"
 
@@ -490,7 +490,7 @@ class TestCalcPairDirection:
             "custom_components.entity_distance.coordinator.ha_distance",
             return_value=200.0,
         ):
-            result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+            result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, {"person.alice"})
 
         assert result.direction == "approaching"
         assert result.eta_minutes is not None
@@ -510,7 +510,7 @@ class TestCalcPairDirection:
             "custom_components.entity_distance.coordinator.ha_distance",
             return_value=800.0,
         ):
-            result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, set())
+            result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, {"person.alice"})
 
         assert result.direction == "diverging"
 

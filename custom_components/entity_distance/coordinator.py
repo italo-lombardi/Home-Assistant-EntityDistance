@@ -721,6 +721,11 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         closing_speed_kmh: float | None = None
         eta_minutes: float | None = None
         direction_teleport_rejected = False
+        has_new_fix = bool(pending & {entity_a, entity_b})
+        _hold_until = self._resync_hold_until.get(k)
+        hold_just_expired = (
+            self._resync_holding.get(k, False) and _hold_until is not None and now >= _hold_until
+        )
 
         if (
             not zone_fallback_a
@@ -746,7 +751,15 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 if implied_speed_kmh > direction_speed_cap:
                     direction_teleport_rejected = True
 
-            if delta_s > 0 and not direction_teleport_rejected:
+            # Only compute direction when a real GPS fix arrived for this pair,
+            # or when a resync hold just expired (prev_distance_m was advanced
+            # during hold so the expiry tick can produce a meaningful delta).
+            # Timer ticks re-use the same GPS state → delta_m ≈ 0 → false stationary.
+            if (
+                delta_s > 0
+                and not direction_teleport_rejected
+                and (has_new_fix or hold_just_expired)
+            ):
                 # Per-tick stationary threshold: scale with the noise budget of this
                 # specific pair of fixes. Two devices with acc=10m → budget=40m →
                 # threshold=20m → 40m real movement registers. Two devices with acc=150m
@@ -795,9 +808,10 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         ps.last_bucket = calc_bucket(dist_m, self._bucket_thresholds)
         ps.prev_distance_m = dist_m
         ps.prev_calc_time = now
-        ps.direction = direction
-        ps.closing_speed_kmh = closing_speed_kmh
-        ps.eta_minutes = eta_minutes
+        if direction is not None or has_new_fix or hold_just_expired or direction_teleport_rejected:
+            ps.direction = direction
+            ps.closing_speed_kmh = closing_speed_kmh
+            ps.eta_minutes = eta_minutes
         # Don't store zone radius as GPS accuracy — it bleeds into noise_budget_m
         # on the first GPS tick after zone-fallback recovery and inflates the budget.
         ps.accuracy_a = None if zone_fallback_a else acc_a

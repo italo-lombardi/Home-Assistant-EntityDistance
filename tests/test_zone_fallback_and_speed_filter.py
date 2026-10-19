@@ -670,7 +670,7 @@ class TestDirectionZoneVsPerson:
             "custom_components.entity_distance.coordinator.ha_distance",
             return_value=100.0,  # closer → approaching
         ):
-            result = coord._calc_pair(ps, "zone.home", "person.bob", now, set())
+            result = coord._calc_pair(ps, "zone.home", "person.bob", now, {"person.bob"})
         assert result.direction == "approaching"
         assert result.closing_speed_kmh is not None
 
@@ -691,7 +691,7 @@ class TestDirectionZoneVsPerson:
             "custom_components.entity_distance.coordinator.ha_distance",
             return_value=1500.0,  # farther → diverging
         ):
-            result = coord._calc_pair(ps, "zone.home", "person.bob", now, set())
+            result = coord._calc_pair(ps, "zone.home", "person.bob", now, {"person.bob"})
         assert result.direction == "diverging"
 
     def test_zone_vs_person_gps_teleport_rejected(self):

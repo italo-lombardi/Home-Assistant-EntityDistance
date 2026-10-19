@@ -2359,7 +2359,9 @@ class TestStationaryThresholdPerTick:
             "custom_components.entity_distance.coordinator.ha_distance",
             return_value=curr_dist,
         ):
-            return coordinator._calc_pair(ps, "person.alice", "person.bob", now, set())
+            return coordinator._calc_pair(
+                ps, "person.alice", "person.bob", now, {"person.alice", "person.bob"}
+            )
 
     def test_stationary_with_high_accuracy_noise(self):
         """Two devices each acc=100m → noise_budget=400m → threshold=60m; delta=50m → STATIONARY."""

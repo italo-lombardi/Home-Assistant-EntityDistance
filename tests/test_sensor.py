@@ -71,7 +71,6 @@ class TestPairDeviceInfo:
     def test_via_device_id_when_flag_true(self):
         import unittest.mock as mock
 
-        from custom_components.entity_distance.const import DOMAIN
         import custom_components.entity_distance.sensor as sensor_mod
         from custom_components.entity_distance.sensor import _pair_device_info
 
@@ -115,8 +114,8 @@ class TestPairDeviceInfo:
         for flag in (True, False):
             with mock.patch.object(sensor_mod, "_USE_VIA_DEVICE_ID", flag):
                 info = _pair_device_info(entry, k, "Alice", "Bob", None)
-            assert "via_device" not in info
-            assert "via_device_id" not in info
+                assert "via_device" not in info
+                assert "via_device_id" not in info
 
 
 class TestSensorValues:

@@ -12,6 +12,7 @@
 
 ### Fixed
 
+- **Direction flicker on timer tick** — the 60-second coordinator timer tick re-used the unchanged GPS state, producing `delta_m ≈ 0` → stationary, erasing an `approaching` signal set moments earlier by a real GPS update. Direction now only recomputes when a new GPS fix arrives for the pair; timer ticks leave the last direction unchanged. Resync hold-expiry ticks are still handled correctly. Teleport rejection on timer ticks still clears direction as expected.
 - **Smoke test debounce timing** — smoke tests for v0.4.3/0.4.4 used `sleep(3)` which is shorter than the `debounce_s=5` on the test entry; bumped to `sleep(7)` (single-inject) and `sleep(6)` (two-inject sequences).
 - **Deprecation: `via_device` tuple** — replaced deprecated `via_device=(DOMAIN, id)` tuple with `via_device_id` string in `DeviceInfo`. The old form is removed in HA 2027.8.
 - **Deprecation: `async_get_device(identifiers=…)`** — replaced deprecated device-registry lookup with `async_get_device_by_identifier`. The old form is removed in HA 2027.8.

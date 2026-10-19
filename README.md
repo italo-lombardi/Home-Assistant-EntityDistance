@@ -526,11 +526,11 @@ If auto-registration fails (e.g. YAML-only Lovelace mode), add manually:
 
 ```yaml
 resources:
-  - url: /entity_distance/entity-distance-pair-card.js?0.4.5
+  - url: /entity_distance/entity-distance-pair-card.js?0.4.6
     type: module
-  - url: /entity_distance/entity-distance-avatar-card.js?0.4.5
+  - url: /entity_distance/entity-distance-avatar-card.js?0.4.6
     type: module
-  - url: /entity_distance/entity-distance-group-card.js?0.4.5
+  - url: /entity_distance/entity-distance-group-card.js?0.4.6
     type: module
 ```
 

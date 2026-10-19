@@ -18,6 +18,7 @@ Requirements:
 
 import json
 import os
+import random as _random
 import sys
 import time
 import urllib.request
@@ -36,7 +37,6 @@ FAIL = "\033[31mFAIL\033[0m"
 SKIP = "\033[33mSKIP\033[0m"
 
 results: list[tuple[str, bool, str]] = []
-import random as _random
 _nudge = _random.randint(10000, 99999)
 
 

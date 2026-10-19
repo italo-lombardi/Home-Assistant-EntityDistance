@@ -2,10 +2,17 @@
 
 ## [Unreleased]
 
-### Changed
 
-- **`DeviceInfo` import path** — imported from `homeassistant.helpers.device_registry` instead of the deprecated `homeassistant.helpers.entity` alias, which logs a deprecation warning in recent Home Assistant releases. Warning-level cleanup, no behaviour change.
+## [0.4.6] - 2026-10-19
 
+### Added
+
+- **Storage cleanup on entry removal** — `async_remove_entry` now deletes `.storage/entity_distance_group_state_<entry_id>` when a config entry is removed, preventing leftover storage files.
+- **Startup orphan purge** — `async_setup` scans `.storage` for `entity_distance_group_state_*` files whose entry ID no longer exists and removes them. Cleans up files left behind by entries deleted before 0.4.6.
+
+### Fixed
+
+- **Smoke test debounce timing** — smoke tests for v0.4.3/0.4.4 used `sleep(3)` which is shorter than the `debounce_s=5` on the test entry; bumped to `sleep(7)` (single-inject) and `sleep(6)` (two-inject sequences).
 
 ## [0.4.5] - 2026-10-03
 
@@ -17,6 +24,7 @@
 
 - **Altitude stat box label** — card now shows `⛰ Altitude · Δ8m` / `Δ−8m` instead of `same floor` / `different floor`. GPS vertical accuracy (±10–30 m) makes floor detection unreliable; the raw signed delta is more honest and always available when altitude data exists.
 - **Duration display rolls over to days and weeks** — cards previously showed long proximity/ETA durations as overflowing hours (e.g. `2480h 27m`). The card formatter now renders the top two units: `≥24h` as `Nd Nh`, `≥7d` as `Nw Nd` (e.g. `103d 8h` → `14w 5d`). Weeks are exact (7 d); nothing above, since the elapsed-seconds total has no calendar for months/years. Durations under an hour are unchanged.
+- **`DeviceInfo` import path** — imported from `homeassistant.helpers.device_registry` instead of the deprecated `homeassistant.helpers.entity` alias.
 
 ## [0.4.4] - 2026-09-09
 

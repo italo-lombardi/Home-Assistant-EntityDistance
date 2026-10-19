@@ -14,6 +14,7 @@ Requirements:
 
 import json
 import os
+import random as _random
 import sys
 import time
 import urllib.request
@@ -34,7 +35,6 @@ SKIP = "\033[33mSKIP\033[0m"
 results: list[tuple[str, bool, str]] = []
 # Start nudge at a large random offset so the first inject always produces
 # a state that differs from whatever HA has cached from a prior run.
-import random as _random
 _nudge = _random.randint(10000, 99999)
 
 

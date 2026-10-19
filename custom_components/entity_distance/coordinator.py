@@ -724,9 +724,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         has_new_fix = bool(pending & {entity_a, entity_b})
         _hold_until = self._resync_hold_until.get(k)
         hold_just_expired = (
-            self._resync_holding.get(k, False)
-            and _hold_until is not None
-            and now >= _hold_until
+            self._resync_holding.get(k, False) and _hold_until is not None and now >= _hold_until
         )
 
         if (
@@ -757,7 +755,11 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             # or when a resync hold just expired (prev_distance_m was advanced
             # during hold so the expiry tick can produce a meaningful delta).
             # Timer ticks re-use the same GPS state → delta_m ≈ 0 → false stationary.
-            if delta_s > 0 and not direction_teleport_rejected and (has_new_fix or hold_just_expired):
+            if (
+                delta_s > 0
+                and not direction_teleport_rejected
+                and (has_new_fix or hold_just_expired)
+            ):
                 # Per-tick stationary threshold: scale with the noise budget of this
                 # specific pair of fixes. Two devices with acc=10m → budget=40m →
                 # threshold=20m → 40m real movement registers. Two devices with acc=150m

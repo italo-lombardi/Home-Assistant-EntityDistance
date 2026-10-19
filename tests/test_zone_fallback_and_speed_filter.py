@@ -758,7 +758,9 @@ class TestDirectionZoneVsPerson:
         now = datetime.now().astimezone()
         ps.prev_distance_m = 500.0
         ps.prev_calc_time = now  # same instant → delta_s=0
-        ps.direction = "approaching"  # delta_s=0 with real fix: direction reset to None (no delta computed)
+        ps.direction = (
+            "approaching"  # delta_s=0 with real fix: direction reset to None (no delta computed)
+        )
         with patch(
             "custom_components.entity_distance.coordinator.ha_distance",
             return_value=100.0,

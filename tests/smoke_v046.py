@@ -179,7 +179,11 @@ def test_basic_regression():
     time.sleep(3)
 
     s = state(f"sensor.{SLUG}_distance")
-    check("Distance sensor exists and has value", s is not None and s["state"] not in ("unknown", "unavailable"), s["state"] if s else "missing")
+    check(
+        "Distance sensor exists and has value",
+        s is not None and s["state"] not in ("unknown", "unavailable"),
+        s["state"] if s else "missing",
+    )
 
     s = state(f"binary_sensor.{SLUG}_in_proximity")
     check("In proximity binary sensor exists", s is not None)

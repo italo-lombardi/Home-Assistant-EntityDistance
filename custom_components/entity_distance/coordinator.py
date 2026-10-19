@@ -806,7 +806,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         ps.last_bucket = calc_bucket(dist_m, self._bucket_thresholds)
         ps.prev_distance_m = dist_m
         ps.prev_calc_time = now
-        if direction is not None or has_new_fix or hold_just_expired:
+        if direction is not None or has_new_fix or hold_just_expired or direction_teleport_rejected:
             ps.direction = direction
             ps.closing_speed_kmh = closing_speed_kmh
             ps.eta_minutes = eta_minutes

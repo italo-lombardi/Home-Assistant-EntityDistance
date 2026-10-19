@@ -710,6 +710,7 @@ class TestDirectionZoneVsPerson:
         now = datetime.now().astimezone()
         ps.prev_distance_m = 500.0
         ps.prev_calc_time = now - timedelta(seconds=60)
+        ps.direction = "approaching"  # must be cleared by teleport rejection
         with patch(
             "custom_components.entity_distance.coordinator.ha_distance",
             return_value=100000.0,
@@ -734,6 +735,7 @@ class TestDirectionZoneVsPerson:
         now = datetime.now().astimezone()
         ps.prev_distance_m = 500.0
         ps.prev_calc_time = now - timedelta(seconds=60)
+        ps.direction = "approaching"  # must be cleared by teleport rejection
         with patch(
             "custom_components.entity_distance.coordinator.ha_distance",
             return_value=500000.0,  # ~29970 km/h — well above DEFAULT_MAX_SPEED_KMH=1000
@@ -756,12 +758,13 @@ class TestDirectionZoneVsPerson:
         now = datetime.now().astimezone()
         ps.prev_distance_m = 500.0
         ps.prev_calc_time = now  # same instant → delta_s=0
+        ps.direction = "approaching"  # delta_s=0 with real fix: direction reset to None (no delta computed)
         with patch(
             "custom_components.entity_distance.coordinator.ha_distance",
             return_value=100.0,
         ):
-            result = coord._calc_pair(ps, "zone.home", "person.bob", now, set())
-        assert result.direction is None
+            result = coord._calc_pair(ps, "zone.home", "person.bob", now, {"person.bob"})
+        assert result.direction is None  # has_new_fix=True but delta_s=0 → direction=None written
         assert result.closing_speed_kmh is None
 
 
@@ -836,6 +839,7 @@ class TestZoneZonePair:
         coord, k, ps, now = self._make_zone_zone_coord(
             zone_a, zone_b, prev_dist=100.0, prev_offset_s=5
         )
+        ps.direction = "approaching"  # must be cleared by teleport rejection
         with patch(
             "custom_components.entity_distance.coordinator.ha_distance",
             return_value=50000.0,  # ~36000 km/h — speed filter skipped, direction teleport guard fires

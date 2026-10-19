@@ -18,7 +18,7 @@ from homeassistant.util import dt as dt_util
 from .const import BUCKETS, DIRECTION_APPROACHING, DOMAIN
 from .coordinator import EntityDistanceCoordinator, calc_bucket
 from .models import PairState, _zone_match_value, friendly_name, pair_key
-from .sensor import _pair_device_info
+from .sensor import _USE_GET_DEVICE_BY_IDENTIFIER, _pair_device_info
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -57,7 +57,14 @@ async def async_setup_entry(
     group_device_id: str | None = None
     try:
         dev_reg = dr.async_get(hass)
-        group_dev_entry = dev_reg.async_get_device(identifiers={(DOMAIN, entry.entry_id)})
+        if _USE_GET_DEVICE_BY_IDENTIFIER:
+            group_dev_entry = dev_reg.async_get_device_by_identifier(
+                (DOMAIN, entry.entry_id), entry.entry_id
+            )
+        else:
+            group_dev_entry = dev_reg.async_get_device(  # type: ignore[attr-defined]
+                identifiers={(DOMAIN, entry.entry_id)}
+            )
         if group_dev_entry is not None:
             group_device_id = group_dev_entry.id
     except Exception:  # noqa: BLE001

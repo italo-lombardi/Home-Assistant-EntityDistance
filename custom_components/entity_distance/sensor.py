@@ -40,6 +40,9 @@ _LOGGER = logging.getLogger(__name__)
 # ponytail: runtime sniff avoids a hard min-HA-version bump while silencing the deprecation warning
 _USE_VIA_DEVICE_ID: bool = "via_device_id" in DeviceInfo.__annotations__
 
+# async_get_device_by_identifier added in HA 2026.x; async_get_device deprecated, removed 2027.8.
+_USE_GET_DEVICE_BY_IDENTIFIER: bool = hasattr(dr.DeviceRegistry, "async_get_device_by_identifier")
+
 
 _BUCKET_LEVEL = {
     BUCKET_VERY_NEAR: 1,

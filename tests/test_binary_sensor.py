@@ -517,11 +517,14 @@ class TestAsyncSetupEntry:
     @pytest.mark.asyncio
     async def test_pair_devices_use_correct_via_device_key(self):
         # Uses via_device_id on new HA (2026+), via_device tuple on old HA (2025.x).
-        # Both cases: no regression in parent link, no deprecated key on new HA.
+        # Uses async_get_device_by_identifier on new HA, async_get_device on old HA.
         from homeassistant.helpers import device_registry as dr
 
         from custom_components.entity_distance.const import DOMAIN
-        from custom_components.entity_distance.sensor import _USE_VIA_DEVICE_ID
+        from custom_components.entity_distance.sensor import (
+            _USE_GET_DEVICE_BY_IDENTIFIER,
+            _USE_VIA_DEVICE_ID,
+        )
 
         coordinator = MagicMock()
         coordinator.is_within_grace.return_value = False
@@ -534,7 +537,10 @@ class TestAsyncSetupEntry:
         fake_group_device = MagicMock()
         fake_group_device.id = "group-device-uuid"
         dev_reg = MagicMock()
-        dev_reg.async_get_device.return_value = fake_group_device
+        if _USE_GET_DEVICE_BY_IDENTIFIER:
+            dev_reg.async_get_device_by_identifier.return_value = fake_group_device
+        else:
+            dev_reg.async_get_device.return_value = fake_group_device
         hass = MagicMock()
         hass.states.get.return_value = None
         hass.data = {DOMAIN: {"test_entry": coordinator}, dr.DATA_REGISTRY: dev_reg}
@@ -542,7 +548,12 @@ class TestAsyncSetupEntry:
         added = []
         await async_setup_entry(hass, entry, lambda entities: added.extend(entities))
 
-        dev_reg.async_get_device.assert_called_once_with(identifiers={(DOMAIN, "test_entry")})
+        if _USE_GET_DEVICE_BY_IDENTIFIER:
+            dev_reg.async_get_device_by_identifier.assert_called_once_with(
+                (DOMAIN, "test_entry"), "test_entry"
+            )
+        else:
+            dev_reg.async_get_device.assert_called_once_with(identifiers={(DOMAIN, "test_entry")})
         for sensor in added:
             info = sensor._attr_device_info
             if info is not None and info.get("identifiers") != {(DOMAIN, "test_entry")}:
@@ -560,6 +571,7 @@ class TestAsyncSetupEntry:
         from homeassistant.helpers import device_registry as dr
 
         from custom_components.entity_distance.const import DOMAIN
+        from custom_components.entity_distance.sensor import _USE_GET_DEVICE_BY_IDENTIFIER
 
         coordinator = MagicMock()
         coordinator.is_within_grace.return_value = False
@@ -570,7 +582,10 @@ class TestAsyncSetupEntry:
         entry.entry_id = "test_entry"
 
         dev_reg = MagicMock()
-        dev_reg.async_get_device.return_value = None  # group device not found
+        if _USE_GET_DEVICE_BY_IDENTIFIER:
+            dev_reg.async_get_device_by_identifier.return_value = None
+        else:
+            dev_reg.async_get_device.return_value = None
         hass = MagicMock()
         hass.states.get.return_value = None
         hass.data = {DOMAIN: {"test_entry": coordinator}, dr.DATA_REGISTRY: dev_reg}
@@ -584,6 +599,41 @@ class TestAsyncSetupEntry:
             if info is not None:
                 assert "via_device" not in info
                 assert "via_device_id" not in info
+
+    @pytest.mark.asyncio
+    async def test_pair_devices_use_get_device_by_identifier_when_flag_true(self):
+        # Force _USE_GET_DEVICE_BY_IDENTIFIER=True to cover that branch on any HA version.
+        from unittest import mock
+
+        from homeassistant.helpers import device_registry as dr
+
+        from custom_components.entity_distance import binary_sensor as bs_mod
+        from custom_components.entity_distance.const import DOMAIN
+
+        coordinator = MagicMock()
+        coordinator.is_within_grace.return_value = False
+        coordinator.entities = ["person.alice", "person.bob"]
+        coordinator.data = MagicMock()
+
+        entry = MagicMock()
+        entry.entry_id = "test_entry"
+
+        fake_group_device = MagicMock()
+        fake_group_device.id = "group-device-uuid"
+        dev_reg = MagicMock()
+        dev_reg.async_get_device_by_identifier.return_value = fake_group_device
+        hass = MagicMock()
+        hass.states.get.return_value = None
+        hass.data = {DOMAIN: {"test_entry": coordinator}, dr.DATA_REGISTRY: dev_reg}
+
+        with mock.patch.object(bs_mod, "_USE_GET_DEVICE_BY_IDENTIFIER", True):
+            added = []
+            await async_setup_entry(hass, entry, lambda entities: added.extend(entities))
+
+        dev_reg.async_get_device_by_identifier.assert_called_once_with(
+            (DOMAIN, "test_entry"), "test_entry"
+        )
+        dev_reg.async_get_device.assert_not_called()
 
     def test_is_on_when_proximity_true(self):
         k = pair_key("person.alice", "person.bob")

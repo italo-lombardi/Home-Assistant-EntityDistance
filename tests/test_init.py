@@ -125,8 +125,24 @@ class TestModuleHelpers:
         from custom_components.entity_distance import async_setup
 
         hass = MagicMock()
-        result = await async_setup(hass, {})
+        with patch(
+            "custom_components.entity_distance._async_purge_orphaned_storage",
+            new=AsyncMock(),
+        ):
+            result = await async_setup(hass, {})
         assert result is True
+
+    @pytest.mark.asyncio
+    async def test_async_setup_calls_purge(self):
+        from custom_components.entity_distance import async_setup
+
+        hass = MagicMock()
+        with patch(
+            "custom_components.entity_distance._async_purge_orphaned_storage",
+            new=AsyncMock(),
+        ) as mock_purge:
+            await async_setup(hass, {})
+        mock_purge.assert_awaited_once_with(hass)
 
     @pytest.mark.asyncio
     async def test_async_update_options_reloads_entry(self):
@@ -558,3 +574,132 @@ class TestRegisterLovelaceResource:
 
         resources.async_update_item.assert_not_called()
         resources.async_delete_item.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# async_remove_entry
+# ---------------------------------------------------------------------------
+
+
+class TestRemoveEntry:
+    @pytest.mark.asyncio
+    async def test_removes_storage_file_on_entry_delete(self):
+        from custom_components.entity_distance import async_remove_entry
+
+        hass = MagicMock()
+        entry = MagicMock()
+        entry.entry_id = "abc123"
+
+        store_instance = MagicMock()
+        store_instance.async_remove = AsyncMock()
+
+        with patch(
+            "homeassistant.helpers.storage.Store",
+            return_value=store_instance,
+        ) as mock_store_cls:
+            await async_remove_entry(hass, entry)
+
+        mock_store_cls.assert_called_once_with(hass, 1, f"{DOMAIN}_group_state_abc123")
+        store_instance.async_remove.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# _async_purge_orphaned_storage
+# ---------------------------------------------------------------------------
+
+
+class TestPurgeOrphanedStorage:
+    @pytest.mark.asyncio
+    async def test_deletes_orphaned_file(self, tmp_path):
+        from custom_components.entity_distance import _async_purge_orphaned_storage
+
+        storage_dir = tmp_path / ".storage"
+        storage_dir.mkdir()
+        orphan = storage_dir / f"{DOMAIN}_group_state_deadbeef"
+        orphan.write_text("{}")
+
+        hass = MagicMock()
+        hass.config.path.return_value = str(storage_dir)
+        hass.config_entries.async_entries.return_value = []
+        hass.async_add_executor_job = AsyncMock(side_effect=lambda fn, *a: fn(*a))
+
+        await _async_purge_orphaned_storage(hass)
+
+        assert not orphan.exists()
+
+    @pytest.mark.asyncio
+    async def test_keeps_active_entry_file(self, tmp_path):
+        from custom_components.entity_distance import _async_purge_orphaned_storage
+
+        storage_dir = tmp_path / ".storage"
+        storage_dir.mkdir()
+        active = storage_dir / f"{DOMAIN}_group_state_LIVEENTRY"
+        active.write_text("{}")
+
+        entry = MagicMock()
+        entry.entry_id = "LIVEENTRY"
+        hass = MagicMock()
+        hass.config.path.return_value = str(storage_dir)
+        hass.config_entries.async_entries.return_value = [entry]
+        hass.async_add_executor_job = AsyncMock(side_effect=lambda fn, *a: fn(*a))
+
+        await _async_purge_orphaned_storage(hass)
+
+        assert active.exists()
+
+    @pytest.mark.asyncio
+    async def test_missing_storage_dir_no_error(self, tmp_path):
+        from custom_components.entity_distance import _async_purge_orphaned_storage
+
+        missing = tmp_path / ".storage_nonexistent"
+        hass = MagicMock()
+        hass.config.path.return_value = str(missing)
+        hass.config_entries.async_entries.return_value = []
+        hass.async_add_executor_job = AsyncMock(side_effect=lambda fn, *a: fn(*a))
+
+        await _async_purge_orphaned_storage(hass)  # must not raise
+
+    @pytest.mark.asyncio
+    async def test_oserror_on_unlink_logs_warning(self, tmp_path, caplog):
+        import logging
+
+        from custom_components.entity_distance import _async_purge_orphaned_storage
+
+        storage_dir = tmp_path / ".storage"
+        storage_dir.mkdir()
+        orphan = storage_dir / f"{DOMAIN}_group_state_deadbeef"
+        orphan.write_text("{}")
+
+        def _raise(missing_ok=False):
+            raise OSError("permission denied")
+
+        hass = MagicMock()
+        hass.config.path.return_value = str(storage_dir)
+        hass.config_entries.async_entries.return_value = []
+        hass.async_add_executor_job = AsyncMock(side_effect=lambda fn, *a: fn(*a))
+
+        with (
+            patch("pathlib.Path.unlink", side_effect=_raise),
+            caplog.at_level(logging.WARNING),
+        ):
+            await _async_purge_orphaned_storage(hass)
+
+        assert "could not remove orphaned storage file" in caplog.text
+
+    @pytest.mark.asyncio
+    async def test_ignores_unrelated_files(self, tmp_path):
+        from custom_components.entity_distance import _async_purge_orphaned_storage
+
+        storage_dir = tmp_path / ".storage"
+        storage_dir.mkdir()
+        unrelated = storage_dir / "core.entity_registry"
+        unrelated.write_text("{}")
+
+        hass = MagicMock()
+        hass.config.path.return_value = str(storage_dir)
+        hass.config_entries.async_entries.return_value = []
+        hass.async_add_executor_job = AsyncMock(side_effect=lambda fn, *a: fn(*a))
+
+        await _async_purge_orphaned_storage(hass)
+
+        assert unrelated.exists()

@@ -47,7 +47,41 @@ def _get_version() -> str:
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    await _async_purge_orphaned_storage(hass)
     return True
+
+
+async def _async_purge_orphaned_storage(hass: HomeAssistant) -> None:
+    """Delete group-state storage files for entry IDs that no longer exist.
+
+    Versions <= 0.4.4 lacked async_remove_entry, so deleted config entries left
+    their entity_distance_group_state_<entry_id> files behind. This one-shot
+    scan on integration load cleans them up.
+    """
+    storage_dir = Path(hass.config.path(".storage"))
+    known_ids = {e.entry_id for e in hass.config_entries.async_entries(DOMAIN)}
+    prefix = f"{DOMAIN}_group_state_"
+
+    def _scan() -> list[Path]:
+        if not storage_dir.is_dir():
+            return []
+        return [
+            p
+            for p in storage_dir.iterdir()
+            if p.name.startswith(prefix) and p.name[len(prefix) :] not in known_ids
+        ]
+
+    orphans = await hass.async_add_executor_job(_scan)
+    for path in orphans:
+        try:
+            await hass.async_add_executor_job(path.unlink, True)  # missing_ok=True
+            _LOGGER.info("entity_distance: removed orphaned storage file %s", path.name)
+        except OSError as err:
+            _LOGGER.warning(
+                "entity_distance: could not remove orphaned storage file %s: %s",
+                path.name,
+                err,
+            )
 
 
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -177,6 +211,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await _async_install_card(hass)
 
     return True
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    from homeassistant.helpers.storage import Store
+
+    await Store(hass, 1, f"{DOMAIN}_group_state_{entry.entry_id}").async_remove()
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

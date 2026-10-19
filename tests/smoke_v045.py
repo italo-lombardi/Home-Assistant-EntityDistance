@@ -149,9 +149,9 @@ def test_reset_proximity_duration_zeroes_sensor():
     # Find all proximity_duration sensors for this SLUG
     all_states = api("/states")
     duration_sensors = [
-        s for s in all_states
-        if f"{SLUG}_proximity_duration" in s["entity_id"]
-        and s["entity_id"].startswith("sensor.")
+        s
+        for s in all_states
+        if f"{SLUG}_proximity_duration" in s["entity_id"] and s["entity_id"].startswith("sensor.")
     ]
     check(
         "At least one proximity_duration sensor exists",

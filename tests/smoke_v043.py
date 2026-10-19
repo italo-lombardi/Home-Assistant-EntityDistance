@@ -166,7 +166,9 @@ def test_basic_sensors():
 def test_altitude_sensors():
     section("Altitude sensors — Altitude A/B, Elevation Difference, Same Altitude")
     inject("device_tracker.test_alice", 53.3498, -6.2603, altitude=42.0)
-    inject("device_tracker.test_bob", 53.3499, -6.2603, altitude=50.0)  # ~11m apart — within proximity threshold
+    inject(
+        "device_tracker.test_bob", 53.3499, -6.2603, altitude=50.0
+    )  # ~11m apart — within proximity threshold
     time.sleep(7)  # debounce_s=5
 
     s = state(f"sensor.{SLUG}_altitude_test_alice")
@@ -198,14 +200,20 @@ def test_altitude_sensors():
     s = state(f"binary_sensor.{SLUG}_same_altitude")
     check("Same altitude binary sensor exists", s is not None)
     if s:
-        check("Same altitude = off (8m > 5m threshold, entities nearby)", s["state"] == "off", s["state"])
+        check(
+            "Same altitude = off (8m > 5m threshold, entities nearby)",
+            s["state"] == "off",
+            s["state"],
+        )
 
 
 def test_same_altitude_threshold():
     section("Same Altitude — within threshold")
     # Two injects needed — coordinator requires prev_state to compute altitude delta
     inject("device_tracker.test_alice", 53.3498, -6.2603, altitude=100.0)
-    inject("device_tracker.test_bob", 53.3499, -6.2603, altitude=103.0)  # ~11m — within proximity threshold
+    inject(
+        "device_tracker.test_bob", 53.3499, -6.2603, altitude=103.0
+    )  # ~11m — within proximity threshold
     time.sleep(2)
     inject("device_tracker.test_alice", 53.3498, -6.2603, altitude=100.0)
     inject("device_tracker.test_bob", 53.3499, -6.2603, altitude=103.0)

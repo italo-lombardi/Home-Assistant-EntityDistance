@@ -68,52 +68,31 @@ def _make_sensor(cls, pair_state: PairState):
 
 
 class TestPairDeviceInfo:
-    def test_via_device_id_when_flag_true(self):
+    def test_via_device_id_set_when_group_device_id_provided(self):
         import unittest.mock as mock
 
-        import custom_components.entity_distance.sensor as sensor_mod
         from custom_components.entity_distance.sensor import _pair_device_info
 
         entry = mock.MagicMock()
         entry.entry_id = "eid"
         k = ("person.alice", "person.bob")
 
-        with mock.patch.object(sensor_mod, "_USE_VIA_DEVICE_ID", True):
-            info = _pair_device_info(entry, k, "Alice", "Bob", "dev-uuid-123")
-            assert info.get("via_device_id") == "dev-uuid-123"
-            assert "via_device" not in info
-
-    def test_via_device_tuple_when_flag_false(self):
-        import unittest.mock as mock
-
-        from custom_components.entity_distance.const import DOMAIN
-        import custom_components.entity_distance.sensor as sensor_mod
-        from custom_components.entity_distance.sensor import _pair_device_info
-
-        entry = mock.MagicMock()
-        entry.entry_id = "eid"
-        k = ("person.alice", "person.bob")
-
-        with mock.patch.object(sensor_mod, "_USE_VIA_DEVICE_ID", False):
-            info = _pair_device_info(entry, k, "Alice", "Bob", "dev-uuid-123")
-            assert info.get("via_device") == (DOMAIN, "eid")
-            assert "via_device_id" not in info
+        info = _pair_device_info(entry, k, "Alice", "Bob", "dev-uuid-123")
+        assert info.get("via_device_id") == "dev-uuid-123"
+        assert "via_device" not in info
 
     def test_no_via_link_when_group_device_id_none(self):
         import unittest.mock as mock
 
-        import custom_components.entity_distance.sensor as sensor_mod
         from custom_components.entity_distance.sensor import _pair_device_info
 
         entry = mock.MagicMock()
         entry.entry_id = "eid"
         k = ("person.alice", "person.bob")
 
-        for flag in (True, False):
-            with mock.patch.object(sensor_mod, "_USE_VIA_DEVICE_ID", flag):
-                info = _pair_device_info(entry, k, "Alice", "Bob", None)
-                assert "via_device" not in info
-                assert "via_device_id" not in info
+        info = _pair_device_info(entry, k, "Alice", "Bob", None)
+        assert "via_device" not in info
+        assert "via_device_id" not in info
 
 
 class TestSensorValues:
@@ -1685,18 +1664,12 @@ class TestAsyncSetupEntrySensor:
         assert kwargs["identifiers"] == {(DOMAIN, "test_entry")}
         assert kwargs["manufacturer"] == "Entity Distance"
 
-        # Pair sensors carry the correct via link for the running HA version.
-        from custom_components.entity_distance.sensor import _USE_VIA_DEVICE_ID
-
+        # Pair sensors carry via_device_id pointing to the group device.
         for sensor in added:
             info = sensor._attr_device_info
             if info is not None and info.get("identifiers") != {(DOMAIN, "test_entry")}:
-                if _USE_VIA_DEVICE_ID:
-                    assert info.get("via_device_id") == "group-device-uuid"
-                    assert "via_device" not in info
-                else:
-                    assert info.get("via_device") == (DOMAIN, "test_entry")
-                    assert "via_device_id" not in info
+                assert info.get("via_device_id") == "group-device-uuid"
+                assert "via_device" not in info
 
 
 class TestAltitudeSensor:

@@ -36,13 +36,6 @@ from .models import PairState, _zone_match_value, friendly_name, pair_key
 
 _LOGGER = logging.getLogger(__name__)
 
-# via_device_id (str) preferred on HA ≥2026; via_device tuple deprecated, removed 2027.8.
-# ponytail: runtime sniff avoids a hard min-HA-version bump while silencing the deprecation warning
-_USE_VIA_DEVICE_ID: bool = "via_device_id" in DeviceInfo.__annotations__
-
-# async_get_device_by_identifier added in HA 2026.x; async_get_device deprecated, removed 2027.8.
-_USE_GET_DEVICE_BY_IDENTIFIER: bool = hasattr(dr.DeviceRegistry, "async_get_device_by_identifier")
-
 
 _BUCKET_LEVEL = {
     BUCKET_VERY_NEAR: 1,
@@ -82,10 +75,7 @@ def _pair_device_info(
         entry_type=DeviceEntryType.SERVICE,
     )
     if group_device_id is not None:
-        if _USE_VIA_DEVICE_ID:
-            info["via_device_id"] = group_device_id
-        else:
-            info["via_device"] = (DOMAIN, entry.entry_id)  # type: ignore[typeddict-unknown-key]
+        info["via_device_id"] = group_device_id
     return info
 
 

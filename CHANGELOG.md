@@ -13,6 +13,9 @@
 ### Fixed
 
 - **Smoke test debounce timing** — smoke tests for v0.4.3/0.4.4 used `sleep(3)` which is shorter than the `debounce_s=5` on the test entry; bumped to `sleep(7)` (single-inject) and `sleep(6)` (two-inject sequences).
+- **Deprecation: `via_device` tuple** — replaced deprecated `via_device=(DOMAIN, id)` tuple with `via_device_id` string in `DeviceInfo`. The old form is removed in HA 2027.8.
+- **Deprecation: `async_get_device(identifiers=…)`** — replaced deprecated device-registry lookup with `async_get_device_by_identifier`. The old form is removed in HA 2027.8.
+- **Minimum HA version raised to 2026.3** — removes backward-compat runtime sniff code; both new APIs are stable since 2026.3.
 
 ## [0.4.5] - 2026-10-03
 

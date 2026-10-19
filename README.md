@@ -2,7 +2,7 @@
 
 <a href="https://github.com/italo-lombardi/Home-Assistant-EntityDistance/releases"><img src="https://img.shields.io/github/v/release/italo-lombardi/Home-Assistant-EntityDistance" alt="GitHub Release"></a>
 <a href="https://github.com/hacs/integration"><img src="https://img.shields.io/badge/HACS-Custom-41BDF5.svg" alt="HACS Custom"></a>
-<a href="https://www.home-assistant.io/"><img src="https://img.shields.io/badge/Home%20Assistant-2024.3%2B-blue.svg" alt="Home Assistant"></a>
+<a href="https://www.home-assistant.io/"><img src="https://img.shields.io/badge/Home%20Assistant-2026.3%2B-blue.svg" alt="Home Assistant"></a>
 <a href="https://github.com/italo-lombardi/Home-Assistant-EntityDistance/blob/main/LICENSE"><img src="https://img.shields.io/github/license/italo-lombardi/Home-Assistant-EntityDistance?logo=gnu&logoColor=white" alt="License"></a>
 <img src="https://img.shields.io/badge/coverage-100%25-brightgreen" alt="Test Coverage">
 

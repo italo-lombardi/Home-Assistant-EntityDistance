@@ -62,15 +62,21 @@ def _group_device_info(entry: ConfigEntry, group_name: str) -> DeviceInfo:
 
 
 def _pair_device_info(
-    entry: ConfigEntry, pair_key_val: tuple[str, str], a_name: str, b_name: str
+    entry: ConfigEntry,
+    pair_key_val: tuple[str, str],
+    a_name: str,
+    b_name: str,
+    group_device_id: str | None = None,
 ) -> DeviceInfo:
-    return DeviceInfo(
+    info = DeviceInfo(
         identifiers={(DOMAIN, f"{entry.entry_id}_{pair_key_val[0]}__{pair_key_val[1]}")},
         name=f"{a_name} & {b_name}",
         manufacturer="Entity Distance",
         entry_type=DeviceEntryType.SERVICE,
-        via_device=(DOMAIN, entry.entry_id),
     )
+    if group_device_id is not None:
+        info["via_device_id"] = group_device_id
+    return info
 
 
 async def async_setup_entry(
@@ -94,16 +100,18 @@ async def async_setup_entry(
 
     all_sensors: list = []
 
-    # Pre-register group device so pair devices can reference it via via_device.
+    # Pre-register group device so pair devices can reference it via via_device_id.
+    group_device_id: str | None = None
     try:
         dev_reg = dr.async_get(hass)
-        dev_reg.async_get_or_create(
+        group_device = dev_reg.async_get_or_create(
             config_entry_id=entry.entry_id,
             identifiers={(DOMAIN, entry.entry_id)},
             name=f"Entity Distance — {group_name}",
             manufacturer="Entity Distance",
             entry_type=DeviceEntryType.SERVICE,
         )
+        group_device_id = group_device.id
     except Exception:  # noqa: BLE001
         pass
 
@@ -111,7 +119,7 @@ async def async_setup_entry(
         k = pair_key(a, b)
         a_name = _friendly_name(k[0])
         b_name = _friendly_name(k[1])
-        pair_dev = _pair_device_info(entry, k, a_name, b_name)
+        pair_dev = _pair_device_info(entry, k, a_name, b_name, group_device_id)
         is_zone_pair = k[0].startswith("zone.") and k[1].startswith("zone.")
         has_zone = k[0].startswith("zone.") or k[1].startswith("zone.")
         if is_zone_pair:

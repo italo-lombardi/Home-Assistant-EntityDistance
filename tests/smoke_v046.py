@@ -139,7 +139,7 @@ def test_direction_held_between_gps_updates():
         print(f"         direction={s_dir['state'] if s_dir else 'missing'}")
         return
 
-    print(f"  Approaching established. Waiting 70s for timer tick (no new GPS)...")
+    print("  Approaching established. Waiting 70s for timer tick (no new GPS)...")
     time.sleep(70)
 
     s_dir_after = state(f"sensor.{SLUG}_direction")

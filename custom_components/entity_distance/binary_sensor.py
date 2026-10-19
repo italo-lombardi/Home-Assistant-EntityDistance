@@ -57,9 +57,7 @@ async def async_setup_entry(
     group_device_id: str | None = None
     try:
         dev_reg = dr.async_get(hass)
-        group_dev_entry = dev_reg.async_get_device(
-            identifiers={(DOMAIN, entry.entry_id)}
-        )
+        group_dev_entry = dev_reg.async_get_device(identifiers={(DOMAIN, entry.entry_id)})
         if group_dev_entry is not None:
             group_device_id = group_dev_entry.id
     except Exception:  # noqa: BLE001

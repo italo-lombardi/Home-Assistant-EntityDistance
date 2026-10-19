@@ -542,9 +542,7 @@ class TestAsyncSetupEntry:
         added = []
         await async_setup_entry(hass, entry, lambda entities: added.extend(entities))
 
-        dev_reg.async_get_device.assert_called_once_with(
-            identifiers={(DOMAIN, "test_entry")}
-        )
+        dev_reg.async_get_device.assert_called_once_with(identifiers={(DOMAIN, "test_entry")})
         for sensor in added:
             info = sensor._attr_device_info
             if info is not None and info.get("identifiers") != {(DOMAIN, "test_entry")}:

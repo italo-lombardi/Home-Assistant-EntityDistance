@@ -2346,6 +2346,8 @@ class TestStationaryThresholdPerTick:
         now = datetime.now().astimezone()
         ps.prev_distance_m = prev_dist
         ps.prev_calc_time = now - timedelta(seconds=10)
+        ps.last_fix_distance_m = prev_dist  # F1: direction baseline is last_fix_*
+        ps.last_fix_time = now - timedelta(seconds=10)
         ps.accuracy_a = prev_acc_a
         ps.accuracy_b = prev_acc_b
 
@@ -2394,6 +2396,8 @@ class TestStationaryThresholdPerTick:
         now = datetime.now().astimezone()
         ps.prev_distance_m = 500.0
         ps.prev_calc_time = now - timedelta(seconds=10)
+        ps.last_fix_distance_m = 500.0  # F1: direction baseline is last_fix_*
+        ps.last_fix_time = now - timedelta(seconds=10)
         ps.accuracy_a = 10.0
         ps.accuracy_b = 10.0
 
@@ -2413,6 +2417,8 @@ class TestStationaryThresholdPerTick:
         # Second confirming tick on same coordinator (carries state)
         ps.prev_distance_m = 460.0
         ps.prev_calc_time = now - timedelta(seconds=5)
+        ps.last_fix_distance_m = 460.0
+        ps.last_fix_time = now - timedelta(seconds=5)
         with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=420.0):
             result2 = coordinator._calc_pair(
                 ps, "person.alice", "person.bob", now, {"person.alice", "person.bob"}
@@ -2481,6 +2487,8 @@ class TestDirectionHeldOnTimerTick:
         now = datetime.now().astimezone()
         ps.prev_distance_m = 500.0
         ps.prev_calc_time = now - timedelta(seconds=60)
+        ps.last_fix_distance_m = 500.0  # F1: teleport measured against last_fix baseline
+        ps.last_fix_time = now - timedelta(seconds=60)
         ps.direction = "approaching"  # must be cleared by teleport rejection
 
         state_a = make_state("person.alice", 51.5, -0.1)
@@ -3406,6 +3414,11 @@ class TestDirectionHysteresis:
 
         now = datetime.now().astimezone()
         ps.prev_calc_time = now - timedelta(seconds=10)
+        # F1: direction/speed baseline is last_fix_* (not prev_*). Reset it to a 10s-old
+        # anchor each tick (mirrors the prev_calc_time gap) so every single-tick call
+        # has a positive inter-fix interval; the distance side (last_fix_distance_m) is
+        # seeded by the caller via _fresh_ps / between-tick assignments.
+        ps.last_fix_time = now - timedelta(seconds=10)
 
         state_a = make_state("person.alice", 51.5, -0.1, accuracy=30.0)
         state_b = make_state("person.bob", 51.501, -0.1, accuracy=30.0)
@@ -3428,6 +3441,7 @@ class TestDirectionHysteresis:
         k = pair_key("person.alice", "person.bob")
         ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
         ps.prev_distance_m = prev_dist
+        ps.last_fix_distance_m = prev_dist
         ps.accuracy_a = prev_acc
         ps.accuracy_b = prev_acc
         return ps
@@ -3451,6 +3465,7 @@ class TestDirectionHysteresis:
 
         # Second tick: same direction → count=2 → commits approaching
         ps.prev_distance_m = 460.0
+        ps.last_fix_distance_m = 460.0
         result = self._run_tick(ps, dist=420.0)
         assert result.direction == "approaching"
         assert result.direction_candidate_count == 2
@@ -3465,6 +3480,7 @@ class TestDirectionHysteresis:
 
         # Second tick: diverging (distance grows) → candidate resets, stays stationary
         ps.prev_distance_m = 460.0
+        ps.last_fix_distance_m = 460.0
         result = self._run_tick(ps, dist=500.0)
         assert result.direction == "stationary"
         assert result.direction_candidate == "diverging"
@@ -3483,9 +3499,11 @@ class TestDirectionHysteresis:
 
         now = datetime.now().astimezone()
         ps.prev_distance_m = 500.0
+        ps.last_fix_distance_m = 500.0
         ps.accuracy_a = 30.0
         ps.accuracy_b = 30.0
         ps.prev_calc_time = now - timedelta(seconds=10)
+        ps.last_fix_time = now - timedelta(seconds=10)
         # Set hold_until in the past so hold_just_expired triggers
         coordinator._resync_holding[k] = True
         coordinator._resync_hold_until[k] = now - timedelta(seconds=1)
@@ -3572,3 +3590,233 @@ class TestDirectionHysteresis:
         assert result.prev_distance_m is None  # baseline nulled
         assert result.direction_candidate is None
         assert result.direction_candidate_count == 0
+
+
+class TestDirectionFixBaselineAndConfidentMove:
+    """F1 (last_fix_* baseline) + F2 (confident-move hysteresis bypass) + F3 (blip preserves streak)."""
+
+    def _coord(self, max_speed_kmh=0.0):
+        return _make_calc_pair_coordinator(max_speed_kmh=max_speed_kmh)
+
+    def _states(self, coordinator, acc=20.0):
+        from tests.conftest import make_state
+
+        state_a = make_state("person.alice", 51.5, -0.1, accuracy=acc)
+        state_b = make_state("person.bob", 51.6, -0.2, accuracy=acc)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+
+    def _tick(self, coordinator, ps, dist, now, pending):
+        from unittest.mock import patch
+
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=dist,
+        ):
+            return coordinator._calc_pair(ps, "person.alice", "person.bob", now, pending)
+
+    def test_confident_move_commits_on_first_fix(self):
+        """F2: a large unambiguous approach (|delta| >> confident cutoff) commits on fix #1."""
+        coordinator = self._coord()
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+        self._states(coordinator, acc=20.0)
+        now = datetime.now().astimezone()
+        ps.prev_distance_m = 1600.0
+        ps.last_fix_distance_m = 1600.0  # baseline distance at last real fix
+        ps.last_fix_time = now - timedelta(seconds=120)  # 2 min ago (sparse fix)
+        ps.prev_calc_time = now - timedelta(seconds=60)
+        # delta = 600 - 1600 = -1000m; threshold ≈ max(15, 80*0.15)=15 → cutoff 60m
+        # 1000 >> 60 → confident → approaching committed WITHOUT a second fix.
+        result = self._tick(coordinator, ps, dist=600.0, now=now, pending={"person.alice"})
+        assert result.direction == "approaching"
+        assert result.direction_candidate is None
+        assert result.direction_candidate_count == 0
+        # closing_speed over the real 120s fix interval, not a sub-second spike.
+        assert result.closing_speed_kmh is not None
+        assert result.closing_speed_kmh < 60.0  # 1000m/120s ≈ 30 km/h, sane
+
+    def test_marginal_move_still_needs_two_fixes(self):
+        """F2 regression guard: a marginal near-threshold move keeps the N=2 requirement."""
+        coordinator = self._coord()
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+        self._states(coordinator, acc=20.0)
+        now = datetime.now().astimezone()
+        ps.prev_distance_m = 500.0
+        ps.last_fix_distance_m = 500.0
+        ps.last_fix_time = now - timedelta(seconds=30)
+        ps.prev_calc_time = now - timedelta(seconds=30)
+        # threshold ≈ 15m, cutoff 60m. delta = -40m → just over threshold, under cutoff
+        # → NOT confident → first fix suppressed to stationary (candidate only).
+        result = self._tick(coordinator, ps, dist=460.0, now=now, pending={"person.alice"})
+        assert result.direction == "stationary"
+        assert result.direction_candidate == "approaching"
+        assert result.direction_candidate_count == 1
+
+    def test_direction_holds_across_timer_tick(self):
+        """F1: a fix-less timer tick does NOT overwrite a committed direction or advance last_fix_*."""
+        coordinator = self._coord()
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+        self._states(coordinator, acc=20.0)
+        now = datetime.now().astimezone()
+        ps.prev_distance_m = 1600.0
+        ps.last_fix_distance_m = 1600.0
+        ps.last_fix_time = now - timedelta(seconds=120)
+        ps.prev_calc_time = now - timedelta(seconds=60)
+        # Real fix: confident approach → committed.
+        r1 = self._tick(coordinator, ps, dist=600.0, now=now, pending={"person.alice"})
+        assert r1.direction == "approaching"
+        fix_dist_after = ps.last_fix_distance_m
+        fix_time_after = ps.last_fix_time
+        assert fix_dist_after == 600.0  # advanced on the real fix
+
+        # Timer tick (empty pending), same GPS distance: direction must HOLD, and the
+        # last_fix_* baseline must NOT advance (no new fix drove this tick).
+        later = now + timedelta(seconds=60)
+        r2 = self._tick(coordinator, ps, dist=600.0, now=later, pending=set())
+        assert r2.direction == "approaching"  # held, not reset to stationary
+        assert ps.last_fix_distance_m == fix_dist_after  # not advanced on timer tick
+        assert ps.last_fix_time == fix_time_after
+
+    def test_blip_inside_grace_preserves_direction_streak(self):
+        """F3: a 1-tick invalidation while displayable preserves candidate + last_fix baseline."""
+        from homeassistant.const import STATE_UNAVAILABLE
+        from homeassistant.core import State
+
+        coordinator = self._coord()
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+        now = datetime.now().astimezone()
+        # Mid-approach state with a live streak and a fix baseline + prior valid distance.
+        ps.distance_m = 460.0
+        ps.prev_distance_m = 460.0
+        ps.prev_calc_time = now - timedelta(seconds=10)
+        ps.last_fix_distance_m = 460.0
+        ps.last_fix_time = now - timedelta(seconds=10)
+        ps.direction_candidate = "approaching"
+        ps.direction_candidate_count = 1
+
+        # Alice blips unavailable for one tick → _invalidate, but distance_m is present
+        # (inside display grace) so the streak/baseline must survive.
+        state_a = State("person.alice", STATE_UNAVAILABLE)
+        state_b = State("person.bob", "not_home")
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+        result = coordinator._calc_pair(ps, "person.alice", "person.bob", now, {"person.alice"})
+
+        assert result.data_valid is False
+        assert result.direction_candidate == "approaching"  # preserved
+        assert result.direction_candidate_count == 1
+        assert result.last_fix_distance_m == 460.0  # baseline preserved across the blip
+
+    def test_cold_invalidate_resets_streak(self):
+        """F3 boundary: with no prior displayable data, _invalidate still clears the streak."""
+        from homeassistant.const import STATE_UNAVAILABLE
+        from homeassistant.core import State
+
+        coordinator = self._coord()
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+        now = datetime.now().astimezone()
+        ps.distance_m = None  # never had valid data
+        ps.direction_candidate = "approaching"
+        ps.direction_candidate_count = 1
+        ps.last_fix_distance_m = 500.0
+        ps.last_fix_time = now - timedelta(seconds=10)
+
+        state_a = State("person.alice", STATE_UNAVAILABLE)
+        state_b = State("person.bob", "not_home")
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+        result = coordinator._calc_pair(ps, "person.alice", "person.bob", now, {"person.alice"})
+
+        assert result.direction_candidate is None
+        assert result.direction_candidate_count == 0
+        assert result.last_fix_distance_m is None
+        assert result.last_fix_time is None
+
+    def test_zero_interval_fix_skips_direction(self):
+        """F1: last_fix_time == now (delta_s=0) enters the baseline block but computes no
+        direction/speed (guards the divide-by-zero on the last_fix interval)."""
+        coordinator = self._coord()
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+        self._states(coordinator, acc=20.0)
+        now = datetime.now().astimezone()
+        ps.prev_distance_m = 500.0
+        ps.prev_calc_time = now - timedelta(seconds=10)
+        ps.last_fix_distance_m = 500.0
+        ps.last_fix_time = now  # same instant → delta_s == 0 on the last_fix interval
+        ps.direction = "approaching"
+        result = self._tick(coordinator, ps, dist=100.0, now=now, pending={"person.alice"})
+        # has_new_fix but delta_s==0 → direction written as None, no speed computed.
+        assert result.direction is None
+        assert result.closing_speed_kmh is None
+
+    def test_real_drive_sparse_fixes_with_timer_ticks(self):
+        """Regression for the reported drive bug: a sustained approach with sparse GPS
+        fixes (minutes apart) and interleaved fix-less 60s timer ticks must latch
+        `approaching` across the run and report plausible (noise-stripped) closing speed.
+
+        The pre-fix suite force-fed non-empty `pending` on every direction tick and never
+        interleaved an empty-pending timer tick between two sparse moving fixes — which is
+        why 747 tests stayed green while the real 12km→0 drive read stationary/611km/h."""
+        from unittest.mock import patch
+
+        coordinator = self._coord()  # max_speed_kmh=0 → DEFAULT cap 1000 for teleport
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+        self._states(coordinator, acc=25.0)  # realistic phone GPS accuracy
+
+        # Monotonic approach, ~2 min between real fixes (metres). Mirrors the CSV shape.
+        start = datetime.now().astimezone()
+        fixes = [12000.0, 10000.0, 8000.0, 5500.0, 3300.0, 2000.0, 1300.0, 600.0, 60.0]
+        t = start
+        # Seed the baseline with the first fix (no direction yet — needs a prior fix).
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance", return_value=fixes[0]
+        ):
+            coordinator._calc_pair(ps, "person.alice", "person.bob", t, {"person.alice"})
+
+        approaching = 0
+        speeds: list[float] = []
+        etas: list[float] = []
+        for dist in fixes[1:]:
+            # Interleave a fix-less 60s timer tick (empty pending) BEFORE each real fix —
+            # the exact interaction the old suite never exercised. Must not clobber direction.
+            t = t + timedelta(seconds=60)
+            with patch(
+                "custom_components.entity_distance.coordinator.ha_distance",
+                return_value=dist + 5.0,  # same GPS position would be reported by a timer tick
+            ):
+                coordinator._calc_pair(ps, "person.alice", "person.bob", t, set())
+            # Real fix ~2 min after the previous real fix.
+            t = t + timedelta(seconds=60)
+            with patch(
+                "custom_components.entity_distance.coordinator.ha_distance",
+                return_value=dist,
+            ):
+                r = coordinator._calc_pair(ps, "person.alice", "person.bob", t, {"person.alice"})
+            if r.direction == "approaching":
+                approaching += 1
+                if r.closing_speed_kmh is not None:
+                    speeds.append(r.closing_speed_kmh)
+                if r.eta_minutes is not None:
+                    etas.append(r.eta_minutes)
+
+        # Latches approaching across the whole approach (pre-fix: ~4/13).
+        assert approaching >= len(fixes) - 2, (
+            f"only {approaching}/{len(fixes) - 1} fixes approaching"
+        )
+        # F4: closing speed is plausible — noise stripped, NOT clamped. Non-zero (would be
+        # 0 if F4 over-stripped) and under a car ceiling (pre-fix: 611 km/h).
+        assert speeds, "no closing speed samples on an approaching drive"
+        assert all(0.0 < v < 200.0 for v in speeds), f"implausible closing speeds: {speeds}"
+        # ETA inherits the corrected speed → finite for the sustained approach.
+        assert etas, "ETA never computed on a sustained approach"
+        assert all(0.0 < e <= 1440.0 for e in etas), f"implausible ETAs: {etas}"

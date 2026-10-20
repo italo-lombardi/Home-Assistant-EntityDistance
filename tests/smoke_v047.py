@@ -101,10 +101,15 @@ def test_single_oscillating_tick_suppressed():
     """
     section("Single indoor GPS oscillation does NOT commit approaching")
 
-    # Both stationary at home — set baseline
+    # Both stationary at home — set baseline. Drive bob to home, then a second near-identical
+    # fix (sub-threshold jitter) so the motion delta computes a genuine `stationary` reading.
+    # (A single park-at-home inject after a prior approach would otherwise still read the
+    # held `approaching` from that approach — direction holds between fixes by design.)
     inject("device_tracker.test_alice", 53.3498, -6.2603, accuracy=40)
     inject("device_tracker.test_bob", 53.3498, -6.2603, accuracy=40)
-    time.sleep(7)  # clear debounce_s=5
+    time.sleep(7)
+    inject("device_tracker.test_bob", 53.34982, -6.2603, accuracy=40)  # ~2m jitter → stationary
+    time.sleep(7)
 
     s_baseline = state(f"sensor.{SLUG}_direction")
     check(

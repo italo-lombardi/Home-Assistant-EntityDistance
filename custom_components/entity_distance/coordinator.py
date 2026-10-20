@@ -42,6 +42,7 @@ from .const import (
     CONF_ZONE_MID_M,
     CONF_ZONE_NEAR_M,
     CONF_ZONE_VERY_NEAR_M,
+    CONFIDENT_MOVE_FACTOR,
     DEFAULT_ALTITUDE_ALIGNED_THRESHOLD_M,
     DEFAULT_DEBOUNCE_S,
     DEFAULT_GRACE_WINDOW_S,
@@ -592,8 +593,17 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             ps.last_error = reason
             ps.prev_calc_time = None
             ps.prev_distance_m = None
-            ps.direction_candidate = None
-            ps.direction_candidate_count = 0
+            # F3: a 1-tick blip (person flips not_home/unknown and back) while the pair
+            # still has recent valid data to display must NOT wipe the direction streak —
+            # otherwise every mid-drive zone-name oscillation restarts the N=2 hysteresis
+            # from zero and approaching never latches. Preserve the candidate + the
+            # last-fix baseline while inside the display grace window (distance_m present);
+            # only reset when there is no prior data to carry (genuine cold/invalid state).
+            if ps.distance_m is None:
+                ps.direction_candidate = None
+                ps.direction_candidate_count = 0
+                ps.last_fix_distance_m = None
+                ps.last_fix_time = None
             # Display grace: if the pair had valid data, keep showing it (distance_m,
             # direction, etc. are intentionally NOT cleared above) for GRACE_WINDOW_S
             # before sensors report unknown. Display-only — data_valid stays False so
@@ -732,11 +742,17 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         if (
             not zone_fallback_a
             and not zone_fallback_b
-            and ps.prev_distance_m is not None
-            and ps.prev_calc_time is not None
+            and ps.last_fix_distance_m is not None
+            and ps.last_fix_time is not None
         ):
-            delta_m = dist_m - ps.prev_distance_m
-            delta_s = max(0.0, (now - ps.prev_calc_time).total_seconds())
+            # F1: delta is measured against the LAST REAL GPS FIX, not prev_* (which a
+            # fix-less 1-min timer tick overwrites every minute). A sparse fix compared
+            # against a seconds-old timer tick gave delta_s≈seconds for a minutes-long
+            # real gap → implied speed inflated ~20× (observed 611 km/h) and the move
+            # looked too small to leave stationary. Spanning the true inter-fix interval
+            # fixes both the speed and the direction.
+            delta_m = dist_m - ps.last_fix_distance_m
+            delta_s = max(0.0, (now - ps.last_fix_time).total_seconds())
 
             if delta_s > 0:
                 implied_speed_kmh = abs(delta_m / delta_s) * 3.6
@@ -753,10 +769,9 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 if implied_speed_kmh > direction_speed_cap:
                     direction_teleport_rejected = True
 
-            # Only compute direction when a real GPS fix arrived for this pair,
-            # or when a resync hold just expired (prev_distance_m was advanced
-            # during hold so the expiry tick can produce a meaningful delta).
-            # Timer ticks re-use the same GPS state → delta_m ≈ 0 → false stationary.
+            # Only compute direction when a real GPS fix arrived for this pair, or when a
+            # resync hold just expired. Fix-less timer ticks leave ps.direction untouched
+            # (L844 gate) so the last committed direction HOLDS between sparse fixes.
             if (
                 delta_s > 0
                 and not direction_teleport_rejected
@@ -789,9 +804,17 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 # diverging before committing. A single oscillating indoor-GPS tick is
                 # suppressed to stationary. hold_just_expired is exempt — the resync
                 # baseline recovery tick must commit direction immediately.
+                # F2: an unambiguous move (|delta| ≥ CONFIDENT_MOVE_FACTOR × threshold)
+                # commits on the first fix — a real drive should not wait for a 2nd fix
+                # that sparse/jittery GPS may never deliver cleanly. The N=2 wait is kept
+                # only for marginal near-threshold moves, which is exactly the indoor
+                # oscillation case 0.4.6 targeted (±48m noise stays < the confident cutoff
+                # for typical acc, so it is still suppressed). See direction_hysteresis.md.
+                _confident_move = abs(delta_m) >= CONFIDENT_MOVE_FACTOR * _stationary_threshold
                 if (
                     direction in (DIRECTION_APPROACHING, DIRECTION_DIVERGING)
                     and not hold_just_expired
+                    and not _confident_move
                 ):
                     if ps.direction_candidate == direction:
                         ps.direction_candidate_count += 1
@@ -804,8 +827,18 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                     ps.direction_candidate = None
                     ps.direction_candidate_count = 0
 
-                closing_speed_kmh = 0.0 if direction == DIRECTION_STATIONARY else implied_speed_kmh
-                if direction == DIRECTION_APPROACHING:
+                # F4: displayed closing speed is computed from the noise-budget-adjusted
+                # delta, not the raw delta. implied_speed_kmh (the raw rate) is used only
+                # for the teleport cap above; a single noisy fix (tens of metres of GPS
+                # jitter over a short real interval) would otherwise show a physically
+                # indefensible closing speed even after F1 corrects delta_s. Subtract the
+                # same per-tick noise budget the stationary threshold uses, floor at 0.
+                if direction == DIRECTION_STATIONARY:
+                    closing_speed_kmh = 0.0
+                else:
+                    _adjusted_delta_m = max(0.0, abs(delta_m) - _tick_noise_budget)
+                    closing_speed_kmh = _adjusted_delta_m / delta_s * 3.6
+                if direction == DIRECTION_APPROACHING and closing_speed_kmh > 0:
                     closing_speed_m_per_s = closing_speed_kmh / 3.6
                     eta_minutes = dist_m / closing_speed_m_per_s / 60
                     eta_minutes = min(eta_minutes, 1440.0)
@@ -831,6 +864,12 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         ps.last_bucket = calc_bucket(dist_m, self._bucket_thresholds)
         ps.prev_distance_m = dist_m
         ps.prev_calc_time = now
+        # F1: advance the direction/speed baseline ONLY on a real fix (or hold expiry),
+        # never on a fix-less timer tick — so the next fix's delta spans the true
+        # inter-fix interval, not the seconds since the last timer tick.
+        if has_new_fix or hold_just_expired:
+            ps.last_fix_distance_m = dist_m
+            ps.last_fix_time = now
         if direction is not None or has_new_fix or hold_just_expired or direction_teleport_rejected:
             ps.direction = direction
             ps.closing_speed_kmh = closing_speed_kmh
@@ -842,9 +881,13 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         # Zone-center baseline is unusable for speed/direction on next GPS tick —
         # null it so the first post-fallback tick doesn't compare GPS against zone centroid.
         # Also null after a direction teleport rejection so the next tick starts fresh
-        # rather than comparing against the post-teleport position.
+        # rather than comparing against the post-teleport position. last_fix_* is the
+        # direction/speed baseline so it must be nulled on the same conditions as
+        # prev_distance_m (keeps the hysteresis reset points in sync).
         if zone_fallback_a or zone_fallback_b or direction_teleport_rejected:
             ps.prev_distance_m = None
+            ps.last_fix_distance_m = None
+            ps.last_fix_time = None
             ps.direction_candidate = None
             ps.direction_candidate_count = 0
         ps.data_valid = True
@@ -962,6 +1005,12 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                         )
                 ps.prev_distance_m = dist_m
                 ps.prev_calc_time = now
+                # F1: advance the direction baseline during hold too, so the expiry tick
+                # (hold_just_expired) can compute a delta (0 if stationary, or the real
+                # move during silence) instead of skipping direction for want of a
+                # baseline. Mirrors the prev_* advance above.
+                ps.last_fix_distance_m = dist_m
+                ps.last_fix_time = now
                 return ps
             # Hold expired — credit elapsed proximity time if session still open,
             # then advance proximity_since to now (fresh session start post-hold).

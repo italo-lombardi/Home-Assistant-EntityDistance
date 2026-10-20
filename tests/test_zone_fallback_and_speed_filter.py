@@ -666,20 +666,12 @@ class TestDirectionZoneVsPerson:
         now = datetime.now().astimezone()
         ps.prev_distance_m = 500.0
         ps.prev_calc_time = now - timedelta(seconds=60)
-        # First tick: approaching candidate recorded
+        ps.last_fix_distance_m = 500.0  # F1: direction baseline is last_fix_*
+        ps.last_fix_time = now - timedelta(seconds=60)
+        # F2: 500→100 is a −400m unambiguous move → commits approaching on first fix
         with patch(
             "custom_components.entity_distance.coordinator.ha_distance",
             return_value=100.0,  # closer → approaching
-        ):
-            coord._calc_pair(ps, "zone.home", "person.bob", now, {"person.bob"})
-        assert ps.direction_candidate == "approaching"
-
-        # Second confirming tick: approaching committed
-        ps.prev_distance_m = 100.0
-        ps.prev_calc_time = now - timedelta(seconds=30)
-        with patch(
-            "custom_components.entity_distance.coordinator.ha_distance",
-            return_value=50.0,
         ):
             result = coord._calc_pair(ps, "zone.home", "person.bob", now, {"person.bob"})
         assert result.direction == "approaching"
@@ -698,20 +690,12 @@ class TestDirectionZoneVsPerson:
         now = datetime.now().astimezone()
         ps.prev_distance_m = 100.0
         ps.prev_calc_time = now - timedelta(seconds=60)
-        # First tick: diverging candidate recorded
+        ps.last_fix_distance_m = 100.0  # F1: direction baseline is last_fix_*
+        ps.last_fix_time = now - timedelta(seconds=60)
+        # F2: 100→1500 is a +1400m unambiguous move → commits diverging on first fix
         with patch(
             "custom_components.entity_distance.coordinator.ha_distance",
             return_value=1500.0,  # farther → diverging
-        ):
-            coord._calc_pair(ps, "zone.home", "person.bob", now, {"person.bob"})
-        assert ps.direction_candidate == "diverging"
-
-        # Second confirming tick: diverging committed
-        ps.prev_distance_m = 1500.0
-        ps.prev_calc_time = now - timedelta(seconds=30)
-        with patch(
-            "custom_components.entity_distance.coordinator.ha_distance",
-            return_value=3000.0,
         ):
             result = coord._calc_pair(ps, "zone.home", "person.bob", now, {"person.bob"})
         assert result.direction == "diverging"
@@ -732,6 +716,8 @@ class TestDirectionZoneVsPerson:
         now = datetime.now().astimezone()
         ps.prev_distance_m = 500.0
         ps.prev_calc_time = now - timedelta(seconds=60)
+        ps.last_fix_distance_m = 500.0  # F1: teleport measured against last_fix baseline
+        ps.last_fix_time = now - timedelta(seconds=60)
         ps.direction = "approaching"  # must be cleared by teleport rejection
         with patch(
             "custom_components.entity_distance.coordinator.ha_distance",
@@ -757,6 +743,8 @@ class TestDirectionZoneVsPerson:
         now = datetime.now().astimezone()
         ps.prev_distance_m = 500.0
         ps.prev_calc_time = now - timedelta(seconds=60)
+        ps.last_fix_distance_m = 500.0  # F1: teleport measured against last_fix baseline
+        ps.last_fix_time = now - timedelta(seconds=60)
         ps.direction = "approaching"  # must be cleared by teleport rejection
         with patch(
             "custom_components.entity_distance.coordinator.ha_distance",
@@ -812,6 +800,8 @@ class TestZoneZonePair:
         if prev_dist is not None:
             ps.prev_distance_m = prev_dist
             ps.prev_calc_time = now - timedelta(seconds=prev_offset_s or 60)
+            ps.last_fix_distance_m = prev_dist  # F1: direction baseline is last_fix_*
+            ps.last_fix_time = now - timedelta(seconds=prev_offset_s or 60)
         return coord, k, ps, now
 
     def test_zone_zone_data_valid(self):

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 import itertools
 from unittest.mock import MagicMock, patch
 
@@ -466,6 +466,8 @@ class TestCalcPairDirection:
         ps = _fresh_pair()
         ps.prev_distance_m = 300.0  # current will also be 300.0 → delta < 50m
         ps.prev_calc_time = datetime(2024, 6, 1, 11, 59, 0, tzinfo=UTC)
+        ps.last_fix_distance_m = 300.0  # F1: direction baseline is last_fix_*
+        ps.last_fix_time = datetime(2024, 6, 1, 11, 59, 0, tzinfo=UTC)
 
         with patch(
             "custom_components.entity_distance.coordinator.ha_distance",
@@ -485,22 +487,15 @@ class TestCalcPairDirection:
         ps = _fresh_pair()
         ps.prev_distance_m = 600.0  # current 200m → delta = -400m → approaching
         ps.prev_calc_time = datetime(2024, 6, 1, 11, 59, 0, tzinfo=UTC)
+        ps.last_fix_distance_m = 600.0  # F1: direction baseline is last_fix_*
+        ps.last_fix_time = datetime(2024, 6, 1, 11, 59, 0, tzinfo=UTC)
 
         with patch(
             "custom_components.entity_distance.coordinator.ha_distance",
             return_value=200.0,
         ):
-            # First tick: candidate recorded, direction held as stationary
-            result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, {"person.alice"})
-        assert result.direction_candidate == "approaching"
-
-        # Second confirming tick
-        ps.prev_distance_m = 200.0
-        ps.prev_calc_time = _NOW - timedelta(seconds=5)
-        with patch(
-            "custom_components.entity_distance.coordinator.ha_distance",
-            return_value=100.0,
-        ):
+            # F2: −400m is an unambiguous move (≫ confident cutoff) → commits on the
+            # first fix without waiting for the N=2 confirmation.
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, {"person.alice"})
 
         assert result.direction == "approaching"
@@ -516,22 +511,14 @@ class TestCalcPairDirection:
         ps = _fresh_pair()
         ps.prev_distance_m = 200.0  # current 800m → delta = +600m → diverging
         ps.prev_calc_time = datetime(2024, 6, 1, 11, 59, 0, tzinfo=UTC)
+        ps.last_fix_distance_m = 200.0  # F1: direction baseline is last_fix_*
+        ps.last_fix_time = datetime(2024, 6, 1, 11, 59, 0, tzinfo=UTC)
 
         with patch(
             "custom_components.entity_distance.coordinator.ha_distance",
             return_value=800.0,
         ):
-            # First tick: candidate recorded
-            result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, {"person.alice"})
-        assert result.direction_candidate == "diverging"
-
-        # Second confirming tick
-        ps.prev_distance_m = 800.0
-        ps.prev_calc_time = _NOW - timedelta(seconds=5)
-        with patch(
-            "custom_components.entity_distance.coordinator.ha_distance",
-            return_value=1400.0,
-        ):
+            # F2: +600m is an unambiguous move → commits diverging on the first fix.
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, {"person.alice"})
 
         assert result.direction == "diverging"

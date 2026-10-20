@@ -12,8 +12,10 @@
 
 ### Fixed
 
-- **Direction flicker on timer tick** — the 60-second coordinator timer tick re-used the unchanged GPS state, producing `delta_m ≈ 0` → stationary, erasing an `approaching` signal set moments earlier by a real GPS update. Direction now only recomputes when a new GPS fix arrives for the pair; timer ticks leave the last direction unchanged. Resync hold-expiry ticks are still handled correctly. Teleport rejection on timer ticks still clears direction as expected.
-- **Indoor GPS oscillation flicker** — single GPS fix showing `approaching` or `diverging` when both entities are stationary indoors (±45–48 m GPS drift exceeds the 15 m noise threshold) would fire the `approaching` binary sensor ON/OFF on every update. Direction now requires two consecutive GPS fixes agreeing on the same direction before committing; a single oscillating tick is held as `stationary`. Resync hold-expiry ticks are still committed immediately.
+- **Direction flicker** — two separate sources of false `approaching`/`diverging` signals fixed:
+  - *Timer tick*: the 60-second coordinator tick re-used unchanged GPS state (`delta_m ≈ 0` → stationary), erasing an `approaching` set by a real GPS update moments earlier. Direction now only recomputes on a new GPS fix; timer ticks hold the last direction.
+  - *Indoor GPS oscillation*: with typical GPS accuracy (40 m), a single indoor GPS drift of ±45–48 m exceeds the 15 m noise threshold and fires the `approaching` binary sensor ON/OFF on every update. Direction now requires two consecutive GPS fixes agreeing on the same direction before committing; a single oscillating tick is held as `stationary`.
+  - Resync hold-expiry ticks and teleport rejection are unaffected.
 - **Smoke test debounce timing** — smoke tests for v0.4.3/0.4.4 used `sleep(3)` which is shorter than the `debounce_s=5` on the test entry; bumped to `sleep(7)` (single-inject) and `sleep(6)` (two-inject sequences).
 - **Deprecation: `via_device` tuple** — replaced deprecated `via_device=(DOMAIN, id)` tuple with `via_device_id` string in `DeviceInfo`. The old form is removed in HA 2027.8.
 - **Deprecation: `async_get_device(identifiers=…)`** — replaced deprecated device-registry lookup with `async_get_device_by_identifier`. The old form is removed in HA 2027.8.

@@ -64,6 +64,11 @@ class PairState:
     direction: str | None = None
     closing_speed_kmh: float | None = None
     eta_minutes: float | None = None
+    # Hysteresis: approaching/diverging must appear in 2 consecutive GPS fixes before
+    # committing. Suppresses single-tick indoor GPS oscillation false positives.
+    # Transient — not persisted to storage; resets to default on restart.
+    direction_candidate: str | None = None
+    direction_candidate_count: int = 0
 
     proximity: bool = False
     proximity_since: datetime | None = None

@@ -592,6 +592,8 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             ps.last_error = reason
             ps.prev_calc_time = None
             ps.prev_distance_m = None
+            ps.direction_candidate = None
+            ps.direction_candidate_count = 0
             # Display grace: if the pair had valid data, keep showing it (distance_m,
             # direction, etc. are intentionally NOT cleared above) for GRACE_WINDOW_S
             # before sensors report unknown. Display-only — data_valid stays False so
@@ -783,6 +785,25 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 else:
                     direction = DIRECTION_DIVERGING
 
+                # Hysteresis: require 2 consecutive GPS fixes agreeing on approaching or
+                # diverging before committing. A single oscillating indoor-GPS tick is
+                # suppressed to stationary. hold_just_expired is exempt — the resync
+                # baseline recovery tick must commit direction immediately.
+                if (
+                    direction in (DIRECTION_APPROACHING, DIRECTION_DIVERGING)
+                    and not hold_just_expired
+                ):
+                    if ps.direction_candidate == direction:
+                        ps.direction_candidate_count += 1
+                    else:
+                        ps.direction_candidate = direction
+                        ps.direction_candidate_count = 1
+                    if ps.direction_candidate_count < 2:
+                        direction = DIRECTION_STATIONARY
+                else:
+                    ps.direction_candidate = None
+                    ps.direction_candidate_count = 0
+
                 closing_speed_kmh = 0.0 if direction == DIRECTION_STATIONARY else implied_speed_kmh
                 if direction == DIRECTION_APPROACHING:
                     closing_speed_m_per_s = closing_speed_kmh / 3.6
@@ -796,6 +817,8 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         if direction is None and not direction_teleport_rejected and is_zone_a and is_zone_b:
             direction = DIRECTION_STATIONARY
             closing_speed_kmh = 0.0
+            ps.direction_candidate = None
+            ps.direction_candidate_count = 0
 
         was_proximity = ps.proximity
 
@@ -822,6 +845,8 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         # rather than comparing against the post-teleport position.
         if zone_fallback_a or zone_fallback_b or direction_teleport_rejected:
             ps.prev_distance_m = None
+            ps.direction_candidate = None
+            ps.direction_candidate_count = 0
         ps.data_valid = True
         ps.last_error = None
         ps.stale_since = None  # valid tick — exit any display grace window

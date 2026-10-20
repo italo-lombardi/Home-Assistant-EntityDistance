@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 import itertools
 from unittest.mock import MagicMock, patch
 
@@ -490,6 +490,17 @@ class TestCalcPairDirection:
             "custom_components.entity_distance.coordinator.ha_distance",
             return_value=200.0,
         ):
+            # First tick: candidate recorded, direction held as stationary
+            result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, {"person.alice"})
+        assert result.direction_candidate == "approaching"
+
+        # Second confirming tick
+        ps.prev_distance_m = 200.0
+        ps.prev_calc_time = _NOW - timedelta(seconds=5)
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=100.0,
+        ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, {"person.alice"})
 
         assert result.direction == "approaching"
@@ -509,6 +520,17 @@ class TestCalcPairDirection:
         with patch(
             "custom_components.entity_distance.coordinator.ha_distance",
             return_value=800.0,
+        ):
+            # First tick: candidate recorded
+            result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, {"person.alice"})
+        assert result.direction_candidate == "diverging"
+
+        # Second confirming tick
+        ps.prev_distance_m = 800.0
+        ps.prev_calc_time = _NOW - timedelta(seconds=5)
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=1400.0,
         ):
             result = coord._calc_pair(ps, "person.alice", "person.bob", _NOW, {"person.alice"})
 

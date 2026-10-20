@@ -252,9 +252,15 @@ class TestScenarioCityToCity:
         coord = _make_coord(["person.alice", "zone.home"], state_map)
         _tick(coord, t0, state_map)  # establish baseline
 
-        t1 = t0 + timedelta(minutes=30)
-        state_map["person.alice"] = make_state("person.alice", 53.1500, -6.2600, accuracy=20)
+        # First diverging tick — candidate recorded
+        t1 = t0 + timedelta(minutes=15)
+        state_map["person.alice"] = make_state("person.alice", 53.1800, -6.2600, accuracy=20)
         _tick(coord, t1, state_map)
+
+        # Second confirming tick — direction commits
+        t2 = t0 + timedelta(minutes=30)
+        state_map["person.alice"] = make_state("person.alice", 53.1500, -6.2600, accuracy=20)
+        _tick(coord, t2, state_map)
         ps = _ps(coord, "person.alice", "zone.home")
         assert ps.direction == "diverging"
         assert ps.closing_speed_kmh is not None
@@ -270,10 +276,15 @@ class TestScenarioCityToCity:
         coord = _make_coord(["person.alice", "zone.home"], state_map)
         _tick(coord, t0, state_map)  # baseline at Cork
 
-        # Moving back toward Dublin
-        t1 = t0 + timedelta(hours=1)
+        # First approaching tick — candidate recorded (moving toward Dublin)
+        t1 = t0 + timedelta(minutes=30)
         state_map["person.alice"] = make_state("person.alice", 52.5000, -7.5000, accuracy=15)
         _tick(coord, t1, state_map)
+
+        # Second confirming tick — direction commits (closer to Dublin)
+        t2 = t0 + timedelta(hours=1)
+        state_map["person.alice"] = make_state("person.alice", 52.8000, -7.0000, accuracy=15)
+        _tick(coord, t2, state_map)
         ps = _ps(coord, "person.alice", "zone.home")
         assert ps.direction == "approaching"
         assert ps.closing_speed_kmh is not None
@@ -380,18 +391,23 @@ class TestScenarioTwoPeopleMoving:
         d0 = ps0.distance_m
         assert d0 > 3000  # ~5km apart
 
-        # T+30min: Alice moves toward Italo
-        t1 = t0 + timedelta(minutes=30)
-        state_map["person.alice"] = make_state("person.alice", 53.3200, -6.2400, accuracy=15)
+        # T+15min: Alice moves toward Bob — first approaching tick (candidate)
+        t1 = t0 + timedelta(minutes=15)
+        state_map["person.alice"] = make_state("person.alice", 53.3300, -6.2400, accuracy=15)
         _tick(coord, t1, state_map)
+
+        # T+30min: Alice continues toward Bob — second confirming tick (commits approaching)
+        t2 = t0 + timedelta(minutes=30)
+        state_map["person.alice"] = make_state("person.alice", 53.3200, -6.2400, accuracy=15)
+        _tick(coord, t2, state_map)
         ps1 = _ps(coord, "person.alice", "person.bob")
         assert ps1.direction == "approaching"
         assert ps1.distance_m < d0
 
         # T+60min: they meet
-        t2 = t0 + timedelta(minutes=60)
+        t3 = t0 + timedelta(minutes=60)
         state_map["person.alice"] = make_state("person.alice", 53.3050, -6.2200, accuracy=15)
-        _tick(coord, t2, state_map)
+        _tick(coord, t3, state_map)
         ps2 = _ps(coord, "person.alice", "person.bob")
         assert ps2.data_valid
         assert ps2.proximity is True
@@ -407,10 +423,15 @@ class TestScenarioTwoPeopleMoving:
         coord = _make_coord(["person.alice", "person.bob"], state_map)
         _tick(coord, t0, state_map)  # establish baseline
 
-        # T+15min: Bob drives away
-        t1 = t0 + timedelta(minutes=15)
-        state_map["person.bob"] = make_state("person.bob", 53.2500, -6.1500, accuracy=20)
+        # T+10min: Bob drives away — first diverging tick (candidate)
+        t1 = t0 + timedelta(minutes=10)
+        state_map["person.bob"] = make_state("person.bob", 53.3000, -6.2000, accuracy=20)
         _tick(coord, t1, state_map)
+
+        # T+15min: Bob continues away — second confirming tick (commits diverging)
+        t2 = t0 + timedelta(minutes=15)
+        state_map["person.bob"] = make_state("person.bob", 53.2500, -6.1500, accuracy=20)
+        _tick(coord, t2, state_map)
         ps = _ps(coord, "person.alice", "person.bob")
         assert ps.direction == "diverging"
         assert ps.proximity is False

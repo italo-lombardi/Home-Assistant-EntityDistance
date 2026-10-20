@@ -666,9 +666,20 @@ class TestDirectionZoneVsPerson:
         now = datetime.now().astimezone()
         ps.prev_distance_m = 500.0
         ps.prev_calc_time = now - timedelta(seconds=60)
+        # First tick: approaching candidate recorded
         with patch(
             "custom_components.entity_distance.coordinator.ha_distance",
             return_value=100.0,  # closer → approaching
+        ):
+            coord._calc_pair(ps, "zone.home", "person.bob", now, {"person.bob"})
+        assert ps.direction_candidate == "approaching"
+
+        # Second confirming tick: approaching committed
+        ps.prev_distance_m = 100.0
+        ps.prev_calc_time = now - timedelta(seconds=30)
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=50.0,
         ):
             result = coord._calc_pair(ps, "zone.home", "person.bob", now, {"person.bob"})
         assert result.direction == "approaching"
@@ -687,9 +698,20 @@ class TestDirectionZoneVsPerson:
         now = datetime.now().astimezone()
         ps.prev_distance_m = 100.0
         ps.prev_calc_time = now - timedelta(seconds=60)
+        # First tick: diverging candidate recorded
         with patch(
             "custom_components.entity_distance.coordinator.ha_distance",
             return_value=1500.0,  # farther → diverging
+        ):
+            coord._calc_pair(ps, "zone.home", "person.bob", now, {"person.bob"})
+        assert ps.direction_candidate == "diverging"
+
+        # Second confirming tick: diverging committed
+        ps.prev_distance_m = 1500.0
+        ps.prev_calc_time = now - timedelta(seconds=30)
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=3000.0,
         ):
             result = coord._calc_pair(ps, "zone.home", "person.bob", now, {"person.bob"})
         assert result.direction == "diverging"

@@ -2378,17 +2378,42 @@ class TestStationaryThresholdPerTick:
         assert result.direction == "stationary"
 
     def test_approaching_with_low_accuracy_noise(self):
-        """Two devices each acc=10m → noise_budget=40m → threshold=15m; delta=40m → APPROACHING."""
+        """Two devices each acc=10m → noise_budget=40m → threshold=15m; delta=40m → APPROACHING after 2 confirming fixes."""
+        from unittest.mock import patch
+
+        from custom_components.entity_distance.models import pair_key
+        from tests.conftest import make_state
+
         # budget = 40, threshold = max(15, 40*0.15) = max(15, 6) = 15m
-        # delta = 500 - 460 = -40m → abs=40 > 15 → approaching
-        result = self._run_tick(
-            prev_dist=500.0,
-            curr_dist=460.0,
-            prev_acc_a=10.0,
-            prev_acc_b=10.0,
-            curr_acc=10.0,
+        # delta = -40m → abs=40 > 15 → approaching candidate on first tick
+        # N=2 hysteresis: need second confirming tick to commit
+        coordinator = _make_calc_pair_coordinator(max_speed_kmh=0.0)
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+
+        now = datetime.now().astimezone()
+        ps.prev_distance_m = 500.0
+        ps.prev_calc_time = now - timedelta(seconds=10)
+        ps.accuracy_a = 10.0
+        ps.accuracy_b = 10.0
+
+        state_a = make_state("person.alice", 51.5, -0.1, accuracy=10.0)
+        state_b = make_state("person.bob", 51.6, -0.2, accuracy=10.0)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
         )
-        assert result.direction == "approaching"
+
+        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=460.0):
+            result = coordinator._calc_pair(ps, "person.alice", "person.bob", now, {"person.alice", "person.bob"})
+        assert result.direction == "stationary"  # first tick: candidate held
+        assert result.direction_candidate == "approaching"
+
+        # Second confirming tick on same coordinator (carries state)
+        ps.prev_distance_m = 460.0
+        ps.prev_calc_time = now - timedelta(seconds=5)
+        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=420.0):
+            result2 = coordinator._calc_pair(ps, "person.alice", "person.bob", now, {"person.alice", "person.bob"})
+        assert result2.direction == "approaching"
 
     def test_stationary_threshold_min_floor(self):
         """Zone entities (acc=None→0) → noise_budget=0 → threshold=STATIONARY_THRESHOLD_MIN_M=15m; delta=5m → STATIONARY."""
@@ -3361,3 +3386,191 @@ class TestResetProximityDuration:
         assert ps.proximity_duration_s == 0.0
         assert ps.proximity_since is None  # not resurrected
         assert ps.proximity is False
+
+
+class TestDirectionHysteresis:
+    """N=2 direction hysteresis: approaching/diverging committed only on 2 consecutive GPS fixes."""
+
+    def _run_tick(self, ps, dist, pending=None):
+        """Run one tick, return updated PairState."""
+        from unittest.mock import patch
+
+        from tests.conftest import make_state
+
+        coordinator = _make_calc_pair_coordinator(max_speed_kmh=0.0)
+        coordinator._pair_states[pair_key("person.alice", "person.bob")] = ps
+
+        now = datetime.now().astimezone()
+        ps.prev_calc_time = now - timedelta(seconds=10)
+
+        state_a = make_state("person.alice", 51.5, -0.1, accuracy=30.0)
+        state_b = make_state("person.bob", 51.501, -0.1, accuracy=30.0)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+
+        if pending is None:
+            pending = {"person.alice"}
+
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=dist,
+        ):
+            return coordinator._calc_pair(
+                ps, "person.alice", "person.bob", now, pending
+            )
+
+    def _fresh_ps(self, prev_dist=500.0, prev_acc=30.0):
+        from custom_components.entity_distance.models import PairState, pair_key
+
+        k = pair_key("person.alice", "person.bob")
+        ps = PairState(entity_a_id=k[0], entity_b_id=k[1])
+        ps.prev_distance_m = prev_dist
+        ps.accuracy_a = prev_acc
+        ps.accuracy_b = prev_acc
+        return ps
+
+    def test_single_approaching_tick_suppressed_to_stationary(self):
+        """Single approaching GPS fix → held as stationary (candidate_count=1 < 2)."""
+        ps = self._fresh_ps(prev_dist=500.0)
+        # delta = 500 - 460 = -40m → would be approaching but N=2 blocks it
+        result = self._run_tick(ps, dist=460.0)
+        assert result.direction == "stationary"
+        assert result.direction_candidate == "approaching"
+        assert result.direction_candidate_count == 1
+
+    def test_two_consecutive_approaching_ticks_committed(self):
+        """Two consecutive approaching fixes → committed as approaching on second fix."""
+        ps = self._fresh_ps(prev_dist=500.0)
+        # First tick: approaching but suppressed
+        self._run_tick(ps, dist=460.0)
+        assert ps.direction == "stationary"
+        assert ps.direction_candidate_count == 1
+
+        # Second tick: same direction → count=2 → commits approaching
+        ps.prev_distance_m = 460.0
+        result = self._run_tick(ps, dist=420.0)
+        assert result.direction == "approaching"
+        assert result.direction_candidate_count == 2
+
+    def test_oscillating_approaching_diverging_suppressed(self):
+        """Approaching then diverging → candidate resets → never commits either direction."""
+        ps = self._fresh_ps(prev_dist=500.0)
+        # First tick: approaching
+        self._run_tick(ps, dist=460.0)
+        assert ps.direction_candidate == "approaching"
+        assert ps.direction_candidate_count == 1
+
+        # Second tick: diverging (distance grows) → candidate resets, stays stationary
+        ps.prev_distance_m = 460.0
+        result = self._run_tick(ps, dist=500.0)
+        assert result.direction == "stationary"
+        assert result.direction_candidate == "diverging"
+        assert result.direction_candidate_count == 1
+
+    def test_hold_just_expired_commits_immediately(self):
+        """hold_just_expired tick bypasses hysteresis → approaching committed on first fix."""
+        from unittest.mock import patch
+
+        from custom_components.entity_distance.models import pair_key
+        from tests.conftest import make_state
+
+        coordinator = _make_calc_pair_coordinator(max_speed_kmh=0.0)
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+
+        now = datetime.now().astimezone()
+        ps.prev_distance_m = 500.0
+        ps.accuracy_a = 30.0
+        ps.accuracy_b = 30.0
+        ps.prev_calc_time = now - timedelta(seconds=10)
+        # Set hold_until in the past so hold_just_expired triggers
+        coordinator._resync_holding[k] = True
+        coordinator._resync_hold_until[k] = now - timedelta(seconds=1)
+
+        state_a = make_state("person.alice", 51.5, -0.1, accuracy=30.0)
+        state_b = make_state("person.bob", 51.501, -0.1, accuracy=30.0)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=460.0,
+        ):
+            result = coordinator._calc_pair(
+                ps, "person.alice", "person.bob", now, {"person.alice"}
+            )
+
+        # hold_just_expired → hysteresis bypassed → approaching committed immediately
+        assert result.direction == "approaching"
+        assert result.direction_candidate is None
+        assert result.direction_candidate_count == 0
+
+    def test_invalidate_resets_candidate(self):
+        """_invalidate() (entity unavailable) resets direction_candidate to None/0."""
+        from custom_components.entity_distance.models import pair_key
+
+        coordinator = _make_calc_pair_coordinator(max_speed_kmh=0.0)
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+
+        now = datetime.now().astimezone()
+        ps.prev_distance_m = 500.0
+        ps.prev_calc_time = now - timedelta(seconds=10)
+        ps.direction_candidate = "approaching"
+        ps.direction_candidate_count = 1
+
+        # Trigger _invalidate() by returning unavailable state for alice
+        from homeassistant.const import STATE_UNAVAILABLE
+        from homeassistant.core import State
+
+        state_a = State("person.alice", STATE_UNAVAILABLE)
+        state_b = State("person.bob", "not_home")
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+
+        result = coordinator._calc_pair(ps, "person.alice", "person.bob", now, {"person.alice"})
+
+        assert result.direction_candidate is None
+        assert result.direction_candidate_count == 0
+        assert result.data_valid is False
+
+    def test_teleport_rejection_resets_candidate(self):
+        """Teleport rejection nulls prev_distance_m AND resets direction candidate."""
+        from unittest.mock import patch
+
+        from custom_components.entity_distance.models import pair_key
+        from tests.conftest import make_state
+
+        coordinator = _make_calc_pair_coordinator(max_speed_kmh=250.0)
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+
+        now = datetime.now().astimezone()
+        ps.prev_distance_m = 100.0
+        ps.accuracy_a = 30.0
+        ps.accuracy_b = 30.0
+        ps.prev_calc_time = now - timedelta(seconds=10)
+        ps.direction_candidate = "approaching"
+        ps.direction_candidate_count = 1
+
+        state_a = make_state("person.alice", 51.5, -0.1, accuracy=30.0)
+        state_b = make_state("person.bob", 51.501, -0.1, accuracy=30.0)
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+
+        # 900km/h — exceeds max_speed_kmh=250 → teleport rejection
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=2_500_000.0,
+        ):
+            result = coordinator._calc_pair(
+                ps, "person.alice", "person.bob", now, {"person.alice"}
+            )
+
+        assert result.prev_distance_m is None  # baseline nulled
+        assert result.direction_candidate is None
+        assert result.direction_candidate_count == 0

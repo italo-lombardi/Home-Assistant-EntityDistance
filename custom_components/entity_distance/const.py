@@ -45,6 +45,13 @@ MAX_DEBOUNCE_S = 60
 STATIONARY_THRESHOLD_FACTOR = 0.15
 STATIONARY_THRESHOLD_MIN_M = 15.0
 
+# A distance delta at least this many × the per-tick stationary threshold is an
+# unambiguous move — commit approaching/diverging immediately instead of waiting for the
+# N=2 hysteresis confirmation. Keeps the 0.4.6 indoor-flicker fix (small ±noise moves
+# still need 2 consecutive fixes) while letting a real drive latch on the first fix.
+# Calibration knob: raise to demand a larger confident move, lower to commit sooner.
+CONFIDENT_MOVE_FACTOR = 4.0
+
 # Minimum elapsed seconds between _calc_pair calls to credit zone/proximity buckets.
 # Guards against rapid-fire recalculates (real GPS bursts or debounce=0 back-to-back
 # events) where near-zero _elapsed_s would silently leak time into today_unaccounted.

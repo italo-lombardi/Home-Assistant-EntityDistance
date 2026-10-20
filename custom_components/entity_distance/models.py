@@ -57,6 +57,14 @@ class PairState:
     distance_m: float | None = None
     prev_distance_m: float | None = None
     prev_calc_time: datetime | None = None
+    # Direction/speed baseline: distance + time of the LAST REAL GPS fix (not timer
+    # ticks). prev_distance_m/prev_calc_time are rewritten every tick (incl. fix-less
+    # 1-min timer ticks) for the speed/teleport filter and display grace, so using them
+    # for direction compares a sparse fix against a ~seconds-old timer tick → false
+    # stationary + inflated implied speed. These advance only on a real fix so the delta
+    # spans the true inter-fix interval. Transient — not persisted; reset on restart.
+    last_fix_distance_m: float | None = None
+    last_fix_time: datetime | None = None
     # Bucket of the last valid distance. Persisted so a cross-midnight _invalidate()
     # credits the correct zone even after distance_m may have been superseded.
     last_bucket: str | None = None

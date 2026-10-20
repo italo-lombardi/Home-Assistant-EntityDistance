@@ -3,6 +3,21 @@
 ## [Unreleased]
 
 
+## [0.4.8] - 2026-10-20
+
+### Fixed
+
+- **Direction / approaching never latched on a real drive** — a sustained approach (e.g. a 12 km → 40 m drive home) read `approaching` on only a few one-tick flickers, mostly `stationary`/`unknown`; `approach_speed` showed impossible values (611 km/h); `estimated_arrival_time` was garbage. Three compounding causes fixed:
+  - *Corrupted motion baseline* — direction and closing speed were measured against `prev_distance_m` / `prev_calc_time`, which the 60-second timer tick overwrites every minute. A sparse GPS fix was compared against a seconds-old timer tick instead of the true minutes-long gap, so the move looked too small to leave `stationary` and the implied speed was inflated ~20×. Direction and speed now use a dedicated last-real-fix baseline (`last_fix_distance_m` / `last_fix_time`) that only advances on an actual GPS fix (or resync-hold expiry), so the delta spans the real inter-fix interval.
+  - *Hysteresis starved the signal* — the N=2 hysteresis (0.4.6 indoor-flicker fix) forced the first fix of every approach to `stationary` and any jitter tick reset the two-fix count, so a sparse one-sided stream rarely committed. An unambiguous move (`|Δ| ≥ CONFIDENT_MOVE_FACTOR × stationary threshold`) now commits `approaching`/`diverging` on the first fix; the two-fix confirmation is kept only for marginal near-threshold moves — the exact indoor-oscillation case 0.4.6 targeted (still suppressed).
+  - *Zone-name blips wiped the streak* — a one-tick `not_home`/unknown flip (common while driving) ran through `_invalidate`, which nulled the direction baseline and candidate. The streak and baseline are now preserved across a brief invalidation while the pair is still inside its display grace window.
+- As a direct result, `approach_speed`/`closing_speed` and `estimated_arrival_time` are now computed over the real fix interval and read plausibly during a drive.
+
+### Notes
+
+- The N=2 indoor-flicker behaviour from 0.4.6 is preserved for small near-threshold moves; only clearly unambiguous moves bypass it. New regression tests guard both paths.
+
+
 ## [0.4.6] - 2026-10-19
 
 ### Added

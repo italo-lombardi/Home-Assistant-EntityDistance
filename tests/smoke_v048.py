@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Smoke tests for Entity Distance v0.4.8 — direction/approaching/speed on a real drive.
+"""Smoke tests for Entity Distance v0.4.6 — direction/approaching/speed on a real drive.
 
 Fixes verified end-to-end against live HA:
     F1 — direction/speed computed against the LAST REAL GPS FIX (last_fix_*), not prev_*
@@ -344,7 +344,7 @@ def summary():
 
 
 if __name__ == "__main__":
-    print("\nEntity Distance v0.4.8 Smoke Tests — direction/approaching/speed on a real drive")
+    print("\nEntity Distance v0.4.6 Smoke Tests — direction/approaching/speed on a real drive")
     print(f"HA: {HA}  slug: {SLUG}\n")
 
     test_sensors_available()

@@ -30,7 +30,7 @@ jobs:
         id: prerelease
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          if echo "$VERSION" | grep -qE '[ab][0-9]|rc[0-9]'; then
+          if echo "$VERSION" | grep -qE '[ab][0-9]|rc[0-9]|-beta\.[0-9]|-alpha\.[0-9]|-rc\.[0-9]'; then
             echo "is_prerelease=true" >> $GITHUB_OUTPUT
           else
             echo "is_prerelease=false" >> $GITHUB_OUTPUT

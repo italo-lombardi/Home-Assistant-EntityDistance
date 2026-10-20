@@ -789,7 +789,10 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 # diverging before committing. A single oscillating indoor-GPS tick is
                 # suppressed to stationary. hold_just_expired is exempt — the resync
                 # baseline recovery tick must commit direction immediately.
-                if direction in (DIRECTION_APPROACHING, DIRECTION_DIVERGING) and not hold_just_expired:
+                if (
+                    direction in (DIRECTION_APPROACHING, DIRECTION_DIVERGING)
+                    and not hold_just_expired
+                ):
                     if ps.direction_candidate == direction:
                         ps.direction_candidate_count += 1
                     else:

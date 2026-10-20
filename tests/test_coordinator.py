@@ -2404,7 +2404,9 @@ class TestStationaryThresholdPerTick:
         )
 
         with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=460.0):
-            result = coordinator._calc_pair(ps, "person.alice", "person.bob", now, {"person.alice", "person.bob"})
+            result = coordinator._calc_pair(
+                ps, "person.alice", "person.bob", now, {"person.alice", "person.bob"}
+            )
         assert result.direction == "stationary"  # first tick: candidate held
         assert result.direction_candidate == "approaching"
 
@@ -2412,7 +2414,9 @@ class TestStationaryThresholdPerTick:
         ps.prev_distance_m = 460.0
         ps.prev_calc_time = now - timedelta(seconds=5)
         with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=420.0):
-            result2 = coordinator._calc_pair(ps, "person.alice", "person.bob", now, {"person.alice", "person.bob"})
+            result2 = coordinator._calc_pair(
+                ps, "person.alice", "person.bob", now, {"person.alice", "person.bob"}
+            )
         assert result2.direction == "approaching"
 
     def test_stationary_threshold_min_floor(self):
@@ -3416,9 +3420,7 @@ class TestDirectionHysteresis:
             "custom_components.entity_distance.coordinator.ha_distance",
             return_value=dist,
         ):
-            return coordinator._calc_pair(
-                ps, "person.alice", "person.bob", now, pending
-            )
+            return coordinator._calc_pair(ps, "person.alice", "person.bob", now, pending)
 
     def _fresh_ps(self, prev_dist=500.0, prev_acc=30.0):
         from custom_components.entity_distance.models import PairState, pair_key
@@ -3498,9 +3500,7 @@ class TestDirectionHysteresis:
             "custom_components.entity_distance.coordinator.ha_distance",
             return_value=460.0,
         ):
-            result = coordinator._calc_pair(
-                ps, "person.alice", "person.bob", now, {"person.alice"}
-            )
+            result = coordinator._calc_pair(ps, "person.alice", "person.bob", now, {"person.alice"})
 
         # hold_just_expired → hysteresis bypassed → approaching committed immediately
         assert result.direction == "approaching"
@@ -3567,9 +3567,7 @@ class TestDirectionHysteresis:
             "custom_components.entity_distance.coordinator.ha_distance",
             return_value=2_500_000.0,
         ):
-            result = coordinator._calc_pair(
-                ps, "person.alice", "person.bob", now, {"person.alice"}
-            )
+            result = coordinator._calc_pair(ps, "person.alice", "person.bob", now, {"person.alice"})
 
         assert result.prev_distance_m is None  # baseline nulled
         assert result.direction_candidate is None

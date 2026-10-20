@@ -432,12 +432,15 @@ def summary():
 
 def test_approaching_binary_sensor():
     section("Approaching binary sensor")
-    # Two injects: first establishes prev_state, second moves Alice closer to Bob.
-    # Alice starts north of Bob; second inject moves Alice slightly south (toward Bob).
-    inject("device_tracker.test_alice", 53.3600, -6.2603)  # same lat as Bob
+    # N=2 hysteresis: need two consecutive GPS fixes in same direction to commit.
+    # Three injects: baseline, first approach (candidate), second approach (commits).
+    inject("device_tracker.test_alice", 53.3600, -6.2603)  # baseline
     inject("device_tracker.test_bob", 53.3500, -6.2603)
-    time.sleep(2)
-    inject("device_tracker.test_alice", 53.3550, -6.2603)  # moved south, closer to Bob
+    time.sleep(6)
+    inject("device_tracker.test_alice", 53.3550, -6.2603)  # first approach tick (candidate)
+    inject("device_tracker.test_bob", 53.3500, -6.2603)
+    time.sleep(6)
+    inject("device_tracker.test_alice", 53.3520, -6.2603)  # second confirming tick (commits)
     inject("device_tracker.test_bob", 53.3500, -6.2603)
     time.sleep(6)
 
@@ -450,11 +453,11 @@ def test_approaching_binary_sensor():
             s["state"],
         )
 
-    # Now move Alice away from Bob
-    inject("device_tracker.test_alice", 53.3550, -6.2603)
+    # Now move Alice away from Bob — two confirming diverging ticks
+    inject("device_tracker.test_alice", 53.3550, -6.2603)  # first diverging tick
     inject("device_tracker.test_bob", 53.3500, -6.2603)
-    time.sleep(2)
-    inject("device_tracker.test_alice", 53.3600, -6.2603)  # moved north, away from Bob
+    time.sleep(6)
+    inject("device_tracker.test_alice", 53.3600, -6.2603)  # second confirming tick
     inject("device_tracker.test_bob", 53.3500, -6.2603)
     time.sleep(6)
 

@@ -827,8 +827,18 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                     ps.direction_candidate = None
                     ps.direction_candidate_count = 0
 
-                closing_speed_kmh = 0.0 if direction == DIRECTION_STATIONARY else implied_speed_kmh
-                if direction == DIRECTION_APPROACHING:
+                # F4: displayed closing speed is computed from the noise-budget-adjusted
+                # delta, not the raw delta. implied_speed_kmh (the raw rate) is used only
+                # for the teleport cap above; a single noisy fix (tens of metres of GPS
+                # jitter over a short real interval) would otherwise show a physically
+                # indefensible closing speed even after F1 corrects delta_s. Subtract the
+                # same per-tick noise budget the stationary threshold uses, floor at 0.
+                if direction == DIRECTION_STATIONARY:
+                    closing_speed_kmh = 0.0
+                else:
+                    _adjusted_delta_m = max(0.0, abs(delta_m) - _tick_noise_budget)
+                    closing_speed_kmh = _adjusted_delta_m / delta_s * 3.6
+                if direction == DIRECTION_APPROACHING and closing_speed_kmh > 0:
                     closing_speed_m_per_s = closing_speed_kmh / 3.6
                     eta_minutes = dist_m / closing_speed_m_per_s / 60
                     eta_minutes = min(eta_minutes, 1440.0)

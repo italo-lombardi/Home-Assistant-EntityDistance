@@ -3757,3 +3757,62 @@ class TestDirectionFixBaselineAndConfidentMove:
         # has_new_fix but delta_s==0 → direction written as None, no speed computed.
         assert result.direction is None
         assert result.closing_speed_kmh is None
+
+    def test_real_drive_sparse_fixes_with_timer_ticks(self):
+        """Regression for the reported drive bug: a sustained approach with sparse GPS
+        fixes (minutes apart) and interleaved fix-less 60s timer ticks must latch
+        `approaching` across the run and report plausible (noise-stripped) closing speed.
+
+        The pre-fix suite force-fed non-empty `pending` on every direction tick and never
+        interleaved an empty-pending timer tick between two sparse moving fixes — which is
+        why 747 tests stayed green while the real 12km→0 drive read stationary/611km/h."""
+        from unittest.mock import patch
+
+        coordinator = self._coord()  # max_speed_kmh=0 → DEFAULT cap 1000 for teleport
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+        self._states(coordinator, acc=25.0)  # realistic phone GPS accuracy
+
+        # Monotonic approach, ~2 min between real fixes (metres). Mirrors the CSV shape.
+        start = datetime.now().astimezone()
+        fixes = [12000.0, 10000.0, 8000.0, 5500.0, 3300.0, 2000.0, 1300.0, 600.0, 60.0]
+        t = start
+        # Seed the baseline with the first fix (no direction yet — needs a prior fix).
+        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=fixes[0]):
+            coordinator._calc_pair(ps, "person.alice", "person.bob", t, {"person.alice"})
+
+        approaching = 0
+        speeds: list[float] = []
+        etas: list[float] = []
+        for dist in fixes[1:]:
+            # Interleave a fix-less 60s timer tick (empty pending) BEFORE each real fix —
+            # the exact interaction the old suite never exercised. Must not clobber direction.
+            t = t + timedelta(seconds=60)
+            with patch(
+                "custom_components.entity_distance.coordinator.ha_distance",
+                return_value=dist + 5.0,  # same GPS position would be reported by a timer tick
+            ):
+                coordinator._calc_pair(ps, "person.alice", "person.bob", t, set())
+            # Real fix ~2 min after the previous real fix.
+            t = t + timedelta(seconds=60)
+            with patch(
+                "custom_components.entity_distance.coordinator.ha_distance",
+                return_value=dist,
+            ):
+                r = coordinator._calc_pair(ps, "person.alice", "person.bob", t, {"person.alice"})
+            if r.direction == "approaching":
+                approaching += 1
+                if r.closing_speed_kmh is not None:
+                    speeds.append(r.closing_speed_kmh)
+                if r.eta_minutes is not None:
+                    etas.append(r.eta_minutes)
+
+        # Latches approaching across the whole approach (pre-fix: ~4/13).
+        assert approaching >= len(fixes) - 2, f"only {approaching}/{len(fixes) - 1} fixes approaching"
+        # F4: closing speed is plausible — noise stripped, NOT clamped. Non-zero (would be
+        # 0 if F4 over-stripped) and under a car ceiling (pre-fix: 611 km/h).
+        assert speeds, "no closing speed samples on an approaching drive"
+        assert all(0.0 < v < 200.0 for v in speeds), f"implausible closing speeds: {speeds}"
+        # ETA inherits the corrected speed → finite for the sustained approach.
+        assert etas, "ETA never computed on a sustained approach"
+        assert all(0.0 < e <= 1440.0 for e in etas), f"implausible ETAs: {etas}"

@@ -3778,7 +3778,9 @@ class TestDirectionFixBaselineAndConfidentMove:
         fixes = [12000.0, 10000.0, 8000.0, 5500.0, 3300.0, 2000.0, 1300.0, 600.0, 60.0]
         t = start
         # Seed the baseline with the first fix (no direction yet — needs a prior fix).
-        with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=fixes[0]):
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance", return_value=fixes[0]
+        ):
             coordinator._calc_pair(ps, "person.alice", "person.bob", t, {"person.alice"})
 
         approaching = 0
@@ -3808,7 +3810,9 @@ class TestDirectionFixBaselineAndConfidentMove:
                     etas.append(r.eta_minutes)
 
         # Latches approaching across the whole approach (pre-fix: ~4/13).
-        assert approaching >= len(fixes) - 2, f"only {approaching}/{len(fixes) - 1} fixes approaching"
+        assert approaching >= len(fixes) - 2, (
+            f"only {approaching}/{len(fixes) - 1} fixes approaching"
+        )
         # F4: closing speed is plausible — noise stripped, NOT clamped. Non-zero (would be
         # 0 if F4 over-stripped) and under a car ceiling (pre-fix: 611 km/h).
         assert speeds, "no closing speed samples on an approaching drive"

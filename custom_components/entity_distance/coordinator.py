@@ -889,10 +889,24 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         if (has_new_fix and (_fix_interval_ok or _seed_baseline)) or hold_just_expired:
             ps.last_fix_distance_m = dist_m
             ps.last_fix_time = now
-        # Write direction/speed only when a meaningful compute happened (interval ok) or on
-        # a teleport rejection (which intentionally clears to None). A too-short rapid-fix
-        # pair must NOT clobber the held direction with None — hold it like a timer tick.
-        if hold_just_expired or direction_teleport_rejected or direction is not None:
+        # Write direction/speed on exactly the ticks that carry a real verdict:
+        #   - direction is not None: a meaningful compute happened (a real fix on an interval
+        #     >= DIRECTION_MIN_INTERVAL_S always sets a value; a good-interval hold-expiry
+        #     commits here too). Covers the normal path and the "commit immediately" exemption.
+        #   - direction_teleport_rejected: intentionally clears to None (fresh baseline next tick).
+        #   - has_new_fix AND a zone-fallback side: a real fix where no GPS motion delta can be
+        #     derived (one side is a scanner/zone centroid). Main cleared the stale GPS
+        #     direction on this tick; keep that so a pair that arrives home does not DISPLAY a
+        #     frozen "approaching / N km/h" for the whole dwell.
+        # Deliberately NOT written on: a too-short rapid-fix pair (hold the last direction like a
+        # timer tick — including a sub-5s hold-expiry, which must NOT clobber to None), and a
+        # fix-less timer tick. `hold_just_expired` is intentionally absent: a good-interval expiry
+        # already has direction set (→ `direction is not None`); a sub-5s expiry must hold.
+        if (
+            direction is not None
+            or direction_teleport_rejected
+            or (has_new_fix and (zone_fallback_a or zone_fallback_b))
+        ):
             ps.direction = direction
             ps.closing_speed_kmh = closing_speed_kmh
             ps.eta_minutes = eta_minutes

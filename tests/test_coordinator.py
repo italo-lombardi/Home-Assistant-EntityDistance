@@ -2753,27 +2753,21 @@ class TestExtractAltitude:
         """0.0 WITH a trustworthy vertical_accuracy is a genuine sea-level fix → kept."""
         from custom_components.entity_distance.coordinator import _extract_altitude
 
-        s = self._state(
-            "device_tracker.phone", {"altitude": 0.0, "vertical_accuracy": 12.0}
-        )
+        s = self._state("device_tracker.phone", {"altitude": 0.0, "vertical_accuracy": 12.0})
         assert _extract_altitude(s) == pytest.approx(0.0)
 
     def test_altitude_zero_with_garbage_vacc_is_nofix_sentinel(self):
         """0.0 with out-of-range (garbage) vertical_accuracy → sentinel → None."""
         from custom_components.entity_distance.coordinator import _extract_altitude
 
-        s = self._state(
-            "device_tracker.phone", {"altitude": 0.0, "vertical_accuracy": 99999.0}
-        )
+        s = self._state("device_tracker.phone", {"altitude": 0.0, "vertical_accuracy": 99999.0})
         assert _extract_altitude(s) is None
 
     def test_altitude_zero_with_negative_vacc_is_nofix_sentinel(self):
         """0.0 with Apple's negative invalid-vacc flag → sentinel → None."""
         from custom_components.entity_distance.coordinator import _extract_altitude
 
-        s = self._state(
-            "device_tracker.phone", {"altitude": 0.0, "vertical_accuracy": -1.0}
-        )
+        s = self._state("device_tracker.phone", {"altitude": 0.0, "vertical_accuracy": -1.0})
         assert _extract_altitude(s) is None
 
     def test_altitude_zero_with_zero_vacc_is_nofix_sentinel(self):
@@ -2781,9 +2775,7 @@ class TestExtractAltitude:
         never reports zero vertical uncertainty)."""
         from custom_components.entity_distance.coordinator import _extract_altitude
 
-        s = self._state(
-            "device_tracker.phone", {"altitude": 0.0, "vertical_accuracy": 0.0}
-        )
+        s = self._state("device_tracker.phone", {"altitude": 0.0, "vertical_accuracy": 0.0})
         assert _extract_altitude(s) is None
 
     def test_altitude_integer_coerced(self):
@@ -2815,9 +2807,7 @@ class TestExtractAltitude:
 
         s = self._state("device_tracker.phone", {"altitude": -0.3})
         assert _extract_altitude(s) == pytest.approx(-0.3)
-        s2 = self._state(
-            "device_tracker.phone", {"altitude": -0.3, "vertical_accuracy": 8.0}
-        )
+        s2 = self._state("device_tracker.phone", {"altitude": -0.3, "vertical_accuracy": 8.0})
         assert _extract_altitude(s2) == pytest.approx(-0.3)
 
     def test_altitude_missing_key(self):
@@ -4116,16 +4106,12 @@ class TestAltitudeSentinelIntegration:
         b_id = state_b.entity_id
         k = pair_key(a_id, b_id)
         ps = coordinator._pair_states[k]
-        coordinator.hass.states.get.side_effect = lambda eid: (
-            state_a if eid == a_id else state_b
-        )
+        coordinator.hass.states.get.side_effect = lambda eid: state_a if eid == a_id else state_b
         with patch(
             "custom_components.entity_distance.coordinator.ha_distance",
             return_value=500.0,
         ):
-            return coordinator._calc_pair(
-                ps, a_id, b_id, datetime.now().astimezone(), set()
-            )
+            return coordinator._calc_pair(ps, a_id, b_id, datetime.now().astimezone(), set())
 
     def test_sentinel_not_at_home_drops_to_none(self):
         """altitude 0.0 + no vertical_accuracy, NOT at home → altitude None, no

@@ -100,12 +100,18 @@ def inject_pair(alice_alt, alice_vacc, bob_alt, bob_vacc):
     """
     for _ in range(2):
         inject(
-            "device_tracker.test_alice", _ALICE_LAT, _LON,
-            altitude=alice_alt, vertical_accuracy=alice_vacc,
+            "device_tracker.test_alice",
+            _ALICE_LAT,
+            _LON,
+            altitude=alice_alt,
+            vertical_accuracy=alice_vacc,
         )
         inject(
-            "device_tracker.test_bob", _BOB_LAT, _LON,
-            altitude=bob_alt, vertical_accuracy=bob_vacc,
+            "device_tracker.test_bob",
+            _BOB_LAT,
+            _LON,
+            altitude=bob_alt,
+            vertical_accuracy=bob_vacc,
         )
         time.sleep(7)  # debounce_s=5 on this entry
 

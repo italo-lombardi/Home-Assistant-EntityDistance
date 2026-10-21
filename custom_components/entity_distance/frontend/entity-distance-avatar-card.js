@@ -283,6 +283,16 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       flex: 0 0 auto;
       width: 92px;
     }
+    .person-col.clickable {
+      cursor: pointer;
+      border-radius: 10px;
+      transition: background-color 120ms ease;
+      outline: none;
+    }
+    .person-col.clickable:hover,
+    .person-col.clickable:focus-visible {
+      background: var(--secondary-background-color, rgba(0, 0, 0, 0.06));
+    }
 
     .avatar-wrap {
       width: var(--edpc-avatar-size);
@@ -577,6 +587,18 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         </div>`;
     }
 
+    /** Open HA's more-info dialog for the clicked entity (person/device_tracker/zone). */
+    _openEntityMoreInfo(entityId) {
+      if (typeof entityId !== "string" || !entityId) return;
+      this.dispatchEvent(
+        new CustomEvent("hass-more-info", {
+          detail: { entityId },
+          bubbles: true,
+          composed: true,
+        })
+      );
+    }
+
     render() {
       if (!this._config || !this.hass) return html``;
       const { slug } = this._config;
@@ -668,7 +690,18 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
           <!-- hero: avatar A — distance — avatar B -->
           <div class="hero">
             <!-- person A -->
-            <div class="person-col">
+            <div class="person-col ${resolvedEntityA ? "clickable" : ""}"
+              role=${resolvedEntityA ? "button" : nothing}
+              tabindex=${resolvedEntityA ? "0" : nothing}
+              @click=${resolvedEntityA ? () => this._openEntityMoreInfo(resolvedEntityA) : nothing}
+              @keydown=${resolvedEntityA
+                ? (e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      this._openEntityMoreInfo(resolvedEntityA);
+                    }
+                  }
+                : nothing}>
               ${this._renderAvatar(entityA, displayNameA)}
               <span class="person-name">${displayNameA}</span>
               ${c.show_entity_states && stateA ? html`<span class="person-state">${stateA}</span>` : nothing}
@@ -695,7 +728,18 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
             </div>
 
             <!-- person B -->
-            <div class="person-col">
+            <div class="person-col ${resolvedEntityB ? "clickable" : ""}"
+              role=${resolvedEntityB ? "button" : nothing}
+              tabindex=${resolvedEntityB ? "0" : nothing}
+              @click=${resolvedEntityB ? () => this._openEntityMoreInfo(resolvedEntityB) : nothing}
+              @keydown=${resolvedEntityB
+                ? (e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      this._openEntityMoreInfo(resolvedEntityB);
+                    }
+                  }
+                : nothing}>
               ${this._renderAvatar(entityB, displayNameB)}
               <span class="person-name">${displayNameB}</span>
               ${c.show_entity_states && stateB ? html`<span class="person-state">${stateB}</span>` : nothing}

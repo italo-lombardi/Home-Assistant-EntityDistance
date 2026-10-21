@@ -710,7 +710,7 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
         }
 
         return `
-          <g>
+          <g style="cursor:pointer" data-node="${_encodeAttr(n.id)}">
             <circle cx="${n.x}" cy="${n.y}" r="${NODE_RADIUS + 1}" fill="none" stroke="var(--divider-color,rgba(0,0,0,0.12))" stroke-width="1.5"/>
             <circle cx="${n.x}" cy="${n.y}" r="${NODE_RADIUS - 2}" fill="hsl(${hue},45%,42%)"/>
             ${pic && SAFE_SCHEMES.test(pic)
@@ -736,10 +736,23 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
       wrap.innerHTML = svgStr;
 
       // Re-attach click listeners (innerHTML wipes them)
-      // Re-attach click listeners (innerHTML wipes them)
+      // Edge <g data-entity> → the pair distance sensor's more-info.
       wrap.querySelectorAll("g[data-entity]").forEach(g => {
         g.addEventListener("click", () => this._onLineClick(g.dataset.entity));
       });
+      // Node <g data-node> → the ENTITY's own more-info (person/device_tracker/zone).
+      wrap.querySelectorAll("g[data-node]").forEach(g => {
+        g.addEventListener("click", () => this._onNodeClick(g.dataset.node));
+      });
+    }
+
+    _onNodeClick(entityId) {
+      if (typeof entityId !== "string" || !entityId) return;
+      this.dispatchEvent(new CustomEvent("hass-more-info", {
+        detail: { entityId },
+        bubbles: true,
+        composed: true,
+      }));
     }
 
     _onLineClick(distEntityId) {

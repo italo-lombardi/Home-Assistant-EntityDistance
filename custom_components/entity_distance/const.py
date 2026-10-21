@@ -52,6 +52,16 @@ STATIONARY_THRESHOLD_MIN_M = 15.0
 # Calibration knob: raise to demand a larger confident move, lower to commit sooner.
 CONFIDENT_MOVE_FACTOR = 4.0
 
+# Minimum real-fix interval (seconds) for computing direction / closing speed. Two genuine
+# GPS fixes arriving only a second or two apart (rapid-fire trackers, debounce=0) often
+# carry a GPS position jump that, divided by the tiny interval, yields an impossible speed
+# (observed 510 km/h over a 1.9s pair). The speed/teleport FILTER already ignores sub-5s
+# pairs; mirror that floor here so the DISPLAYED direction/speed are not derived from a
+# sub-interval the physics can't support. On a too-short interval the tick holds the last
+# direction and does NOT advance the baseline, so the interval accumulates until the next
+# fix spans a meaningful window.
+DIRECTION_MIN_INTERVAL_S = 5.0
+
 # Minimum elapsed seconds between _calc_pair calls to credit zone/proximity buckets.
 # Guards against rapid-fire recalculates (real GPS bursts or debounce=0 back-to-back
 # events) where near-zero _elapsed_s would silently leak time into today_unaccounted.

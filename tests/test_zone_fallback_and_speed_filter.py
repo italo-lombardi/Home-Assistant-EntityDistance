@@ -754,8 +754,9 @@ class TestDirectionZoneVsPerson:
         assert result.direction is None
         assert result.prev_distance_m is None
 
-    def test_zone_vs_person_delta_s_zero_direction_none(self):
-        # Same-millisecond double update: delta_s=0 → direction and speed must stay None
+    def test_zone_vs_person_zero_interval_fix_holds_direction(self):
+        # Same-instant real fix (delta_s=0, below DIRECTION_MIN_INTERVAL_S): F5 computes no
+        # direction/speed and HOLDS the last committed direction rather than nulling it.
         zone = make_zone_state("zone.home", 51.5, -0.1, radius=100)
         person = make_state("person.bob", 51.6, -0.2, accuracy=10)
         hass = _make_hass(zone_states=[zone], extra={person.entity_id: person})
@@ -768,16 +769,17 @@ class TestDirectionZoneVsPerson:
         now = datetime.now().astimezone()
         ps.prev_distance_m = 500.0
         ps.prev_calc_time = now  # same instant → delta_s=0
-        ps.direction = (
-            "approaching"  # delta_s=0 with real fix: direction reset to None (no delta computed)
-        )
+        ps.last_fix_distance_m = 500.0
+        ps.last_fix_time = now  # same instant → zero real-fix interval (< 5s floor)
+        ps.direction = "approaching"  # F5: a sub-interval real fix HOLDS the last direction
         with patch(
             "custom_components.entity_distance.coordinator.ha_distance",
             return_value=100.0,
         ):
             result = coord._calc_pair(ps, "zone.home", "person.bob", now, {"person.bob"})
-        assert result.direction is None  # has_new_fix=True but delta_s=0 → direction=None written
-        assert result.closing_speed_kmh is None
+        # delta_s below DIRECTION_MIN_INTERVAL_S → no direction/speed computed; the last
+        # committed direction is held (not nulled), and no junk closing speed is written.
+        assert result.direction == "approaching"
 
 
 class TestZoneZonePair:
@@ -851,7 +853,7 @@ class TestZoneZonePair:
         zone_a = make_zone_state("zone.home", 51.5, -0.1, radius=100)
         zone_b = make_zone_state("zone.work", 51.6, -0.2, radius=50)
         coord, k, ps, now = self._make_zone_zone_coord(
-            zone_a, zone_b, prev_dist=100.0, prev_offset_s=5
+            zone_a, zone_b, prev_dist=100.0, prev_offset_s=10
         )
         ps.direction = "approaching"  # must be cleared by teleport rejection
         with patch(

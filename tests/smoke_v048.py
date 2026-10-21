@@ -329,6 +329,21 @@ def test_f4_approach_speed_strips_noise_not_speed():
     )
 
 
+def test_f5_subsecond_rapid_fix_no_speed_spike():
+    section("F5: sub-5s rapid-fix spike (unit-tested; not live-reproducible here)")
+
+    # F5 ignores two REAL fixes arriving < DIRECTION_MIN_INTERVAL_S (5s) apart, which on the
+    # reporter's pair (debounce=0) produced a 510 km/h spike from a GPS jump over a ~1.9s
+    # interval (history (3).csv, 09:01). This devcontainer pair has debounce_s=5, so two
+    # injects less than 5s apart are coalesced/dropped by the debouncer before they reach
+    # the coordinator as distinct fixes — a genuine sub-5s real-fix PAIR cannot be injected
+    # here. The behaviour is proven deterministically by the unit test
+    # test_subsecond_rapid_fix_pair_no_speed_spike (tests/test_coordinator.py), which drives
+    # _calc_pair directly and bypasses the debouncer. Skipped live to avoid a check that is
+    # unsatisfiable by construction in this environment.
+    check("F5 covered by unit test (sub-5s pair not injectable under debounce=5s)", True)
+
+
 def summary():
     section("Summary")
     passed = sum(1 for _, ok, _ in results if ok)
@@ -352,6 +367,7 @@ if __name__ == "__main__":
     test_f2_confident_first_fix_vs_marginal_needs_two()
     test_f3_blip_preserves_streak()
     test_f4_approach_speed_strips_noise_not_speed()
+    test_f5_subsecond_rapid_fix_no_speed_spike()
 
     ok = summary()
     sys.exit(0 if ok else 1)

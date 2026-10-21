@@ -24,7 +24,7 @@ Track the distance between any two or more entities — people, devices, or zone
 - **36 sensors per pair** — distance, proximity zone, proximity zone level, proximity duration, proximity rate, proximity tracking started, last seen together, today proximity time, direction, direction level, closing speed, ETA, today zone times, GPS accuracy, GPS speed, GPS heading, GPS vertical accuracy, last update, update count, entity state, today unaccounted time, altitude (per entity where applicable)
 - **Proximity binary sensor** — ON when distance ≤ zone boundary, OFF when distance > zone boundary (strict, no hysteresis gap)
 - **Same Zone binary sensor** — ON when both entities share the same named zone, OFF otherwise (never `unknown`)
-- **Same Altitude binary sensor** — ON when absolute altitude difference ≤ threshold (default 5 m), `unknown` when either entity lacks altitude data
+- **Same Altitude binary sensor** — ON when absolute altitude difference ≤ threshold (default 5 m), `unknown` when either entity lacks altitude data (missing, or a no-vertical-fix `altitude: 0.0` with no valid vertical accuracy)
 - **Reliable binary sensor** — ON when both entities have enough recent GPS fixes to meet the reliability threshold
 - **Zone bucket binary sensors** — one per zone (Very Near, Near, Medium, Far, Very Far): ON while the pair's distance falls in that zone
 - **Direction of travel** — approaching, diverging, or stationary
@@ -177,7 +177,7 @@ Each configured group creates one HA device (the group) with per-pair sub-device
 | In Proximity | ON when entities are within the selected proximity zone (or closer), OFF when distance > zone boundary | `presence` |
 | Same Zone | ON when both entities are in the same named zone (e.g. both `home`), OFF otherwise. Never `unknown` — when either side is `not_home` / `unknown` / `unavailable`, the pair is not in the same zone so the sensor is OFF | — |
 | Reliable | ON when both entities have enough recent GPS updates to meet the reliability threshold | — |
-| Same Altitude | ON when absolute altitude difference ≤ threshold (default 5 m) and entities are within the proximity zone distance. Unknown when altitude data is missing or entities are farther apart than the proximity threshold. When an entity's state is `home` and GPS altitude is unavailable, the HA instance elevation (Settings → System → General) is used as a fallback. Registered for all pair types including zone pairs | — |
+| Same Altitude | ON when absolute altitude difference ≤ threshold (default 5 m) and entities are within the proximity zone distance. Unknown when altitude data is unavailable (missing, or `altitude: 0.0` with no valid vertical accuracy) or entities are farther apart than the proximity threshold. When an entity's state is `home` and GPS altitude is unavailable, the HA instance elevation (Settings → System → General) is used as a fallback. Registered for all pair types including zone pairs | — |
 | Very Near | ON while the pair's current distance falls in the Very Near zone | — |
 | Near | ON while the pair's current distance falls in the Near zone | — |
 | Medium | ON while the pair's current distance falls in the Medium zone | — |
@@ -186,7 +186,7 @@ Each configured group creates one HA device (the group) with per-pair sub-device
 
 > `Same Zone` is not created for zone-zone pairs (always trivially true).
 
-> Altitude sensors and `Same Altitude` show `unknown` when GPS altitude is unavailable. For `person.*` entities, altitude and GPS speed/heading/vertical accuracy are automatically read from the active source device tracker — these sensors now work correctly for person entities without any extra config.
+> Altitude sensors and `Same Altitude` show `unknown` when GPS altitude is unavailable. A tracker reporting `altitude: 0.0` with no valid vertical accuracy is treated as a no-vertical-fix (2D-only) signature and dropped rather than read as a sea-level reading; a genuine `0.0` carrying a valid vertical accuracy is kept. For `person.*` entities, altitude and GPS speed/heading/vertical accuracy are automatically read from the active source device tracker — these sensors now work correctly for person entities without any extra config.
 
 ### Group Sensors (3+ entities only)
 

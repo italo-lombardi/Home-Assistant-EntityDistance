@@ -2742,11 +2742,41 @@ class TestExtractAltitude:
         s = self._state("device_tracker.phone", {"altitude": 42.5})
         assert _extract_altitude(s) == pytest.approx(42.5)
 
-    def test_altitude_zero_is_valid(self):
+    def test_altitude_zero_no_vacc_is_nofix_sentinel(self):
+        """0.0 with no vertical_accuracy is the iOS/HA no-vertical-fix sentinel → None."""
         from custom_components.entity_distance.coordinator import _extract_altitude
 
         s = self._state("device_tracker.phone", {"altitude": 0.0})
+        assert _extract_altitude(s) is None
+
+    def test_altitude_zero_with_valid_vacc_is_real_sea_level(self):
+        """0.0 WITH a trustworthy vertical_accuracy is a genuine sea-level fix → kept."""
+        from custom_components.entity_distance.coordinator import _extract_altitude
+
+        s = self._state("device_tracker.phone", {"altitude": 0.0, "vertical_accuracy": 12.0})
         assert _extract_altitude(s) == pytest.approx(0.0)
+
+    def test_altitude_zero_with_garbage_vacc_is_nofix_sentinel(self):
+        """0.0 with out-of-range (garbage) vertical_accuracy → sentinel → None."""
+        from custom_components.entity_distance.coordinator import _extract_altitude
+
+        s = self._state("device_tracker.phone", {"altitude": 0.0, "vertical_accuracy": 99999.0})
+        assert _extract_altitude(s) is None
+
+    def test_altitude_zero_with_negative_vacc_is_nofix_sentinel(self):
+        """0.0 with Apple's negative invalid-vacc flag → sentinel → None."""
+        from custom_components.entity_distance.coordinator import _extract_altitude
+
+        s = self._state("device_tracker.phone", {"altitude": 0.0, "vertical_accuracy": -1.0})
+        assert _extract_altitude(s) is None
+
+    def test_altitude_zero_with_zero_vacc_is_nofix_sentinel(self):
+        """0.0 with vertical_accuracy exactly 0.0 → sentinel → None (a real GPS fix
+        never reports zero vertical uncertainty)."""
+        from custom_components.entity_distance.coordinator import _extract_altitude
+
+        s = self._state("device_tracker.phone", {"altitude": 0.0, "vertical_accuracy": 0.0})
+        assert _extract_altitude(s) is None
 
     def test_altitude_integer_coerced(self):
         from custom_components.entity_distance.coordinator import _extract_altitude
@@ -2759,6 +2789,26 @@ class TestExtractAltitude:
 
         s = self._state("device_tracker.phone", {"altitude": -28.5})
         assert _extract_altitude(s) == pytest.approx(-28.5)
+
+    def test_altitude_below_sea_level_no_vacc_is_kept(self):
+        """A genuine below-sea-level reading (Dead Sea ~-430 m, Netherlands ~-5 m)
+        is NOT the 0.0 no-fix sentinel and is kept even without a vertical_accuracy —
+        only an exact 0.0 is treated as the sentinel."""
+        from custom_components.entity_distance.coordinator import _extract_altitude
+
+        for alt in (-5.0, -86.0, -430.0):
+            s = self._state("device_tracker.phone", {"altitude": alt})
+            assert _extract_altitude(s) == pytest.approx(alt)
+
+    def test_altitude_below_sea_level_near_zero_is_kept(self):
+        """A small negative altitude just below sea level is kept (not snapped to the
+        0.0 sentinel), with or without vacc."""
+        from custom_components.entity_distance.coordinator import _extract_altitude
+
+        s = self._state("device_tracker.phone", {"altitude": -0.3})
+        assert _extract_altitude(s) == pytest.approx(-0.3)
+        s2 = self._state("device_tracker.phone", {"altitude": -0.3, "vertical_accuracy": 8.0})
+        assert _extract_altitude(s2) == pytest.approx(-0.3)
 
     def test_altitude_missing_key(self):
         from custom_components.entity_distance.coordinator import _extract_altitude
@@ -2812,7 +2862,7 @@ class TestExtractAltitude:
 class TestCalcPairAltitude:
     """Tests for altitude_a_m / altitude_b_m / altitude_delta_m in _calc_pair."""
 
-    def _run(self, alt_a, alt_b):
+    def _run(self, alt_a, alt_b, vacc_a=None, vacc_b=None):
         from unittest.mock import patch
 
         from custom_components.entity_distance.models import pair_key
@@ -2822,8 +2872,8 @@ class TestCalcPairAltitude:
         k = pair_key("person.alice", "person.bob")
         ps = coordinator._pair_states[k]
 
-        state_a = make_state("person.alice", 51.5, -0.1, altitude=alt_a)
-        state_b = make_state("person.bob", 51.6, -0.2, altitude=alt_b)
+        state_a = make_state("person.alice", 51.5, -0.1, altitude=alt_a, vertical_accuracy=vacc_a)
+        state_b = make_state("person.bob", 51.6, -0.2, altitude=alt_b, vertical_accuracy=vacc_b)
         coordinator.hass.states.get.side_effect = lambda eid: (
             state_a if eid == "person.alice" else state_b
         )
@@ -2867,8 +2917,17 @@ class TestCalcPairAltitude:
         assert ps.altitude_b_m is None
         assert ps.altitude_delta_m is None
 
-    def test_altitude_zero_is_valid(self):
+    def test_altitude_zero_no_vacc_drops_to_none(self):
+        # 0.0/0.0 with no vertical_accuracy is the no-vertical-fix sentinel → None.
         ps = self._run(0.0, 0.0)
+        assert ps.altitude_a_m is None
+        assert ps.altitude_b_m is None
+        assert ps.altitude_delta_m is None
+
+    def test_altitude_zero_with_valid_vacc_retained(self):
+        # 0.0/0.0 WITH a trustworthy vertical_accuracy is a genuine sea-level fix,
+        # retained end-to-end through _calc_pair.
+        ps = self._run(0.0, 0.0, vacc_a=12.0, vacc_b=12.0)
         assert ps.altitude_a_m == pytest.approx(0.0)
         assert ps.altitude_b_m == pytest.approx(0.0)
         assert ps.altitude_delta_m == pytest.approx(0.0)
@@ -4033,3 +4092,82 @@ class TestDirectionFixBaselineAndConfidentMove:
 
         # Sub-5s expiry → held, not nulled.
         assert r.direction == "approaching", "sub-5s hold-expiry must hold the direction"
+
+
+class TestAltitudeSentinelIntegration:
+    """Integration: the altitude-0.0 no-vertical-fix sentinel drop (_extract_altitude)
+    interacts correctly with the _calc_pair home-elevation fallback (coordinator.py
+    ~939-980). Drives the full pair-calc path, not the helper in isolation."""
+
+    def _run(self, state_a, state_b, elevation=None, entities=None):
+        coordinator = _make_calc_pair_coordinator(entities=entities)
+        coordinator.hass.config.elevation = elevation
+        a_id = state_a.entity_id
+        b_id = state_b.entity_id
+        k = pair_key(a_id, b_id)
+        ps = coordinator._pair_states[k]
+        coordinator.hass.states.get.side_effect = lambda eid: state_a if eid == a_id else state_b
+        with patch(
+            "custom_components.entity_distance.coordinator.ha_distance",
+            return_value=500.0,
+        ):
+            return coordinator._calc_pair(ps, a_id, b_id, datetime.now().astimezone(), set())
+
+    def test_sentinel_not_at_home_drops_to_none(self):
+        """altitude 0.0 + no vertical_accuracy, NOT at home → altitude None, no
+        phantom sea-level delta (sentinel must not poison altitude_delta_m)."""
+        state_a = State(
+            "person.alice",
+            "not_home",
+            {"latitude": 51.5, "longitude": -0.1, "altitude": 0.0},
+        )
+        state_b = State(
+            "person.bob",
+            "not_home",
+            {"latitude": 51.6, "longitude": -0.2, "altitude": 100.0},
+        )
+        ps = self._run(state_a, state_b, elevation=42.0)
+        assert ps.altitude_a_m is None
+        assert ps.altitude_b_m == pytest.approx(100.0)
+        assert ps.altitude_delta_m is None
+
+    def test_sentinel_at_home_resolves_to_elevation(self):
+        """altitude 0.0 + no vertical_accuracy, AT home → sentinel becomes None FIRST,
+        THEN the home-elevation fallback fires → altitude is elevation, NOT 0.0.
+        Load-bearing ordering assertion."""
+        state_a = State(
+            "person.alice",
+            "home",
+            {"latitude": 51.5, "longitude": -0.1, "altitude": 0.0},
+        )
+        state_b = State(
+            "person.bob",
+            "not_home",
+            {"latitude": 51.6, "longitude": -0.2, "altitude": 50.0},
+        )
+        ps = self._run(state_a, state_b, elevation=42.0)
+        assert ps.altitude_a_m == pytest.approx(42.0)
+        assert ps.altitude_delta_m == pytest.approx(8.0)
+
+    def test_real_sea_level_with_valid_vacc_is_retained(self):
+        """altitude 0.0 WITH a valid vertical_accuracy → genuine sea-level fix, kept,
+        and altitude_delta_m is computed against the other entity."""
+        state_a = State(
+            "person.alice",
+            "not_home",
+            {
+                "latitude": 51.5,
+                "longitude": -0.1,
+                "altitude": 0.0,
+                "vertical_accuracy": 12.0,
+            },
+        )
+        state_b = State(
+            "person.bob",
+            "not_home",
+            {"latitude": 51.6, "longitude": -0.2, "altitude": 30.0},
+        )
+        ps = self._run(state_a, state_b, elevation=42.0)
+        assert ps.altitude_a_m == pytest.approx(0.0)
+        assert ps.altitude_b_m == pytest.approx(30.0)
+        assert ps.altitude_delta_m == pytest.approx(30.0)

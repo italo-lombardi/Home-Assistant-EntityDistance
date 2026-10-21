@@ -257,6 +257,25 @@ def _extract_altitude(state: State) -> float | None:
             alt,
         )
         return None
+    # iOS/HA no-vertical-fix sentinel: a tracker with no vertical GPS fix reports
+    # altitude 0.0 (CLLocation defaults to 0.0 on a 2D-only fix) alongside an
+    # absent, non-positive, or garbage vertical_accuracy. A genuine sea-level fix
+    # reports 0.0 WITH a real (strictly positive) vertical_accuracy, so it is kept.
+    # _extract_vertical_accuracy returns None for the missing/out-of-range (incl.
+    # negative) cases; a reported 0.0 vacc is itself a no-fix tell (a real GPS fix
+    # never has zero vertical uncertainty), so <= 0 is treated as untrustworthy too.
+    # Returning None lets the home-elevation fallback fire for an at-home device and
+    # leaves altitude_delta_m unset otherwise, rather than poisoning it with a
+    # phantom sea-level reading.
+    if alt == 0.0:
+        vacc = _extract_vertical_accuracy(state)
+        if vacc is None or vacc <= 0.0:
+            _LOGGER.debug(
+                "entity_distance: dropping altitude 0.0 no-fix sentinel for %s "
+                "(no trustworthy vertical_accuracy)",
+                state.entity_id,
+            )
+            return None
     return alt
 
 

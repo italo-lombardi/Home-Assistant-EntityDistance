@@ -845,6 +845,13 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 # oscillation case 0.4.6 targeted (±48m noise stays < the confident cutoff
                 # for typical acc, so it is still suppressed). See direction_hysteresis.md.
                 _confident_move = abs(delta_m) >= CONFIDENT_MOVE_FACTOR * _stationary_threshold
+                # ponytail: N=2 confirms two same-direction raw verdicts but not net
+                # displacement. Two correlated same-direction GPS drifts at a parked
+                # arrival (each above threshold, below the confident cutoff) can reach
+                # count==2 and commit a false approaching/diverging. Not observed in live
+                # logs (alternation reset the counter); a fix (net-displacement gate from a
+                # candidate-start anchor) touches the speed/teleport delta_m path, so
+                # deferred until it actually reproduces. See direction_hysteresis.md.
                 if (
                     direction in (DIRECTION_APPROACHING, DIRECTION_DIVERGING)
                     and not hold_just_expired

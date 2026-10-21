@@ -2414,11 +2414,12 @@ class TestStationaryThresholdPerTick:
         assert result.direction == "stationary"  # first tick: candidate held
         assert result.direction_candidate == "approaching"
 
-        # Second confirming tick on same coordinator (carries state)
+        # Second confirming tick on same coordinator (carries state). 10s interval is
+        # comfortably above the F5 DIRECTION_MIN_INTERVAL_S (5s) floor so the fix computes.
         ps.prev_distance_m = 460.0
-        ps.prev_calc_time = now - timedelta(seconds=5)
+        ps.prev_calc_time = now - timedelta(seconds=10)
         ps.last_fix_distance_m = 460.0
-        ps.last_fix_time = now - timedelta(seconds=5)
+        ps.last_fix_time = now - timedelta(seconds=10)
         with patch("custom_components.entity_distance.coordinator.ha_distance", return_value=420.0):
             result2 = coordinator._calc_pair(
                 ps, "person.alice", "person.bob", now, {"person.alice", "person.bob"}
@@ -3740,9 +3741,10 @@ class TestDirectionFixBaselineAndConfidentMove:
         assert result.last_fix_distance_m is None
         assert result.last_fix_time is None
 
-    def test_zero_interval_fix_skips_direction(self):
-        """F1: last_fix_time == now (delta_s=0) enters the baseline block but computes no
-        direction/speed (guards the divide-by-zero on the last_fix interval)."""
+    def test_zero_interval_fix_holds_direction(self):
+        """F5: a real-fix interval below DIRECTION_MIN_INTERVAL_S (here delta_s==0) computes
+        no direction/speed and HOLDS the last committed direction instead of nulling it —
+        a sub-interval GPS jump must not fabricate a value or wipe a valid one."""
         coordinator = self._coord()
         k = pair_key("person.alice", "person.bob")
         ps = coordinator._pair_states[k]
@@ -3751,12 +3753,15 @@ class TestDirectionFixBaselineAndConfidentMove:
         ps.prev_distance_m = 500.0
         ps.prev_calc_time = now - timedelta(seconds=10)
         ps.last_fix_distance_m = 500.0
-        ps.last_fix_time = now  # same instant → delta_s == 0 on the last_fix interval
+        ps.last_fix_time = now  # same instant → zero real-fix interval (< 5s floor)
         ps.direction = "approaching"
+        ps.closing_speed_kmh = 42.0
         result = self._tick(coordinator, ps, dist=100.0, now=now, pending={"person.alice"})
-        # has_new_fix but delta_s==0 → direction written as None, no speed computed.
-        assert result.direction is None
-        assert result.closing_speed_kmh is None
+        # Held, not nulled; the stale speed is likewise left untouched (no junk recompute).
+        assert result.direction == "approaching"
+        assert result.closing_speed_kmh == 42.0
+        # Baseline not advanced on the sub-interval tick → interval accumulates to next fix.
+        assert result.last_fix_distance_m == 500.0
 
     def test_real_drive_sparse_fixes_with_timer_ticks(self):
         """Regression for the reported drive bug: a sustained approach with sparse GPS
@@ -3820,3 +3825,48 @@ class TestDirectionFixBaselineAndConfidentMove:
         # ETA inherits the corrected speed → finite for the sustained approach.
         assert etas, "ETA never computed on a sustained approach"
         assert all(0.0 < e <= 1440.0 for e in etas), f"implausible ETAs: {etas}"
+
+    def test_subsecond_rapid_fix_pair_no_speed_spike(self):
+        """F5 regression (history (3).csv, 09:01): two REAL fixes ~1.9s apart carrying a GPS
+        position jump must not fabricate an impossible closing speed. The short pair is
+        ignored (direction held, baseline not advanced); the NEXT fix, spanning a meaningful
+        interval, produces a plausible speed from the accumulated delta."""
+        coordinator = self._coord()  # max_speed_kmh=0 → DEFAULT cap 1000
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+        self._states(coordinator, acc=20.0)
+        t0 = datetime.now().astimezone()
+
+        # Clean baseline at 2928 m, moving out (diverging). Seed on the first fix.
+        self._tick(coordinator, ps, dist=2928.0, now=t0, pending={"person.alice"})
+        # Lead-in fix 10s later so direction commits diverging on a good interval.
+        self._tick(
+            coordinator, ps, dist=3100.0, now=t0 + timedelta(seconds=10), pending={"person.alice"}
+        )
+        committed = ps.direction
+        assert committed in ("diverging", "stationary")  # established on a real interval
+
+        # The bad pair: a second real fix only 1.9s later with a +337m GPS jump.
+        # Raw rate = 337m/1.9s*3.6 ≈ 639 km/h (the 510 the user saw after noise-strip).
+        r = self._tick(
+            coordinator,
+            ps,
+            dist=3437.0,
+            now=t0 + timedelta(seconds=11, milliseconds=900),
+            pending={"person.alice"},
+        )
+        # F5: sub-5s interval ignored → no junk speed written, direction held, baseline frozen.
+        assert r.direction == committed, "sub-interval fix must hold, not recompute"
+        assert ps.last_fix_distance_m == 3100.0, "baseline must not advance on a sub-5s pair"
+
+        # Next fix 8s after the frozen baseline (≈19.9s total): spans a real interval, so a
+        # plausible speed is computed from the accumulated delta — not the 639 km/h artifact.
+        r2 = self._tick(
+            coordinator,
+            ps,
+            dist=3500.0,
+            now=t0 + timedelta(seconds=19, milliseconds=900),
+            pending={"person.alice"},
+        )
+        assert r2.closing_speed_kmh is not None
+        assert r2.closing_speed_kmh < 300.0, f"speed still inflated: {r2.closing_speed_kmh}"

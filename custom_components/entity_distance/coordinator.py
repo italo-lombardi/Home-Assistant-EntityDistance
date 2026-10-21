@@ -61,6 +61,7 @@ from .const import (
     DEFAULT_ZONE_VERY_NEAR_M,
     DIRECTION_APPROACHING,
     DIRECTION_DIVERGING,
+    DIRECTION_MIN_INTERVAL_S,
     DIRECTION_STATIONARY,
     DOMAIN,
     MIN_CALC_ELAPSED_S,
@@ -734,6 +735,11 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         eta_minutes: float | None = None
         direction_teleport_rejected = False
         has_new_fix = bool(pending & {entity_a, entity_b})
+        # F5: True once a real-fix delta spanned a physically meaningful interval
+        # (>= DIRECTION_MIN_INTERVAL_S). Stays False on the first-ever fix (no baseline)
+        # and on a too-short rapid-fix pair — both leave direction held and the baseline
+        # un-advanced so the interval accumulates to the next fix.
+        _fix_interval_ok = False
         _hold_until = self._resync_hold_until.get(k)
         hold_just_expired = (
             self._resync_holding.get(k, False) and _hold_until is not None and now >= _hold_until
@@ -754,7 +760,16 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             delta_m = dist_m - ps.last_fix_distance_m
             delta_s = max(0.0, (now - ps.last_fix_time).total_seconds())
 
-            if delta_s > 0:
+            # F5: ignore a too-short real-fix interval. Two genuine fixes a second or two
+            # apart (rapid trackers / debounce=0) usually carry a GPS position jump that,
+            # divided by the tiny interval, fabricates an impossible speed (observed
+            # 510 km/h over a 1.9s pair). Below DIRECTION_MIN_INTERVAL_S we compute nothing
+            # and (crucially) do NOT advance last_fix_* below, so the interval ACCUMULATES
+            # until the next fix spans a physically meaningful window. Mirrors the sub-5s
+            # floor the speed/teleport filter already applies (~L699).
+            _fix_interval_ok = delta_s >= DIRECTION_MIN_INTERVAL_S
+
+            if _fix_interval_ok:
                 implied_speed_kmh = abs(delta_m / delta_s) * 3.6
                 # ponytail: closing_speed uses distance-delta, not GPS speed+heading
                 # vector projection. Vector approach needs tick-1 GPS speed/heading
@@ -773,7 +788,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             # resync hold just expired. Fix-less timer ticks leave ps.direction untouched
             # (L844 gate) so the last committed direction HOLDS between sparse fixes.
             if (
-                delta_s > 0
+                _fix_interval_ok
                 and not direction_teleport_rejected
                 and (has_new_fix or hold_just_expired)
             ):
@@ -867,10 +882,17 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         # F1: advance the direction/speed baseline ONLY on a real fix (or hold expiry),
         # never on a fix-less timer tick — so the next fix's delta spans the true
         # inter-fix interval, not the seconds since the last timer tick.
-        if has_new_fix or hold_just_expired:
+        # F5: on a too-short real-fix interval, do NOT advance the baseline either — let
+        # the interval accumulate so the NEXT fix spans a meaningful window. Always seed on
+        # the first-ever fix (no baseline yet) and on a hold-expiry recovery tick.
+        _seed_baseline = ps.last_fix_time is None or hold_just_expired
+        if (has_new_fix and (_fix_interval_ok or _seed_baseline)) or hold_just_expired:
             ps.last_fix_distance_m = dist_m
             ps.last_fix_time = now
-        if direction is not None or has_new_fix or hold_just_expired or direction_teleport_rejected:
+        # Write direction/speed only when a meaningful compute happened (interval ok) or on
+        # a teleport rejection (which intentionally clears to None). A too-short rapid-fix
+        # pair must NOT clobber the held direction with None — hold it like a timer tick.
+        if hold_just_expired or direction_teleport_rejected or direction is not None:
             ps.direction = direction
             ps.closing_speed_kmh = closing_speed_kmh
             ps.eta_minutes = eta_minutes

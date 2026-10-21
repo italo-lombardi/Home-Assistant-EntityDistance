@@ -768,16 +768,17 @@ class TestDirectionZoneVsPerson:
         now = datetime.now().astimezone()
         ps.prev_distance_m = 500.0
         ps.prev_calc_time = now  # same instant → delta_s=0
-        ps.direction = (
-            "approaching"  # delta_s=0 with real fix: direction reset to None (no delta computed)
-        )
+        ps.last_fix_distance_m = 500.0
+        ps.last_fix_time = now  # same instant → zero real-fix interval
+        ps.direction = "approaching"  # F5: a sub-interval fix HOLDS the last direction
         with patch(
             "custom_components.entity_distance.coordinator.ha_distance",
             return_value=100.0,
         ):
             result = coord._calc_pair(ps, "zone.home", "person.bob", now, {"person.bob"})
-        assert result.direction is None  # has_new_fix=True but delta_s=0 → direction=None written
-        assert result.closing_speed_kmh is None
+        # F5: delta_s below DIRECTION_MIN_INTERVAL_S → no direction/speed computed; the last
+        # committed direction is held (not nulled), and no junk closing speed is written.
+        assert result.direction == "approaching"
 
 
 class TestZoneZonePair:
@@ -851,7 +852,7 @@ class TestZoneZonePair:
         zone_a = make_zone_state("zone.home", 51.5, -0.1, radius=100)
         zone_b = make_zone_state("zone.work", 51.6, -0.2, radius=50)
         coord, k, ps, now = self._make_zone_zone_coord(
-            zone_a, zone_b, prev_dist=100.0, prev_offset_s=5
+            zone_a, zone_b, prev_dist=100.0, prev_offset_s=10
         )
         ps.direction = "approaching"  # must be cleared by teleport rejection
         with patch(

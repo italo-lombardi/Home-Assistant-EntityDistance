@@ -7,6 +7,7 @@
 
 ### Added
 
+- **Click an entity to open its more-info dialog (avatar + group cards)** — in the avatar (pair) card, each person column (avatar + name) is now a keyboard-accessible button that opens Home Assistant's native more-info dialog for that entity (person/device_tracker/zone). In the group card, the graph nodes are now clickable for the same, alongside the existing edge click that opens the pair's distance sensor.
 - **Storage cleanup on entry removal** — `async_remove_entry` now deletes `.storage/entity_distance_group_state_<entry_id>` when a config entry is removed, preventing leftover storage files.
 - **Startup orphan purge** — `async_setup` scans `.storage` for `entity_distance_group_state_*` files whose entry ID no longer exists and removes them. Cleans up files left behind by entries deleted before 0.4.6.
 

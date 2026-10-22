@@ -75,8 +75,16 @@ def inject(entity_id, lat, lon, accuracy=10, altitude=None, vertical_accuracy=No
 
 def inject_pair(alice_alt, alice_vacc, bob_alt, bob_vacc, rounds=2):
     for _ in range(rounds):
-        inject("device_tracker.test_alice", _ALICE_LAT, _LON, altitude=alice_alt, vertical_accuracy=alice_vacc)
-        inject("device_tracker.test_bob", _BOB_LAT, _LON, altitude=bob_alt, vertical_accuracy=bob_vacc)
+        inject(
+            "device_tracker.test_alice",
+            _ALICE_LAT,
+            _LON,
+            altitude=alice_alt,
+            vertical_accuracy=alice_vacc,
+        )
+        inject(
+            "device_tracker.test_bob", _BOB_LAT, _LON, altitude=bob_alt, vertical_accuracy=bob_vacc
+        )
         time.sleep(7)  # debounce_s=5
 
 
@@ -102,6 +110,7 @@ def section(title):
 
 
 # ── F1: vacc=0.0 extended sentinel ─────────────────────────────────────────────
+
 
 def test_vacc_zero_nonzero_alt_dropped():
     """iOS 2D-only fix: non-zero alt (e.g. 8.5 m) with vacc=0.0 — must be dropped."""
@@ -188,6 +197,7 @@ def test_sealevel_with_valid_vacc_kept():
 
 
 # ── F2: _extract_vertical_accuracy strict positive ─────────────────────────────
+
 
 def test_vacc_zero_suppresses_via_extractor():
     """vacc=0.0 in isolation (alt>0) exercises the strict-positive guard in extractor."""

@@ -649,9 +649,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             # that the recovery tick does not see hold_just_expired=True and bypass
             # the N=2 direction hysteresis on the first fix after unavailability.
             hold_until = self._resync_hold_until.get(k)
-            if self._resync_holding.get(k, False) and (
-                hold_until is None or now >= hold_until
-            ):
+            if self._resync_holding.get(k, False) and (hold_until is None or now >= hold_until):
                 self._resync_holding[k] = False
                 self._resync_hold_until[k] = None
             return ps
@@ -1380,7 +1378,9 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 if stored_date_str:
                     stored_date = date.fromisoformat(stored_date_str)
                     if stored_date == today:
-                        ps.today_proximity_seconds = max(0.0, float(blob.get("today_proximity_seconds", 0.0)))
+                        ps.today_proximity_seconds = max(
+                            0.0, float(blob.get("today_proximity_seconds", 0.0))
+                        )
                         ps.today_zone_seconds = {
                             bk: max(0.0, float(bv))
                             for bk, bv in blob.get("today_zone_seconds", {}).items()

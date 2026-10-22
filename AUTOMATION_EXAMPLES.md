@@ -327,3 +327,84 @@ automation:
 brief GPS gaps, prefer `for:` durations on triggers where a momentary blip
 shouldn't fire the automation — and gate on `binary_sensor.<pair>_reliable`
 when data confidence matters.
+
+---
+
+## 14. Alert when GPS data becomes unreliable
+
+`binary_sensor.<pair>_reliable` goes OFF when both entities haven't provided a
+fresh fix recently. Use it to suppress noisy distance-based automations during
+GPS silence rather than acting on stale data.
+
+```yaml
+automation:
+  - alias: "Warn when GPS tracking is unreliable"
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.alice_bob_reliable
+        to: "off"
+        for:
+          minutes: 5
+    action:
+      - service: notify.mobile_app_my_phone
+        data:
+          message: "GPS tracking for Alice and Bob is unreliable — location data is stale."
+```
+
+## 15. Gate on today's proximity time reaching a goal
+
+Notify once a day when Alice and Bob have spent enough time together.
+
+```yaml
+automation:
+  - alias: "Daily proximity goal reached"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.alice_bob_today_proximity_time
+        above: 60          # minutes
+    condition:
+      # Don't re-fire after midnight reset resets the counter
+      - condition: time
+        after: "08:00:00"
+        before: "22:00:00"
+    action:
+      - service: notify.mobile_app_my_phone
+        data:
+          message: >
+            Goal reached — Alice and Bob have been together for
+            {{ states('sensor.alice_bob_today_proximity_time') | int }} minutes today.
+```
+
+## 16. Suppress altitude automations when fix quality is poor
+
+After the vacc=0.0 2D-only fix fix, altitude sensors return `unknown` instead
+of a phantom value. Gate altitude-based automations on the sensor being
+available to avoid firing on stale or absent data.
+
+```yaml
+automation:
+  - alias: "Floor alert — only when altitude data is fresh"
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.alice_bob_same_altitude
+        to: "off"
+        for:
+          seconds: 20
+    condition:
+      # Altitude sensor must be available (not unknown/unavailable)
+      - condition: template
+        value_template: >
+          {{ states('sensor.alice_bob_elevation_difference') not in ['unknown', 'unavailable'] }}
+      - condition: state
+        entity_id: binary_sensor.alice_bob_in_proximity
+        state: "on"
+      - condition: state
+        entity_id: binary_sensor.alice_bob_reliable
+        state: "on"
+    action:
+      - service: notify.mobile_app_alice
+        data:
+          message: >
+            You and Bob are on different floors
+            ({{ states('sensor.alice_bob_elevation_difference') | float | abs | round(0) }} m apart vertically).
+```

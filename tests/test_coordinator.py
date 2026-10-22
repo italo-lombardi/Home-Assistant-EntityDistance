@@ -2018,6 +2018,8 @@ class TestCoordinatorAsyncUpdateData:
         coord._pair_states = {k: ps}
         coord._pending_updates = set()
         coord._bucket_thresholds = {}
+        coord._resync_holding = {}
+        coord._resync_hold_until = {}
         coord.hass = MagicMock()
         coord.hass.states.get.return_value = None
         coord._async_save_state = AsyncMock()
@@ -2858,6 +2860,22 @@ class TestExtractAltitude:
         s = self._state("device_tracker.phone", {"altitude": -500.0})
         assert _extract_altitude(s) == pytest.approx(-500.0)
 
+    def test_nonzero_altitude_with_vacc_zero_is_2d_only_sentinel(self):
+        """Non-zero alt + vacc=0.0 = iOS 2D-only fix → dropped."""
+        from custom_components.entity_distance.coordinator import _extract_altitude
+
+        s = self._state("device_tracker.phone", {"altitude": 8.5, "vertical_accuracy": 0.0})
+        assert _extract_altitude(s) is None
+
+    def test_vacc_nonnumeric_falls_back_to_minus_one(self):
+        """Non-numeric vertical_accuracy in raw_vacc try/except → raw_vacc=-1.0 → not a sentinel."""
+        from custom_components.entity_distance.coordinator import _extract_altitude
+
+        # vertical_accuracy is a string — triggers the except branch (L277-278).
+        # With raw_vacc=-1.0 and alt=50.0, neither sentinel path fires, so alt is returned.
+        s = self._state("device_tracker.phone", {"altitude": 50.0, "vertical_accuracy": "bad"})
+        assert _extract_altitude(s) == pytest.approx(50.0)
+
 
 class TestCalcPairAltitude:
     """Tests for altitude_a_m / altitude_b_m / altitude_delta_m in _calc_pair."""
@@ -3199,9 +3217,8 @@ class TestExtractVerticalAccuracy:
     def test_zero(self):
         from custom_components.entity_distance.coordinator import _extract_vertical_accuracy
 
-        assert _extract_vertical_accuracy(self._state({"vertical_accuracy": 0.0})) == pytest.approx(
-            0.0
-        )
+        # vacc=0.0 is a 2D-only-fix sentinel — physically impossible for a real fix.
+        assert _extract_vertical_accuracy(self._state({"vertical_accuracy": 0.0})) is None
 
     def test_missing_key(self):
         from custom_components.entity_distance.coordinator import _extract_vertical_accuracy
@@ -3614,6 +3631,34 @@ class TestDirectionHysteresis:
         assert result.direction_candidate is None
         assert result.direction_candidate_count == 0
         assert result.data_valid is False
+
+    def test_invalidate_clears_expired_resync_hold(self):
+        """_invalidate clears _resync_holding when hold has already expired (L653-654)."""
+        from homeassistant.const import STATE_UNAVAILABLE
+        from homeassistant.core import State
+
+        from custom_components.entity_distance.models import pair_key
+
+        coordinator = _make_calc_pair_coordinator(max_speed_kmh=0.0)
+        k = pair_key("person.alice", "person.bob")
+        ps = coordinator._pair_states[k]
+
+        now = datetime.now().astimezone()
+        # Plant an expired hold — hold_until is in the past.
+        coordinator._resync_holding[k] = True
+        coordinator._resync_hold_until[k] = now - timedelta(seconds=5)
+
+        state_a = State("person.alice", STATE_UNAVAILABLE)
+        state_b = State("person.bob", "not_home")
+        coordinator.hass.states.get.side_effect = lambda eid: (
+            state_a if eid == "person.alice" else state_b
+        )
+
+        coordinator._calc_pair(ps, "person.alice", "person.bob", now, {"person.alice"})
+
+        # Expired hold must be cleared so recovery tick doesn't bypass N=2 hysteresis.
+        assert coordinator._resync_holding[k] is False
+        assert coordinator._resync_hold_until[k] is None
 
     def test_teleport_rejection_resets_candidate(self):
         """Teleport rejection nulls prev_distance_m AND resets direction candidate."""

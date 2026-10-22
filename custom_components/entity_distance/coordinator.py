@@ -262,18 +262,29 @@ def _extract_altitude(state: State) -> float | None:
     # absent, non-positive, or garbage vertical_accuracy. A genuine sea-level fix
     # reports 0.0 WITH a real (strictly positive) vertical_accuracy, so it is kept.
     # _extract_vertical_accuracy returns None for the missing/out-of-range (incl.
-    # negative) cases; a reported 0.0 vacc is itself a no-fix tell (a real GPS fix
-    # never has zero vertical uncertainty), so <= 0 is treated as untrustworthy too.
+    # negative and zero) cases; a reported 0.0 vacc is itself a no-fix tell (a real
+    # GPS fix never has zero vertical uncertainty), so <= 0 is treated as untrustworthy.
     # Returning None lets the home-elevation fallback fire for an at-home device and
     # leaves altitude_delta_m unset otherwise, rather than poisoning it with a
-    # phantom sea-level reading.
-    if alt == 0.0:
+    # phantom reading.
+    #
+    # Extended sentinel: an iOS device on a 2D-only fix may report a non-zero altitude
+    # (e.g. 8.5 m) alongside vacc=0.0 — the alt==0.0 check above misses this case.
+    # Read the raw vacc attribute directly so we can catch vacc=0.0 before
+    # _extract_vertical_accuracy normalises it to None.
+    try:
+        raw_vacc = float(state.attributes.get("vertical_accuracy", -1.0))
+    except (TypeError, ValueError):
+        raw_vacc = -1.0
+    if alt == 0.0 or raw_vacc == 0.0:
         vacc = _extract_vertical_accuracy(state)
         if vacc is None or vacc <= 0.0:
             _LOGGER.debug(
-                "entity_distance: dropping altitude 0.0 no-fix sentinel for %s "
-                "(no trustworthy vertical_accuracy)",
+                "entity_distance: dropping altitude %s no-fix sentinel for %s "
+                "(no trustworthy vertical_accuracy; raw_vacc=%s)",
+                alt,
                 state.entity_id,
+                raw_vacc,
             )
             return None
     return alt
@@ -307,7 +318,9 @@ def _extract_vertical_accuracy(state: State) -> float | None:
         val = float(state.attributes["vertical_accuracy"])
     except (KeyError, TypeError, ValueError):
         return None
-    if not (0.0 <= val <= 10000.0):
+    if not (0.0 < val <= 10000.0):
+        # 0.0 is physically impossible for a real GPS fix (zero vertical uncertainty)
+        # and is used by some chipsets as a 2D-only-fix sentinel.
         return None
     return val
 
@@ -632,6 +645,13 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
             # sensors don't flip off on a blip.
             if ps.distance_m is not None and ps.stale_since is None:
                 ps.stale_since = now
+            # If a resync hold was active but has already expired, clear it now so
+            # that the recovery tick does not see hold_just_expired=True and bypass
+            # the N=2 direction hysteresis on the first fix after unavailability.
+            hold_until = self._resync_hold_until.get(k)
+            if self._resync_holding.get(k, False) and (hold_until is None or now >= hold_until):
+                self._resync_holding[k] = False
+                self._resync_hold_until[k] = None
             return ps
 
         if state_a is None or state_b is None:
@@ -978,7 +998,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         vacc_a = _extract_vertical_accuracy(src_a)
         vacc_b = _extract_vertical_accuracy(src_b)
         if self._max_vertical_accuracy_m > 0:
-            if vacc_a is not None and vacc_a > self._max_vertical_accuracy_m:
+            if vacc_a is not None and vacc_a > self._max_vertical_accuracy_m and not home_a:
                 _LOGGER.debug(
                     "entity_distance: suppressing altitude for %s — vacc %.1f m > limit %.1f m",
                     entity_a,
@@ -986,7 +1006,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                     self._max_vertical_accuracy_m,
                 )
                 alt_a = None
-            if vacc_b is not None and vacc_b > self._max_vertical_accuracy_m:
+            if vacc_b is not None and vacc_b > self._max_vertical_accuracy_m and not home_b:
                 _LOGGER.debug(
                     "entity_distance: suppressing altitude for %s — vacc %.1f m > limit %.1f m",
                     entity_b,
@@ -1135,7 +1155,7 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         elif ps.proximity and dist_m > self._exit_threshold_m:
             ps.proximity = False
             if ps.proximity_since:
-                ps.proximity_duration_s += (now - ps.proximity_since).total_seconds()
+                ps.proximity_duration_s += max(0.0, (now - ps.proximity_since).total_seconds())
             ps.proximity_since = None
 
         if (
@@ -1358,8 +1378,14 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
                 if stored_date_str:
                     stored_date = date.fromisoformat(stored_date_str)
                     if stored_date == today:
-                        ps.today_proximity_seconds = float(blob.get("today_proximity_seconds", 0.0))
-                        ps.today_zone_seconds = dict(blob.get("today_zone_seconds", {}))
+                        ps.today_proximity_seconds = max(
+                            0.0, float(blob.get("today_proximity_seconds", 0.0))
+                        )
+                        ps.today_zone_seconds = {
+                            bk: max(0.0, float(bv))
+                            for bk, bv in blob.get("today_zone_seconds", {}).items()
+                            if isinstance(bv, (int, float))
+                        }
                         ps.today_reset_date = stored_date
                 last_seen_str = blob.get("last_seen_together")
                 if last_seen_str:

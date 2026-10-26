@@ -1077,4 +1077,4 @@ customElements.whenDefined("ha-panel-lovelace").then(() => {
 
   customElements.define("entity-distance-group-card-editor", EntityDistanceGroupCardEditor);
 
-}); // end whenDefined
+}); // end whenDefined — load-bearing anchor for tests/frontend harness, do not reword

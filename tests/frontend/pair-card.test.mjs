@@ -38,6 +38,9 @@ test("_formatMinutes: boundaries and week carry", () => {
   assert.equal(_formatMinutes(0), "0 min");
   assert.equal(_formatMinutes(0.5), "< 1 min");
   assert.equal(_formatMinutes(59), "59 min");
+  // Sub-minute values round both ways (not floor/ceil): 30.4 -> 30, 30.6 -> 31.
+  assert.equal(_formatMinutes(30.4), "30 min");
+  assert.equal(_formatMinutes(30.6), "31 min");
   assert.equal(_formatMinutes(60), "1h");
   assert.equal(_formatMinutes(90), "1h 30m");
   assert.equal(_formatMinutes(29822.78), "2w 6d");
@@ -48,6 +51,7 @@ test("_formatTs: rounds, junk -> em dash", () => {
   const ago = (sec) => new Date(Date.now() - sec * 1000).toISOString();
   assert.equal(_formatTs(ago(59)), "just now");
   assert.equal(_formatTs(ago(60)), "1m ago"); // 60 s boundary
+  assert.equal(_formatTs(ago(90)), "2m ago"); // 1.5 min ROUNDS to 2 (not floor -> 1)
   assert.equal(_formatTs(ago(6900)), "2h ago");
   assert.equal(_formatTs("unavailable"), "—");
 });

@@ -12,11 +12,13 @@
 // the pure helpers (_formatMinutes, _formatDistance, _formatTs, _slug, ...) are
 // trapped in the .then() closure — not exported, not on any prototype.
 //
-// Rather than edit the shipped file (it must stay byte-identical to what ships
-// to browsers), we read the source TEXT, append a one-line capture of the
-// helpers we want to test, and run the augmented text in a vm sandbox with the
-// browser globals stubbed. The file on disk is never touched; only the string
-// handed to vm is augmented. See captureCard() below.
+// Rather than add test-only exports to the shipped file, we read the source
+// TEXT, append a one-line capture of the helpers we want to test, and run the
+// augmented text in a vm sandbox with the browser globals stubbed. The file on
+// disk is never modified; only the in-memory string handed to vm is augmented.
+// The capture anchors on the `}); // end whenDefined` comment that closes the
+// card's whenDefined() callback — that comment is intentionally load-bearing
+// (each card carries a "do not reword" note on it). See captureCard() below.
 
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";

@@ -1,5 +1,5 @@
 // Unit tests for the pure helpers in entity-distance-avatar-card.js.
-// Run with: node --test tests/frontend/
+// Run with: node --test "tests/frontend/*.test.mjs"
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { captureCard } from "./_harness.mjs";

@@ -47,6 +47,12 @@ function makeLitStubs() {
   class LitBase {}
   LitBase.prototype.html = htmlTag;
   LitBase.prototype.css = () => ({});
+  // ponytail: `nothing` is a plain sentinel string, not Lit's real symbol.
+  // These tests only exercise pure helpers off the captured closure, never a
+  // live render(). If a future test renders a card and asserts an attribute is
+  // OMITTED, note that this stub's html`` stringifies `nothing` into the output
+  // (e.g. role="__NOTHING__") rather than dropping the attribute — assert the
+  // helper return, or teach htmlTag to skip NOTHING, before relying on that.
   LitBase.prototype.nothing = NOTHING;
   LitBase.prototype.LitElement = LitBase;
   class HaPanelStub extends LitBase {}

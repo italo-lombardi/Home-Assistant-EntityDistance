@@ -56,3 +56,15 @@ jobs:
         run: pip install -r requirements_test.txt
       - name: Run tests
         run: pytest tests/ --tb=short -q
+
+  test-card-js:
+    name: Card JS Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Run card JS tests
+        run: node --test "tests/frontend/*.test.mjs"

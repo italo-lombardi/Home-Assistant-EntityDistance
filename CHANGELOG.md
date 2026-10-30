@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.7] - 2026-10-30
+
+### Added
+
+- **`apart_duration_s` attribute on Last Seen Together** — the Last Seen Together timestamp is re-stamped to *now* on every proximity tick, so while a pair is together its state always moves and "they reunited after N hours apart" can't be expressed as a state trigger. The sensor now carries an `apart_duration_s` attribute: seconds since the pair was last together while they are apart, `0.0` while together or never-seen, clamped to ≥ 0 against clock skew. A reunion automation can fire on `numeric_state` of this attribute.
+- **`closest_pair` / `closest_pair_entities` attributes on Minimum Distance** — the group Minimum Distance sensor is a bare number, so *which* pair owns the minimum (and when that hand-off changes) had no state representation. It now exposes `closest_pair` (e.g. `"Alice & Carol"`) and `closest_pair_entities` (`[entity_a, entity_b]`), so a state trigger on the attribute fires when the closest pair changes. Group sensor only (3+ entities).
+
 ## [0.4.6] - 2026-10-22
 
 ### Added

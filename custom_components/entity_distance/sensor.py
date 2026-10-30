@@ -344,6 +344,8 @@ class LastSeenTogetherSensor(EntityDistanceSensorBase):
         # window data_valid is False but the pair is still shown as proximate
         # (last_proximity), so apart_duration must stay 0.0 then too — mirror the
         # coordinator's _prox() so this attribute never disagrees with the state.
+        # ponytail: inline mirror of coordinator._prox (coordinator.py) — one line beats
+        # exposing a shared helper; keep in sync if that definition changes.
         prox = ps.proximity if ps.data_valid else ps.last_proximity
         if ps.last_seen_together is None or prox:
             return {"apart_duration_s": 0.0}
@@ -830,6 +832,8 @@ class MinDistanceSensor(CoordinatorEntity[EntityDistanceCoordinator], SensorEnti
             # equals md — skip it so we never credit the minimum to a hidden pair.
             if ps.distance_m != md:
                 continue
+            # ponytail: inline mirror of coordinator._shown (data_valid or within grace)
+            # — keep in sync if that predicate changes.
             if not (ps.data_valid or self.coordinator.is_within_grace(ps, now)):
                 continue
             return {

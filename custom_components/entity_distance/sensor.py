@@ -332,6 +332,24 @@ class LastSeenTogetherSensor(EntityDistanceSensorBase):
             return None
         return self._pair.last_seen_together
 
+    @property
+    def extra_state_attributes(self) -> dict:
+        # While the pair is apart, last_seen_together holds the moment they were
+        # last together (it is only re-stamped to now on proximity ticks). Expose
+        # how long they've been apart so a "reunited after N hours" automation can
+        # fire on numeric_state of this attribute — a gap predicate that the bare
+        # timestamp state can't express (the state always moves while together).
+        ps = self._pair
+        # Use the same proximity view the rest of the group uses: during the grace
+        # window data_valid is False but the pair is still shown as proximate
+        # (last_proximity), so apart_duration must stay 0.0 then too — mirror the
+        # coordinator's _prox() so this attribute never disagrees with the state.
+        prox = ps.proximity if ps.data_valid else ps.last_proximity
+        if ps.last_seen_together is None or prox:
+            return {"apart_duration_s": 0.0}
+        apart_s = max(0.0, (dt_util.now() - ps.last_seen_together).total_seconds())
+        return {"apart_duration_s": round(apart_s, 1)}
+
 
 class TodayProximityTimeSensor(EntityDistanceSensorBase):
     _attr_device_class = SensorDeviceClass.DURATION
@@ -795,6 +813,31 @@ class MinDistanceSensor(CoordinatorEntity[EntityDistanceCoordinator], SensorEnti
         if not self.available:
             return None
         return self.coordinator.data.min_distance_m
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        # Which pair currently owns the minimum. min_distance_m is a bare number,
+        # so "the closest pair changed to X & Y" has no entity-state representation
+        # on its own — surface it here so a state trigger on this attribute can fire
+        # on hand-off between pairs.
+        md = self.coordinator.data.min_distance_m
+        if md is None:
+            return {}
+        now = dt_util.now()
+        for (a_id, b_id), ps in self.coordinator.data.pairs.items():
+            # min_distance_m is computed over shown pairs only; a not-shown pair
+            # (invalid + past grace) may carry a stale distance_m that coincidentally
+            # equals md — skip it so we never credit the minimum to a hidden pair.
+            if ps.distance_m != md:
+                continue
+            if not (ps.data_valid or self.coordinator.is_within_grace(ps, now)):
+                continue
+            return {
+                "closest_pair": f"{friendly_name(self.hass, a_id)} & "
+                f"{friendly_name(self.hass, b_id)}",
+                "closest_pair_entities": [a_id, b_id],
+            }
+        return {}
 
 
 class SettingsSensor(CoordinatorEntity[EntityDistanceCoordinator], SensorEntity):

@@ -947,8 +947,66 @@ class TestLastSeenTogetherSensor:
 
 
 # ---------------------------------------------------------------------------
-# TodayProximityTimeSensor native_value
+# LastSeenTogetherSensor apart_duration_s attribute
 # ---------------------------------------------------------------------------
+
+
+class TestLastSeenTogetherApartDuration:
+    def _make(self, last_seen, proximity):
+        from custom_components.entity_distance.sensor import LastSeenTogetherSensor
+
+        ps = PairState(entity_a_id="person.alice", entity_b_id="person.bob")
+        ps.data_valid = True
+        ps.last_seen_together = last_seen
+        ps.proximity = proximity
+        return _make_sensor(LastSeenTogetherSensor, ps)
+
+    def test_zero_when_never_seen(self):
+        sensor = self._make(None, False)
+        assert sensor.extra_state_attributes == {"apart_duration_s": 0.0}
+
+    def test_zero_while_together(self):
+        now = datetime.now().astimezone()
+        sensor = self._make(now - timedelta(hours=3), True)
+        assert sensor.extra_state_attributes == {"apart_duration_s": 0.0}
+
+    def test_elapsed_while_apart(self):
+        now = datetime.now().astimezone()
+        sensor = self._make(now - timedelta(seconds=120), False)
+        attrs = sensor.extra_state_attributes
+        assert 119.0 <= attrs["apart_duration_s"] <= 121.0
+
+    def test_never_negative(self):
+        # last_seen in the (clock-skew) future must not yield a negative gap.
+        future = datetime.now().astimezone() + timedelta(seconds=30)
+        sensor = self._make(future, False)
+        assert sensor.extra_state_attributes["apart_duration_s"] == 0.0
+
+    def test_zero_during_grace_when_last_proximity_true(self):
+        # Grace window: data_valid False but last_proximity True → the group still
+        # shows the pair as together, so apart_duration must stay 0.0 (uses _prox view,
+        # not the raw proximity flag which may have flipped False).
+        from custom_components.entity_distance.sensor import LastSeenTogetherSensor
+
+        ps = PairState(entity_a_id="person.alice", entity_b_id="person.bob")
+        ps.data_valid = False
+        ps.proximity = False
+        ps.last_proximity = True
+        ps.last_seen_together = datetime.now().astimezone() - timedelta(seconds=120)
+        sensor = _make_sensor(LastSeenTogetherSensor, ps)
+        assert sensor.extra_state_attributes == {"apart_duration_s": 0.0}
+
+    def test_elapsed_during_grace_when_last_proximity_false(self):
+        # Grace window but last_proximity False → genuinely apart, gap reported.
+        from custom_components.entity_distance.sensor import LastSeenTogetherSensor
+
+        ps = PairState(entity_a_id="person.alice", entity_b_id="person.bob")
+        ps.data_valid = False
+        ps.proximity = True  # stale/raw flag ignored because data_valid is False
+        ps.last_proximity = False
+        ps.last_seen_together = datetime.now().astimezone() - timedelta(seconds=120)
+        sensor = _make_sensor(LastSeenTogetherSensor, ps)
+        assert 119.0 <= sensor.extra_state_attributes["apart_duration_s"] <= 121.0
 
 
 class TestTodayProximityTimeSensor:
@@ -1028,6 +1086,77 @@ class TestMinDistanceSensor:
     def test_returns_none_when_no_valid_pairs(self):
         sensor = self._make(None)
         assert sensor.native_value is None
+
+
+# ---------------------------------------------------------------------------
+# MinDistanceSensor closest_pair attribute
+# ---------------------------------------------------------------------------
+
+
+class TestMinDistanceClosestPair:
+    def _make(self, min_distance_m, pairs):
+        from custom_components.entity_distance.models import GroupData
+        from custom_components.entity_distance.sensor import MinDistanceSensor
+
+        coordinator = MagicMock()
+        coordinator.is_within_grace.return_value = False
+        coordinator.data = GroupData(min_distance_m=min_distance_m, pairs=pairs)
+        hass = MagicMock()
+        hass.states.get.return_value = None  # force entity_id friendly-name fallback
+        sensor = MinDistanceSensor.__new__(MinDistanceSensor)
+        sensor.coordinator = coordinator
+        sensor.hass = hass
+        sensor._entry = MagicMock()
+        sensor._attr_unique_id = "test_min_distance"
+        sensor._attr_device_info = {}
+        return sensor
+
+    def _pair(self, a, b, dist, data_valid=True):
+        ps = PairState(entity_a_id=a, entity_b_id=b)
+        ps.distance_m = dist
+        ps.data_valid = data_valid
+        return (pair_key(a, b), ps)
+
+    def test_empty_when_no_min(self):
+        sensor = self._make(None, {})
+        assert sensor.extra_state_attributes == {}
+
+    def test_identifies_closest_pair(self):
+        k1, p1 = self._pair("person.alice", "person.bob", 50.0)
+        k2, p2 = self._pair("person.alice", "person.carol", 10.0)
+        sensor = self._make(10.0, {k1: p1, k2: p2})
+        attrs = sensor.extra_state_attributes
+        assert attrs["closest_pair"] == "Alice & Carol"
+        assert set(attrs["closest_pair_entities"]) == {"person.alice", "person.carol"}
+
+    def test_empty_when_min_matches_no_pair(self):
+        # min_distance_m set but no pair's distance equals it (stale aggregate).
+        k1, p1 = self._pair("person.alice", "person.bob", 50.0)
+        sensor = self._make(10.0, {k1: p1})
+        assert sensor.extra_state_attributes == {}
+
+    def test_skips_not_shown_pair_with_stale_matching_distance(self):
+        # A not-shown pair (invalid + past grace) whose stale distance_m coincidentally
+        # equals md must not be credited; the shown pair that produced md wins.
+        k1, p1 = self._pair("person.alice", "person.bob", 10.0, data_valid=False)
+        k2, p2 = self._pair("person.alice", "person.carol", 10.0, data_valid=True)
+        sensor = self._make(10.0, {k1: p1, k2: p2})
+        attrs = sensor.extra_state_attributes
+        assert set(attrs["closest_pair_entities"]) == {"person.alice", "person.carol"}
+
+    def test_empty_when_only_match_is_not_shown(self):
+        # Sole pair at md is invalid and past grace → no closest pair surfaced.
+        k1, p1 = self._pair("person.alice", "person.bob", 10.0, data_valid=False)
+        sensor = self._make(10.0, {k1: p1})
+        assert sensor.extra_state_attributes == {}
+
+    def test_not_shown_pair_within_grace_is_shown(self):
+        # Invalid but within grace → still counts as shown, so it can be the closest.
+        k1, p1 = self._pair("person.alice", "person.bob", 10.0, data_valid=False)
+        sensor = self._make(10.0, {k1: p1})
+        sensor.coordinator.is_within_grace.return_value = True
+        attrs = sensor.extra_state_attributes
+        assert set(attrs["closest_pair_entities"]) == {"person.alice", "person.bob"}
 
 
 # ---------------------------------------------------------------------------

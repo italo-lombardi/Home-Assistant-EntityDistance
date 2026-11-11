@@ -1,7 +1,7 @@
 # Entity Distance for Home Assistant
 
 <a href="https://github.com/italo-lombardi/Home-Assistant-EntityDistance/releases"><img src="https://img.shields.io/github/v/release/italo-lombardi/Home-Assistant-EntityDistance" alt="GitHub Release"></a>
-<a href="https://github.com/hacs/integration"><img src="https://img.shields.io/badge/HACS-Custom-41BDF5.svg" alt="HACS Custom"></a>
+<a href="https://www.home-assistant.io/integrations/#marketplace"><img src="https://img.shields.io/badge/Marketplace-Integration-41BDF5.svg" alt="Home Assistant Marketplace"></a>
 <a href="https://github.com/italo-lombardi/Home-Assistant-EntityDistance"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fanalytics.home-assistant.io%2Fcustom_integrations.json&query=%24.entity_distance.total&label=installs&color=41BDF5" alt="HACS Installs"></a>
 <a href="https://www.home-assistant.io/"><img src="https://img.shields.io/badge/Home%20Assistant-2026.3%2B-blue.svg" alt="Home Assistant"></a>
 <a href="https://github.com/italo-lombardi/Home-Assistant-EntityDistance/blob/main/LICENSE"><img src="https://img.shields.io/github/license/italo-lombardi/Home-Assistant-EntityDistance?logo=gnu&logoColor=white" alt="License"></a>
@@ -9,7 +9,7 @@
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=flat&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/italolombardi)
 [![PayPal](https://img.shields.io/badge/PayPal-00457C?style=flat&logo=paypal&logoColor=white)](https://paypal.me/ItaloLombardi)
 
-[![Add to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=italo-lombardi&repository=Home-Assistant-EntityDistance&category=integration)
+[![Open in Home Assistant](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=italo-lombardi&repository=Home-Assistant-EntityDistance&category=integration)
 [![Add to Home Assistant](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=entity_distance)
 
 Track the distance between any two or more entities — people, devices, or zones — with sensors for direction, closing speed, ETA, and proximity detection. Track a whole family with a single setup.
@@ -50,12 +50,15 @@ Track the distance between any two or more entities — people, devices, or zone
 
 ## Installation
 
-### HACS (Recommended)
+### Marketplace (Recommended)
 
-1. Click the badge above or open **HACS → Integrations → Custom repositories**
-2. Add `https://github.com/italo-lombardi/Home-Assistant-EntityDistance` with category **Integration**
-3. Install **Entity Distance**
-4. Restart Home Assistant
+Entity Distance is in the official Home Assistant Marketplace — no need to add a repository URL.
+
+1. Open **Settings → Marketplace** in Home Assistant.
+2. Search for **Entity Distance** and click **Install**.
+3. Restart Home Assistant.
+
+> On Home Assistant older than 2026.11 (no built-in Marketplace), install via HACS instead — search for **Entity Distance** in HACS; it is a default repository, so no custom-repository URL is needed.
 
 ### Manual
 

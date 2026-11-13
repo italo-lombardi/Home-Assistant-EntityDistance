@@ -1852,9 +1852,7 @@ class TestCoordinatorLifecycle:
         coord._store.async_save = AsyncMock()
         coord._unloaded = False
 
-        with patch.object(
-            type(hass), "is_stopping", new_callable=PropertyMock, return_value=True
-        ):
+        with patch.object(type(hass), "is_stopping", new_callable=PropertyMock, return_value=True):
             await coord._async_save_state()
 
         coord._store.async_save.assert_not_called()
@@ -1872,7 +1870,6 @@ class TestCoordinatorLifecycle:
 
         coord.async_set_updated_data.assert_not_called()
         coord._async_save_state.assert_not_called()
-
 
         from unittest.mock import MagicMock, patch
 

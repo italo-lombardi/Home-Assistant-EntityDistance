@@ -135,8 +135,10 @@ def phase_check() -> bool:
     hits = [ln for ln in log.splitlines() if CRASH_MARKER in ln]
     ok = not hits
     mark = PASS if ok else FAIL
-    print(f"  {mark}  '{CRASH_MARKER}' absent from error log"
-          + (f"  [since≈{since}]" if since else ""))
+    print(
+        f"  {mark}  '{CRASH_MARKER}' absent from error log"
+        + (f"  [since≈{since}]" if since else "")
+    )
     if hits:
         print("  offending lines:")
         for ln in hits[:6]:

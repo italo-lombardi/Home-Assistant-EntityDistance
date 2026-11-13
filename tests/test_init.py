@@ -116,7 +116,6 @@ class TestCoordinatorSetupAndUnload:
         coordinator.async_unload.assert_called_once()
         assert "test_entry" not in hass.data[DOMAIN]
 
-
     @pytest.mark.asyncio
     async def test_unload_entry_noop_when_platforms_fail(self):
         from custom_components.entity_distance import async_unload_entry

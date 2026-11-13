@@ -147,6 +147,7 @@ class TestPersistence:
         )
 
         hass = MagicMock()
+        hass.is_stopping = False
         entry = MagicMock()
         entry.entry_id = "test_entry"
         entry.data = {
@@ -167,6 +168,7 @@ class TestPersistence:
         coordinator._entities = ["person.alice", "person.bob"]
         coordinator._pair_states = {k: ps}
         coordinator._store = store
+        coordinator._unloaded = False
         coordinator.logger = MagicMock()
         return coordinator
 

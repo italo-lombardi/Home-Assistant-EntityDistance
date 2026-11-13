@@ -1766,7 +1766,7 @@ class TestCoordinatorLifecycle:
             await coord.async_setup()
 
         assert coord._debouncer is not None
-        assert len(coord._unsub_listeners) == 2
+        assert len(coord._unsub_listeners) == 3
 
         # Clean up to avoid lingering timers
         coord.async_unload()
@@ -1794,7 +1794,83 @@ class TestCoordinatorLifecycle:
         coord._unsub_listeners = []
         coord.async_unload()  # should not raise
 
-    async def test_async_tick_schedules_task(self, hass):
+    async def test_async_on_hass_stop_shuts_down_debouncer(self, hass):
+        # STOP handler must flip _unloaded and cancel the debouncer so no late
+        # recalculate is scheduled into the dead-executor window.
+        from unittest.mock import MagicMock
+
+        coord = self._make_coord(hass)
+        coord._debouncer = MagicMock()
+        coord._debouncer.async_shutdown = MagicMock()
+
+        coord._async_on_hass_stop(None)
+
+        assert coord._unloaded is True
+        coord._debouncer.async_shutdown.assert_called_once()
+
+    async def test_async_on_hass_stop_no_debouncer(self, hass):
+        # False branch of `if self._debouncer` — must still flip the flag.
+        coord = self._make_coord(hass)
+        coord._debouncer = None
+        coord._async_on_hass_stop(None)
+        assert coord._unloaded is True
+
+    async def test_setup_registers_stop_listener(self, hass):
+        # async_setup appends a third unsub: the EVENT_HOMEASSISTANT_STOP handle.
+        from unittest.mock import AsyncMock, patch
+
+        coord = self._make_coord(hass)
+        with (
+            patch.object(coord, "_async_load_state", new=AsyncMock()),
+            patch.object(coord, "_async_save_state", new=AsyncMock()),
+        ):
+            await coord.async_setup()
+        assert len(coord._unsub_listeners) == 3
+        assert coord._unloaded is False
+        coord.async_unload()  # exercises the stop-unsub remover
+
+    async def test_save_state_skips_when_unloaded(self, hass):
+        # _unloaded is load-bearing: it blocks the save across the whole stop
+        # sequence, including not_running/stopped where is_stopping is False.
+        from unittest.mock import AsyncMock
+
+        coord = self._make_coord(hass)
+        coord._store = MagicMock()
+        coord._store.async_save = AsyncMock()
+        coord._unloaded = True
+
+        await coord._async_save_state()
+
+        coord._store.async_save.assert_not_called()
+
+    async def test_save_state_skips_when_stopping(self, hass):
+        # is_stopping covers the final_write window HA's own Store guard misses.
+        from unittest.mock import AsyncMock, PropertyMock, patch
+
+        coord = self._make_coord(hass)
+        coord._store = MagicMock()
+        coord._store.async_save = AsyncMock()
+        coord._unloaded = False
+
+        with patch.object(type(hass), "is_stopping", new_callable=PropertyMock, return_value=True):
+            await coord._async_save_state()
+
+        coord._store.async_save.assert_not_called()
+
+    async def test_recalculate_skips_during_teardown(self, hass):
+        # Top-of-method guard: no recompute, no sensor push, no save when unloaded.
+        from unittest.mock import AsyncMock, MagicMock
+
+        coord = self._make_coord(hass)
+        coord._unloaded = True
+        coord.async_set_updated_data = MagicMock()
+        coord._async_save_state = AsyncMock()
+
+        await coord.async_recalculate()
+
+        coord.async_set_updated_data.assert_not_called()
+        coord._async_save_state.assert_not_called()
+
         from unittest.mock import MagicMock, patch
 
         coord = self._make_coord(hass)
@@ -1944,6 +2020,9 @@ class TestCoordinatorAsyncRecalculate:
         ps.distance_m = 500.0
         coord._pair_states = {k: ps}
         coord._pending_updates = {"person.alice"}
+        coord._unloaded = False
+        coord.hass = MagicMock()
+        coord.hass.is_stopping = False
 
         store = MagicMock()
         store.async_save = AsyncMock()
@@ -1977,6 +2056,9 @@ class TestCoordinatorAsyncRecalculate:
         ps.distance_m = None
         coord._pair_states = {k: ps}
         coord._pending_updates = set()
+        coord._unloaded = False
+        coord.hass = MagicMock()
+        coord.hass.is_stopping = False
 
         coord.async_set_updated_data = MagicMock()
 
@@ -2022,6 +2104,8 @@ class TestCoordinatorAsyncUpdateData:
         coord._resync_hold_until = {}
         coord.hass = MagicMock()
         coord.hass.states.get.return_value = None
+        coord.hass.is_stopping = False
+        coord._unloaded = False
         coord._async_save_state = AsyncMock()
 
         captured = []
@@ -3426,6 +3510,9 @@ class TestResetProximityDuration:
         coord._store = MagicMock()
         coord._store.async_save = AsyncMock()
         coord.async_update_listeners = MagicMock()
+        coord._unloaded = False
+        coord.hass = MagicMock()
+        coord.hass.is_stopping = False
         return coord
 
     async def test_reset_while_in_proximity_zeroes_live_total(self):

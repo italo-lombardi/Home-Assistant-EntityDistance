@@ -225,7 +225,20 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if unload_ok:
         coordinator: EntityDistanceCoordinator = hass.data[DOMAIN].pop(entry.entry_id, None)
         if coordinator:
-            coordinator.async_unload()
+            # Flush latest in-memory state before teardown. MUST precede
+            # async_unload() — that sets _unloaded, after which _async_save_state
+            # no-ops. Wrapped so a save failure can never abort the unload or
+            # leak the coordinator's listeners/debouncer.
+            try:
+                await coordinator._async_save_state()
+            except Exception:  # noqa: BLE001
+                _LOGGER.warning(
+                    "entity_distance: final state save failed during unload for %s",
+                    entry.entry_id,
+                    exc_info=True,
+                )
+            finally:
+                coordinator.async_unload()
         # Clear the card-installed flag when the last entry unloads so resources
         # are re-registered on next setup (handles reload and version upgrades).
         remaining = [k for k in hass.data[DOMAIN] if k != _CARD_INSTALLED_KEY]

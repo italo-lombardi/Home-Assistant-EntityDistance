@@ -16,6 +16,7 @@ class TestCoordinatorSetupAndUnload:
         coord.async_setup = AsyncMock()
         coord._async_recalculate = AsyncMock()
         coord.async_recalculate = AsyncMock()
+        coord._async_save_state = AsyncMock()
         coord.async_unload = MagicMock()
         return coord
 
@@ -60,6 +61,52 @@ class TestCoordinatorSetupAndUnload:
         entry = MagicMock()
         entry.entry_id = "test_entry"
 
+        hass.config_entries = MagicMock()
+        hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
+
+        result = await async_unload_entry(hass, entry)
+
+        assert result is True
+        coordinator.async_unload.assert_called_once()
+        assert "test_entry" not in hass.data[DOMAIN]
+
+    @pytest.mark.asyncio
+    async def test_unload_entry_flushes_state_before_unload(self):
+        # Item 7: a final save must run BEFORE async_unload() (which sets
+        # _unloaded, after which saves no-op). Lock the ordering, not just counts.
+        from custom_components.entity_distance import async_unload_entry
+
+        hass = MagicMock()
+        coordinator = self._make_coordinator(["person.alice", "person.bob"])
+        parent = MagicMock()
+        parent.attach_mock(coordinator._async_save_state, "save")
+        parent.attach_mock(coordinator.async_unload, "unload")
+        hass.data = {DOMAIN: {"test_entry": coordinator}}
+
+        entry = MagicMock()
+        entry.entry_id = "test_entry"
+        hass.config_entries = MagicMock()
+        hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
+
+        result = await async_unload_entry(hass, entry)
+
+        assert result is True
+        coordinator._async_save_state.assert_awaited_once()
+        order = [c[0] for c in parent.mock_calls if c[0] in ("save", "unload")]
+        assert order == ["save", "unload"]
+
+    @pytest.mark.asyncio
+    async def test_unload_entry_save_failure_still_unloads(self):
+        # A failing final save must never abort the unload or leak listeners.
+        from custom_components.entity_distance import async_unload_entry
+
+        hass = MagicMock()
+        coordinator = self._make_coordinator(["person.alice", "person.bob"])
+        coordinator._async_save_state = AsyncMock(side_effect=RuntimeError("disk full"))
+        hass.data = {DOMAIN: {"test_entry": coordinator}}
+
+        entry = MagicMock()
+        entry.entry_id = "test_entry"
         hass.config_entries = MagicMock()
         hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
 

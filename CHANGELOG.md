@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.8] - 2026-11-13
+
+### Fixed
+
+- **Crash on Home Assistant shutdown/restart — `RuntimeError: Executor shutdown has been called`** — on a full HA stop, config entries are never unloaded, so the coordinator's state-change debouncer was never cancelled. Its pending timer is a plain `loop.call_later` handle (not a cancel-on-shutdown job), so HA's task-drain barriers did not cancel it; a debounced `async_recalculate` could then fire during teardown and reach `Store.async_save` → `run_in_executor` after the event loop's default executor had already been torn down (`runner.py` `shutdown_default_executor`), raising `RuntimeError: Executor shutdown has been called`. Observed on a live instance (HA 2026.11.1 / Python 3.14) firing on every configured group at once during a restart. The coordinator now registers an `EVENT_HOMEASSISTANT_STOP` listener that shuts the debouncer down the moment HA begins stopping, so no late recalculate is ever scheduled; `async_recalculate` and `_async_save_state` also early-return while the integration is unloading or HA is stopping (covering the `final_write` window HA's own `Store` guard misses) as defense-in-depth.
+- **State not flushed before entry unload/reload** — `async_unload_entry` cancelled the debouncer without a final save, so an options-change reload could drop up to one tick's worth of accumulated proximity counters (`proximity_duration_s`, today totals). The entry-unload path now flushes the latest state before teardown; the save is wrapped so a failed write can never abort the unload or leak the coordinator's listeners.
+
 ## [0.4.7] - 2026-10-30
 
 ### Added

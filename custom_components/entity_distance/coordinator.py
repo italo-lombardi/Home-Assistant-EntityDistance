@@ -5,7 +5,11 @@ import itertools
 import logging
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
+from homeassistant.const import (
+    EVENT_HOMEASSISTANT_STOP,
+    STATE_UNAVAILABLE,
+    STATE_UNKNOWN,
+)
 from homeassistant.core import HomeAssistant, State, callback
 from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.event import (
@@ -346,6 +350,12 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         self._entry = entry
         self._unsub_listeners: list = []
         self._debouncer: Debouncer | None = None
+        # Set True on teardown (HA stop or entry unload). Load-bearing: it
+        # suppresses saves across the whole stopping→final_write→not_running→
+        # stopped window — hass.is_stopping only covers stopping+final_write, so
+        # _unloaded is what prevents a late debounced save hitting the torn-down
+        # default executor (RuntimeError: Executor shutdown has been called).
+        self._unloaded: bool = False
 
         data = {**entry.data, **entry.options}
         self._entities: list[str] = list(data.get(CONF_ENTITIES, []))
@@ -474,10 +484,29 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         unsub = async_track_state_change_event(self.hass, self._entities, self._async_state_changed)
         unsub_tick = async_track_time_interval(self.hass, self._async_tick, timedelta(minutes=1))
         self._unsub_listeners = [unsub, unsub_tick]
+        # A full HA stop never unloads config entries, so async_unload() does not
+        # run and the debouncer is never cancelled. Its pending loop.call_later
+        # timer is a plain handle (not a cancel-on-shutdown HassJob), so HA's
+        # task barriers don't drain it — a late async_recalculate could then save
+        # after the event loop's default executor is torn down. Shut the
+        # debouncer down on STOP so no late recalculate is ever scheduled.
+        self._unsub_listeners.append(
+            self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self._async_on_hass_stop)
+        )
         _LOGGER.debug("entity_distance: tracking %s", self._entities)
 
     @callback
+    def _async_on_hass_stop(self, _event) -> None:
+        self._unloaded = True
+        if self._debouncer:
+            self._debouncer.async_shutdown()
+
+    @callback
     def async_unload(self) -> None:
+        # Set before tearing down so any racing save no-ops. On a normal unload/
+        # reload the explicit flush in async_unload_entry runs BEFORE this (while
+        # _unloaded is still False), so the latest state is persisted first.
+        self._unloaded = True
         for unsub in self._unsub_listeners:
             unsub()
         self._unsub_listeners.clear()
@@ -532,6 +561,11 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         self.hass.async_create_task(self._debouncer.async_call())
 
     async def async_recalculate(self) -> None:
+        # Skip entirely during teardown: no recompute, no sensor push, no save.
+        # The save is what can hit the torn-down executor; guarding here also
+        # avoids a pointless async_set_updated_data during shutdown.
+        if self._unloaded or self.hass.is_stopping:
+            return
         now = dt_util.now()
         pending = set(self._pending_updates)
         self._pending_updates.clear()
@@ -1325,6 +1359,12 @@ class EntityDistanceCoordinator(DataUpdateCoordinator[GroupData]):
         self.async_update_listeners()
 
     async def _async_save_state(self) -> None:
+        # Defense-in-depth against writing during teardown. _unloaded covers the
+        # whole stop sequence incl. not_running/stopped (where the executor is
+        # gone); is_stopping covers final_write (which HA's own Store guard
+        # misses). Do NOT drop _unloaded thinking is_stopping suffices.
+        if self._unloaded or self.hass.is_stopping:
+            return
         payload: dict = {}
         for k, ps in self._pair_states.items():
             today = ps.today_reset_date
